@@ -1,0 +1,75 @@
+-- ===============================================
+-- MLP Example 2: OOP - Shapes
+-- ===============================================
+-- Demonstrates inheritance, abstract classes, and polymorphism
+
+-- Abstract base class
+SOYUT SINIF Shape
+    KORUNAN METIN color;
+
+    KURUCU(METIN color)
+        BU.color = color;
+    KURUCU SON
+
+    SOYUT IŞLEÇ area() -> SAYISAL
+    SOYUT IŞLEÇ perimeter() -> SAYISAL
+
+    -- Concrete method
+    IŞLEÇ display_info()
+        YAZDIR "Shape color: " + BU.color;
+        YAZDIR "Area: " + BU.area();
+        YAZDIR "Perimeter: " + BU.perimeter();
+    IŞLEÇ SON
+SINIF SON
+
+-- Circle class
+SINIF Circle KALITIR Shape
+    ÖZEL SAYISAL radius;
+
+    KURUCU(METIN color, SAYISAL radius)
+        ÜST(color);
+        BU.radius = radius;
+    KURUCU SON
+
+    ÜZERİNE_YAZ IŞLEÇ area() -> SAYISAL
+        DÖNÜŞ 3.14159 * BU.radius * BU.radius;
+    IŞLEÇ SON
+
+    ÜZERİNE_YAZ IŞLEÇ perimeter() -> SAYISAL
+        DÖNÜŞ 2 * 3.14159 * BU.radius;
+    IŞLEÇ SON
+SINIF SON
+
+-- Rectangle class
+SINIF Rectangle KALITIR Shape
+    ÖZEL SAYISAL width;
+    ÖZEL SAYISAL height;
+
+    KURUCU(METIN color, SAYISAL width, SAYISAL height)
+        ÜST(color);
+        BU.width = width;
+        BU.height = height;
+    KURUCU SON
+
+    ÜZERİNE_YAZ IŞLEÇ area() -> SAYISAL
+        DÖNÜŞ BU.width * BU.height;
+    IŞLEÇ SON
+
+    ÜZERİNE_YAZ IŞLEÇ perimeter() -> SAYISAL
+        DÖNÜŞ 2 * (BU.width + BU.height);
+    IŞLEÇ SON
+SINIF SON
+
+-- Create instances and use polymorphism
+DİZİ<Shape> shapes = [
+    YENİ Circle("red", 5),
+    YENİ Rectangle("blue", 10, 20),
+    YENİ Circle("green", 3)
+];
+
+YAZDIR "=== Shape Information ===";
+
+HER shape İÇİNDE shapes
+    shape.display_info();
+    YAZDIR "---";
+HER SON

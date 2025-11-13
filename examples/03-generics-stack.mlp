@@ -1,0 +1,80 @@
+-- ===============================================
+-- MLP Example 3: Generics - Stack Data Structure
+-- ===============================================
+-- Demonstrates generic classes and type parameters
+
+GENEL<T> SINIF Stack
+    ÖZEL DİZİ<T> items;
+
+    KURUCU()
+        BU.items = [];
+    KURUCU SON
+
+    IŞLEÇ push(T item)
+        DİZİ_EKLE BU.items item;
+    IŞLEÇ SON
+
+    IŞLEÇ pop() -> T?
+        EĞER BU.is_empty() İSE
+            DÖNÜŞ HİÇLİK;
+        EĞER SON
+        DÖNÜŞ DİZİ_SON_ÇIKAR BU.items;
+    IŞLEÇ SON
+
+    IŞLEÇ peek() -> T?
+        EĞER BU.is_empty() İSE
+            DÖNÜŞ HİÇLİK;
+        EĞER SON
+        DÖNÜŞ BU.items[UZUNLUK BU.items - 1];
+    IŞLEÇ SON
+
+    IŞLEÇ is_empty() -> ZITLIK
+        DÖNÜŞ UZUNLUK BU.items == 0;
+    IŞLEÇ SON
+
+    IŞLEÇ size() -> SAYISAL
+        DÖNÜŞ UZUNLUK BU.items;
+    IŞLEÇ SON
+SINIF SON
+
+-- Usage with numbers
+YAZDIR "=== Number Stack ===";
+Stack<SAYISAL> numbers = YENİ Stack<SAYISAL>();
+
+numbers.push(10);
+numbers.push(20);
+numbers.push(30);
+
+YAZDIR "Stack size: " + numbers.size();
+YAZDIR "Peek: " + numbers.peek();
+YAZDIR "Pop: " + numbers.pop();
+YAZDIR "Pop: " + numbers.pop();
+YAZDIR "Stack size: " + numbers.size();
+
+-- Usage with strings
+YAZDIR "\n=== String Stack ===";
+Stack<METIN> strings = YENİ Stack<METIN>();
+
+strings.push("Hello");
+strings.push("World");
+strings.push("MLP");
+
+YAZDIR "Stack size: " + strings.size();
+
+DÖNGÜ BU.size() > 0
+    YAZDIR "Pop: " + strings.pop();
+DÖNGÜ SON
+
+-- Output:
+-- === Number Stack ===
+-- Stack size: 3
+-- Peek: 30
+-- Pop: 30
+-- Pop: 20
+-- Stack size: 1
+--
+-- === String Stack ===
+-- Stack size: 3
+-- Pop: MLP
+-- Pop: World
+-- Pop: Hello

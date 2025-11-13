@@ -1,0 +1,58 @@
+# Build artifacts
+build/
+*.o
+*.asm
+*.out
+program
+mlp-compiler-*
+
+# Compiler outputs
+output.asm
+output.s
+
+# Python (for bootstrap tools)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# Temporary
+*.tmp
+*.log
+tmp/
+temp/
+
+# Test outputs
+test-output/
+benchmark-results/
+
+# VSCode Extension
+vscode-mlp/node_modules/
+vscode-mlp/out/
+vscode-mlp/*.vsix
+
+# Documentation build
+docs/_build/
+docs/.doctrees/
+
+# Stage artifacts
+stage0/output/
+stage1/output/
+stage2/output/
+stage3/output/
