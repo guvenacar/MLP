@@ -101,6 +101,97 @@ class Token:
     column: int
 
 # ===============================================
+# AST Node Classes
+# ===============================================
+
+class ASTNode:
+    """Base class for all AST nodes"""
+    pass
+
+@dataclass
+class Program(ASTNode):
+    """Root node - contains all statements"""
+    statements: List[ASTNode]
+
+@dataclass
+class VarDecl(ASTNode):
+    """Variable declaration: var x = 10"""
+    name: str
+    type_name: Optional[str]
+    value: Optional[ASTNode]
+
+@dataclass
+class Assignment(ASTNode):
+    """Assignment: x = value"""
+    target: str
+    value: ASTNode
+
+@dataclass
+class BinaryOp(ASTNode):
+    """Binary operation: left op right"""
+    left: ASTNode
+    op: str
+    right: ASTNode
+
+@dataclass
+class Identifier(ASTNode):
+    """Variable reference"""
+    name: str
+
+@dataclass
+class Literal(ASTNode):
+    """Literal value (string, number, bool)"""
+    value: Any
+    type: str  # 'string', 'int', 'float', 'bool'
+
+@dataclass
+class MethodDef(ASTNode):
+    """Method definition"""
+    name: str
+    params: List[tuple]  # [(name, type), ...]
+    return_type: Optional[str]
+    body: List[ASTNode]
+    is_constructor: bool = False
+    is_override: bool = False
+
+@dataclass
+class ClassDef(ASTNode):
+    """Class definition"""
+    name: str
+    fields: List[tuple]  # [(name, type), ...]
+    methods: List[MethodDef]
+
+@dataclass
+class MethodCall(ASTNode):
+    """Method call: obj.method(args) or method(args)"""
+    object: Optional[ASTNode]  # None for standalone functions
+    method_name: str
+    args: List[ASTNode]
+
+@dataclass
+class IfStatement(ASTNode):
+    """If statement"""
+    condition: ASTNode
+    then_body: List[ASTNode]
+    else_body: Optional[List[ASTNode]]
+
+@dataclass
+class WhileStatement(ASTNode):
+    """While loop"""
+    condition: ASTNode
+    body: List[ASTNode]
+
+@dataclass
+class ReturnStatement(ASTNode):
+    """Return statement"""
+    value: Optional[ASTNode]
+
+@dataclass
+class PrintStatement(ASTNode):
+    """YAZDIR statement"""
+    value: ASTNode
+
+# ===============================================
 # Lexer
 # ===============================================
 
@@ -326,52 +417,566 @@ class Lexer:
         return self.tokens
 
 # ===============================================
-# Simple C Code Generator
+# Parser
 # ===============================================
 
-class SimpleCCodeGen:
+class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
         self.pos = 0
+
+    def current(self) -> Token:
+        if self.pos >= len(self.tokens):
+            return self.tokens[-1]
+        return self.tokens[self.pos]
+
+    def peek(self, offset=1) -> Token:
+        pos = self.pos + offset
+        if pos >= len(self.tokens):
+            return self.tokens[-1]
+        return self.tokens[pos]
+
+    def advance(self):
+        self.pos += 1
+
+    def expect(self, token_type: TokenType) -> Token:
+        if self.current().type != token_type:
+            raise Exception(f"Expected {token_type}, got {self.current().type} at line {self.current().line}")
+        token = self.current()
+        self.advance()
+        return token
+
+    def parse(self) -> Program:
+        """Parse tokens into AST"""
+        statements = []
+        while self.current().type != TokenType.EOF:
+            stmt = self.parse_statement()
+            if stmt:
+                statements.append(stmt)
+        return Program(statements)
+
+    def parse_statement(self) -> Optional[ASTNode]:
+        """Parse a single statement"""
+        current = self.current()
+
+        # Skip comments and newlines
+        if current.type in [TokenType.NEWLINE]:
+            self.advance()
+            return None
+
+        # Variable declaration
+        if current.type == TokenType.VAR:
+            return self.parse_var_decl()
+
+        # Class definition
+        if current.type == TokenType.CLASS:
+            return self.parse_class()
+
+        # If statement
+        if current.type == TokenType.IF:
+            return self.parse_if()
+
+        # While statement
+        if current.type == TokenType.WHILE:
+            return self.parse_while()
+
+        # Return statement
+        if current.type == TokenType.RETURN:
+            return self.parse_return()
+
+        # Print statement
+        if current.type == TokenType.YAZDIR:
+            return self.parse_print()
+
+        # Assignment or method call
+        if current.type == TokenType.IDENTIFIER:
+            # Look ahead to determine if it's assignment or method call
+            if self.peek().type == TokenType.ASSIGN:
+                return self.parse_assignment()
+            elif self.peek().type == TokenType.LPAREN:
+                return self.parse_method_call()
+            else:
+                # Just skip unknown identifier statements for now
+                self.advance()
+                return None
+
+        # Skip unknown tokens
+        self.advance()
+        return None
+
+    def parse_var_decl(self) -> VarDecl:
+        """Parse variable declaration: var x = 10 or var x string = "hello" """
+        self.expect(TokenType.VAR)
+        name = self.expect(TokenType.IDENTIFIER).value
+
+        type_name = None
+        value = None
+
+        # Optional type
+        if self.current().type in [TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC]:
+            type_name = self.current().value
+            self.advance()
+
+        # Optional initialization
+        if self.current().type == TokenType.ASSIGN:
+            self.advance()
+            value = self.parse_expression()
+
+        return VarDecl(name, type_name, value)
+
+    def parse_assignment(self) -> Assignment:
+        """Parse assignment: x = value"""
+        name = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ASSIGN)
+        value = self.parse_expression()
+        return Assignment(name, value)
+
+    def parse_class(self) -> ClassDef:
+        """Parse class definition"""
+        self.expect(TokenType.CLASS)
+        name = self.expect(TokenType.IDENTIFIER).value
+
+        fields = []
+        methods = []
+
+        # Parse class body until 'end'
+        while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
+            # Field declaration (name type)
+            if self.current().type == TokenType.IDENTIFIER and self.peek().type in [TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC]:
+                field_name = self.expect(TokenType.IDENTIFIER).value
+                field_type = self.current().value
+                self.advance()
+                fields.append((field_name, field_type))
+
+            # Constructor
+            elif self.current().type == TokenType.CONSTRUCTOR:
+                self.advance()  # Consume CONSTRUCTOR token
+                method = self.parse_method(is_constructor=True)
+                methods.append(method)
+
+            # Method
+            elif self.current().type == TokenType.METHOD or self.current().type == TokenType.OVERRIDE:
+                is_override = self.current().type == TokenType.OVERRIDE
+                if is_override:
+                    self.advance()
+                method = self.parse_method(is_override=is_override)
+                methods.append(method)
+
+            else:
+                self.advance()
+
+        self.expect(TokenType.END)
+        return ClassDef(name, fields, methods)
+
+    def parse_method(self, is_constructor=False, is_override=False) -> MethodDef:
+        """Parse method definition"""
+        if not is_constructor:
+            self.expect(TokenType.METHOD)
+            name = self.expect(TokenType.IDENTIFIER).value
+        else:
+            # Constructor - no name, directly to parameters
+            name = "constructor"
+
+        # Parameters
+        self.expect(TokenType.LPAREN)
+        params = []
+        while self.current().type != TokenType.RPAREN:
+            param_name = self.expect(TokenType.IDENTIFIER).value
+            param_type = None
+            if self.current().type in [TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC]:
+                param_type = self.current().value
+                self.advance()
+            params.append((param_name, param_type))
+
+            if self.current().type == TokenType.COMMA:
+                self.advance()
+        self.expect(TokenType.RPAREN)
+
+        # Return type
+        return_type = None
+        if self.current().type == TokenType.ARROW:
+            self.advance()
+            return_type = self.current().value
+            self.advance()
+
+        # Body
+        body = []
+        while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
+            stmt = self.parse_statement()
+            if stmt:
+                body.append(stmt)
+
+        self.expect(TokenType.END)
+        return MethodDef(name, params, return_type, body, is_constructor, is_override)
+
+    def parse_if(self) -> IfStatement:
+        """Parse if statement"""
+        self.expect(TokenType.IF)
+        condition = self.parse_expression()
+
+        then_body = []
+        while self.current().type not in [TokenType.ELSE, TokenType.END, TokenType.EOF]:
+            stmt = self.parse_statement()
+            if stmt:
+                then_body.append(stmt)
+
+        else_body = None
+        if self.current().type == TokenType.ELSE:
+            self.advance()
+            else_body = []
+            while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
+                stmt = self.parse_statement()
+                if stmt:
+                    else_body.append(stmt)
+
+        self.expect(TokenType.END)
+        return IfStatement(condition, then_body, else_body)
+
+    def parse_while(self) -> WhileStatement:
+        """Parse while loop"""
+        self.expect(TokenType.WHILE)
+        condition = self.parse_expression()
+
+        body = []
+        while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
+            stmt = self.parse_statement()
+            if stmt:
+                body.append(stmt)
+
+        self.expect(TokenType.END)
+        return WhileStatement(condition, body)
+
+    def parse_return(self) -> ReturnStatement:
+        """Parse return statement"""
+        self.expect(TokenType.RETURN)
+        value = None
+        if self.current().type not in [TokenType.NEWLINE, TokenType.EOF]:
+            value = self.parse_expression()
+        return ReturnStatement(value)
+
+    def parse_print(self) -> PrintStatement:
+        """Parse YAZDIR statement"""
+        self.expect(TokenType.YAZDIR)
+        value = self.parse_expression()
+        return PrintStatement(value)
+
+    def parse_method_call(self) -> MethodCall:
+        """Parse method call: method(args)"""
+        name = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.LPAREN)
+
+        args = []
+        while self.current().type != TokenType.RPAREN:
+            args.append(self.parse_expression())
+            if self.current().type == TokenType.COMMA:
+                self.advance()
+
+        self.expect(TokenType.RPAREN)
+        return MethodCall(None, name, args)
+
+    def parse_expression(self) -> ASTNode:
+        """Parse expression (simplified - just handle basic cases)"""
+        return self.parse_additive()
+
+    def parse_additive(self) -> ASTNode:
+        """Parse addition/subtraction"""
+        left = self.parse_multiplicative()
+
+        while self.current().type in [TokenType.PLUS, TokenType.MINUS]:
+            op = '+' if self.current().type == TokenType.PLUS else '-'
+            self.advance()
+            right = self.parse_multiplicative()
+            left = BinaryOp(left, op, right)
+
+        return left
+
+    def parse_multiplicative(self) -> ASTNode:
+        """Parse multiplication/division"""
+        left = self.parse_primary()
+
+        while self.current().type in [TokenType.MULTIPLY, TokenType.DIVIDE]:
+            op = '*' if self.current().type == TokenType.MULTIPLY else '/'
+            self.advance()
+            right = self.parse_primary()
+            left = BinaryOp(left, op, right)
+
+        return left
+
+    def parse_primary(self) -> ASTNode:
+        """Parse primary expression"""
+        current = self.current()
+
+        # String literal
+        if current.type == TokenType.STRING_LITERAL:
+            self.advance()
+            return Literal(current.value, 'string')
+
+        # Number literal
+        if current.type in [TokenType.INTEGER_LITERAL, TokenType.FLOAT_LITERAL]:
+            self.advance()
+            lit_type = 'int' if current.type == TokenType.INTEGER_LITERAL else 'float'
+            return Literal(current.value, lit_type)
+
+        # Boolean literal
+        if current.type in [TokenType.TRUE, TokenType.FALSE]:
+            self.advance()
+            return Literal(current.type == TokenType.TRUE, 'bool')
+
+        # Identifier or method call
+        if current.type == TokenType.IDENTIFIER:
+            name = current.value
+            self.advance()
+
+            # Method call
+            if self.current().type == TokenType.LPAREN:
+                self.expect(TokenType.LPAREN)
+                args = []
+                while self.current().type != TokenType.RPAREN:
+                    args.append(self.parse_expression())
+                    if self.current().type == TokenType.COMMA:
+                        self.advance()
+                self.expect(TokenType.RPAREN)
+                return MethodCall(None, name, args)
+
+            # Just identifier
+            return Identifier(name)
+
+        # Parenthesized expression
+        if current.type == TokenType.LPAREN:
+            self.advance()
+            expr = self.parse_expression()
+            self.expect(TokenType.RPAREN)
+            return expr
+
+        # Unknown - just return null literal
+        self.advance()
+        return Literal(None, 'null')
+
+# ===============================================
+# AST-based C Code Generator
+# ===============================================
+
+class CCodeGenerator:
+    def __init__(self, ast: Program):
+        self.ast = ast
         self.c_code = []
-        self.includes = set(['#include "runtime/runtime.h"'])
+        self.includes = set(['#include "runtime/runtime.h"', '#include <stdbool.h>'])
         self.indent_level = 0
+        self.class_structs = []  # Generated struct definitions
+        self.class_methods = []  # Generated method implementations
 
     def emit(self, code: str):
         indent = '    ' * self.indent_level
         self.c_code.append(indent + code)
 
-    def current_token(self) -> Token:
-        if self.pos >= len(self.tokens):
-            return self.tokens[-1]
-        return self.tokens[self.pos]
-
-    def advance(self):
-        self.pos += 1
-
     def generate(self) -> str:
-        """Simple code generation - just handle YAZDIR for now"""
-        self.emit("int main(int argc, char** argv) {")
-        self.indent_level += 1
+        """Generate C code from AST"""
+        # Process all top-level statements
+        has_main = False
+        for stmt in self.ast.statements:
+            if isinstance(stmt, ClassDef):
+                self.generate_class(stmt)
+            elif isinstance(stmt, PrintStatement):
+                # Top-level print - put in main
+                has_main = True
 
-        while self.current_token().type != TokenType.EOF:
-            if self.current_token().type == TokenType.YAZDIR:
-                self.advance()
-                if self.current_token().type == TokenType.STRING_LITERAL:
-                    value = self.current_token().value
-                    self.emit(f'mlp_yazdir("{value}");')
-                    self.advance()
-            else:
-                # Skip unknown tokens (comments, etc.)
-                self.advance()
+        # Generate main function if we have top-level statements
+        if has_main or any(not isinstance(stmt, ClassDef) for stmt in self.ast.statements):
+            self.emit("int main(int argc, char** argv) {")
+            self.indent_level += 1
 
-        self.emit("return 0;")
-        self.indent_level -= 1
-        self.emit("}")
+            for stmt in self.ast.statements:
+                if not isinstance(stmt, ClassDef):
+                    self.generate_statement(stmt)
+
+            self.emit("return 0;")
+            self.indent_level -= 1
+            self.emit("}")
 
         # Build final code
-        result = '\n'.join(self.includes) + '\n\n' + '\n'.join(self.c_code)
+        result = '\n'.join(self.includes) + '\n\n'
+        if self.class_structs:
+            result += '\n'.join(self.class_structs) + '\n\n'
+        if self.class_methods:
+            result += '\n'.join(self.class_methods) + '\n\n'
+        result += '\n'.join(self.c_code)
         return result
+
+    def generate_class(self, node: ClassDef):
+        """Generate C struct for class"""
+        struct_code = []
+        struct_code.append(f"typedef struct {node.name} {{")
+
+        # Fields
+        for field_name, field_type in node.fields:
+            c_type = self.mlp_type_to_c(field_type) if field_type else 'void*'
+            struct_code.append(f"    {c_type} {field_name};")
+
+        struct_code.append(f"}} {node.name};")
+        self.class_structs.append('\n'.join(struct_code))
+
+        # Methods
+        for method in node.methods:
+            self.generate_method(node.name, method)
+
+    def generate_method(self, class_name: str, method: MethodDef):
+        """Generate C function for method"""
+        # Build function signature
+        return_type = self.mlp_type_to_c(method.return_type) if method.return_type else 'void'
+
+        # Parameters - first param is always 'this' pointer for non-constructors
+        params = []
+        if not method.is_constructor:
+            params.append(f"{class_name}* this")
+
+        for param_name, param_type in method.params:
+            c_type = self.mlp_type_to_c(param_type) if param_type else 'void*'
+            params.append(f"{c_type} {param_name}")
+
+        params_str = ', '.join(params) if params else 'void'
+        func_name = f"{class_name}_{method.name}"
+
+        method_code = []
+        method_code.append(f"{return_type} {func_name}({params_str}) {{")
+
+        # Body
+        old_c_code = self.c_code
+        old_indent = self.indent_level
+        self.c_code = []
+        self.indent_level = 1
+
+        for stmt in method.body:
+            self.generate_statement(stmt)
+
+        method_code.extend(self.c_code)
+        method_code.append("}")
+
+        self.c_code = old_c_code
+        self.indent_level = old_indent
+        self.class_methods.append('\n'.join(method_code))
+
+    def generate_statement(self, node: ASTNode):
+        """Generate code for a statement"""
+        if isinstance(node, VarDecl):
+            # Infer type from value if not specified
+            if node.type_name:
+                c_type = self.mlp_type_to_c(node.type_name)
+            elif node.value:
+                c_type = self.infer_c_type(node.value)
+            else:
+                c_type = 'void*'
+
+            if node.value:
+                value_code = self.generate_expression(node.value)
+                self.emit(f"{c_type} {node.name} = {value_code};")
+            else:
+                self.emit(f"{c_type} {node.name};")
+
+        elif isinstance(node, Assignment):
+            value_code = self.generate_expression(node.value)
+            self.emit(f"{node.target} = {value_code};")
+
+        elif isinstance(node, PrintStatement):
+            value_code = self.generate_expression(node.value)
+            # Check if it's a string literal or needs conversion
+            if isinstance(node.value, Literal) and node.value.type == 'string':
+                self.emit(f'mlp_yazdir({value_code});')
+            else:
+                self.emit(f'printf("%s\\n", {value_code});')
+
+        elif isinstance(node, IfStatement):
+            cond = self.generate_expression(node.condition)
+            self.emit(f"if ({cond}) {{")
+            self.indent_level += 1
+            for stmt in node.then_body:
+                self.generate_statement(stmt)
+            self.indent_level -= 1
+            if node.else_body:
+                self.emit("} else {")
+                self.indent_level += 1
+                for stmt in node.else_body:
+                    self.generate_statement(stmt)
+                self.indent_level -= 1
+            self.emit("}")
+
+        elif isinstance(node, WhileStatement):
+            cond = self.generate_expression(node.condition)
+            self.emit(f"while ({cond}) {{")
+            self.indent_level += 1
+            for stmt in node.body:
+                self.generate_statement(stmt)
+            self.indent_level -= 1
+            self.emit("}")
+
+        elif isinstance(node, ReturnStatement):
+            if node.value:
+                value_code = self.generate_expression(node.value)
+                self.emit(f"return {value_code};")
+            else:
+                self.emit("return;")
+
+        elif isinstance(node, MethodCall):
+            # Standalone method call (not in expression)
+            call_code = self.generate_expression(node)
+            self.emit(f"{call_code};")
+
+    def generate_expression(self, node: ASTNode) -> str:
+        """Generate code for an expression"""
+        if isinstance(node, Literal):
+            if node.type == 'string':
+                # Escape quotes in string
+                escaped = node.value.replace('"', '\\"')
+                return f'"{escaped}"'
+            elif node.type == 'int':
+                return str(node.value)
+            elif node.type == 'float':
+                return str(node.value)
+            elif node.type == 'bool':
+                return 'true' if node.value else 'false'
+            else:
+                return 'NULL'
+
+        elif isinstance(node, Identifier):
+            return node.name
+
+        elif isinstance(node, BinaryOp):
+            left = self.generate_expression(node.left)
+            right = self.generate_expression(node.right)
+            return f"({left} {node.op} {right})"
+
+        elif isinstance(node, MethodCall):
+            args = ', '.join([self.generate_expression(arg) for arg in node.args])
+            return f"{node.method_name}({args})"
+
+        else:
+            return "NULL"
+
+    def mlp_type_to_c(self, mlp_type: str) -> str:
+        """Convert MLP type to C type"""
+        type_map = {
+            'string': 'char*',
+            'number': 'double',
+            'bool': 'bool',
+            'dynamic': 'void*',
+            'dict': 'mlp_dict_t*',
+        }
+        return type_map.get(mlp_type, 'void*')
+
+    def infer_c_type(self, node: ASTNode) -> str:
+        """Infer C type from expression"""
+        if isinstance(node, Literal):
+            if node.type == 'int':
+                return 'int'
+            elif node.type == 'float':
+                return 'double'
+            elif node.type == 'string':
+                return 'char*'
+            elif node.type == 'bool':
+                return 'bool'
+        elif isinstance(node, BinaryOp):
+            # Binary ops on ints = int, etc.
+            return self.infer_c_type(node.left)
+        return 'void*'
 
 # ===============================================
 # Main Compiler
@@ -390,8 +995,13 @@ def compile_mlp_file(input_file: str, output_file: str):
     tokens = lexer.tokenize()
     print(f"[Seed Compiler] Tokenized: {len(tokens)} tokens")
 
-    # Generate C code
-    codegen = SimpleCCodeGen(tokens)
+    # Parse into AST
+    parser = Parser(tokens)
+    ast = parser.parse()
+    print(f"[Seed Compiler] Parsed: {len(ast.statements)} top-level statements")
+
+    # Generate C code from AST
+    codegen = CCodeGenerator(ast)
     c_code = codegen.generate()
 
     # Write C file
