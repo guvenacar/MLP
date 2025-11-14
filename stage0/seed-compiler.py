@@ -26,7 +26,7 @@ from dataclasses import dataclass
 # ===============================================
 
 class TokenType(Enum):
-    # Keywords
+    # Keywords - English
     CLASS = auto()
     CONSTRUCTOR = auto()
     METHOD = auto()
@@ -41,17 +41,42 @@ class TokenType(Enum):
     VAR = auto()
     THIS = auto()
     NEW = auto()
-    KULLAN = auto()  # import
-    YAZDIR = auto()  # print
+    KULLAN = auto()  # import (Turkish: use)
+    YAZDIR = auto()  # print (Turkish: write)
 
-    # Types
+    # Keywords - Turkish
+    SINIF = auto()      # class
+    KURUCU = auto()     # constructor
+    IŞLEÇ = auto()      # method/function
+    EĞER = auto()       # if
+    İSE = auto()        # then
+    DEĞILSE = auto()    # else
+    YOKSA = auto()      # elsif
+    DONGU = auto()      # while/loop
+    HER = auto()        # for/each
+    İÇİNDE = auto()     # in
+    DÖNÜŞ = auto()      # return
+    DEĞIŞKEN = auto()   # var
+    BU = auto()         # this
+    YENİ = auto()       # new
+    SON = auto()        # end
+
+    # Types - English
     STRING = auto()
     NUMBER = auto()
     BOOL = auto()
     DYNAMIC = auto()
     DICT = auto()
 
-    # Literals
+    # Types - Turkish
+    METIN = auto()      # string
+    SAYISAL = auto()    # number
+    ZITLIK = auto()     # bool
+    DİNAMİK = auto()    # dynamic
+    SÖZLÜK = auto()     # dict
+    DİZİ = auto()       # array
+
+    # Literals - English
     IDENTIFIER = auto()
     STRING_LITERAL = auto()
     INTEGER_LITERAL = auto()
@@ -59,6 +84,11 @@ class TokenType(Enum):
     TRUE = auto()
     FALSE = auto()
     NULL = auto()
+
+    # Literals - Turkish
+    DOĞRU = auto()      # true
+    YANLIŞ = auto()     # false
+    HİÇLİK = auto()     # null
 
     # Operators
     ASSIGN = auto()
@@ -204,6 +234,7 @@ class Lexer:
         self.tokens = []
 
         self.keywords = {
+            # English keywords
             'class': TokenType.CLASS,
             'constructor': TokenType.CONSTRUCTOR,
             'method': TokenType.METHOD,
@@ -232,6 +263,36 @@ class Lexer:
             'or': TokenType.OR,
             'not': TokenType.NOT,
             'in': TokenType.IDENTIFIER,  # Special case
+
+            # Turkish keywords
+            'SINIF': TokenType.SINIF,
+            'KURUCU': TokenType.KURUCU,
+            'IŞLEÇ': TokenType.IŞLEÇ,
+            'EĞER': TokenType.EĞER,
+            'İSE': TokenType.İSE,
+            'DEĞILSE': TokenType.DEĞILSE,
+            'YOKSA': TokenType.YOKSA,
+            'DONGU': TokenType.DONGU,
+            'HER': TokenType.HER,
+            'İÇİNDE': TokenType.İÇİNDE,
+            'DÖNÜŞ': TokenType.DÖNÜŞ,
+            'DEĞIŞKEN': TokenType.DEĞIŞKEN,
+            'BU': TokenType.BU,
+            'YENİ': TokenType.YENİ,
+            'SON': TokenType.SON,
+
+            # Turkish types
+            'METIN': TokenType.METIN,
+            'SAYISAL': TokenType.SAYISAL,
+            'ZITLIK': TokenType.ZITLIK,
+            'DİNAMİK': TokenType.DİNAMİK,
+            'SÖZLÜK': TokenType.SÖZLÜK,
+            'DİZİ': TokenType.DİZİ,
+
+            # Turkish literals
+            'DOĞRU': TokenType.DOĞRU,
+            'YANLIŞ': TokenType.YANLIŞ,
+            'HİÇLİK': TokenType.HİÇLİK,
         }
 
     def current_char(self) -> Optional[str]:
@@ -464,27 +525,27 @@ class Parser:
             self.advance()
             return None
 
-        # Variable declaration
-        if current.type == TokenType.VAR:
+        # Variable declaration (var or DEĞIŞKEN)
+        if current.type in [TokenType.VAR, TokenType.DEĞIŞKEN]:
             return self.parse_var_decl()
 
-        # Class definition
-        if current.type == TokenType.CLASS:
+        # Class definition (class or SINIF)
+        if current.type in [TokenType.CLASS, TokenType.SINIF]:
             return self.parse_class()
 
-        # If statement
-        if current.type == TokenType.IF:
+        # If statement (if or EĞER)
+        if current.type in [TokenType.IF, TokenType.EĞER]:
             return self.parse_if()
 
-        # While statement
-        if current.type == TokenType.WHILE:
+        # While statement (while or DONGU)
+        if current.type in [TokenType.WHILE, TokenType.DONGU]:
             return self.parse_while()
 
-        # Return statement
-        if current.type == TokenType.RETURN:
+        # Return statement (return or DÖNÜŞ)
+        if current.type in [TokenType.RETURN, TokenType.DÖNÜŞ]:
             return self.parse_return()
 
-        # Print statement
+        # Print statement (YAZDIR)
         if current.type == TokenType.YAZDIR:
             return self.parse_print()
 
@@ -505,15 +566,24 @@ class Parser:
         return None
 
     def parse_var_decl(self) -> VarDecl:
-        """Parse variable declaration: var x = 10 or var x string = "hello" """
-        self.expect(TokenType.VAR)
+        """Parse variable declaration: var x = 10 or DEĞIŞKEN x METIN = "hello" """
+        # Accept both English and Turkish
+        if self.current().type == TokenType.VAR:
+            self.advance()
+        elif self.current().type == TokenType.DEĞIŞKEN:
+            self.advance()
+
         name = self.expect(TokenType.IDENTIFIER).value
 
         type_name = None
         value = None
 
-        # Optional type
-        if self.current().type in [TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC]:
+        # Optional type (English or Turkish)
+        type_tokens = [
+            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+        ]
+        if self.current().type in type_tokens:
             type_name = self.current().value
             self.advance()
 
@@ -532,30 +602,39 @@ class Parser:
         return Assignment(name, value)
 
     def parse_class(self) -> ClassDef:
-        """Parse class definition"""
-        self.expect(TokenType.CLASS)
+        """Parse class definition (class or SINIF)"""
+        # Accept both English and Turkish
+        if self.current().type == TokenType.CLASS:
+            self.advance()
+        elif self.current().type == TokenType.SINIF:
+            self.advance()
+
         name = self.expect(TokenType.IDENTIFIER).value
 
         fields = []
         methods = []
 
-        # Parse class body until 'end'
-        while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
-            # Field declaration (name type)
-            if self.current().type == TokenType.IDENTIFIER and self.peek().type in [TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC]:
+        # Parse class body until 'end' or 'SON'
+        while self.current().type not in [TokenType.END, TokenType.SON, TokenType.EOF]:
+            # Field declaration (name type) - support Turkish types
+            type_tokens_all = [
+                TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+                TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+            ]
+            if self.current().type == TokenType.IDENTIFIER and self.peek().type in type_tokens_all:
                 field_name = self.expect(TokenType.IDENTIFIER).value
                 field_type = self.current().value
                 self.advance()
                 fields.append((field_name, field_type))
 
-            # Constructor
-            elif self.current().type == TokenType.CONSTRUCTOR:
-                self.advance()  # Consume CONSTRUCTOR token
+            # Constructor (constructor or KURUCU)
+            elif self.current().type in [TokenType.CONSTRUCTOR, TokenType.KURUCU]:
+                self.advance()  # Consume token
                 method = self.parse_method(is_constructor=True)
                 methods.append(method)
 
-            # Method
-            elif self.current().type == TokenType.METHOD or self.current().type == TokenType.OVERRIDE:
+            # Method (method or IŞLEÇ)
+            elif self.current().type in [TokenType.METHOD, TokenType.IŞLEÇ, TokenType.OVERRIDE]:
                 is_override = self.current().type == TokenType.OVERRIDE
                 if is_override:
                     self.advance()
@@ -565,13 +644,21 @@ class Parser:
             else:
                 self.advance()
 
-        self.expect(TokenType.END)
+        # Expect end or SON
+        if self.current().type == TokenType.END:
+            self.advance()
+        elif self.current().type == TokenType.SON:
+            self.advance()
         return ClassDef(name, fields, methods)
 
     def parse_method(self, is_constructor=False, is_override=False) -> MethodDef:
-        """Parse method definition"""
+        """Parse method definition (method/IŞLEÇ)"""
         if not is_constructor:
-            self.expect(TokenType.METHOD)
+            # Expect METHOD or IŞLEÇ
+            if self.current().type == TokenType.METHOD:
+                self.advance()
+            elif self.current().type == TokenType.IŞLEÇ:
+                self.advance()
             name = self.expect(TokenType.IDENTIFIER).value
         else:
             # Constructor - no name, directly to parameters
@@ -580,10 +667,14 @@ class Parser:
         # Parameters
         self.expect(TokenType.LPAREN)
         params = []
+        type_tokens_all = [
+            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+        ]
         while self.current().type != TokenType.RPAREN:
             param_name = self.expect(TokenType.IDENTIFIER).value
             param_type = None
-            if self.current().type in [TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC]:
+            if self.current().type in type_tokens_all:
                 param_type = self.current().value
                 self.advance()
             params.append((param_name, param_type))
@@ -601,54 +692,67 @@ class Parser:
 
         # Body
         body = []
-        while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
+        while self.current().type not in [TokenType.END, TokenType.SON, TokenType.EOF]:
             stmt = self.parse_statement()
             if stmt:
                 body.append(stmt)
 
-        self.expect(TokenType.END)
+        # Expect END or SON
+        if self.current().type == TokenType.END:
+            self.advance()
+        elif self.current().type == TokenType.SON:
+            self.advance()
         return MethodDef(name, params, return_type, body, is_constructor, is_override)
 
     def parse_if(self) -> IfStatement:
-        """Parse if statement"""
-        self.expect(TokenType.IF)
+        """Parse if statement (if/EĞER)"""
+        # Already consumed by parse_statement
         condition = self.parse_expression()
 
         then_body = []
-        while self.current().type not in [TokenType.ELSE, TokenType.END, TokenType.EOF]:
+        end_tokens = [TokenType.ELSE, TokenType.DEĞILSE, TokenType.END, TokenType.SON, TokenType.EOF]
+        while self.current().type not in end_tokens:
             stmt = self.parse_statement()
             if stmt:
                 then_body.append(stmt)
 
         else_body = None
-        if self.current().type == TokenType.ELSE:
+        if self.current().type in [TokenType.ELSE, TokenType.DEĞILSE]:
             self.advance()
             else_body = []
-            while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
+            while self.current().type not in [TokenType.END, TokenType.SON, TokenType.EOF]:
                 stmt = self.parse_statement()
                 if stmt:
                     else_body.append(stmt)
 
-        self.expect(TokenType.END)
+        # Expect END or SON
+        if self.current().type == TokenType.END:
+            self.advance()
+        elif self.current().type == TokenType.SON:
+            self.advance()
         return IfStatement(condition, then_body, else_body)
 
     def parse_while(self) -> WhileStatement:
-        """Parse while loop"""
-        self.expect(TokenType.WHILE)
+        """Parse while loop (while/DONGU)"""
+        # Already consumed by parse_statement
         condition = self.parse_expression()
 
         body = []
-        while self.current().type != TokenType.END and self.current().type != TokenType.EOF:
+        while self.current().type not in [TokenType.END, TokenType.SON, TokenType.EOF]:
             stmt = self.parse_statement()
             if stmt:
                 body.append(stmt)
 
-        self.expect(TokenType.END)
+        # Expect END or SON
+        if self.current().type == TokenType.END:
+            self.advance()
+        elif self.current().type == TokenType.SON:
+            self.advance()
         return WhileStatement(condition, body)
 
     def parse_return(self) -> ReturnStatement:
-        """Parse return statement"""
-        self.expect(TokenType.RETURN)
+        """Parse return statement (return/DÖNÜŞ)"""
+        # Already consumed by parse_statement
         value = None
         if self.current().type not in [TokenType.NEWLINE, TokenType.EOF]:
             value = self.parse_expression()
@@ -952,13 +1056,21 @@ class CCodeGenerator:
             return "NULL"
 
     def mlp_type_to_c(self, mlp_type: str) -> str:
-        """Convert MLP type to C type"""
+        """Convert MLP type to C type (English or Turkish)"""
         type_map = {
+            # English
             'string': 'char*',
             'number': 'double',
             'bool': 'bool',
             'dynamic': 'void*',
             'dict': 'mlp_dict_t*',
+            # Turkish
+            'METIN': 'char*',
+            'SAYISAL': 'double',
+            'ZITLIK': 'bool',
+            'DİNAMİK': 'void*',
+            'SÖZLÜK': 'mlp_dict_t*',
+            'DİZİ': 'void*',  # array - for now
         }
         return type_map.get(mlp_type, 'void*')
 
