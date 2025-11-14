@@ -672,11 +672,22 @@ class Parser:
             TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
         ]
         while self.current().type != TokenType.RPAREN:
-            param_name = self.expect(TokenType.IDENTIFIER).value
+            # Support both "TYPE name" and "name TYPE" syntax
             param_type = None
+            param_name = None
+
+            # Check if type comes first (TYPE name)
             if self.current().type in type_tokens_all:
                 param_type = self.current().value
                 self.advance()
+                param_name = self.expect(TokenType.IDENTIFIER).value
+            # Otherwise expect name first (name TYPE or just name)
+            else:
+                param_name = self.expect(TokenType.IDENTIFIER).value
+                if self.current().type in type_tokens_all:
+                    param_type = self.current().value
+                    self.advance()
+
             params.append((param_name, param_type))
 
             if self.current().type == TokenType.COMMA:
@@ -752,9 +763,12 @@ class Parser:
 
     def parse_return(self) -> ReturnStatement:
         """Parse return statement (return/DÖNÜŞ)"""
-        # Already consumed by parse_statement
+        # Consume RETURN or DÖNÜŞ token
+        if self.current().type in [TokenType.RETURN, TokenType.DÖNÜŞ]:
+            self.advance()
+
         value = None
-        if self.current().type not in [TokenType.NEWLINE, TokenType.EOF]:
+        if self.current().type not in [TokenType.NEWLINE, TokenType.EOF, TokenType.END, TokenType.SON]:
             value = self.parse_expression()
         return ReturnStatement(value)
 
@@ -868,6 +882,8 @@ class CCodeGenerator:
         self.indent_level = 0
         self.class_structs = []  # Generated struct definitions
         self.class_methods = []  # Generated method implementations
+        self.current_class = None  # Track current class being generated
+        self.current_class_fields = set()  # Track fields of current class
 
     def emit(self, code: str):
         indent = '    ' * self.indent_level
@@ -911,10 +927,15 @@ class CCodeGenerator:
         struct_code = []
         struct_code.append(f"typedef struct {node.name} {{")
 
+        # Store class context
+        self.current_class = node.name
+        self.current_class_fields = set()
+
         # Fields
         for field_name, field_type in node.fields:
             c_type = self.mlp_type_to_c(field_type) if field_type else 'void*'
             struct_code.append(f"    {c_type} {field_name};")
+            self.current_class_fields.add(field_name)
 
         struct_code.append(f"}} {node.name};")
         self.class_structs.append('\n'.join(struct_code))
@@ -922,6 +943,10 @@ class CCodeGenerator:
         # Methods
         for method in node.methods:
             self.generate_method(node.name, method)
+
+        # Clear class context
+        self.current_class = None
+        self.current_class_fields = set()
 
     def generate_method(self, class_name: str, method: MethodDef):
         """Generate C function for method"""
@@ -1041,6 +1066,9 @@ class CCodeGenerator:
                 return 'NULL'
 
         elif isinstance(node, Identifier):
+            # Check if this is a class field - add this-> prefix
+            if node.name in self.current_class_fields:
+                return f"this->{node.name}"
             return node.name
 
         elif isinstance(node, BinaryOp):
@@ -1086,8 +1114,27 @@ class CCodeGenerator:
             elif node.type == 'bool':
                 return 'bool'
         elif isinstance(node, BinaryOp):
-            # Binary ops on ints = int, etc.
+            # For arithmetic operations, default to double
+            if node.op in ['+', '-', '*', '/']:
+                left_type = self.infer_c_type(node.left)
+                right_type = self.infer_c_type(node.right)
+                # If either side is double, result is double
+                if left_type == 'double' or right_type == 'double':
+                    return 'double'
+                # If both are int, result is int
+                if left_type == 'int' and right_type == 'int':
+                    return 'int'
+                # Default to double for numeric operations
+                return 'double'
+            # For comparison ops, result is bool
+            elif node.op in ['==', '!=', '<', '>', '<=', '>=']:
+                return 'bool'
+            # For other ops, try to infer from left operand
             return self.infer_c_type(node.left)
+        elif isinstance(node, Identifier):
+            # Check if it's a class field - look up its type
+            # For now, default to double for unknown identifiers in expressions
+            return 'double'
         return 'void*'
 
 # ===============================================
