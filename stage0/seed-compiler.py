@@ -361,6 +361,9 @@ class SimpleCCodeGen:
                     value = self.current_token().value
                     self.emit(f'mlp_yazdir("{value}");')
                     self.advance()
+            else:
+                # Skip unknown tokens (comments, etc.)
+                self.advance()
 
         self.emit("return 0;")
         self.indent_level -= 1
@@ -416,17 +419,20 @@ def compile_mlp_file(input_file: str, output_file: str):
     print(f"[Seed Compiler] ✅ Success! Created: {output_file}")
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python3 seed-compiler.py <input.mlp> -o <output>")
+    if len(sys.argv) < 2:
+        print("Usage: python3 seed-compiler.py <input.mlp> [output]")
+        print("   or: python3 seed-compiler.py <input.mlp> -o <output>")
         sys.exit(1)
 
     input_file = sys.argv[1]
     output_file = 'output'
 
-    if '-o' in sys.argv:
-        idx = sys.argv.index('-o')
-        if idx + 1 < len(sys.argv):
-            output_file = sys.argv[idx + 1]
+    # Parse output file: supports both "-o output" and just "output"
+    if len(sys.argv) >= 3:
+        if sys.argv[2] == '-o' and len(sys.argv) >= 4:
+            output_file = sys.argv[3]
+        elif sys.argv[2] != '-o':
+            output_file = sys.argv[2]
 
     try:
         compile_mlp_file(input_file, output_file)
