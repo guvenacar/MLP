@@ -42,8 +42,8 @@
 ### Installation
 
 ```bash
-# Download binary
-curl -sSL https://mlp-lang.org/install.sh | sh
+# Download binary (coming soon) 
+curl -sSL https://mlp-lang.org/install.sh | sh 
 
 # Or build from source
 git clone https://github.com/guvenacar/MLP.git
