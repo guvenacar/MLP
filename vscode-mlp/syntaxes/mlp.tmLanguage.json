@@ -1,0 +1,111 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "MLP",
+  "scopeName": "source.mlp",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#functions" },
+    { "include": "#classes" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-dash.mlp",
+          "match": "--.*$"
+        },
+        {
+          "name": "comment.block.mlp",
+          "begin": "--\\[\\[",
+          "end": "\\]\\]"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(if|else|elsif|while|for|return|break|continue|end|EĞER|İSE|DEGILSE|YOKSA|DONGU|DÖNÜŞ|BITIR|SON)\\b"
+        },
+        {
+          "name": "keyword.other.mlp",
+          "match": "\\b(class|constructor|method|override|var|this|new|SINIF|KURUCU|IŞLEÇ|OVERRIDE|DEĞIŞKEN|BU|YENİ|KULLAN|YAZDIR)\\b"
+        },
+        {
+          "name": "storage.type.mlp",
+          "match": "\\b(string|number|bool|dynamic|dict|array|METIN|SAYISAL|BOOL|DİNAMİK|SÖZLÜK|DİZİ)\\b"
+        },
+        {
+          "name": "constant.language.mlp",
+          "match": "\\b(true|false|null|DOĞRU|YANLIŞ|HİÇLİK)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.mlp",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.mlp",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.mlp",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.mlp",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.mlp",
+          "match": "\\b([0-9]+\\.?[0-9]*)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.mlp",
+          "match": "(\\+|\\-|\\*|\\/|%|==|!=|<=|>=|<|>|=|\\+=|\\-=|\\*=|\\/=|and|or|not|VE|VEYA|DEĞİL)"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.mlp",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+        }
+      ]
+    },
+    "classes": {
+      "patterns": [
+        {
+          "name": "entity.name.type.class.mlp",
+          "match": "(?<=class\\s+)[a-zA-Z_][a-zA-Z0-9_]*"
+        },
+        {
+          "name": "entity.name.type.class.mlp",
+          "match": "(?<=SINIF\\s+)[a-zA-ZğüşıöçĞÜŞİÖÇ_][a-zA-ZğüşıöçĞÜŞİÖÇ0-9_]*"
+        }
+      ]
+    }
+  }
+}
