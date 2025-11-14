@@ -1,0 +1,108 @@
+-- ===============================================
+-- MLP Token Definitions
+-- ===============================================
+-- Transpiled from: TYD-MLP/src/tokens.py
+-- Date: 2025-11-14
+-- NOTE: Ensure this file is saved as UTF-8!
+
+-- ===============================================
+-- Token Class
+-- ===============================================
+class Token
+    -- Represents a single word or symbol in our language
+    tip string
+    deger dynamic  -- Can be null, string, or number
+
+    constructor(tip, deger)
+        this.tip = tip
+        this.deger = deger
+    end
+
+    -- String representation for debugging
+    override method toString() -> string
+        if this.deger != null
+            return "<" + this.tip + ": " + string(this.deger) + ">"
+        end
+        return "<" + this.tip + ">"
+    end
+end
+
+-- ===============================================
+-- All Abstract Token Types
+-- ===============================================
+var TOKEN_TIPLERI = {
+    -- Type Definitions (Keywords - from JSON)
+    "TANIMLA_DEGISKEN": "TANIMLA_DEGISKEN",  -- MLP Syntax: DEĞIŞKEN
+    "TANIMLA_SAYI": "TANIMLA_SAYI",
+    "TANIMLA_METIN": "TANIMLA_METIN",
+    "TANIMLA_BOOL": "TANIMLA_BOOL",
+    "TANIMLA_NESNE": "TANIMLA_NESNE",
+
+    -- Value Constants (Keywords - from JSON)
+    "DEGER_BOOL_DOGRU": "DEGER_BOOL_DOGRU",
+    "DEGER_BOOL_YANLIS": "DEGER_BOOL_YANLIS",
+    "DEGER_HICLIK": "DEGER_HICLIK",
+
+    -- Structural Keywords (Keywords - from JSON)
+    "YAPI_KOSUL_EGER": "YAPI_KOSUL_EGER",
+    "YAPI_KOSUL_ISE": "YAPI_KOSUL_ISE",
+    "YAPI_KOSUL_DEGILSE": "YAPI_KOSUL_DEGILSE",
+    "YAPI_YAZDIR": "YAPI_YAZDIR",
+    "YAPI_DONUS": "YAPI_DONUS",
+    "YAPI_ISLEC": "YAPI_ISLEC",
+    "YAPI_DONGU": "YAPI_DONGU",
+    "YAPI_DONGU_BITIR": "YAPI_DONGU_BITIR",
+    "YAPI_SON": "YAPI_SON",
+
+    -- Operator Keywords (Keywords - from JSON)
+    "OP_ESIT": "OP_ESIT",
+    "OP_ARTI": "OP_ARTI",
+    "OP_EKSI": "OP_EKSI",
+    "OP_CARP": "OP_CARP",
+    "OP_BOL": "OP_BOL",
+    "OP_GT": "OP_GT",
+    "OP_LT": "OP_LT",
+
+    -- Standard Value Tokens (Hard-coded - in Lexer)
+    "IDENTIFIER": "IDENTIFIER",
+    "INTEGER": "INTEGER",
+    "FLOAT": "FLOAT",
+    "STRING": "STRING",
+
+    -- Reserved Symbol Tokens (Hard-coded - in Lexer)
+    "ASSIGN": "ASSIGN",         -- =
+    "SEMICOLON": "SEMICOLON",   -- ;
+    "COLON": "COLON",           -- :
+    "COMMA": "COMMA",           -- ,
+    "PLUS": "PLUS",
+    "MINUS": "MINUS",
+    "MUL": "MUL",
+    "DIV": "DIV",
+    "POWER": "POWER",           -- **
+
+    "GT": "GT",
+    "LT": "LT",                 -- > <
+    "GTE": "GTE",
+    "LTE": "LTE",               -- >= <=
+
+    "OP_ESIT_KARSILASTIRMA": "OP_ESIT_KARSILASTIRMA",  -- ==
+
+    -- Grammar Structure (Hard-coded - in Lexer)
+    "LEFT_PAREN": "LEFT_PAREN",
+    "RIGHT_PAREN": "RIGHT_PAREN",       -- ( )
+    "LEFT_BRACKET": "LEFT_BRACKET",
+    "RIGHT_BRACKET": "RIGHT_BRACKET",   -- [ ]
+    "LEFT_BRACE": "LEFT_BRACE",
+    "RIGHT_BRACE": "RIGHT_BRACE",       -- { }
+
+    "EOF": "EOF",  -- End of File
+
+    -- OOP Keywords (Phase 8)
+    "OOP_SINIF": "OOP_SINIF",           -- SINIF
+    "OOP_KURUCU": "OOP_KURUCU",         -- KURUCU
+    "OOP_OZELLIK": "OOP_OZELLIK",       -- ÖZELLIK
+    "OOP_YAPI": "OOP_YAPI",             -- YAPI (struct)
+    "OOP_GENERIC": "OOP_GENERIC",       -- GENERIC
+    "OOP_DEMET": "OOP_DEMET",           -- DEMET (tuple)
+    "OOP_ENUM": "OOP_ENUM"              -- ENUM
+}
