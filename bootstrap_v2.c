@@ -27,10 +27,11 @@ typedef enum {
 
     // MLP Keywords
     TOK_CLASS, TOK_CONSTRUCTOR, TOK_METHOD, TOK_OVERRIDE,
-    TOK_FONKSIYON, TOK_VAR, TOK_SAYISAL, TOK_METIN, TOK_MANTIKSAL,
+    TOK_FONKSIYON, TOK_ISLEC, TOK_VAR, TOK_SAYISAL, TOK_METIN, TOK_MANTIKSAL,
     TOK_DIZI, TOK_DONUSTUR, TOK_EGER, TOK_DEGILSE, TOK_ISE,
     TOK_HER, TOK_ICINDE, TOK_YAZDIR, TOK_DOGRU, TOK_YANLIS,
     TOK_YAPI, TOK_YENI, TOK_KULLAN, TOK_PAKET, TOK_SINIF,
+    TOK_UZUNLUK,
     TOK_THIS, TOK_NEW, TOK_RETURN, TOK_IF, TOK_ELSE,
     TOK_FOR, TOK_WHILE, TOK_BREAK, TOK_CONTINUE,
     TOK_TRY, TOK_CATCH, TOK_THROW,
@@ -193,6 +194,7 @@ Token lexer_read_ident(Lexer* lex) {
         {"method", TOK_METHOD},
         {"override", TOK_OVERRIDE},
         {"fonksiyon", TOK_FONKSIYON}, {"FONKSİYON", TOK_FONKSIYON},
+        {"işleç", TOK_ISLEC}, {"İŞLEÇ", TOK_ISLEC},
         {"var", TOK_VAR}, {"VAR", TOK_VAR},
         {"sayısal", TOK_SAYISAL}, {"SAYISAL", TOK_SAYISAL},
         {"metin", TOK_METIN}, {"METİN", TOK_METIN},
@@ -205,6 +207,7 @@ Token lexer_read_ident(Lexer* lex) {
         {"her", TOK_HER}, {"HER", TOK_HER},
         {"içinde", TOK_ICINDE}, {"İÇİNDE", TOK_ICINDE},
         {"yazdır", TOK_YAZDIR}, {"YAZDIR", TOK_YAZDIR},
+        {"uzunluk", TOK_UZUNLUK}, {"UZUNLUK", TOK_UZUNLUK},
         {"doğru", TOK_DOGRU}, {"DOĞRU", TOK_DOGRU},
         {"yanlış", TOK_YANLIS}, {"YANLIŞ", TOK_YANLIS},
         {"yapı", TOK_YAPI}, {"YAPI", TOK_YAPI},
@@ -756,6 +759,15 @@ void parser_parse_statement(Parser* p) {
     else if (parser_check(p, TOK_HER) || parser_check(p, TOK_FOR)) {
         parser_parse_for_loop(p);
     }
+    // YAZDIR statement
+    else if (parser_check(p, TOK_YAZDIR)) {
+        parser_advance(p);
+        indent(p);
+        fprintf(p->output, "printf(\"%%s\\n\", ");
+        parser_parse_expression(p);
+        fprintf(p->output, ");\n");
+        parser_match(p, TOK_SEMICOLON);
+    }
     // Return
     else if (parser_check(p, TOK_DONUSTUR) || parser_check(p, TOK_RETURN)) {
         parser_parse_return_statement(p);
@@ -1062,8 +1074,8 @@ void parser_parse(Parser* p) {
         else if (parser_check(p, TOK_KULLAN)) {
             parser_parse_kullan(p);
         }
-        else if (parser_check(p, TOK_FONKSIYON)) {
-            // Top-level function
+        else if (parser_check(p, TOK_FONKSIYON) || parser_check(p, TOK_ISLEC)) {
+            // Top-level function (FONKSIYON or İŞLEÇ)
             parser_advance(p);
             if (parser_check(p, TOK_IDENT)) {
                 char* func_name = str_dup(p->lexer->current.value);

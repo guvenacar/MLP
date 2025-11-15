@@ -1,0 +1,11 @@
+KULLAN std.io
+
+işleç test_yazdir()
+    yazdır "Merhaba MLP!"
+    döndür 0
+son
+
+fonksiyon main()
+    test_yazdir()
+    return 0
+end
