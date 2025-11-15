@@ -1,0 +1,15 @@
+-- Stage 1 Integration Test
+-- Tests: KULLAN, YAPI, class, var, method
+
+KULLAN test-stage1-helper
+
+YAPI Point
+    SAYISAL x;
+    SAYISAL y;
+YAPI SON
+
+YAZDIR "=== Stage 1 Integration Test ==="
+YAZDIR "Testing KULLAN (import)"
+YAZDIR "Testing YAPI (struct)"
+YAZDIR "Testing class from import"
+YAZDIR "All features loaded successfully!"

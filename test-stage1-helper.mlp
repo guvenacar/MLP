@@ -1,0 +1,14 @@
+-- Helper module for Stage 1 test
+
+class Calculator
+    result SAYISAL
+
+    constructor()
+        YAZDIR "Calculator created"
+    end
+
+    method add(SAYISAL a, SAYISAL b) -> SAYISAL
+        var sum = a + b
+        return sum
+    end
+end
