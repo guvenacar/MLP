@@ -31,7 +31,8 @@ typedef enum {
     TOK_DIZI, TOK_DONUSTUR, TOK_EGER, TOK_DEGILSE, TOK_ISE,
     TOK_HER, TOK_ICINDE, TOK_YAZDIR, TOK_DOGRU, TOK_YANLIS, TOK_NULL,
     TOK_YAPI, TOK_YENI, TOK_KULLAN, TOK_PAKET, TOK_SINIF,
-    TOK_UZUNLUK,
+    TOK_UZUNLUK, TOK_TYPE_OF, TOK_KARAKTER_AL, TOK_ALT_METIN,
+    TOK_METIN_DEGISTIR, TOK_PARSE_INT, TOK_TO, TOK_STEP,
     TOK_THIS, TOK_NEW, TOK_RETURN, TOK_IF, TOK_ELSE,
     TOK_FOR, TOK_WHILE, TOK_BREAK, TOK_CONTINUE,
     TOK_TRY, TOK_CATCH, TOK_THROW,
@@ -207,6 +208,13 @@ Token lexer_read_ident(Lexer* lex) {
         {"içinde", TOK_ICINDE}, {"İÇİNDE", TOK_ICINDE}, {"in", TOK_ICINDE},
         {"yazdır", TOK_YAZDIR}, {"YAZDIR", TOK_YAZDIR},
         {"uzunluk", TOK_UZUNLUK}, {"UZUNLUK", TOK_UZUNLUK},
+        {"TYPE_OF", TOK_TYPE_OF},
+        {"KARAKTER_AL", TOK_KARAKTER_AL},
+        {"ALT_METIN", TOK_ALT_METIN},
+        {"METIN_DEGISTIR", TOK_METIN_DEGISTIR},
+        {"PARSE_INT", TOK_PARSE_INT},
+        {"to", TOK_TO},
+        {"step", TOK_STEP},
         {"doğru", TOK_DOGRU}, {"DOĞRU", TOK_DOGRU},
         {"yanlış", TOK_YANLIS}, {"YANLIŞ", TOK_YANLIS},
         {"null", TOK_NULL},
@@ -506,10 +514,65 @@ void parser_parse_primary(Parser* p) {
         // new ClassName(args) -> malloc + constructor
         fprintf(p->output, "malloc(sizeof(struct TODO))");
     } else if (parser_check(p, TOK_UZUNLUK)) {
-        // UZUNLUK keyword - handle specially
+        // UZUNLUK keyword - works for both strings and arrays
         parser_advance(p);
         parser_expect(p, TOK_LPAREN, "( bekleniyor");
-        fprintf(p->output, "strlen(");
+        fprintf(p->output, "UZUNLUK(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_TYPE_OF)) {
+        // TYPE_OF function call
+        parser_advance(p);
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "TYPE_OF(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_KARAKTER_AL)) {
+        // KARAKTER_AL(string, index) function
+        parser_advance(p);
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "KARAKTER_AL(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_COMMA, ", bekleniyor");
+        fprintf(p->output, ", ");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_ALT_METIN)) {
+        // ALT_METIN(string, start, length) function
+        parser_advance(p);
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "ALT_METIN(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_COMMA, ", bekleniyor");
+        fprintf(p->output, ", ");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_COMMA, ", bekleniyor");
+        fprintf(p->output, ", ");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_METIN_DEGISTIR)) {
+        // METIN_DEGISTIR(string, old, new) function
+        parser_advance(p);
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "METIN_DEGISTIR(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_COMMA, ", bekleniyor");
+        fprintf(p->output, ", ");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_COMMA, ", bekleniyor");
+        fprintf(p->output, ", ");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_PARSE_INT)) {
+        // PARSE_INT(string) function
+        parser_advance(p);
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "PARSE_INT(");
         parser_parse_expression(p);
         parser_expect(p, TOK_RPAREN, ") bekleniyor");
         fprintf(p->output, ")");
@@ -852,6 +915,49 @@ void parser_parse_for_loop(Parser* p) {
 
     char* var1_name = str_dup(p->lexer->current.value);
     parser_advance(p);
+
+    // Check if this is a traditional for loop: for i = start to end [step increment]
+    if (parser_match(p, TOK_ASSIGN)) {
+        // Traditional for loop
+        fprintf(p->output, "for (int64_t %s = ", var1_name);
+        parser_parse_expression(p);  // start value
+
+        if (!parser_match(p, TOK_TO)) {
+            fprintf(stderr, "Hata: 'to' bekleniyor\n");
+            free(var1_name);
+            return;
+        }
+
+        fprintf(p->output, "; %s <= ", var1_name);
+        parser_parse_expression(p);  // end value
+
+        // Check for optional step
+        if (parser_match(p, TOK_STEP)) {
+            fprintf(p->output, "; %s += ", var1_name);
+            parser_parse_expression(p);  // step value
+        } else {
+            fprintf(p->output, "; %s++", var1_name);
+        }
+
+        fprintf(p->output, ") {\n");
+        p->indent_level++;
+
+        // Parse loop body
+        while (!parser_check(p, TOK_EOF) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
+            parser_parse_statement(p);
+        }
+
+        if (parser_check(p, TOK_END) || parser_check(p, TOK_SON)) {
+            parser_advance(p);
+        }
+
+        p->indent_level--;
+        indent(p);
+        fprintf(p->output, "}\n");
+
+        free(var1_name);
+        return;
+    }
 
     // Check for second variable (for dictionary iteration: key, value)
     char* var2_name = NULL;
@@ -1344,6 +1450,16 @@ void parser_parse(Parser* p) {
     fprintf(p->output, "bool str_contains(char* s, char* sub) { return strstr(s, sub) != NULL; }\n");
     fprintf(p->output, "char* str_concat(char* a, char* b) { if(!a) a=\"\"; if(!b) b=\"\"; char* r = malloc(strlen(a)+strlen(b)+1); strcpy(r, a); strcat(r, b); return r; }\n");
     fprintf(p->output, "char* mlp_to_string(void* val) { char* buf = malloc(64); if(!val) { strcpy(buf, \"null\"); return buf; } sprintf(buf, \"%%p\", val); return buf; }\n\n");
+
+    // Built-in functions for MLP
+    fprintf(p->output, "// MLP Built-in Functions\n");
+    fprintf(p->output, "int64_t UZUNLUK(void* obj) { if(!obj) return 0; Array* arr = (Array*)obj; if(arr->cap > 0 && arr->cap < 1000000) return arr->len; return strlen((char*)obj); }\n");  // Heuristic: if looks like Array, use len, else strlen
+    fprintf(p->output, "char* TYPE_OF(void* obj) { return \"object\"; }\n");  // Simplified - returns generic type
+    fprintf(p->output, "char* KARAKTER_AL(char* str, int64_t idx) { static char buf[2]; buf[0] = str[idx]; buf[1] = 0; return strdup(buf); }\n");
+    fprintf(p->output, "char* ALT_METIN(char* str, int64_t start, int64_t len) { char* r = malloc(len+1); strncpy(r, str+start, len); r[len] = 0; return r; }\n");
+    fprintf(p->output, "char* METIN_DEGISTIR(char* str, char* old, char* new) { if(!strstr(str, old)) return strdup(str); int oldlen = strlen(old); int newlen = strlen(new); int count = 0; char* p = str; while((p = strstr(p, old))) { count++; p += oldlen; } char* result = malloc(strlen(str) + count * (newlen - oldlen) + 1); char* dst = result; p = str; char* q; while((q = strstr(p, old))) { strncpy(dst, p, q - p); dst += q - p; strcpy(dst, new); dst += newlen; p = q + oldlen; } strcpy(dst, p); return result; }\n");
+    fprintf(p->output, "int64_t PARSE_INT(char* str) { return str ? atoll(str) : 0; }\n\n");
+
     fprintf(p->output, "// Exception handling stubs\n");
     fprintf(p->output, "void mlp_throw(char* msg) { fprintf(stderr, \"Exception: %%s\\n\", msg); exit(1); }\n\n");
 
