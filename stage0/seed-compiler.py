@@ -279,6 +279,12 @@ class IndexExpression(ASTNode):
     array: ASTNode
     index: ASTNode
 
+@dataclass
+class PropertyAccess(ASTNode):
+    """Property access: object.property"""
+    object: ASTNode
+    property_name: str
+
 # ===============================================
 # Lexer
 # ===============================================
@@ -606,14 +612,17 @@ class Parser:
 
         # If statement (if or EĞER)
         if current.type in [TokenType.IF, TokenType.EĞER]:
+            self.advance()  # consume if/EĞER
             return self.parse_if()
 
         # While statement (while or DONGU)
         if current.type in [TokenType.WHILE, TokenType.DONGU]:
+            self.advance()  # consume while/DONGU
             return self.parse_while()
 
         # For-each statement (HER)
         if current.type == TokenType.HER:
+            self.advance()  # consume HER
             return self.parse_for_each()
 
         # Continue statement (DÖNGÜ_DEVAM)
@@ -623,10 +632,12 @@ class Parser:
 
         # Match statement (EŞLEŞTIR)
         if current.type == TokenType.EŞLEŞTIR:
+            self.advance()  # consume EŞLEŞTIR
             return self.parse_match()
 
         # Return statement (return or DÖNÜŞ)
         if current.type in [TokenType.RETURN, TokenType.DÖNÜŞ]:
+            self.advance()  # consume return/DÖNÜŞ
             return self.parse_return()
 
         # Print statement (YAZDIR)
@@ -843,6 +854,10 @@ class Parser:
         # Already consumed by parse_statement
         condition = self.parse_expression()
 
+        # Optional İSE (then) keyword for Turkish syntax
+        if self.current().type == TokenType.İSE:
+            self.advance()
+
         then_body = []
         end_tokens = [TokenType.ELSE, TokenType.DEĞILSE, TokenType.END, TokenType.SON, TokenType.EOF]
         while self.current().type not in end_tokens:
@@ -1031,7 +1046,7 @@ class Parser:
         return left
 
     def parse_postfix(self) -> ASTNode:
-        """Parse postfix expressions (array indexing, property access)"""
+        """Parse postfix expressions (array indexing, property access, method calls)"""
         expr = self.parse_primary()
 
         while True:
@@ -1041,6 +1056,25 @@ class Parser:
                 index = self.parse_expression()
                 self.expect(TokenType.RBRACKET)
                 expr = IndexExpression(expr, index)
+
+            # Property access or method call: expr.property or expr.method(args)
+            elif self.current().type == TokenType.DOT:
+                self.advance()  # consume '.'
+                property_name = self.expect(TokenType.IDENTIFIER).value
+
+                # Method call: expr.method(args)
+                if self.current().type == TokenType.LPAREN:
+                    self.advance()  # consume '('
+                    args = []
+                    while self.current().type != TokenType.RPAREN:
+                        args.append(self.parse_expression())
+                        if self.current().type == TokenType.COMMA:
+                            self.advance()
+                    self.expect(TokenType.RPAREN)
+                    expr = MethodCall(expr, property_name, args)
+                else:
+                    # Property access: expr.property
+                    expr = PropertyAccess(expr, property_name)
             else:
                 break
 
@@ -1061,10 +1095,11 @@ class Parser:
             lit_type = 'int' if current.type == TokenType.INTEGER_LITERAL else 'float'
             return Literal(current.value, lit_type)
 
-        # Boolean literal
-        if current.type in [TokenType.TRUE, TokenType.FALSE]:
+        # Boolean literal (English and Turkish)
+        if current.type in [TokenType.TRUE, TokenType.FALSE, TokenType.DOĞRU, TokenType.YANLIŞ]:
             self.advance()
-            return Literal(current.type == TokenType.TRUE, 'bool')
+            is_true = current.type in [TokenType.TRUE, TokenType.DOĞRU]
+            return Literal(is_true, 'bool')
 
         # Identifier or method call or struct literal
         if current.type == TokenType.IDENTIFIER:
@@ -1429,7 +1464,27 @@ class CCodeGenerator:
 
         elif isinstance(node, MethodCall):
             args = ', '.join([self.generate_expression(arg) for arg in node.args])
-            return f"{node.method_name}({args})"
+
+            # Handle object.method(args)
+            if node.object:
+                obj_code = self.generate_expression(node.object)
+
+                # Special handling for string methods
+                if node.method_name == "starts_with":
+                    # str.starts_with(prefix) -> mlp_string_starts_with(str, prefix)
+                    return f"mlp_string_starts_with({obj_code}, {args})"
+                elif node.method_name == "substring":
+                    # str.substring(start, end) -> mlp_string_substring(str, start, end)
+                    return f"mlp_string_substring({obj_code}, {args})"
+                elif node.method_name == "length":
+                    # str.length() -> mlp_string_length(str)
+                    return f"mlp_string_length({obj_code})"
+                else:
+                    # Regular method call: obj->method(args)
+                    return f"{obj_code}->{node.method_name}({args})"
+            else:
+                # Standalone function call
+                return f"{node.method_name}({args})"
 
         elif isinstance(node, ArrayLiteral):
             # Generate array literal using runtime functions
@@ -1455,6 +1510,13 @@ class CCodeGenerator:
                 field_inits.append(f".{field_name} = {value_code}")
             fields_str = ', '.join(field_inits)
             return f"({node.struct_name}){{{fields_str}}}"
+
+        elif isinstance(node, PropertyAccess):
+            # Property access: object.property
+            obj_code = self.generate_expression(node.object)
+            # Use . for struct value access (simpler without full type system)
+            # For pointer access, use -> (TODO: need type tracking for automatic selection)
+            return f"{obj_code}.{node.property_name}"
 
         else:
             return "NULL"
@@ -1514,6 +1576,21 @@ class CCodeGenerator:
             # Check if it's a class field - look up its type
             # For now, default to double for unknown identifiers in expressions
             return 'double'
+        elif isinstance(node, PropertyAccess):
+            # Property access - would need symbol table for exact type
+            # For now, default to char* (common for string properties)
+            return 'char*'
+        elif isinstance(node, MethodCall):
+            # Method call return type inference
+            if node.object and node.method_name in ['starts_with']:
+                return 'bool'
+            elif node.object and node.method_name in ['substring', 'length']:
+                if node.method_name == 'substring':
+                    return 'char*'
+                else:  # length
+                    return 'size_t'
+            # Default for unknown methods
+            return 'void*'
         return 'void*'
 
 # ===============================================

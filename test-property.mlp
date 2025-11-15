@@ -1,0 +1,28 @@
+-- Test property access (object.property)
+-- This tests the PropertyAccess AST node
+
+YAPI Config
+    backend METIN
+    verbose ZITLIK
+YAPI SON
+
+class PropertyTest
+    constructor()
+        YAZDIR "Testing property access..."
+    end
+
+    method test()
+        var config = Config{backend: "asm", verbose: DOĞRU}
+
+        -- Property access
+        YAZDIR config.backend
+
+        -- Property in expression
+        var backend_name = config.backend
+        YAZDIR backend_name
+
+        YAZDIR "Property access test complete!"
+    end
+end
+
+YAZDIR "=== Property Access Test ==="

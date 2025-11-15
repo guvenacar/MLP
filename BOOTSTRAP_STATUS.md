@@ -71,13 +71,16 @@
 - ✅ **Struct literals** - Config{field: value}
 - ✅ **KULLAN** (import/use) - Module system (basic)
 
+### FAZ 4: Property Access & String Methods ✅
+- ✅ **Property access** - object.property (struct field access)
+- ✅ **Method calls** - object.method(args)
+- ✅ **String methods** - .starts_with(), .substring(), .length()
+- ✅ **Parser fixes** - Fixed if/while/for/match/return keyword consumption
+
 ## ❌ Not Yet Implemented (Needed for src/compiler/main.mlp)
 
 ### Critical Features
 - ❌ **Generic types** - DİZİ<METIN> (Array<String>)
-- ❌ **Property access** - object.property
-- ❌ **Module method calls** - module.method()
-- ❌ **String methods** - str.starts_with(), str.substring()
 
 ### Advanced OOP Features (for examples/02-oop-shapes.mlp)
 - ❌ **Access modifiers** - ÖZEL (private), KORUNAN (protected), GENEL (public)
@@ -109,6 +112,9 @@
 ✅ **Struct definitions** - YAPI Name...YAPI SON (FAZ 3)
 ✅ **Struct literals** - Config{field: value} (FAZ 3)
 ✅ **Import statements** - KULLAN module (FAZ 3)
+✅ **Property access** - config.backend (FAZ 4)
+✅ **Object method calls** - arg.starts_with("--") (FAZ 4)
+✅ **String methods** - .starts_with(), .substring(), .length() (FAZ 4)
 
 ### What Cannot Be Compiled Yet
 ❌ The full MLP compiler (src/compiler/main.mlp) - still missing features

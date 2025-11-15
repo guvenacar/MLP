@@ -355,6 +355,44 @@ char* mlp_string_replace(const char* str, const char* old, const char* new) {
     return result;
 }
 
+bool mlp_string_starts_with(const char* str, const char* prefix) {
+    if (!str || !prefix) {
+        return false;
+    }
+    size_t prefix_len = strlen(prefix);
+    size_t str_len = strlen(str);
+    if (prefix_len > str_len) {
+        return false;
+    }
+    return strncmp(str, prefix, prefix_len) == 0;
+}
+
+char* mlp_string_substring(const char* str, int start, int end) {
+    if (!str) {
+        return NULL;
+    }
+    int len = strlen(str);
+
+    // Handle negative indices (Python-style)
+    if (start < 0) start = len + start;
+    if (end < 0) end = len + end;
+
+    // Clamp to valid range
+    if (start < 0) start = 0;
+    if (end > len) end = len;
+    if (start >= end) {
+        char* empty = mlp_malloc(1);
+        empty[0] = '\0';
+        return empty;
+    }
+
+    int substr_len = end - start;
+    char* result = mlp_malloc(substr_len + 1);
+    strncpy(result, str + start, substr_len);
+    result[substr_len] = '\0';
+    return result;
+}
+
 // ===============================================
 // Error Handling
 // ===============================================

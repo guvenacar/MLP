@@ -1,0 +1,32 @@
+-- Test string methods
+-- This tests .starts_with() and .substring()
+
+class StringTest
+    constructor()
+        YAZDIR "Testing string methods..."
+    end
+
+    method test()
+        var arg = "--verbose"
+
+        -- Test starts_with
+        EĞER arg.starts_with("--") İSE
+            YAZDIR "Argument starts with --"
+        DEĞILSE
+            YAZDIR "Argument does not start with --"
+        SON
+
+        -- Test substring
+        var value = arg.substring(2, 9)
+        YAZDIR value
+
+        -- Test with string literal
+        var hello = "Hello World"
+        var sub = hello.substring(0, 5)
+        YAZDIR sub
+
+        YAZDIR "String methods test complete!"
+    end
+end
+
+YAZDIR "=== String Methods Test ==="

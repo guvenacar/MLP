@@ -101,6 +101,8 @@ double mlp_string_to_float(const char* str);
 size_t mlp_string_length(const char* str);
 char mlp_char_at(const char* str, size_t index);
 char* mlp_string_replace(const char* str, const char* old, const char* new);
+bool mlp_string_starts_with(const char* str, const char* prefix);
+char* mlp_string_substring(const char* str, int start, int end);
 
 // ===============================================
 // Error Handling
