@@ -1,0 +1,17 @@
+-- Test generic types and UZUNLUK
+
+class GenericTest
+    constructor()
+        -- Generic type declaration
+        DİZİ<METIN> names = ["Alice", "Bob", "Charlie"]
+
+        -- UZUNLUK built-in
+        var count = UZUNLUK names
+        YAZDIR "Array length:"
+        YAZDIR count
+
+        YAZDIR "Test complete!"
+    end
+end
+
+YAZDIR "=== Generic Type Test ==="

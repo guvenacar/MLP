@@ -1,0 +1,15 @@
+-- Test string concatenation
+
+class ConcatTest
+    constructor()
+        METIN name = "World"
+        METIN greeting = "Hello, " + name
+        YAZDIR greeting
+
+        -- Number in string
+        var msg = "Count: " + "5"
+        YAZDIR msg
+    end
+end
+
+YAZDIR "=== String Concat Test ==="

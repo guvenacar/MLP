@@ -77,10 +77,20 @@
 - ✅ **String methods** - .starts_with(), .substring(), .length()
 - ✅ **Parser fixes** - Fixed if/while/for/match/return keyword consumption
 
+### FAZ 5: Advanced Features (Partial) ⏳
+- ✅ **Generic types** - DİZİ<METIN> (Array<String>)
+- ✅ **TYPE name syntax** - DİZİ<METIN> args = [...]
+- ✅ **UZUNLUK** - Built-in length function for arrays
+- ✅ **String concatenation** - "text" + variable with + operator
+- ✅ **mlp_cstr_concat** - Runtime function for string concatenation
+- ⏳ **Standalone IŞLEÇ** - Top-level functions (parser has nesting bug)
+
 ## ❌ Not Yet Implemented (Needed for src/compiler/main.mlp)
 
 ### Critical Features
-- ❌ **Generic types** - DİZİ<METIN> (Array<String>)
+- ❌ **Property assignment** - config.field = value (in EŞLEŞTIR blocks)
+- ❌ **Parser fix** - IŞLEÇ SON vs nested SON handling
+- ❌ **Module system** - Actual KULLAN/import implementation
 
 ### Advanced OOP Features (for examples/02-oop-shapes.mlp)
 - ❌ **Access modifiers** - ÖZEL (private), KORUNAN (protected), GENEL (public)

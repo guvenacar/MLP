@@ -65,6 +65,7 @@ class TokenType(Enum):
     EŞLEŞTIR = auto()   # match/switch
     DURUM = auto()      # case
     VARSAYILAN = auto() # default
+    UZUNLUK = auto()    # length (built-in function)
 
     # Types - English
     STRING = auto()
@@ -349,6 +350,7 @@ class Lexer:
             'EŞLEŞTIR': TokenType.EŞLEŞTIR,
             'DURUM': TokenType.DURUM,
             'VARSAYILAN': TokenType.VARSAYILAN,
+            'UZUNLUK': TokenType.UZUNLUK,
 
             # Turkish types
             'METIN': TokenType.METIN,
@@ -594,8 +596,13 @@ class Parser:
             self.advance()
             return None
 
-        # Variable declaration (var or DEĞIŞKEN)
-        if current.type in [TokenType.VAR, TokenType.DEĞIŞKEN]:
+        # Variable declaration (var or DEĞIŞKEN or TYPE name = value)
+        type_tokens = [
+            TokenType.VAR, TokenType.DEĞIŞKEN,
+            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+        ]
+        if current.type in type_tokens:
             return self.parse_var_decl()
 
         # Class definition (class or SINIF)
@@ -609,6 +616,10 @@ class Parser:
         # Import statement (KULLAN)
         if current.type == TokenType.KULLAN:
             return self.parse_import()
+
+        # Top-level function (IŞLEÇ or METHOD)
+        if current.type in [TokenType.IŞLEÇ, TokenType.METHOD]:
+            return self.parse_top_level_function()
 
         # If statement (if or EĞER)
         if current.type in [TokenType.IF, TokenType.EĞER]:
@@ -660,27 +671,42 @@ class Parser:
         self.advance()
         return None
 
+    def parse_type(self) -> str:
+        """Parse type including generic types like DİZİ<METIN>"""
+        base_type = self.current().value
+        self.advance()
+
+        # Check for generic type parameter: DİZİ<METIN>
+        if self.current().type == TokenType.LESS_THAN:
+            self.advance()  # consume '<'
+            inner_type = self.current().value
+            self.advance()  # consume inner type
+            self.expect(TokenType.GREATER_THAN)  # consume '>'
+            return f"{base_type}<{inner_type}>"
+
+        return base_type
+
     def parse_var_decl(self) -> VarDecl:
-        """Parse variable declaration: var x = 10 or DEĞIŞKEN x METIN = "hello" """
-        # Accept both English and Turkish
-        if self.current().type == TokenType.VAR:
-            self.advance()
-        elif self.current().type == TokenType.DEĞIŞKEN:
-            self.advance()
-
-        name = self.expect(TokenType.IDENTIFIER).value
-
+        """Parse variable declaration: var x = 10 or DİZİ<METIN> names = [...] """
         type_name = None
         value = None
 
-        # Optional type (English or Turkish)
         type_tokens = [
             TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
             TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
         ]
-        if self.current().type in type_tokens:
-            type_name = self.current().value
+
+        # Check if starts with var/DEĞIŞKEN keyword
+        if self.current().type in [TokenType.VAR, TokenType.DEĞIŞKEN]:
             self.advance()
+            name = self.expect(TokenType.IDENTIFIER).value
+            # Type is optional after var
+            if self.current().type in type_tokens:
+                type_name = self.parse_type()
+        else:
+            # TYPE name = value syntax (e.g., DİZİ<METIN> names = [...])
+            type_name = self.parse_type()
+            name = self.expect(TokenType.IDENTIFIER).value
 
         # Optional initialization
         if self.current().type == TokenType.ASSIGN:
@@ -784,6 +810,64 @@ class Parser:
         module_name = self.expect(TokenType.IDENTIFIER).value
 
         return ImportStatement(module_name)
+
+    def parse_top_level_function(self) -> MethodDef:
+        """Parse top-level function: IŞLEÇ name(...) -> type"""
+        self.advance()  # consume IŞLEÇ
+
+        name = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.LPAREN)
+
+        # Parse parameters
+        params = []
+        type_tokens_all = [
+            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+        ]
+        while self.current().type != TokenType.RPAREN:
+            # Support both "TYPE name" and "name TYPE" syntax
+            param_type = None
+            param_name = None
+
+            # Check if type comes first (TYPE name or DİZİ<METIN> name)
+            if self.current().type in type_tokens_all:
+                param_type = self.parse_type()
+                param_name = self.expect(TokenType.IDENTIFIER).value
+            # Otherwise expect name first (name TYPE or just name)
+            else:
+                param_name = self.expect(TokenType.IDENTIFIER).value
+                if self.current().type in type_tokens_all:
+                    param_type = self.parse_type()
+
+            params.append((param_name, param_type))
+
+            if self.current().type == TokenType.COMMA:
+                self.advance()
+
+        self.expect(TokenType.RPAREN)
+
+        # Optional return type: -> TYPE
+        return_type = None
+        if self.current().type == TokenType.ARROW:
+            self.advance()
+            return_type = self.parse_type()
+
+        # Parse body
+        body = []
+        while self.current().type not in [TokenType.IŞLEÇ, TokenType.SON, TokenType.END, TokenType.EOF]:
+            # Check for nested IŞLEÇ SON
+            if self.current().type == TokenType.SON:
+                # Peek ahead - if next token is not EOF/NEWLINE, it's not the end
+                break
+            stmt = self.parse_statement()
+            if stmt:
+                body.append(stmt)
+
+        # Expect IŞLEÇ SON or just SON
+        if self.current().type in [TokenType.SON, TokenType.END]:
+            self.advance()
+
+        return MethodDef(name, params, return_type, body, is_constructor=False, is_override=False)
 
     def parse_method(self, is_constructor=False, is_override=False) -> MethodDef:
         """Parse method definition (method/IŞLEÇ)"""
@@ -1101,6 +1185,12 @@ class Parser:
             is_true = current.type in [TokenType.TRUE, TokenType.DOĞRU]
             return Literal(is_true, 'bool')
 
+        # UZUNLUK built-in function: UZUNLUK array
+        if current.type == TokenType.UZUNLUK:
+            self.advance()
+            arg = self.parse_postfix()  # Parse the argument
+            return MethodCall(None, 'UZUNLUK', [arg])
+
         # Identifier or method call or struct literal
         if current.type == TokenType.IDENTIFIER:
             name = current.value
@@ -1192,6 +1282,9 @@ class CCodeGenerator:
                 self.generate_struct(stmt)
             elif isinstance(stmt, ImportStatement):
                 self.generate_import(stmt)
+            elif isinstance(stmt, MethodDef):
+                # Top-level function
+                self.generate_top_level_function(stmt)
             elif isinstance(stmt, PrintStatement):
                 # Top-level print - put in main
                 has_main = True
@@ -1217,6 +1310,25 @@ class CCodeGenerator:
             result += '\n'.join(self.class_methods) + '\n\n'
         result += '\n'.join(self.c_code)
         return result
+
+    def generate_top_level_function(self, node: MethodDef):
+        """Generate top-level C function"""
+        # Generate function signature
+        params_str = ', '.join([f"{self.mlp_type_to_c(ptype)} {pname}" for pname, ptype in node.params])
+        return_type = self.mlp_type_to_c(node.return_type) if node.return_type else 'void'
+
+        self.class_methods.append(f"{return_type} {node.name}({params_str}) {{")
+
+        # Generate body
+        for stmt in node.body:
+            old_code_len = len(self.c_code)
+            self.c_code = []
+            self.generate_statement(stmt)
+            for line in self.c_code:
+                self.class_methods.append('    ' + line)
+            self.c_code = []
+
+        self.class_methods.append("}")
 
     def generate_class(self, node: ClassDef):
         """Generate C struct for class"""
@@ -1460,6 +1572,16 @@ class CCodeGenerator:
         elif isinstance(node, BinaryOp):
             left = self.generate_expression(node.left)
             right = self.generate_expression(node.right)
+
+            # String concatenation with +
+            if node.op == '+':
+                # Check if either operand is a string literal
+                left_is_str = isinstance(node.left, Literal) and node.left.type == 'string'
+                right_is_str = isinstance(node.right, Literal) and node.right.type == 'string'
+
+                if left_is_str or right_is_str:
+                    return f"mlp_cstr_concat({left}, {right})"
+
             return f"({left} {node.op} {right})"
 
         elif isinstance(node, MethodCall):
@@ -1483,6 +1605,10 @@ class CCodeGenerator:
                     # Regular method call: obj->method(args)
                     return f"{obj_code}->{node.method_name}({args})"
             else:
+                # Built-in functions
+                if node.method_name == "UZUNLUK":
+                    # UZUNLUK array -> mlp_array_length(array)
+                    return f"mlp_array_length({args})"
                 # Standalone function call
                 return f"{node.method_name}({args})"
 
@@ -1523,6 +1649,14 @@ class CCodeGenerator:
 
     def mlp_type_to_c(self, mlp_type: str) -> str:
         """Convert MLP type to C type (English or Turkish)"""
+        # Handle generic types: DİZİ<METIN> -> mlp_array_t*
+        if '<' in mlp_type:
+            base_type = mlp_type.split('<')[0]
+            if base_type in ['DİZİ', 'array']:
+                return 'mlp_array_t*'
+            # For other generic types, default to void*
+            return 'void*'
+
         type_map = {
             # English
             'string': 'char*',
@@ -1536,7 +1670,7 @@ class CCodeGenerator:
             'ZITLIK': 'bool',
             'DİNAMİK': 'void*',
             'SÖZLÜK': 'mlp_dict_t*',
-            'DİZİ': 'void*',  # array - for now
+            'DİZİ': 'mlp_array_t*',  # array
         }
         return type_map.get(mlp_type, 'void*')
 
@@ -1559,6 +1693,11 @@ class CCodeGenerator:
             if node.op in ['+', '-', '*', '/']:
                 left_type = self.infer_c_type(node.left)
                 right_type = self.infer_c_type(node.right)
+
+                # String concatenation with +
+                if node.op == '+' and (left_type == 'char*' or right_type == 'char*'):
+                    return 'char*'
+
                 # If either side is double, result is double
                 if left_type == 'double' or right_type == 'double':
                     return 'double'

@@ -54,6 +54,7 @@ mlp_string_t* mlp_string_new(const char* str);
 mlp_string_t* mlp_string_concat(mlp_string_t* s1, mlp_string_t* s2);
 void mlp_string_free(mlp_string_t* s);
 char* mlp_string_to_cstr(mlp_string_t* s);
+char* mlp_cstr_concat(const char* s1, const char* s2);
 
 // ===============================================
 // Array Operations
