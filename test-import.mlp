@@ -1,0 +1,18 @@
+-- Test KULLAN (import) statement
+-- This tests import syntax
+
+KULLAN lexer
+KULLAN parser
+KULLAN std
+
+class ImportTest
+    constructor()
+        YAZDIR "Testing import..."
+    end
+
+    method test()
+        YAZDIR "Import test complete!"
+    end
+end
+
+YAZDIR "=== Import Test ==="

@@ -46,6 +46,7 @@ class TokenType(Enum):
 
     # Keywords - Turkish
     SINIF = auto()      # class
+    YAPI = auto()       # struct
     KURUCU = auto()     # constructor
     IŞLEÇ = auto()      # method/function
     EĞER = auto()       # if
@@ -179,6 +180,17 @@ class Literal(ASTNode):
     type: str  # 'string', 'int', 'float', 'bool'
 
 @dataclass
+class StructLiteral(ASTNode):
+    """Struct literal: Config{field: value, field2: value2}"""
+    struct_name: str
+    field_values: Dict[str, ASTNode]  # {field_name: value_expression}
+
+@dataclass
+class ImportStatement(ASTNode):
+    """Import statement: KULLAN module"""
+    module_name: str
+
+@dataclass
 class MethodDef(ASTNode):
     """Method definition"""
     name: str
@@ -194,6 +206,12 @@ class ClassDef(ASTNode):
     name: str
     fields: List[tuple]  # [(name, type), ...]
     methods: List[MethodDef]
+
+@dataclass
+class StructDef(ASTNode):
+    """Struct definition: YAPI Name ... YAPI SON"""
+    name: str
+    fields: List[tuple]  # [(name, type), ...]
 
 @dataclass
 class MethodCall(ASTNode):
@@ -306,6 +324,7 @@ class Lexer:
 
             # Turkish keywords
             'SINIF': TokenType.SINIF,
+            'YAPI': TokenType.YAPI,
             'KURUCU': TokenType.KURUCU,
             'IŞLEÇ': TokenType.IŞLEÇ,
             'EĞER': TokenType.EĞER,
@@ -577,6 +596,14 @@ class Parser:
         if current.type in [TokenType.CLASS, TokenType.SINIF]:
             return self.parse_class()
 
+        # Struct definition (YAPI)
+        if current.type == TokenType.YAPI:
+            return self.parse_struct()
+
+        # Import statement (KULLAN)
+        if current.type == TokenType.KULLAN:
+            return self.parse_import()
+
         # If statement (if or EĞER)
         if current.type in [TokenType.IF, TokenType.EĞER]:
             return self.parse_if()
@@ -707,6 +734,45 @@ class Parser:
         elif self.current().type == TokenType.SON:
             self.advance()
         return ClassDef(name, fields, methods)
+
+    def parse_struct(self) -> StructDef:
+        """Parse struct definition: YAPI Name ... YAPI SON"""
+        self.advance()  # consume YAPI
+
+        name = self.expect(TokenType.IDENTIFIER).value
+
+        fields = []
+
+        # Parse struct body until 'YAPI' or 'SON'
+        while self.current().type not in [TokenType.YAPI, TokenType.EOF]:
+            # Field declaration (name type)
+            type_tokens_all = [
+                TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+                TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+            ]
+            if self.current().type == TokenType.IDENTIFIER and self.peek().type in type_tokens_all:
+                field_name = self.expect(TokenType.IDENTIFIER).value
+                field_type = self.current().value
+                self.advance()
+                fields.append((field_name, field_type))
+            else:
+                self.advance()
+
+        # Expect YAPI SON
+        if self.current().type == TokenType.YAPI:
+            self.advance()
+        if self.current().type == TokenType.SON:
+            self.advance()
+
+        return StructDef(name, fields)
+
+    def parse_import(self) -> ImportStatement:
+        """Parse import statement: KULLAN module"""
+        self.advance()  # consume KULLAN
+
+        module_name = self.expect(TokenType.IDENTIFIER).value
+
+        return ImportStatement(module_name)
 
     def parse_method(self, is_constructor=False, is_override=False) -> MethodDef:
         """Parse method definition (method/IŞLEÇ)"""
@@ -1000,10 +1066,28 @@ class Parser:
             self.advance()
             return Literal(current.type == TokenType.TRUE, 'bool')
 
-        # Identifier or method call
+        # Identifier or method call or struct literal
         if current.type == TokenType.IDENTIFIER:
             name = current.value
             self.advance()
+
+            # Struct literal: StructName{field: value, ...}
+            if self.current().type == TokenType.LBRACE:
+                self.advance()  # consume '{'
+                field_values = {}
+                while self.current().type != TokenType.RBRACE:
+                    # Parse field_name: value
+                    field_name = self.expect(TokenType.IDENTIFIER).value
+                    self.expect(TokenType.COLON)
+                    field_value = self.parse_expression()
+                    field_values[field_name] = field_value
+
+                    if self.current().type == TokenType.COMMA:
+                        self.advance()
+                    elif self.current().type != TokenType.RBRACE:
+                        break
+                self.expect(TokenType.RBRACE)
+                return StructLiteral(name, field_values)
 
             # Method call
             if self.current().type == TokenType.LPAREN:
@@ -1069,17 +1153,21 @@ class CCodeGenerator:
         for stmt in self.ast.statements:
             if isinstance(stmt, ClassDef):
                 self.generate_class(stmt)
+            elif isinstance(stmt, StructDef):
+                self.generate_struct(stmt)
+            elif isinstance(stmt, ImportStatement):
+                self.generate_import(stmt)
             elif isinstance(stmt, PrintStatement):
                 # Top-level print - put in main
                 has_main = True
 
         # Generate main function if we have top-level statements
-        if has_main or any(not isinstance(stmt, ClassDef) for stmt in self.ast.statements):
+        if has_main or any(not isinstance(stmt, (ClassDef, StructDef, ImportStatement)) for stmt in self.ast.statements):
             self.emit("int main(int argc, char** argv) {")
             self.indent_level += 1
 
             for stmt in self.ast.statements:
-                if not isinstance(stmt, ClassDef):
+                if not isinstance(stmt, (ClassDef, StructDef, ImportStatement)):
                     self.generate_statement(stmt)
 
             self.emit("return 0;")
@@ -1120,6 +1208,25 @@ class CCodeGenerator:
         # Clear class context
         self.current_class = None
         self.current_class_fields = set()
+
+    def generate_struct(self, node: StructDef):
+        """Generate C struct for YAPI"""
+        struct_code = []
+        struct_code.append(f"typedef struct {{")
+
+        # Fields
+        for field_name, field_type in node.fields:
+            c_type = self.mlp_type_to_c(field_type)
+            struct_code.append(f"    {c_type} {field_name};")
+
+        struct_code.append(f"}} {node.name};")
+        self.class_structs.append('\n'.join(struct_code))
+
+    def generate_import(self, node: ImportStatement):
+        """Generate import/include statement"""
+        # For now, just add a comment
+        # In the future, this could include actual module files
+        self.includes.add(f"// KULLAN {node.module_name}")
 
     def generate_method(self, class_name: str, method: MethodDef):
         """Generate C function for method"""
@@ -1339,6 +1446,16 @@ class CCodeGenerator:
             # For mlp_array_t*, use mlp_array_get
             return f"mlp_array_get({array_code}, {index_code})"
 
+        elif isinstance(node, StructLiteral):
+            # Struct literal: StructName{field: value, ...}
+            # Generate C99 compound literal: (StructName){.field = value, ...}
+            field_inits = []
+            for field_name, field_value in node.field_values.items():
+                value_code = self.generate_expression(field_value)
+                field_inits.append(f".{field_name} = {value_code}")
+            fields_str = ', '.join(field_inits)
+            return f"({node.struct_name}){{{fields_str}}}"
+
         else:
             return "NULL"
 
@@ -1372,6 +1489,9 @@ class CCodeGenerator:
                 return 'char*'
             elif node.type == 'bool':
                 return 'bool'
+        elif isinstance(node, StructLiteral):
+            # Struct literal → struct type
+            return node.struct_name
         elif isinstance(node, BinaryOp):
             # For arithmetic operations, default to double
             if node.op in ['+', '-', '*', '/']:

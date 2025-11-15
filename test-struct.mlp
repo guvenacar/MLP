@@ -1,0 +1,27 @@
+-- Test YAPI (struct) definition
+-- This tests struct syntax
+
+YAPI Config
+    backend METIN
+    optimize ZITLIK
+    verbose ZITLIK
+YAPI SON
+
+class StructTest
+    constructor()
+        YAZDIR "Testing struct..."
+    end
+
+    method test_struct()
+        -- Create struct with literal
+        var config = Config{
+            backend: "asm",
+            optimize: true,
+            verbose: false
+        }
+
+        YAZDIR "Struct test complete!"
+    end
+end
+
+YAZDIR "=== Struct Test ==="
