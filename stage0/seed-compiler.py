@@ -618,7 +618,15 @@ class Parser:
             return self.parse_import()
 
         # Top-level function (IŞLEÇ or METHOD)
+        # But NOT if it's IŞLEÇ SON (function ending)
         if current.type in [TokenType.IŞLEÇ, TokenType.METHOD]:
+            # Peek ahead - if next is SON, it's a function ending marker
+            if self.peek().type == TokenType.SON:
+                # IŞLEÇ SON - this marks end of function, not a new function
+                # Consume both tokens and return None
+                self.advance()  # consume IŞLEÇ
+                self.advance()  # consume SON
+                return None
             return self.parse_top_level_function()
 
         # If statement (if or EĞER)
@@ -854,16 +862,12 @@ class Parser:
 
         # Parse body
         body = []
-        while self.current().type not in [TokenType.IŞLEÇ, TokenType.SON, TokenType.END, TokenType.EOF]:
-            # Check for nested IŞLEÇ SON
-            if self.current().type == TokenType.SON:
-                # Peek ahead - if next token is not EOF/NEWLINE, it's not the end
-                break
+        while self.current().type not in [TokenType.END, TokenType.SON, TokenType.EOF]:
             stmt = self.parse_statement()
             if stmt:
                 body.append(stmt)
 
-        # Expect IŞLEÇ SON or just SON
+        # Expect IŞLEÇ SON or just SON or END
         if self.current().type in [TokenType.SON, TokenType.END]:
             self.advance()
 
@@ -1103,7 +1107,32 @@ class Parser:
 
     def parse_expression(self) -> ASTNode:
         """Parse expression (simplified - just handle basic cases)"""
-        return self.parse_additive()
+        return self.parse_comparison()
+
+    def parse_comparison(self) -> ASTNode:
+        """Parse comparison operators"""
+        left = self.parse_additive()
+
+        while self.current().type in [TokenType.LESS_THAN, TokenType.GREATER_THAN,
+                                       TokenType.LESS_EQUAL, TokenType.GREATER_EQUAL,
+                                       TokenType.EQUAL, TokenType.NOT_EQUAL]:
+            if self.current().type == TokenType.LESS_THAN:
+                op = '<'
+            elif self.current().type == TokenType.GREATER_THAN:
+                op = '>'
+            elif self.current().type == TokenType.LESS_EQUAL:
+                op = '<='
+            elif self.current().type == TokenType.GREATER_EQUAL:
+                op = '>='
+            elif self.current().type == TokenType.EQUAL:
+                op = '=='
+            elif self.current().type == TokenType.NOT_EQUAL:
+                op = '!='
+            self.advance()
+            right = self.parse_additive()
+            left = BinaryOp(left, op, right)
+
+        return left
 
     def parse_additive(self) -> ASTNode:
         """Parse addition/subtraction"""
@@ -1273,8 +1302,14 @@ class CCodeGenerator:
 
     def generate(self) -> str:
         """Generate C code from AST"""
+        # Check if there's already a main() function defined
+        has_main_function = any(
+            isinstance(stmt, MethodDef) and stmt.name == 'main'
+            for stmt in self.ast.statements
+        )
+
         # Process all top-level statements
-        has_main = False
+        has_main_stmts = False
         for stmt in self.ast.statements:
             if isinstance(stmt, ClassDef):
                 self.generate_class(stmt)
@@ -1287,10 +1322,10 @@ class CCodeGenerator:
                 self.generate_top_level_function(stmt)
             elif isinstance(stmt, PrintStatement):
                 # Top-level print - put in main
-                has_main = True
+                has_main_stmts = True
 
-        # Generate main function if we have top-level statements
-        if has_main or any(not isinstance(stmt, (ClassDef, StructDef, ImportStatement)) for stmt in self.ast.statements):
+        # Generate main function if we have top-level statements AND no main() defined
+        if not has_main_function and (has_main_stmts or any(not isinstance(stmt, (ClassDef, StructDef, ImportStatement, MethodDef)) for stmt in self.ast.statements)):
             self.emit("int main(int argc, char** argv) {")
             self.indent_level += 1
 

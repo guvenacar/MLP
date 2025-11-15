@@ -1,0 +1,5 @@
+-- Test without IŞLEÇ SON
+
+IŞLEÇ hello()
+    YAZDIR "Hello"
+end

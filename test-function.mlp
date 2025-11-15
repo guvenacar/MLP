@@ -1,0 +1,11 @@
+-- Simple top-level function test
+
+IŞLEÇ hello() -> SAYISAL
+    YAZDIR "Hello from function!"
+    DÖNÜŞ 42
+IŞLEÇ SON
+
+IŞLEÇ main() -> SAYISAL
+    var result = hello()
+    DÖNÜŞ 0
+IŞLEÇ SON
