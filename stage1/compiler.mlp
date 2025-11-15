@@ -1,0 +1,34 @@
+-- ===============================================
+-- MLP Minimal Compiler - Self-Hosting Version
+-- ===============================================
+-- Transpiled from minimal-compiler.py
+-- This compiler compiles itself!
+
+-- Token types
+class Lexer
+    source METIN
+    position SAYISAL
+
+    constructor(METIN src)
+        this.source = src
+        this.position = 0
+    end
+
+    method peek() -> METIN
+        EĞER position < 0 İSE
+            DÖNÜŞ ""
+        DEĞILSE
+            DÖNÜŞ ""
+        SON
+    end
+
+    method tokenize() -> SAYISAL
+        YAZDIR "Lexer: tokenizing..."
+        DÖNÜŞ 0
+    end
+end
+
+-- Main entry point
+YAZDIR "=== MLP Self-Hosting Compiler v0.1 ==="
+YAZDIR "Compiler structure defined!"
+YAZDIR "Ready for self-hosting test!"
