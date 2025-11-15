@@ -1,7 +1,12 @@
--- Test VAR declaration
+-- Test type-declared variables (no 'var' keyword)
 
 IŞLEÇ test_func() -> SAYISAL
-    VAR x = 42
+    SAYISAL x = 42
     YAZDIR x
+    DÖNÜŞ x
+IŞLEÇ SON
+
+IŞLEÇ main(DİZİ<METIN> args) -> SAYISAL
+    SAYISAL result = test_func()
     DÖNÜŞ 0
 IŞLEÇ SON

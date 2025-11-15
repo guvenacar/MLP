@@ -38,7 +38,6 @@ class TokenType(Enum):
     WHILE = auto()
     FOR = auto()
     RETURN = auto()
-    VAR = auto()
     THIS = auto()
     NEW = auto()
     KULLAN = auto()  # import (Turkish: use)
@@ -58,7 +57,6 @@ class TokenType(Enum):
     İÇİNDE = auto()     # in
     DÖNÜŞ = auto()      # return
     DÖNGÜ_DEVAM = auto()  # continue
-    DEĞIŞKEN = auto()   # var
     BU = auto()         # this
     YENİ = auto()       # new
     SON = auto()        # end
@@ -318,7 +316,6 @@ class Lexer:
             'while': TokenType.WHILE,
             'for': TokenType.FOR,
             'return': TokenType.RETURN,
-            'var': TokenType.VAR,
             'this': TokenType.THIS,
             'new': TokenType.NEW,
             'KULLAN': TokenType.KULLAN,
@@ -350,8 +347,6 @@ class Lexer:
             'İÇİNDE': TokenType.İÇİNDE,
             'DÖNÜŞ': TokenType.DÖNÜŞ,
             'DÖNGÜ_DEVAM': TokenType.DÖNGÜ_DEVAM,
-            'DEĞIŞKEN': TokenType.DEĞIŞKEN,
-            'VAR': TokenType.VAR,  # Uppercase alias for var
             'BU': TokenType.BU,
             'YENİ': TokenType.YENİ,
             'SON': TokenType.SON,
@@ -590,9 +585,20 @@ class Parser:
         """Parse tokens into AST"""
         statements = []
         while self.current().type != TokenType.EOF:
-            stmt = self.parse_statement()
-            if stmt:
-                statements.append(stmt)
+            # Top-level: Handle class, struct, function definitions
+            if self.current().type in [TokenType.SINIF, TokenType.CLASS]:
+                statements.append(self.parse_class())
+            elif self.current().type == TokenType.YAPI:
+                statements.append(self.parse_struct())
+            elif self.current().type in [TokenType.IŞLEÇ, TokenType.METHOD]:
+                statements.append(self.parse_top_level_function())
+            elif self.current().type == TokenType.KULLAN:
+                statements.append(self.parse_import())
+            else:
+                # Other statements (for top-level expressions, etc.)
+                stmt = self.parse_statement()
+                if stmt:
+                    statements.append(stmt)
         return Program(statements)
 
     def parse_statement(self) -> Optional[ASTNode]:
@@ -604,38 +610,13 @@ class Parser:
             self.advance()
             return None
 
-        # Variable declaration (var or DEĞIŞKEN or TYPE name = value)
+        # Variable declaration (TYPE name = value)
         type_tokens = [
-            TokenType.VAR, TokenType.DEĞIŞKEN,
             TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
             TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
         ]
         if current.type in type_tokens:
             return self.parse_var_decl()
-
-        # Class definition (class or SINIF)
-        if current.type in [TokenType.CLASS, TokenType.SINIF]:
-            return self.parse_class()
-
-        # Struct definition (YAPI)
-        if current.type == TokenType.YAPI:
-            return self.parse_struct()
-
-        # Import statement (KULLAN)
-        if current.type == TokenType.KULLAN:
-            return self.parse_import()
-
-        # Top-level function (IŞLEÇ or METHOD)
-        # But NOT if it's IŞLEÇ SON (function ending)
-        if current.type in [TokenType.IŞLEÇ, TokenType.METHOD]:
-            # Peek ahead - if next is SON, it's a function ending marker
-            if self.peek().type == TokenType.SON:
-                # IŞLEÇ SON - this marks end of function, not a new function
-                # Consume both tokens and return None
-                self.advance()  # consume IŞLEÇ
-                self.advance()  # consume SON
-                return None
-            return self.parse_top_level_function()
 
         # If statement (if or EĞER)
         # But NOT if it's EĞER SON (if statement ending)
@@ -749,28 +730,16 @@ class Parser:
         return base_type
 
     def parse_var_decl(self) -> VarDecl:
-        """Parse variable declaration: var x = 10 or DİZİ<METIN> names = [...] """
-        type_name = None
-        value = None
+        """Parse variable declaration: TIP isim = değer (e.g., SAYISAL x = 10, DİZİ<METIN> names = [...])
 
-        type_tokens = [
-            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
-            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
-        ]
-
-        # Check if starts with var/DEĞIŞKEN keyword
-        if self.current().type in [TokenType.VAR, TokenType.DEĞIŞKEN]:
-            self.advance()
-            name = self.expect(TokenType.IDENTIFIER).value
-            # Type is optional after var
-            if self.current().type in type_tokens:
-                type_name = self.parse_type()
-        else:
-            # TYPE name = value syntax (e.g., DİZİ<METIN> names = [...])
-            type_name = self.parse_type()
-            name = self.expect(TokenType.IDENTIFIER).value
+        Type specification is mandatory - no 'var' keyword for type inference.
+        """
+        # TYPE name = value syntax - type is always required
+        type_name = self.parse_type()
+        name = self.expect(TokenType.IDENTIFIER).value
 
         # Optional initialization
+        value = None
         if self.current().type == TokenType.ASSIGN:
             self.advance()
             value = self.parse_expression()
@@ -1805,19 +1774,17 @@ class CCodeGenerator:
             'DİNAMİK': 'void*',
             'SÖZLÜK': 'mlp_dict_t*',
             'DİZİ': 'mlp_array_t*',  # array
+            # Compiler internal types (always pointers)
+            'AST': 'AST*',
+            'Token': 'Token*',
         }
 
         # Check if it's a known type
         if mlp_type in type_map:
             return type_map[mlp_type]
 
-        # For custom types (like AST, CompilerConfig), assume they're struct types
-        # and return as pointer (C convention for custom structs)
-        # Check if it's already a pointer type
-        if mlp_type.endswith('*'):
-            return mlp_type
-        else:
-            return f"{mlp_type}*"
+        # For other custom types (like CompilerConfig), return as-is (by-value structs)
+        return mlp_type
 
     def infer_c_type(self, node: ASTNode) -> str:
         """Infer C type from expression"""
@@ -1876,6 +1843,15 @@ class CCodeGenerator:
             # Special case for compiler functions
             elif not node.object and node.method_name == 'parse_flags':
                 return 'CompilerConfig'
+            # Module method calls (parser.parse, optimizer.optimize, etc.)
+            elif node.object == 'parser' and node.method_name == 'parse':
+                return 'AST*'
+            elif node.object == 'optimizer' and node.method_name == 'optimize':
+                return 'AST*'
+            elif node.object == 'lexer' and node.method_name == 'tokenize_file':
+                return 'mlp_array_t*'
+            elif node.object == 'codegen' and node.method_name == 'generate':
+                return 'char*'
             # Default for unknown methods
             return 'void*'
         return 'void*'
