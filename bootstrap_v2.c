@@ -398,6 +398,25 @@ bool parser_check(Parser* p, TokenType type) {
     return p->lexer->current.type == type;
 }
 
+TokenType parser_peek_next(Parser* p) {
+    // Save current position
+    int saved_pos = p->lexer->pos;
+    int saved_line = p->lexer->line;
+    int saved_column = p->lexer->column;
+
+    // Peek next token
+    Token next = lexer_next_token(p->lexer);
+    TokenType next_type = next.type;
+    if (next.value) free(next.value);
+
+    // Restore position
+    p->lexer->pos = saved_pos;
+    p->lexer->line = saved_line;
+    p->lexer->column = saved_column;
+
+    return next_type;
+}
+
 bool parser_match(Parser* p, TokenType type) {
     if (parser_check(p, type)) {
         parser_advance(p);
@@ -487,9 +506,35 @@ void parser_parse_primary(Parser* p) {
         parser_advance(p);
         // new ClassName(args) -> malloc + constructor
         fprintf(p->output, "malloc(sizeof(struct TODO))");
-    } else if (parser_check(p, TOK_IDENT)) {
-        fprintf(p->output, "%s", p->lexer->current.value);
+    } else if (parser_check(p, TOK_UZUNLUK)) {
+        // UZUNLUK keyword - handle specially
         parser_advance(p);
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "strlen(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_STRING_TYPE) && parser_peek_next(p) == TOK_LPAREN) {
+        // string() function call - convert to mlp_to_string()
+        parser_advance(p);  // consume "string"
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "mlp_to_string(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_NUMBER_TYPE) && parser_peek_next(p) == TOK_LPAREN) {
+        // int() or number() function call - convert to atoi()
+        parser_advance(p);  // consume type keyword
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "atoi(");
+        parser_parse_expression(p);
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
+    } else if (parser_check(p, TOK_IDENT)) {
+        char* ident_name = str_dup(p->lexer->current.value);
+        parser_advance(p);
+        fprintf(p->output, "%s", ident_name);
+        free(ident_name);
 
         while (parser_check(p, TOK_LPAREN) || parser_check(p, TOK_DOT) || parser_check(p, TOK_LBRACKET)) {
             if (parser_match(p, TOK_LPAREN)) {
@@ -616,13 +661,78 @@ void parser_parse_multiplicative(Parser* p) {
 }
 
 void parser_parse_additive(Parser* p) {
+    // Check if there are any + or - operators ahead
+    // First parse the left operand
+    FILE* saved_output = p->output;
+
+    // Buffer for collecting operands
+    char* left_operand = NULL;
+    size_t left_size = 0;
+    FILE* left_stream = open_memstream(&left_operand, &left_size);
+    p->output = left_stream;
+
     parser_parse_multiplicative(p);
-    while (parser_check(p, TOK_PLUS) || parser_check(p, TOK_MINUS)) {
-        char* op_str = str_dup(p->lexer->current.value);
-        parser_advance(p);
-        fprintf(p->output, " %s ", op_str);
-        free(op_str);
-        parser_parse_multiplicative(p);
+    fflush(left_stream);
+    fclose(left_stream);
+
+    // Restore output
+    p->output = saved_output;
+
+    // Check for operators
+    if (parser_check(p, TOK_PLUS)) {
+        // Handle string concatenation
+        int concat_count = 0;
+        char** operands = malloc(32 * sizeof(char*));
+        operands[0] = left_operand;
+        int op_count = 1;
+
+        while (parser_check(p, TOK_PLUS)) {
+            parser_advance(p);
+            concat_count++;
+
+            // Buffer next operand
+            char* operand = NULL;
+            size_t operand_size = 0;
+            FILE* operand_stream = open_memstream(&operand, &operand_size);
+            p->output = operand_stream;
+            parser_parse_multiplicative(p);
+            fflush(operand_stream);
+            fclose(operand_stream);
+
+            operands[op_count++] = operand;
+            p->output = saved_output;
+        }
+
+        // Emit nested str_concat calls
+        for (int i = 0; i < concat_count; i++) {
+            fprintf(p->output, "str_concat(");
+        }
+        fprintf(p->output, "%s", operands[0] ? operands[0] : "");
+        for (int i = 1; i < op_count; i++) {
+            fprintf(p->output, ", %s)", operands[i] ? operands[i] : "");
+        }
+
+        // Free buffers
+        for (int i = 0; i < op_count; i++) {
+            if (operands[i]) free(operands[i]);
+        }
+        free(operands);
+    } else if (parser_check(p, TOK_MINUS)) {
+        // Regular arithmetic
+        fprintf(p->output, "%s", left_operand ? left_operand : "");
+        free(left_operand);
+
+        while (parser_check(p, TOK_MINUS)) {
+            char* op_str = str_dup(p->lexer->current.value);
+            parser_advance(p);
+            fprintf(p->output, " %s ", op_str);
+            free(op_str);
+            parser_parse_multiplicative(p);
+        }
+    } else {
+        // No operators, just emit the left operand
+        fprintf(p->output, "%s", left_operand ? left_operand : "");
+        free(left_operand);
     }
 }
 
@@ -1117,7 +1227,9 @@ void parser_parse(Parser* p) {
     fprintf(p->output, "char* str_lower(char* s) { char* r = strdup(s); for(int i=0; r[i]; i++) r[i] = tolower(r[i]); return r; }\n");
     fprintf(p->output, "char* str_substr(char* s, int start, int len) { char* r = malloc(len+1); strncpy(r, s+start, len); r[len] = 0; return r; }\n");
     fprintf(p->output, "bool str_startswith(char* s, char* prefix) { return strncmp(s, prefix, strlen(prefix)) == 0; }\n");
-    fprintf(p->output, "bool str_contains(char* s, char* sub) { return strstr(s, sub) != NULL; }\n\n");
+    fprintf(p->output, "bool str_contains(char* s, char* sub) { return strstr(s, sub) != NULL; }\n");
+    fprintf(p->output, "char* str_concat(char* a, char* b) { if(!a) a=\"\"; if(!b) b=\"\"; char* r = malloc(strlen(a)+strlen(b)+1); strcpy(r, a); strcat(r, b); return r; }\n");
+    fprintf(p->output, "char* mlp_to_string(void* val) { char* buf = malloc(64); if(!val) { strcpy(buf, \"null\"); return buf; } sprintf(buf, \"%%p\", val); return buf; }\n\n");
     fprintf(p->output, "// Exception handling stubs\n");
     fprintf(p->output, "void mlp_throw(char* msg) { fprintf(stderr, \"Exception: %%s\\n\", msg); exit(1); }\n\n");
 
