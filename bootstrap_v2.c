@@ -1079,17 +1079,17 @@ void parser_parse_method(Parser* p, char* class_name) {
         do {
             if (parser_check(p, TOK_COMMA)) parser_advance(p);
 
-            TokenType param_type = TOK_IDENT;  // Default to typeless (char*)
+            const char* param_type_str = "void*";  // Default to typeless (void* - generic pointer)
             if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
                 parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
                 parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
                 parser_check(p, TOK_ARRAY_TYPE)) {
-                param_type = p->lexer->current.type;
+                param_type_str = mlp_type_to_c(p->lexer->current.type);
                 parser_advance(p);
             }
 
             if (parser_check(p, TOK_IDENT)) {
-                fprintf(p->output, ", %s %s", mlp_type_to_c(param_type), p->lexer->current.value);
+                fprintf(p->output, ", %s %s", param_type_str, p->lexer->current.value);
                 parser_advance(p);
             }
         } while (parser_match(p, TOK_COMMA));
@@ -1144,17 +1144,17 @@ void parser_parse_constructor(Parser* p, char* class_name) {
 
             if (parser_check(p, TOK_COMMA)) parser_advance(p);
 
-            TokenType param_type = TOK_IDENT;  // Default to typeless (char*)
+            const char* param_type_str = "void*";  // Default to typeless (void* - generic pointer)
             if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
                 parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
                 parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
                 parser_check(p, TOK_ARRAY_TYPE)) {
-                param_type = p->lexer->current.type;
+                param_type_str = mlp_type_to_c(p->lexer->current.type);
                 parser_advance(p);
             }
 
             if (parser_check(p, TOK_IDENT)) {
-                fprintf(p->output, "%s %s", mlp_type_to_c(param_type), p->lexer->current.value);
+                fprintf(p->output, "%s %s", param_type_str, p->lexer->current.value);
                 parser_advance(p);
             }
         } while (parser_match(p, TOK_COMMA));
@@ -1193,6 +1193,14 @@ void parser_parse_class(Parser* p) {
 
     char* class_name = str_dup(p->lexer->current.value);
     parser_advance(p);
+
+    // Skip inheritance syntax (: BaseClass)
+    if (parser_match(p, TOK_COLON)) {
+        // Skip base class name
+        if (parser_check(p, TOK_IDENT)) {
+            parser_advance(p);
+        }
+    }
 
     p->in_class = true;
     p->current_class_name = class_name;
@@ -1374,17 +1382,17 @@ void parser_parse(Parser* p) {
 
                     if (parser_check(p, TOK_COMMA)) parser_advance(p);
 
-                    TokenType param_type = TOK_IDENT;  // Default to typeless (char*)
+                    const char* param_type_str = "void*";  // Default to typeless (void* - generic pointer)
                     if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
                         parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
                         parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
                         parser_check(p, TOK_ARRAY_TYPE)) {
-                        param_type = p->lexer->current.type;
+                        param_type_str = mlp_type_to_c(p->lexer->current.type);
                         parser_advance(p);
                     }
 
                     if (parser_check(p, TOK_IDENT)) {
-                        fprintf(p->output, "%s %s", mlp_type_to_c(param_type), p->lexer->current.value);
+                        fprintf(p->output, "%s %s", param_type_str, p->lexer->current.value);
                         parser_advance(p);
                     }
                 } while (parser_match(p, TOK_COMMA));
