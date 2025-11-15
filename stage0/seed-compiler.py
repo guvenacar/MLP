@@ -221,6 +221,17 @@ class PrintStatement(ASTNode):
     """YAZDIR statement"""
     value: ASTNode
 
+@dataclass
+class ArrayLiteral(ASTNode):
+    """Array literal: [item1, item2, item3]"""
+    items: List[ASTNode]
+
+@dataclass
+class IndexExpression(ASTNode):
+    """Array indexing: arr[index]"""
+    array: ASTNode
+    index: ASTNode
+
 # ===============================================
 # Lexer
 # ===============================================
@@ -810,15 +821,31 @@ class Parser:
 
     def parse_multiplicative(self) -> ASTNode:
         """Parse multiplication/division"""
-        left = self.parse_primary()
+        left = self.parse_postfix()
 
         while self.current().type in [TokenType.MULTIPLY, TokenType.DIVIDE]:
             op = '*' if self.current().type == TokenType.MULTIPLY else '/'
             self.advance()
-            right = self.parse_primary()
+            right = self.parse_postfix()
             left = BinaryOp(left, op, right)
 
         return left
+
+    def parse_postfix(self) -> ASTNode:
+        """Parse postfix expressions (array indexing, property access)"""
+        expr = self.parse_primary()
+
+        while True:
+            # Array indexing: expr[index]
+            if self.current().type == TokenType.LBRACKET:
+                self.advance()  # consume '['
+                index = self.parse_expression()
+                self.expect(TokenType.RBRACKET)
+                expr = IndexExpression(expr, index)
+            else:
+                break
+
+        return expr
 
     def parse_primary(self) -> ASTNode:
         """Parse primary expression"""
@@ -865,6 +892,19 @@ class Parser:
             expr = self.parse_expression()
             self.expect(TokenType.RPAREN)
             return expr
+
+        # Array literal: [item1, item2, item3]
+        if current.type == TokenType.LBRACKET:
+            self.advance()  # consume '['
+            items = []
+            while self.current().type != TokenType.RBRACKET:
+                items.append(self.parse_expression())
+                if self.current().type == TokenType.COMMA:
+                    self.advance()
+                elif self.current().type != TokenType.RBRACKET:
+                    break
+            self.expect(TokenType.RBRACKET)
+            return ArrayLiteral(items)
 
         # Unknown - just return null literal
         self.advance()
@@ -987,6 +1027,16 @@ class CCodeGenerator:
     def generate_statement(self, node: ASTNode):
         """Generate code for a statement"""
         if isinstance(node, VarDecl):
+            # Special handling for array literals
+            if node.value and isinstance(node.value, ArrayLiteral):
+                # Create array using runtime functions
+                self.emit(f"mlp_array_t* {node.name} = mlp_array_new({len(node.value.items)});")
+                for item in node.value.items:
+                    item_code = self.generate_expression(item)
+                    # Cast to void* for storage
+                    self.emit(f"mlp_array_push({node.name}, (void*)(long){item_code});")
+                return
+
             # Infer type from value if not specified
             if node.type_name:
                 c_type = self.mlp_type_to_c(node.type_name)
@@ -1079,6 +1129,21 @@ class CCodeGenerator:
         elif isinstance(node, MethodCall):
             args = ', '.join([self.generate_expression(arg) for arg in node.args])
             return f"{node.method_name}({args})"
+
+        elif isinstance(node, ArrayLiteral):
+            # Generate array literal using runtime functions
+            # For now, return a simple array creation
+            # TODO: This needs proper runtime support
+            items_code = ', '.join([self.generate_expression(item) for item in node.items])
+            return f"/* TODO: array literal [{items_code}] */"
+
+        elif isinstance(node, IndexExpression):
+            # Array indexing: arr[index]
+            array_code = self.generate_expression(node.array)
+            index_code = self.generate_expression(node.index)
+            # For simple arrays, use direct C indexing
+            # For mlp_array_t*, use mlp_array_get
+            return f"mlp_array_get({array_code}, {index_code})"
 
         else:
             return "NULL"

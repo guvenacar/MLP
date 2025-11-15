@@ -1,0 +1,17 @@
+-- Test array literal parsing
+-- This tests the array literal syntax
+
+class ArrayLiteralTest
+    constructor()
+        YAZDIR "Testing array literals..."
+    end
+
+    method test_literal()
+        -- Array literal test
+        YAZDIR "Creating array..."
+        var numbers = [1, 2, 3, 4, 5]
+        YAZDIR "Array created"
+    end
+end
+
+YAZDIR "=== Array Literal Test ==="

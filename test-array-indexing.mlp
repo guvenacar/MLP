@@ -1,0 +1,21 @@
+-- Test array indexing
+-- This tests array[index] syntax
+
+class IndexTest
+    constructor()
+        YAZDIR "Testing array indexing..."
+    end
+
+    method test_index()
+        -- Create array
+        var numbers = [10, 20, 30, 40, 50]
+
+        -- Access element (this will use mlp_array_get)
+        var first = numbers[0]
+        var third = numbers[2]
+
+        YAZDIR "Array indexing test complete"
+    end
+end
+
+YAZDIR "=== Array Indexing Test ==="
