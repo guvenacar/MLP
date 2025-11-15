@@ -55,14 +55,18 @@
 - ✅ examples/04-calculator-typed.mlp - Calculator with type annotations
 - ✅ Both compile to working C executables
 
+## ✅ Recently Implemented (FAZ 1 Complete!)
+
+### Array Support
+- ✅ **Array literals** - [item1, item2, item3]
+- ✅ **Array indexing** - args[1]
+
 ## ❌ Not Yet Implemented (Needed for src/compiler/main.mlp)
 
 ### Critical Features
 - ❌ **KULLAN** (import/use) - Module system
 - ❌ **YAPI** (struct) - Standalone struct definitions
 - ❌ **Generic types** - DİZİ<METIN> (Array<String>)
-- ❌ **Array literals** - [item1, item2, item3]
-- ❌ **Array indexing** - args[1]
 - ❌ **Property access** - object.property
 - ❌ **Module method calls** - module.method()
 - ❌ **EŞLEŞTIR** (match/switch) - Pattern matching
@@ -93,12 +97,14 @@
 ✅ Field access
 ✅ Method calls within same class
 ✅ Mixed English/Turkish keywords
+✅ **Array literals** - [1, 2, 3] (NEW!)
+✅ **Array indexing** - arr[0] (NEW!)
 
 ### What Cannot Be Compiled Yet
-❌ The full MLP compiler (src/compiler/main.mlp) - too complex
+❌ The full MLP compiler (src/compiler/main.mlp) - still missing features
 ❌ OOP examples with inheritance (examples/02-oop-shapes.mlp)
 ❌ Programs using imports/modules
-❌ Programs using arrays or generics
+❌ Programs using generic types (DİZİ<METIN>)
 ❌ Programs using pattern matching
 
 ## 🎯 Path to Self-Hosting
