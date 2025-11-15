@@ -1,10 +1,12 @@
 # Build artifacts
 build/
+generated/
 *.o
 *.asm
 *.out
 program
 mlp-compiler-*
+bootstrap_v2
 
 # Compiler outputs
 output.asm
