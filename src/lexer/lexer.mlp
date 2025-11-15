@@ -108,12 +108,12 @@ class Lexer
         return KARAKTER_AL(this.kaynak_kodu, peek_konum)
     end
 
-    method mevcut_dilim(uzunluk) -> string
-        -- Gets text slice of 'uzunluk' length from current position
-        if this.konum + uzunluk > UZUNLUK(this.kaynak_kodu)
+    method mevcut_dilim(len) -> string
+        -- Gets text slice of 'len' length from current position
+        if this.konum + len > UZUNLUK(this.kaynak_kodu)
             return null
         end
-        return ALT_METIN(this.kaynak_kodu, this.konum, uzunluk)
+        return ALT_METIN(this.kaynak_kodu, this.konum, len)
     end
 
     -- ===============================================
