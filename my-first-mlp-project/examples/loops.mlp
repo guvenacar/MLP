@@ -1,0 +1,30 @@
+-- ===============================================
+-- Example 2: Loops and Conditions
+-- ===============================================
+
+YAZDIR "=== Döngü Örneği ===";
+YAZDIR "";
+
+-- Simple loop from 1 to 5
+SAYISAL i = 1;
+DÖNGÜ i <= 5 İSE
+    YAZDIR "Sayı: " + i;
+    i = i + 1;
+DÖNGÜ SON
+
+YAZDIR "";
+YAZDIR "=== Koşullu İfadeler ===";
+YAZDIR "";
+
+-- Conditional example
+SAYISAL puan = 85;
+
+EĞER puan >= 90 İSE
+    YAZDIR "Not: Pekiyi (A)";
+DEĞILSE EĞER puan >= 80 İSE
+    YAZDIR "Not: İyi (B)";
+DEĞILSE EĞER puan >= 70 İSE
+    YAZDIR "Not: Orta (C)";
+DEĞILSE
+    YAZDIR "Not: Geçer (D)";
+EĞER SON

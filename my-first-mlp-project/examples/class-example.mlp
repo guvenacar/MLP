@@ -1,0 +1,36 @@
+-- ===============================================
+-- Example 3: Simple Class (OOP)
+-- ===============================================
+
+SINIF Araba
+    METIN marka;
+    METIN model;
+    SAYISAL yil;
+
+    KURUCU(METIN marka, METIN model, SAYISAL yil)
+        BU.marka = marka;
+        BU.model = model;
+        BU.yil = yil;
+    KURUCU SON
+
+    IŞLEÇ bilgi_goster()
+        YAZDIR "=== Araba Bilgileri ===";
+        YAZDIR "Marka: " + BU.marka;
+        YAZDIR "Model: " + BU.model;
+        YAZDIR "Yıl: " + BU.yil;
+        YAZDIR "=======================";
+    IŞLEÇ SON
+
+    IŞLEÇ yaş_hesapla() -> SAYISAL
+        SAYISAL simdi = 2025;
+        DÖNÜŞ simdi - BU.yil;
+    IŞLEÇ SON
+SINIF SON
+
+-- Create and use car object
+Araba benim_arabam = YENİ Araba("Toyota", "Corolla", 2020);
+benim_arabam.bilgi_goster();
+
+SAYISAL yas = benim_arabam.yaş_hesapla();
+YAZDIR "";
+YAZDIR "Arabanın yaşı: " + yas + " yıl";
