@@ -29,7 +29,7 @@ typedef enum {
     TOK_CLASS, TOK_CONSTRUCTOR, TOK_METHOD, TOK_OVERRIDE,
     TOK_FONKSIYON, TOK_ISLEC, TOK_VAR, TOK_SAYISAL, TOK_METIN, TOK_MANTIKSAL,
     TOK_DIZI, TOK_DONUSTUR, TOK_EGER, TOK_DEGILSE, TOK_ISE,
-    TOK_HER, TOK_ICINDE, TOK_YAZDIR, TOK_DOGRU, TOK_YANLIS,
+    TOK_HER, TOK_ICINDE, TOK_YAZDIR, TOK_DOGRU, TOK_YANLIS, TOK_NULL,
     TOK_YAPI, TOK_YENI, TOK_KULLAN, TOK_PAKET, TOK_SINIF,
     TOK_UZUNLUK,
     TOK_THIS, TOK_NEW, TOK_RETURN, TOK_IF, TOK_ELSE,
@@ -210,6 +210,7 @@ Token lexer_read_ident(Lexer* lex) {
         {"uzunluk", TOK_UZUNLUK}, {"UZUNLUK", TOK_UZUNLUK},
         {"doğru", TOK_DOGRU}, {"DOĞRU", TOK_DOGRU},
         {"yanlış", TOK_YANLIS}, {"YANLIŞ", TOK_YANLIS},
+        {"null", TOK_NULL},
         {"yapı", TOK_YAPI}, {"YAPI", TOK_YAPI},
         {"yeni", TOK_YENI}, {"YENİ", TOK_YENI},
         {"kullan", TOK_KULLAN}, {"KULLAN", TOK_KULLAN},
@@ -418,10 +419,22 @@ const char* mlp_type_to_c(TokenType type) {
         case TOK_SAYISAL: case TOK_NUMBER_TYPE: return "int64_t";
         case TOK_METIN: case TOK_STRING_TYPE: return "char*";
         case TOK_MANTIKSAL: case TOK_BOOL: return "bool";
+        case TOK_DIZI: case TOK_ARRAY_TYPE: return "void**";
         case TOK_DYNAMIC: return "void*";
-        case TOK_ARRAY_TYPE: return "void**";
         case TOK_DICT: return "void*";
         default: return "void*";
+    }
+}
+
+// Helper to skip generic type parameters <...>
+void parser_skip_generic(Parser* p) {
+    if (parser_match(p, TOK_LT)) {
+        int depth = 1;
+        while (depth > 0 && !parser_check(p, TOK_EOF)) {
+            if (parser_match(p, TOK_LT)) depth++;
+            else if (parser_match(p, TOK_GT)) depth--;
+            else parser_advance(p);
+        }
     }
 }
 
@@ -435,6 +448,9 @@ void parser_parse_primary(Parser* p) {
         parser_advance(p);
     } else if (parser_check(p, TOK_DOGRU) || parser_check(p, TOK_YANLIS)) {
         fprintf(p->output, "%s", parser_check(p, TOK_DOGRU) ? "true" : "false");
+        parser_advance(p);
+    } else if (parser_check(p, TOK_NULL)) {
+        fprintf(p->output, "NULL");
         parser_advance(p);
     } else if (parser_check(p, TOK_THIS)) {
         fprintf(p->output, "self");
@@ -659,6 +675,9 @@ void parser_parse_expression(Parser* p) {
 void parser_parse_var_declaration(Parser* p) {
     TokenType var_type = p->lexer->current.type;
     parser_advance(p);
+
+    // Skip generic type parameters if present (e.g., DİZİ<METIN>)
+    parser_skip_generic(p);
 
     if (!parser_check(p, TOK_IDENT)) {
         fprintf(stderr, "Hata: Değişken adı bekleniyor\n");
@@ -982,7 +1001,7 @@ void parser_parse_class(Parser* p) {
     // Parse class body
     bool struct_closed = false;
     while (!parser_check(p, TOK_EOF) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
-        // Field declaration
+        // Field declaration (TYPE IDENT or IDENT TYPE format)
         if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
             parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
             parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
@@ -990,11 +1009,46 @@ void parser_parse_class(Parser* p) {
 
             TokenType field_type = p->lexer->current.type;
             parser_advance(p);
+            parser_skip_generic(p);  // Skip <T> if present
 
             if (parser_check(p, TOK_IDENT)) {
                 fprintf(p->output, "    %s %s;\n", mlp_type_to_c(field_type), p->lexer->current.value);
                 parser_advance(p);
                 parser_match(p, TOK_SEMICOLON);
+            }
+        }
+        // Field declaration (MLP style: IDENT TYPE)
+        else if (parser_check(p, TOK_IDENT)) {
+            // Peek ahead to check if next token is a type
+            char* field_name = str_dup(p->lexer->current.value);
+            parser_advance(p);
+
+            if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
+                parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
+                parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
+                parser_check(p, TOK_ARRAY_TYPE) || parser_check(p, TOK_DICT) ||
+                parser_check(p, TOK_IDENT)) {  // For custom types
+
+                const char* field_type_str = "void*";
+                if (parser_check(p, TOK_SAYISAL)) field_type_str = "int64_t";
+                else if (parser_check(p, TOK_METIN) || parser_check(p, TOK_STRING_TYPE)) field_type_str = "char*";
+                else if (parser_check(p, TOK_MANTIKSAL)) field_type_str = "bool";
+                else if (parser_check(p, TOK_DYNAMIC)) field_type_str = "void*";
+                else if (parser_check(p, TOK_ARRAY_TYPE)) field_type_str = "void**";
+                else if (parser_check(p, TOK_IDENT)) {
+                    // Custom type - use as is
+                    field_type_str = p->lexer->current.value;
+                }
+
+                parser_advance(p);
+                parser_skip_generic(p);  // Skip <T> if present
+
+                fprintf(p->output, "    %s %s;\n", field_type_str, field_name);
+                free(field_name);
+                parser_match(p, TOK_SEMICOLON);
+            } else {
+                // Not a field, restore and skip
+                free(field_name);
             }
         }
         // Constructor
