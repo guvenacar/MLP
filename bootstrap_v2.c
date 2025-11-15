@@ -441,7 +441,8 @@ const char* mlp_type_to_c(TokenType type) {
         case TOK_DIZI: case TOK_ARRAY_TYPE: return "void**";
         case TOK_DYNAMIC: return "void*";
         case TOK_DICT: return "void*";
-        default: return "void*";
+        case TOK_VAR: return "char*";  // var keyword defaults to string
+        default: return "char*";  // Untyped defaults to string (char*)
     }
 }
 
@@ -815,7 +816,7 @@ void parser_parse_var_declaration(Parser* p) {
 
     fprintf(p->output, ";\n");
     free(var_name);
-    parser_match(p, TOK_SEMICOLON);
+    parser_expect(p, TOK_SEMICOLON, "; bekleniyor (değişken tanımında)");
 }
 
 void parser_parse_if_statement(Parser* p) {
@@ -928,13 +929,13 @@ void parser_parse_return_statement(Parser* p) {
     indent(p);
     fprintf(p->output, "return");
 
-    if (!parser_check(p, TOK_SEMICOLON) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
+    if (!parser_check(p, TOK_END) && !parser_check(p, TOK_SON) && !parser_check(p, TOK_EOF)) {
         fprintf(p->output, " ");
         parser_parse_expression(p);
     }
 
     fprintf(p->output, ";\n");
-    parser_match(p, TOK_SEMICOLON);
+    // No semicolon in MLP syntax for statements
 }
 
 void parser_parse_statement(Parser* p) {
@@ -960,7 +961,7 @@ void parser_parse_statement(Parser* p) {
         fprintf(p->output, "printf(\"%%s\\n\", ");
         parser_parse_expression(p);
         fprintf(p->output, ");\n");
-        parser_match(p, TOK_SEMICOLON);
+        // No semicolon in MLP syntax for statements
     }
     // Return
     else if (parser_check(p, TOK_DONUSTUR) || parser_check(p, TOK_RETURN)) {
@@ -980,10 +981,34 @@ void parser_parse_statement(Parser* p) {
         parser_advance(p);
         indent(p);
         fprintf(p->output, "exit(1); // throw\n");
-        parser_match(p, TOK_SEMICOLON);
+        // No semicolon in MLP syntax for statements
     }
-    // Expression statement or assignment
-    else if (parser_check(p, TOK_IDENT) || parser_check(p, TOK_THIS)) {
+    // Typeless variable declaration (identifier;) or assignment/expression
+    else if (parser_check(p, TOK_IDENT)) {
+        // Check if this is a typeless variable declaration
+        if (parser_peek_next(p) == TOK_SEMICOLON) {
+            // Typeless variable declaration: identifier;
+            char* var_name = str_dup(p->lexer->current.value);
+            parser_advance(p);
+            indent(p);
+            fprintf(p->output, "char* %s;\n", var_name);  // Default to string (char*)
+            free(var_name);
+            parser_expect(p, TOK_SEMICOLON, "; bekleniyor (değişken tanımında)");
+        } else {
+            // Expression statement or assignment
+            indent(p);
+            parser_parse_expression(p);
+
+            if (parser_match(p, TOK_ASSIGN)) {
+                fprintf(p->output, " = ");
+                parser_parse_expression(p);
+            }
+
+            fprintf(p->output, ";\n");
+            // No semicolon in MLP syntax for statements
+        }
+    }
+    else if (parser_check(p, TOK_THIS)) {
         indent(p);
         parser_parse_expression(p);
 
@@ -993,7 +1018,7 @@ void parser_parse_statement(Parser* p) {
         }
 
         fprintf(p->output, ";\n");
-        parser_match(p, TOK_SEMICOLON);
+        // No semicolon in MLP syntax for statements
     }
     else {
         parser_advance(p); // Skip unknown
@@ -1051,15 +1076,17 @@ void parser_parse_method(Parser* p, char* class_name) {
     // Return type (if specified with ->)
     fprintf(p->output, "\nvoid* %s_%s(void* self_param", class_name, method_name);
 
-    // Parameters
+    // Parameters (type is optional, defaults to char*)
     if (!parser_check(p, TOK_RPAREN)) {
         do {
             if (parser_check(p, TOK_COMMA)) parser_advance(p);
 
-            TokenType param_type = p->lexer->current.type;
+            TokenType param_type = TOK_IDENT;  // Default to typeless (char*)
             if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
                 parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
-                parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE)) {
+                parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
+                parser_check(p, TOK_ARRAY_TYPE)) {
+                param_type = p->lexer->current.type;
                 parser_advance(p);
             }
 
@@ -1110,7 +1137,7 @@ void parser_parse_constructor(Parser* p, char* class_name) {
 
     fprintf(p->output, "\nvoid* %s_new(", class_name);
 
-    // Parameters
+    // Parameters (type is optional, defaults to char*)
     bool first = true;
     if (!parser_check(p, TOK_RPAREN)) {
         do {
@@ -1119,10 +1146,12 @@ void parser_parse_constructor(Parser* p, char* class_name) {
 
             if (parser_check(p, TOK_COMMA)) parser_advance(p);
 
-            TokenType param_type = p->lexer->current.type;
+            TokenType param_type = TOK_IDENT;  // Default to typeless (char*)
             if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
                 parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
-                parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE)) {
+                parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
+                parser_check(p, TOK_ARRAY_TYPE)) {
+                param_type = p->lexer->current.type;
                 parser_advance(p);
             }
 
@@ -1192,13 +1221,19 @@ void parser_parse_class(Parser* p) {
                 parser_match(p, TOK_SEMICOLON);
             }
         }
-        // Field declaration (MLP style: IDENT TYPE)
+        // Field declaration (MLP style: IDENT TYPE or typeless IDENT;)
         else if (parser_check(p, TOK_IDENT)) {
-            // Peek ahead to check if next token is a type
+            // Peek ahead to check if next token is a type or semicolon
             char* field_name = str_dup(p->lexer->current.value);
             parser_advance(p);
 
-            if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
+            // Check for typeless field declaration (identifier;)
+            if (parser_check(p, TOK_SEMICOLON)) {
+                fprintf(p->output, "    char* %s;\n", field_name);  // Default to string (char*)
+                free(field_name);
+                parser_match(p, TOK_SEMICOLON);
+            }
+            else if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
                 parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
                 parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
                 parser_check(p, TOK_ARRAY_TYPE) || parser_check(p, TOK_DICT) ||
@@ -1270,8 +1305,7 @@ void parser_parse_kullan(Parser* p) {
         parser_advance(p);
     }
     fprintf(p->output, "\n");
-
-    parser_match(p, TOK_SEMICOLON);
+    // No semicolon in MLP syntax for statements
 }
 
 void parser_parse(Parser* p) {
@@ -1332,10 +1366,32 @@ void parser_parse(Parser* p) {
             }
             parser_expect(p, TOK_LPAREN, "( bekleniyor");
             fprintf(p->output, "(");
-            // TODO: Parse parameters properly
-            while (!parser_check(p, TOK_RPAREN) && !parser_check(p, TOK_EOF)) {
-                parser_advance(p);
+
+            // Parse parameters (type is optional, defaults to char*)
+            bool first_param = true;
+            if (!parser_check(p, TOK_RPAREN)) {
+                do {
+                    if (!first_param) fprintf(p->output, ", ");
+                    first_param = false;
+
+                    if (parser_check(p, TOK_COMMA)) parser_advance(p);
+
+                    TokenType param_type = TOK_IDENT;  // Default to typeless (char*)
+                    if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
+                        parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
+                        parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
+                        parser_check(p, TOK_ARRAY_TYPE)) {
+                        param_type = p->lexer->current.type;
+                        parser_advance(p);
+                    }
+
+                    if (parser_check(p, TOK_IDENT)) {
+                        fprintf(p->output, "%s %s", mlp_type_to_c(param_type), p->lexer->current.value);
+                        parser_advance(p);
+                    }
+                } while (parser_match(p, TOK_COMMA));
             }
+
             parser_expect(p, TOK_RPAREN, ") bekleniyor");
             fprintf(p->output, ") {\n");
 
