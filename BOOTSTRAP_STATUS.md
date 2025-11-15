@@ -66,16 +66,18 @@
 - ✅ **DÖNGÜ_DEVAM** (continue) - Loop continue statement
 - ✅ **EŞLEŞTIR** (match/switch) - Pattern matching with DURUM/VARSAYILAN
 
+### FAZ 3: Modules & Structs ✅
+- ✅ **YAPI** (struct) - Standalone struct definitions
+- ✅ **Struct literals** - Config{field: value}
+- ✅ **KULLAN** (import/use) - Module system (basic)
+
 ## ❌ Not Yet Implemented (Needed for src/compiler/main.mlp)
 
 ### Critical Features
-- ❌ **KULLAN** (import/use) - Module system
-- ❌ **YAPI** (struct) - Standalone struct definitions
 - ❌ **Generic types** - DİZİ<METIN> (Array<String>)
 - ❌ **Property access** - object.property
 - ❌ **Module method calls** - module.method()
 - ❌ **String methods** - str.starts_with(), str.substring()
-- ❌ **Struct literals** - Config{field: value}
 
 ### Advanced OOP Features (for examples/02-oop-shapes.mlp)
 - ❌ **Access modifiers** - ÖZEL (private), KORUNAN (protected), GENEL (public)
@@ -104,6 +106,9 @@
 ✅ **For-each loops** - HER (index, item) İÇİNDE array (FAZ 2)
 ✅ **Continue statement** - DÖNGÜ_DEVAM (FAZ 2)
 ✅ **Pattern matching** - EŞLEŞTIR...DURUM...VARSAYILAN (FAZ 2)
+✅ **Struct definitions** - YAPI Name...YAPI SON (FAZ 3)
+✅ **Struct literals** - Config{field: value} (FAZ 3)
+✅ **Import statements** - KULLAN module (FAZ 3)
 
 ### What Cannot Be Compiled Yet
 ❌ The full MLP compiler (src/compiler/main.mlp) - still missing features
