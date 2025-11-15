@@ -46,6 +46,7 @@ class TokenType(Enum):
 
     # Keywords - Turkish
     SINIF = auto()      # class
+    YAPI = auto()       # struct
     KURUCU = auto()     # constructor
     IŞLEÇ = auto()      # method/function
     EĞER = auto()       # if
@@ -56,6 +57,10 @@ class TokenType(Enum):
     HER = auto()        # for/each
     İÇİNDE = auto()     # in
     DÖNÜŞ = auto()      # return
+    EŞLEŞTIR = auto()   # match/switch
+    DURUM = auto()      # case
+    VARSAYILAN = auto() # default
+    DÖNGÜ_DEVAM = auto() # continue
     DEĞIŞKEN = auto()   # var
     BU = auto()         # this
     YENİ = auto()       # new
@@ -212,6 +217,14 @@ class WhileStatement(ASTNode):
     body: List[ASTNode]
 
 @dataclass
+class ForEachStatement(ASTNode):
+    """For-each loop: HER (item) İÇİNDE array ... HER SON"""
+    item_var: str  # Variable name for current item
+    index_var: Optional[str]  # Optional index variable
+    iterable: ASTNode  # Expression to iterate over
+    body: List[ASTNode]
+
+@dataclass
 class ReturnStatement(ASTNode):
     """Return statement"""
     value: Optional[ASTNode]
@@ -266,6 +279,7 @@ class Lexer:
 
             # Turkish keywords
             'SINIF': TokenType.SINIF,
+            'YAPI': TokenType.YAPI,
             'KURUCU': TokenType.KURUCU,
             'IŞLEÇ': TokenType.IŞLEÇ,
             'EĞER': TokenType.EĞER,
@@ -280,6 +294,10 @@ class Lexer:
             'BU': TokenType.BU,
             'YENİ': TokenType.YENİ,
             'SON': TokenType.SON,
+            'EŞLEŞTIR': TokenType.EŞLEŞTIR,
+            'DURUM': TokenType.DURUM,
+            'VARSAYILAN': TokenType.VARSAYILAN,
+            'DÖNGÜ_DEVAM': TokenType.DÖNGÜ_DEVAM,
 
             # Turkish types
             'METIN': TokenType.METIN,
@@ -533,6 +551,10 @@ class Parser:
         if current.type in [TokenType.CLASS, TokenType.SINIF]:
             return self.parse_class()
 
+        # Struct definition (YAPI)
+        if current.type == TokenType.YAPI:
+            return self.parse_struct()
+
         # If statement (if or EĞER)
         if current.type in [TokenType.IF, TokenType.EĞER]:
             return self.parse_if()
@@ -540,6 +562,10 @@ class Parser:
         # While statement (while or DONGU)
         if current.type in [TokenType.WHILE, TokenType.DONGU]:
             return self.parse_while()
+
+        # For-each statement (HER...İÇİNDE)
+        if current.type == TokenType.HER:
+            return self.parse_for_each()
 
         # Return statement (return or DÖNÜŞ)
         if current.type in [TokenType.RETURN, TokenType.DÖNÜŞ]:
@@ -651,6 +677,54 @@ class Parser:
             self.advance()
         return ClassDef(name, fields, methods)
 
+    def parse_struct(self) -> ClassDef:
+        """Parse struct definition (YAPI) - like class but no methods/constructor"""
+        self.expect(TokenType.YAPI)
+        name = self.expect(TokenType.IDENTIFIER).value
+
+        fields = []
+
+        # Parse struct body until 'end' or 'SON'
+        type_tokens_all = [
+            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+        ]
+
+        while self.current().type not in [TokenType.END, TokenType.SON, TokenType.EOF]:
+            # Field declaration: TYPE name; (e.g., METIN backend;)
+            if self.current().type in type_tokens_all:
+                field_type = self.current().value
+                self.advance()
+                field_name = self.expect(TokenType.IDENTIFIER).value
+
+                # Expect semicolon
+                if self.current().type == TokenType.SEMICOLON:
+                    self.advance()
+
+                fields.append((field_name, field_type))
+            # Also support: name TYPE; (e.g., backend METIN;)
+            elif self.current().type == TokenType.IDENTIFIER and self.peek().type in type_tokens_all:
+                field_name = self.expect(TokenType.IDENTIFIER).value
+                field_type = self.current().value
+                self.advance()
+
+                # Expect semicolon
+                if self.current().type == TokenType.SEMICOLON:
+                    self.advance()
+
+                fields.append((field_name, field_type))
+            else:
+                self.advance()
+
+        # Expect end or SON
+        if self.current().type == TokenType.END:
+            self.advance()
+        elif self.current().type == TokenType.SON:
+            self.advance()
+
+        # Return as ClassDef with no methods (struct is just a class with no behavior)
+        return ClassDef(name, fields, [])
+
     def parse_method(self, is_constructor=False, is_override=False) -> MethodDef:
         """Parse method definition (method/IŞLEÇ)"""
         if not is_constructor:
@@ -760,6 +834,57 @@ class Parser:
         elif self.current().type == TokenType.SON:
             self.advance()
         return WhileStatement(condition, body)
+
+    def parse_for_each(self) -> ForEachStatement:
+        """
+        Parse for-each loop: HER (item) İÇİNDE array ... HER SON
+        or: HER (index, item) İÇİNDE array ... HER SON
+        """
+        # Consume HER
+        self.expect(TokenType.HER)
+
+        # Expect (
+        self.expect(TokenType.LPAREN)
+
+        # Parse variable(s)
+        item_var = None
+        index_var = None
+
+        first_var = self.expect(TokenType.IDENTIFIER).value
+
+        # Check for comma (index, item syntax)
+        if self.current().type == TokenType.COMMA:
+            self.advance()
+            index_var = first_var
+            item_var = self.expect(TokenType.IDENTIFIER).value
+        else:
+            item_var = first_var
+
+        # Expect )
+        self.expect(TokenType.RPAREN)
+
+        # Expect İÇİNDE
+        self.expect(TokenType.İÇİNDE)
+
+        # Parse iterable expression
+        iterable = self.parse_expression()
+
+        # Parse body until HER or SON
+        body = []
+        while self.current().type not in [TokenType.HER, TokenType.SON, TokenType.EOF]:
+            stmt = self.parse_statement()
+            if stmt:
+                body.append(stmt)
+
+        # Expect HER or SON (closing)
+        if self.current().type in [TokenType.HER, TokenType.SON]:
+            self.advance()
+
+            # If HER, expect SON next
+            if self.current().type == TokenType.SON:
+                self.advance()
+
+        return ForEachStatement(item_var, index_var, iterable, body)
 
     def parse_return(self) -> ReturnStatement:
         """Parse return statement (return/DÖNÜŞ)"""
@@ -1037,6 +1162,41 @@ class CCodeGenerator:
             self.indent_level -= 1
             self.emit("}")
 
+        elif isinstance(node, ForEachStatement):
+            # Convert for-each to C for-loop
+            # HER (item) İÇİNDE array → for (int i = 0; i < array_len; i++) { item = array[i]; ... }
+            iterable_code = self.generate_expression(node.iterable)
+
+            # Generate unique loop counter variable
+            import random
+            loop_var = f"_i_{random.randint(1000, 9999)}"
+
+            # For arrays, we need length - assume iterable has .length or use hardcoded
+            # Simplified: assume iterable is an identifier, use UZUNLUK() if available
+            # For now, use simple counter-based loop
+
+            self.emit(f"// For-each loop: HER ({node.item_var}) İÇİNDE {iterable_code}")
+            self.emit(f"int {loop_var} = 0;")
+            self.emit(f"while ({loop_var} < mlp_array_length({iterable_code})) {{")
+            self.indent_level += 1
+
+            # Assign current item: item = array[i]
+            self.emit(f"void* {node.item_var} = mlp_array_get({iterable_code}, {loop_var});")
+
+            # If index variable specified
+            if node.index_var:
+                self.emit(f"int {node.index_var} = {loop_var};")
+
+            # Generate body
+            for stmt in node.body:
+                self.generate_statement(stmt)
+
+            # Increment counter
+            self.emit(f"{loop_var}++;")
+
+            self.indent_level -= 1
+            self.emit("}")
+
         elif isinstance(node, ReturnStatement):
             if node.value:
                 value_code = self.generate_expression(node.value)
@@ -1138,6 +1298,77 @@ class CCodeGenerator:
         return 'void*'
 
 # ===============================================
+# Preprocessing
+# ===============================================
+
+def preprocess_imports(source: str, base_path: str, processed_files: set = None) -> str:
+    """
+    Preprocesses KULLAN statements by inlining imported file contents.
+    Similar to C's #include directive.
+
+    Example:
+        KULLAN lexer.tokens
+        → Replaces with content of src/lexer/tokens.mlp
+    """
+    if processed_files is None:
+        processed_files = set()
+
+    lines = source.split('\n')
+    result = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Check if line is KULLAN statement
+        if stripped.startswith('KULLAN '):
+            # Extract module path: "KULLAN lexer.tokens" -> "lexer.tokens"
+            parts = stripped.split(None, 1)  # Split on whitespace
+            if len(parts) < 2:
+                result.append(line)  # Invalid KULLAN, keep as-is
+                continue
+
+            module_name = parts[1].strip()
+
+            # Convert module name to file path: "lexer.tokens" -> "src/lexer/tokens.mlp"
+            # Handle both "std.io" (standard library) and "lexer.tokens" (source files)
+            if module_name.startswith('std.'):
+                # Standard library - skip for now (would need runtime support)
+                result.append(f"-- [Preprocessor] Skipped std library: {module_name}")
+                continue
+
+            module_path = os.path.join(base_path, 'src', module_name.replace('.', '/') + '.mlp')
+
+            # Prevent circular imports
+            if module_path in processed_files:
+                result.append(f"-- [Preprocessor] Already imported: {module_name}")
+                continue
+
+            # Check if file exists
+            if not os.path.exists(module_path):
+                # Try without 'src/' prefix
+                module_path = os.path.join(base_path, module_name.replace('.', '/') + '.mlp')
+                if not os.path.exists(module_path):
+                    result.append(f"-- [Preprocessor] File not found: {module_name}")
+                    continue
+
+            # Read and recursively preprocess imported file
+            processed_files.add(module_path)
+            with open(module_path, 'r', encoding='utf-8') as f:
+                imported_content = f.read()
+
+            # Recursively process imports in imported file
+            imported_content = preprocess_imports(imported_content, base_path, processed_files)
+
+            # Add comment and imported content
+            result.append(f"-- [Preprocessor] Imported from: {module_name}")
+            result.append(imported_content)
+            result.append(f"-- [Preprocessor] End of import: {module_name}")
+        else:
+            result.append(line)
+
+    return '\n'.join(result)
+
+# ===============================================
 # Main Compiler
 # ===============================================
 
@@ -1148,6 +1379,13 @@ def compile_mlp_file(input_file: str, output_file: str):
     # Read source
     with open(input_file, 'r', encoding='utf-8') as f:
         source = f.read()
+
+    # Preprocess KULLAN statements (import system)
+    base_path = os.path.dirname(os.path.abspath(input_file))
+    if not base_path:
+        base_path = '.'
+    source = preprocess_imports(source, base_path)
+    print(f"[Seed Compiler] Preprocessed imports")
 
     # Tokenize
     lexer = Lexer(source)

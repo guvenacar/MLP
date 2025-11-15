@@ -1,0 +1,6 @@
+-- Test KULLAN preprocessing
+KULLAN test-kullan-helper
+
+YAZDIR "=== Testing KULLAN ==="
+YAZDIR "Main program started"
+YAZDIR "Import test complete!"

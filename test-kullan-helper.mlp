@@ -1,0 +1,12 @@
+-- Helper module for testing KULLAN
+class Helper
+    message METIN
+
+    constructor()
+        YAZDIR "Helper initialized"
+    end
+
+    method greet() -> METIN
+        return "Hello from Helper!"
+    end
+end

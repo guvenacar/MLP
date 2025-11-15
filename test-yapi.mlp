@@ -1,0 +1,11 @@
+-- Test YAPI (struct)
+
+YAPI Config
+    METIN backend;
+    ZITLIK optimize;
+    ZITLIK verbose;
+YAPI SON
+
+YAZDIR "=== Testing YAPI (Struct) ==="
+YAZDIR "Config struct defined!"
+YAZDIR "Test complete!"
