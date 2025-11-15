@@ -1,0 +1,7 @@
+-- Minimal compiler test case
+İŞLEÇ main() -> SAYISAL {
+    METIN mesaj;
+    mesaj = "Merhaba MLP";
+    YAZDIR(mesaj);
+    DÖNÜŞ 0;
+}
