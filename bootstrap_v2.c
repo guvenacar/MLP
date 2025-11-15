@@ -61,9 +61,11 @@ typedef struct {
 typedef struct {
     Lexer* lexer;
     FILE* output;
+    FILE* main_body;  // Buffer for top-level statements
     int indent_level;
     bool in_main;
     bool in_class;
+    bool has_main_statements;
     char* current_class_name;
 } Parser;
 
@@ -215,6 +217,9 @@ Token lexer_read_ident(Lexer* lex) {
         {"PARSE_INT", TOK_PARSE_INT},
         {"to", TOK_TO},
         {"step", TOK_STEP},
+        {"and", TOK_AND},
+        {"or", TOK_OR},
+        {"not", TOK_NOT},
         {"doğru", TOK_DOGRU}, {"DOĞRU", TOK_DOGRU},
         {"yanlış", TOK_YANLIS}, {"YANLIŞ", TOK_YANLIS},
         {"null", TOK_NULL},
@@ -511,8 +516,32 @@ void parser_parse_primary(Parser* p) {
         }
     } else if (parser_check(p, TOK_NEW)) {
         parser_advance(p);
-        // new ClassName(args) -> malloc + constructor
-        fprintf(p->output, "malloc(sizeof(struct TODO))");
+        // new ClassName(args) -> ClassName_new(args)
+        if (!parser_check(p, TOK_IDENT)) {
+            fprintf(stderr, "Hata: Sınıf adı bekleniyor\n");
+            return;
+        }
+
+        char* class_name = str_dup(p->lexer->current.value);
+        parser_advance(p);
+
+        fprintf(p->output, "%s_new", class_name);
+        free(class_name);
+
+        // Parse constructor arguments
+        parser_expect(p, TOK_LPAREN, "( bekleniyor");
+        fprintf(p->output, "(");
+
+        if (!parser_check(p, TOK_RPAREN)) {
+            parser_parse_expression(p);
+            while (parser_match(p, TOK_COMMA)) {
+                fprintf(p->output, ", ");
+                parser_parse_expression(p);
+            }
+        }
+
+        parser_expect(p, TOK_RPAREN, ") bekleniyor");
+        fprintf(p->output, ")");
     } else if (parser_check(p, TOK_UZUNLUK)) {
         // UZUNLUK keyword - works for both strings and arrays
         parser_advance(p);
@@ -595,6 +624,50 @@ void parser_parse_primary(Parser* p) {
     } else if (parser_check(p, TOK_IDENT)) {
         char* ident_name = str_dup(p->lexer->current.value);
         parser_advance(p);
+
+        // Check for method call: obj.method(...)
+        if (parser_check(p, TOK_DOT)) {
+            parser_advance(p);  // Skip DOT
+
+            if (!parser_check(p, TOK_IDENT)) {
+                fprintf(stderr, "Hata: Method adı bekleniyor\n");
+                free(ident_name);
+                return;
+            }
+
+            char* method_name = str_dup(p->lexer->current.value);
+            parser_advance(p);
+
+            // Generate: ClassName_method(obj, ...)
+            // We don't know class name, so use generic pattern
+            // For now, just call as function with obj as first param
+
+            if (parser_match(p, TOK_LPAREN)) {
+                // Method call with args: obj.method(a, b) → method(obj, a, b)
+                // But we need class name! For now, use simple transformation
+                fprintf(p->output, "%s_%s(%s", ident_name, method_name, ident_name);
+
+                if (!parser_check(p, TOK_RPAREN)) {
+                    fprintf(p->output, ", ");
+                    parser_parse_expression(p);
+                    while (parser_match(p, TOK_COMMA)) {
+                        fprintf(p->output, ", ");
+                        parser_parse_expression(p);
+                    }
+                }
+
+                parser_expect(p, TOK_RPAREN, ") bekleniyor");
+                fprintf(p->output, ")");
+            } else {
+                // Member access: obj.field → obj->field
+                fprintf(p->output, "((typeof_obj*)%s)->%s", ident_name, method_name);
+            }
+
+            free(method_name);
+            free(ident_name);
+            return;
+        }
+
         fprintf(p->output, "%s", ident_name);
         free(ident_name);
 
@@ -1099,17 +1172,43 @@ void parser_parse_statement(Parser* p) {
             free(var_name);
             parser_expect(p, TOK_SEMICOLON, "; bekleniyor (değişken tanımında)");
         } else {
-            // Expression statement or assignment
-            indent(p);
-            parser_parse_expression(p);
+            // Check if this is assignment: identifier = expression
+            // Use peek to avoid consuming tokens
+            if (parser_check(p, TOK_IDENT)) {
+                // Peek ahead - is next token '='?
+                TokenType next_type = parser_peek_next(p);
 
-            if (parser_match(p, TOK_ASSIGN)) {
-                fprintf(p->output, " = ");
-                parser_parse_expression(p);
+                if (next_type == TOK_ASSIGN) {
+                    // This is an assignment
+                    char* var_name = str_dup(p->lexer->current.value);
+                    parser_advance(p);  // Skip identifier
+                    parser_advance(p);  // Skip '='
+
+                    // Check if RHS is 'new' for variable declaration
+                    if (parser_check(p, TOK_NEW)) {
+                        // Variable declaration with initialization
+                        indent(p);
+                        fprintf(p->output, "void* %s = ", var_name);
+                        parser_parse_expression(p);
+                        fprintf(p->output, ";\n");
+                        free(var_name);
+                        return;
+                    } else {
+                        // Regular assignment (variable already declared)
+                        indent(p);
+                        fprintf(p->output, "%s = ", var_name);
+                        parser_parse_expression(p);
+                        fprintf(p->output, ";\n");
+                        free(var_name);
+                        return;
+                    }
+                }
             }
 
+            // Expression statement (not an assignment)
+            indent(p);
+            parser_parse_expression(p);
             fprintf(p->output, ";\n");
-            // No semicolon in MLP syntax for statements
         }
     }
     else if (parser_check(p, TOK_THIS)) {
@@ -1421,6 +1520,10 @@ void parser_parse_kullan(Parser* p) {
 }
 
 void parser_parse(Parser* p) {
+    // Create temporary buffer for main body
+    p->main_body = tmpfile();
+    p->has_main_statements = false;
+
     fprintf(p->output, "#include <stdio.h>\n");
     fprintf(p->output, "#include <stdlib.h>\n");
     fprintf(p->output, "#include <string.h>\n");
@@ -1529,8 +1632,35 @@ void parser_parse(Parser* p) {
             fprintf(p->output, "}\n");
         }
         else {
-            parser_advance(p);
+            // Top-level statement - add to main body
+            FILE* saved_output = p->output;
+            p->output = p->main_body;
+            p->has_main_statements = true;
+            p->indent_level = 1;  // Inside main()
+
+            parser_parse_statement(p);
+
+            p->indent_level = 0;
+            p->output = saved_output;
         }
+    }
+
+    // Generate main() function if there are top-level statements
+    if (p->has_main_statements) {
+        fprintf(p->output, "\nint main() {\n");
+
+        // Copy main_body contents to output
+        rewind(p->main_body);
+        char buf[4096];
+        size_t n;
+        while ((n = fread(buf, 1, sizeof(buf), p->main_body)) > 0) {
+            fwrite(buf, 1, n, p->output);
+        }
+
+        fprintf(p->output, "    return 0;\n");
+        fprintf(p->output, "}\n");
+
+        fclose(p->main_body);
     }
 }
 
