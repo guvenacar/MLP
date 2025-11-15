@@ -38,7 +38,7 @@ class TokenType(Enum):
     WHILE = auto()
     FOR = auto()
     RETURN = auto()
-    VAR = auto()
+    # VAR removed - type inference instead
     THIS = auto()
     NEW = auto()
     KULLAN = auto()  # import (Turkish: use)
@@ -56,7 +56,7 @@ class TokenType(Enum):
     HER = auto()        # for/each
     İÇİNDE = auto()     # in
     DÖNÜŞ = auto()      # return
-    DEĞIŞKEN = auto()   # var
+    # DEĞIŞKEN removed - type inference instead
     BU = auto()         # this
     YENİ = auto()       # new
     SON = auto()        # end
@@ -246,7 +246,7 @@ class Lexer:
             'while': TokenType.WHILE,
             'for': TokenType.FOR,
             'return': TokenType.RETURN,
-            'var': TokenType.VAR,
+            # 'var' removed - using type inference
             'this': TokenType.THIS,
             'new': TokenType.NEW,
             'KULLAN': TokenType.KULLAN,
@@ -276,7 +276,7 @@ class Lexer:
             'HER': TokenType.HER,
             'İÇİNDE': TokenType.İÇİNDE,
             'DÖNÜŞ': TokenType.DÖNÜŞ,
-            'DEĞIŞKEN': TokenType.DEĞIŞKEN,
+            # 'DEĞIŞKEN' removed - using type inference
             'BU': TokenType.BU,
             'YENİ': TokenType.YENİ,
             'SON': TokenType.SON,
@@ -485,6 +485,9 @@ class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
         self.pos = 0
+        # Symbol table for tracking defined variables
+        self.symbol_table = {}  # {variable_name: type_name}
+        self.scope_stack = []   # Stack of scopes for nested blocks
 
     def current(self) -> Token:
         if self.pos >= len(self.tokens):
@@ -507,6 +510,51 @@ class Parser:
         self.advance()
         return token
 
+    # Symbol Table Management
+    def is_variable_defined(self, name: str) -> bool:
+        """Check if variable is defined in current or parent scopes"""
+        if name in self.symbol_table:
+            return True
+        # Check parent scopes
+        for scope in reversed(self.scope_stack):
+            if name in scope:
+                return True
+        return False
+
+    def define_variable(self, name: str, type_name: str):
+        """Register a new variable in current scope"""
+        self.symbol_table[name] = type_name
+
+    def scope_push(self):
+        """Push current scope and create new one"""
+        self.scope_stack.append(self.symbol_table.copy())
+        # Keep current scope for nested access
+
+    def scope_pop(self):
+        """Pop scope and restore previous one"""
+        if self.scope_stack:
+            self.symbol_table = self.scope_stack.pop()
+
+    def infer_type(self, expr_node: ASTNode) -> str:
+        """Infer type from expression node"""
+        if isinstance(expr_node, Literal):
+            value = expr_node.value
+            if isinstance(value, bool):
+                return "ZITLIK"  # bool
+            elif isinstance(value, int) or isinstance(value, float):
+                return "SAYISAL"  # number
+            elif isinstance(value, str):
+                return "METIN"  # string
+        elif isinstance(expr_node, BinaryOp):
+            # Arithmetic operations → SAYISAL
+            if expr_node.op in ['+', '-', '*', '/']:
+                return "SAYISAL"
+            # Comparison operations → ZITLIK
+            elif expr_node.op in ['==', '!=', '<', '>', '<=', '>=']:
+                return "ZITLIK"
+        # Default: dynamic
+        return "DİNAMİK"
+
     def parse(self) -> Program:
         """Parse tokens into AST"""
         statements = []
@@ -525,9 +573,13 @@ class Parser:
             self.advance()
             return None
 
-        # Variable declaration (var or DEĞIŞKEN)
-        if current.type in [TokenType.VAR, TokenType.DEĞIŞKEN]:
-            return self.parse_var_decl()
+        # Explicit type declaration (SAYISAL a = 5;)
+        type_tokens = [
+            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
+            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
+        ]
+        if current.type in type_tokens:
+            return self.parse_typed_var_decl()
 
         # Class definition (class or SINIF)
         if current.type in [TokenType.CLASS, TokenType.SINIF]:
@@ -549,12 +601,16 @@ class Parser:
         if current.type == TokenType.YAZDIR:
             return self.parse_print()
 
-        # Assignment or method call
+        # Assignment OR first declaration OR method call
         if current.type == TokenType.IDENTIFIER:
-            # Look ahead to determine if it's assignment or method call
+            name = current.value
+
+            # Look ahead to determine what kind of statement
             if self.peek().type == TokenType.ASSIGN:
-                return self.parse_assignment()
+                # name = value (either first declaration or assignment)
+                return self.parse_identifier_assignment(name)
             elif self.peek().type == TokenType.LPAREN:
+                # name(...) - method call
                 return self.parse_method_call()
             else:
                 # Just skip unknown identifier statements for now
@@ -565,41 +621,53 @@ class Parser:
         self.advance()
         return None
 
-    def parse_var_decl(self) -> VarDecl:
-        """Parse variable declaration: var x = 10 or DEĞIŞKEN x METIN = "hello" """
-        # Accept both English and Turkish
-        if self.current().type == TokenType.VAR:
-            self.advance()
-        elif self.current().type == TokenType.DEĞIŞKEN:
-            self.advance()
+    def parse_typed_var_decl(self) -> VarDecl:
+        """Parse explicit type declaration: SAYISAL a = 5;"""
+        type_token = self.current()
+        type_name = type_token.value
+        self.advance()
 
         name = self.expect(TokenType.IDENTIFIER).value
-
-        type_name = None
         value = None
-
-        # Optional type (English or Turkish)
-        type_tokens = [
-            TokenType.STRING, TokenType.NUMBER, TokenType.BOOL, TokenType.DYNAMIC, TokenType.DICT,
-            TokenType.METIN, TokenType.SAYISAL, TokenType.ZITLIK, TokenType.DİNAMİK, TokenType.SÖZLÜK, TokenType.DİZİ
-        ]
-        if self.current().type in type_tokens:
-            type_name = self.current().value
-            self.advance()
 
         # Optional initialization
         if self.current().type == TokenType.ASSIGN:
             self.advance()
             value = self.parse_expression()
 
+        # Semicolon required for declarations
+        if self.current().type == TokenType.SEMICOLON:
+            self.advance()
+
+        # Register variable
+        self.define_variable(name, type_name)
+
         return VarDecl(name, type_name, value)
 
-    def parse_assignment(self) -> Assignment:
-        """Parse assignment: x = value"""
-        name = self.expect(TokenType.IDENTIFIER).value
+    def parse_identifier_assignment(self, name: str) -> ASTNode:
+        """Parse identifier assignment: name = value (first declaration or reassignment)"""
+        self.advance()  # Consume IDENTIFIER
         self.expect(TokenType.ASSIGN)
         value = self.parse_expression()
-        return Assignment(name, value)
+
+        # Check if this is first declaration or reassignment
+        if not self.is_variable_defined(name):
+            # FIRST DECLARATION: semicolon REQUIRED, infer type
+            if self.current().type != TokenType.SEMICOLON:
+                raise Exception(f"First declaration of '{name}' requires semicolon at line {self.current().line}")
+            self.advance()  # Consume semicolon
+
+            # Infer type from value
+            type_name = self.infer_type(value)
+            self.define_variable(name, type_name)
+
+            return VarDecl(name, type_name, value)
+        else:
+            # REASSIGNMENT: semicolon NOT allowed
+            if self.current().type == TokenType.SEMICOLON:
+                raise Exception(f"Reassignment of '{name}' cannot have semicolon at line {self.current().line}")
+
+            return Assignment(name, value)
 
     def parse_class(self) -> ClassDef:
         """Parse class definition (class or SINIF)"""
@@ -762,20 +830,30 @@ class Parser:
         return WhileStatement(condition, body)
 
     def parse_return(self) -> ReturnStatement:
-        """Parse return statement (return/DÖNÜŞ)"""
+        """Parse return statement (return/DÖNÜŞ) - semicolon optional"""
         # Consume RETURN or DÖNÜŞ token
         if self.current().type in [TokenType.RETURN, TokenType.DÖNÜŞ]:
             self.advance()
 
         value = None
-        if self.current().type not in [TokenType.NEWLINE, TokenType.EOF, TokenType.END, TokenType.SON]:
+        if self.current().type not in [TokenType.NEWLINE, TokenType.EOF, TokenType.END, TokenType.SON, TokenType.SEMICOLON]:
             value = self.parse_expression()
+
+        # Semicolon is OPTIONAL
+        if self.current().type == TokenType.SEMICOLON:
+            self.advance()
+
         return ReturnStatement(value)
 
     def parse_print(self) -> PrintStatement:
-        """Parse YAZDIR statement"""
+        """Parse YAZDIR statement - semicolon optional"""
         self.expect(TokenType.YAZDIR)
         value = self.parse_expression()
+
+        # Semicolon is OPTIONAL
+        if self.current().type == TokenType.SEMICOLON:
+            self.advance()
+
         return PrintStatement(value)
 
     def parse_method_call(self) -> MethodCall:
