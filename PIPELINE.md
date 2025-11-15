@@ -3,7 +3,7 @@
 > **Amaç**: MLP compiler'ın kendini compile etmesi (Ring 3 MLP → Ring 0 C → gcc → binary)
 
 **Son Güncelleme**: 2025-11-15
-**Mevcut Aşama**: Stage 0 - Seed Compiler'ı MLP syntax'ına uyarlama
+**Mevcut Aşama**: ✅ Stage 0 TAMAMLANDI - Runtime Library'ye geçiş (Stage 1)
 
 ---
 
@@ -43,21 +43,42 @@
   - Atama: `a = 10` (semicolon YASAK)
   - Function call: `YAZDIR(5)` (semicolon OPSİYONEL)
 
-#### 4. Seed Compiler Özellikleri (Kısmen Tamamlandı)
+#### 4. Seed Compiler Güncellemeleri (✅ TAMAMLANDI - commit 1fcdb53)
 - ✅ Turkish keywords lexer mapping
 - ✅ Basic parser (class, method, if/else, while, return)
 - ✅ Basic code generator (C struct/function generation)
-- ⚠️ **UYARI**: Seed compiler henüz yeni syntax kurallarını desteklemiyor!
+- ✅ **VAR/DEĞIŞKEN token types KALDIRILDI**
+- ✅ **Symbol table tracking eklendi** - `is_variable_defined()`, `define_variable()`
+- ✅ **Type inference eklendi** - `infer_type()` metodu
+- ✅ **Scope management** - `scope_push()`, `scope_pop()`
+- ✅ **Yeni semicolon kuralları**:
+  - İlk tanımlama: `a = 5;` ✅ ZORUNLU
+  - Reassignment: `a = 10` ✅ YASAK
+  - YAZDIR/DÖNÜŞ: ✅ OPSİYONEL
+- ✅ **Test edildi ve çalışıyor**:
+  - test-simple.mlp → ✅ BAŞARILI
+  - examples/04-calculator.mlp → ✅ BAŞARILI
 
 ---
 
 ## 🔄 YAPILACAK ADIMLAR
 
-### **STAGE 0: Seed Compiler'ı MLP Syntax'ına Uyarla** 🔴 ÖNCELİKLİ
+### ~~**STAGE 0: Seed Compiler'ı MLP Syntax'ına Uyarla**~~ ✅ TAMAMLANDI (commit 1fcdb53)
 
-**Amaç**: Python seed compiler'ı MLP'nin güncel syntax'ını anlamalı
+**Sonuç**: Seed compiler artık yeni MLP syntax'ını tam destekliyor!
+- ✅ VAR keyword yok
+- ✅ Type inference çalışıyor
+- ✅ Symbol table tracking aktif
+- ✅ Semicolon kuralları uygulanıyor
+- ✅ Test dosyaları başarıyla compile oluyor
 
-#### 0.1. Seed Compiler'da VAR Keyword'ü Kaldır
+---
+
+### **STAGE 1: Runtime Library'yi Tamamla** 🔴 ŞİMDİ ÖNCELİKLİ
+
+**Amaç**: MLP kaynak kodunun kullandığı tüm built-in fonksiyonlar C'de mevcut olmalı
+
+#### ~~0.1. Seed Compiler'da VAR Keyword'ü Kaldır~~ ✅ TAMAMLANDI
 **Dosya**: `stage0/seed-compiler.py`
 
 **Değişiklikler**:
