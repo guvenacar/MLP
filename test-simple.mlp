@@ -10,9 +10,9 @@ SINIF Point
     SON
 
     IŞLEÇ distance() -> SAYISAL
-        VAR dx = x * x
-        VAR dy = y * y
-        VAR result = dx + dy
+        dx = x * x;
+        dy = y * y;
+        result = dx + dy;
         DÖNÜŞ result
     SON
 SON

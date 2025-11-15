@@ -14,9 +14,15 @@ SINIF Parser
     lexer DİNAMİK
     mevcut_token DİNAMİK
 
+    -- Symbol table for tracking defined variables
+    tanimli_degiskenler SÖZLÜK
+    scope_stack DİZİ  -- Stack of scopes for nested blocks
+
     KURUCU(lexer)
         BU.lexer = lexer
         BU.mevcut_token = BU.lexer.sonraki_tokeni_al()  -- Get first token
+        BU.tanimli_degiskenler = {}
+        BU.scope_stack = []
     KURUCU SON
 
     IŞLEÇ hata(mesaj)
@@ -35,13 +41,104 @@ SINIF Parser
     IŞLEÇ SON
 
     -- ===============================================
+    -- Scope Management
+    -- ===============================================
+
+    IŞLEÇ scope_push()
+        -- Push current scope and create new one
+        BU.scope_stack.push(BU.tanimli_degiskenler)
+        BU.tanimli_degiskenler = {}
+    IŞLEÇ SON
+
+    IŞLEÇ scope_pop()
+        -- Pop scope and restore previous one
+        EĞER UZUNLUK(BU.scope_stack) > 0 İSE
+            BU.tanimli_degiskenler = BU.scope_stack.pop()
+        EĞER SON
+    IŞLEÇ SON
+
+    IŞLEÇ degisken_tanimli_mi(ad) -> ZITLIK
+        -- Check if variable is defined in current or parent scopes
+        EĞER ad İÇİNDE BU.tanimli_degiskenler İSE
+            DÖNÜŞ DOĞRU
+        EĞER SON
+
+        -- Check parent scopes
+        SAYISAL i = UZUNLUK(BU.scope_stack) - 1;
+        DÖNGÜ i >= 0 İSE
+            EĞER ad İÇİNDE BU.scope_stack[i] İSE
+                DÖNÜŞ DOĞRU
+            EĞER SON
+            i = i - 1
+        DÖNGÜ SON
+
+        DÖNÜŞ YANLIŞ
+    IŞLEÇ SON
+
+    IŞLEÇ degisken_tanimla(ad)
+        -- Mark variable as defined in current scope
+        BU.tanimli_degiskenler[ad] = DOĞRU
+    IŞLEÇ SON
+
+    -- ===============================================
+    -- Type Inference
+    -- ===============================================
+
+    IŞLEÇ tip_cikart(ifade_node) -> DİNAMİK
+        -- Infer type from expression
+        -- Returns a token representing the inferred type
+
+        -- Integer or Float literal
+        EĞER TYPE_OF(ifade_node) == "Sayi" İSE
+            -- Check if it's float or integer based on value
+            DÖNÜŞ YENİ Token(TOKEN_TIPLERI["TANIMLA_SAYI"], "SAYISAL")
+        EĞER SON
+
+        -- String literal
+        EĞER TYPE_OF(ifade_node) == "Metin" İSE
+            DÖNÜŞ YENİ Token(TOKEN_TIPLERI["TANIMLA_METIN"], "METIN")
+        EĞER SON
+
+        -- Boolean values (DOĞRU/YANLIŞ)
+        EĞER TYPE_OF(ifade_node) == "Degisken" İSE
+            EĞER ifade_node.ad == "DOĞRU" veya ifade_node.ad == "YANLIŞ" İSE
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["TANIMLA_BOOL"], "ZITLIK")
+            EĞER SON
+        EĞER SON
+
+        -- Binary operation - infer from operands
+        EĞER TYPE_OF(ifade_node) == "IkiliIslem" İSE
+            -- Arithmetic operations → SAYISAL
+            EĞER ifade_node.operator.tip == TOKEN_TIPLERI["PLUS"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["MINUS"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["MUL"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["DIV"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["POWER"] İSE
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["TANIMLA_SAYI"], "SAYISAL")
+            EĞER SON
+
+            -- Comparison operations → ZITLIK
+            EĞER ifade_node.operator.tip == TOKEN_TIPLERI["OP_ESIT_KARSILASTIRMA"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["GT"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["LT"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["GTE"] veya
+               ifade_node.operator.tip == TOKEN_TIPLERI["LTE"] İSE
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["TANIMLA_BOOL"], "ZITLIK")
+            EĞER SON
+        EĞER SON
+
+        -- Default: DİNAMİK
+        DÖNÜŞ YENİ Token(TOKEN_TIPLERI["IDENTIFIER"], "DİNAMİK")
+    IŞLEÇ SON
+
+    -- ===============================================
     -- Grammar Rules
     -- ===============================================
 
     IŞLEÇ faktor() -> dynamic
         -- Highest precedence: Numbers, Strings, Variables, Parentheses,
         -- Function Calls, Array Access, Dictionary Access
-        VAR token = BU.mevcut_token
+        token = BU.mevcut_token;
 
         EĞER token.tip == TOKEN_TIPLERI["INTEGER"] veya token.tip == TOKEN_TIPLERI["FLOAT"]
             BU.tuket(token.tip)
@@ -77,7 +174,7 @@ SINIF Parser
 
         EĞER token.tip == TOKEN_TIPLERI["LEFT_PAREN"]
             BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])
-            VAR dugum = BU.ifade()
+            dugum = BU.ifade();
             BU.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])
             DÖNÜŞ dugum
         SON
@@ -88,7 +185,7 @@ SINIF Parser
     IŞLEÇ islec_cagirma(hedef_token) -> IslecCagirma
         -- Parses function call arguments
         -- Grammar: '(' [ifade (COMMA ifade)*]? ')'
-        VAR argumanlar = []
+        argumanlar = [];
         BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
         -- If first token is not ')', there are arguments
@@ -112,11 +209,11 @@ SINIF Parser
         BU.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])  -- '['
 
         -- Index can be complex expression like '5 + 2'
-        VAR indeks_ifadesi = BU.ifade()
+        indeks_ifadesi = BU.ifade();
 
         BU.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])  -- ']'
 
-        VAR hedef_node = YENİ Degisken(hedef_token)
+        hedef_node = YENİ Degisken(hedef_token);
         DÖNÜŞ YENİ DiziErisim(hedef_node, indeks_ifadesi)
     SON
 
@@ -125,27 +222,27 @@ SINIF Parser
         BU.tuket(TOKEN_TIPLERI["LEFT_BRACE"])  -- '{'
 
         -- Key can be complex expression
-        VAR anahtar_ifadesi = BU.ifade()
+        anahtar_ifadesi = BU.ifade();
 
         BU.tuket(TOKEN_TIPLERI["RIGHT_BRACE"])  -- '}'
 
-        VAR hedef_node = YENİ Degisken(hedef_token)
+        hedef_node = YENİ Degisken(hedef_token);
         DÖNÜŞ YENİ SozlukErisim(hedef_node, anahtar_ifadesi)
     SON
 
     IŞLEÇ terim() -> dynamic
         -- Medium precedence: Multiplication ve Division
         -- Grammar: faktor ((MUL | DIV | POWER) faktor)*
-        VAR sol_dugum = BU.faktor()
+        sol_dugum = BU.faktor();
 
         -- Continue as long as *, /, veya ** appears
         DÖNGÜ BU.mevcut_token.tip == TOKEN_TIPLERI["MUL"] veya İSE
               BU.mevcut_token.tip == TOKEN_TIPLERI["DIV"] veya
               BU.mevcut_token.tip == TOKEN_TIPLERI["POWER"]
 
-            VAR operator = BU.mevcut_token
+            operator = BU.mevcut_token;
             BU.tuket(operator.tip)
-            VAR sag_dugum = BU.faktor()
+            sag_dugum = BU.faktor();
 
             -- Update left node with YENİ operation node
             sol_dugum = YENİ IkiliIslem(sol_dugum, operator, sag_dugum)
@@ -157,7 +254,7 @@ SINIF Parser
     IŞLEÇ ifade() -> dynamic
         -- Lowest precedence: Addition, Subtraction, Comparisons
         -- Grammar: terim ((PLUS | MINUS | comparisons) terim)*
-        VAR sol_dugum = BU.terim()
+        sol_dugum = BU.terim();
 
         DÖNGÜ BU.mevcut_token.tip == TOKEN_TIPLERI["PLUS"] veya İSE
               BU.mevcut_token.tip == TOKEN_TIPLERI["MINUS"] veya
@@ -167,9 +264,9 @@ SINIF Parser
               BU.mevcut_token.tip == TOKEN_TIPLERI["GTE"] veya
               BU.mevcut_token.tip == TOKEN_TIPLERI["LTE"]
 
-            VAR operator = BU.mevcut_token
+            operator = BU.mevcut_token;
             BU.tuket(operator.tip)
-            VAR sag_dugum = BU.terim()
+            sag_dugum = BU.terim();
             sol_dugum = YENİ IkiliIslem(sol_dugum, operator, sag_dugum)
         SON
 
@@ -182,7 +279,7 @@ SINIF Parser
 
     IŞLEÇ komut() -> dynamic
         -- Parses a single statement
-        VAR token = BU.mevcut_token
+        token = BU.mevcut_token;
 
         -- 0. Phase 8: SINIF definition?
         EĞER token.tip == TOKEN_TIPLERI["OOP_SINIF"]
@@ -231,37 +328,64 @@ SINIF Parser
             DÖNÜŞ BU.donus_komutu()
         SON
 
-        -- 9. Assignment OR Function call statement?
+        -- 9. Assignment OR Declaration OR Function call statement?
         EĞER token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            VAR ifade_dugumu = BU.ifade()
+            Token degisken_token = token
+            DİNAMİK ifade_dugumu = BU.ifade()
 
-            -- Case 1: Assignment (s = 10; veya d{"key"} = 30;)
+            -- Case 1: Assignment veya Declaration (name = value)
             EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
                 -- Check EĞER target is valid (Degisken, DiziErisim, veya SozlukErisim)
                 EĞER not (TYPE_OF(ifade_dugumu) == "Degisken" veya
                         TYPE_OF(ifade_dugumu) == "DiziErisim" veya
                         TYPE_OF(ifade_dugumu) == "SozlukErisim")
                     BU.hata("Atama hedefi geçersiz. Hedef bir değişken, dizi elemanı veya sözlük elemanı olmalıdır.")
-                SON
+                EĞER SON
 
                 BU.tuket(TOKEN_TIPLERI["ASSIGN"])  -- '='
-                VAR atanan_deger_ifadesi = BU.ifade()
-                BU.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';'
-                DÖNÜŞ YENİ AtamaKomutu(ifade_dugumu, atanan_deger_ifadesi)
-            SON
+                DİNAMİK atanan_deger_ifadesi = BU.ifade()
 
-            -- Case 2: Function call statement (SOZLUK_OLUSTUR(10);)
-            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"]
-                BU.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';'
-                EĞER TYPE_OF(ifade_dugumu) == "IslecCagirma"
-                    DÖNÜŞ YENİ IfadeKomutu(ifade_dugumu)
+                -- Distinguish: First declaration veya reassignment?
+                EĞER TYPE_OF(ifade_dugumu) == "Degisken" İSE
+                    METIN degisken_ad = ifade_dugumu.ad
+
+                    -- Check if this is first declaration
+                    EĞER BU.degisken_tanimli_mi(degisken_ad) == YANLIŞ İSE
+                        -- FIRST DECLARATION: ; required, infer type
+                        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';' ZORUNLU!
+                        BU.degisken_tanimla(degisken_ad)
+
+                        -- Infer type from value
+                        DİNAMİK tip_token = BU.tip_cikart(atanan_deger_ifadesi)
+                        DÖNÜŞ YENİ DegiskenTanimlama(tip_token, degisken_token, atanan_deger_ifadesi)
+                    DEĞILSE
+                        -- REASSIGNMENT: ; not allowed!
+                        EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"] İSE
+                            BU.hata("Atama işleminde noktalı virgül kullanılamaz! Sadece ilk tanımlamada gereklidir.")
+                        EĞER SON
+                        DÖNÜŞ YENİ AtamaKomutu(ifade_dugumu, atanan_deger_ifadesi)
+                    EĞER SON
                 DEĞILSE
-                    BU.hata("Bu ifade tek başına bir komut olamaz: " + string(ifade_dugumu))
-                SON
-            SON
+                    -- Array/Dict access assignment: always reassignment
+                    EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"] İSE
+                        BU.hata("Atama işleminde noktalı virgül kullanılamaz!")
+                    EĞER SON
+                    DÖNÜŞ YENİ AtamaKomutu(ifade_dugumu, atanan_deger_ifadesi)
+                EĞER SON
+            EĞER SON
 
-            BU.hata("Komutun sonunda ';' veya '=' bekleniyordu")
-        SON
+            -- Case 2: Function call statement (optional semicolon)
+            EĞER TYPE_OF(ifade_dugumu) == "IslecCagirma" İSE
+                -- Semicolon is OPTIONAL for function calls
+                EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"] İSE
+                    BU.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';' opsiyonel
+                EĞER SON
+                DÖNÜŞ YENİ IfadeKomutu(ifade_dugumu)
+            EĞER SON
+
+            -- Case 3: Standalone expression (error)
+            BU.hata("Bu ifade tek başına bir komut olamaz. '=' bekleniyordu.")
+        EĞER SON
 
         -- 10. Otherwise it's an error
         BU.hata("Tanınmayan komut başlangıcı: " + string(token))
@@ -270,7 +394,7 @@ SINIF Parser
     IŞLEÇ degisken_tanimlama(tip_token, ad_token) -> DegiskenTanimlama
         -- Grammar: (tip_token ve ad_token already consumed) ASSIGN ifade SEMICOLON
         BU.tuket(TOKEN_TIPLERI["ASSIGN"])
-        VAR ifade_node = BU.ifade()
+        ifade_node = BU.ifade();
         BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
         DÖNÜŞ YENİ DegiskenTanimlama(tip_token, ad_token, ifade_node)
     SON
@@ -280,14 +404,14 @@ SINIF Parser
         BU.tuket(TOKEN_TIPLERI["TANIMLA_DEGISKEN"])  -- 'DEĞIŞKEN'
 
         -- Get name
-        VAR ad_token = BU.mevcut_token
+        ad_token = BU.mevcut_token;
         BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
         -- Expect ':'
         BU.tuket(TOKEN_TIPLERI["COLON"])
 
         -- Get type
-        VAR tip_token = BU.mevcut_token
+        tip_token = BU.mevcut_token;
         EĞER tip_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] veya
            tip_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] veya
            tip_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"] veya
@@ -298,7 +422,7 @@ SINIF Parser
         SON
 
         -- Optional initial value
-        VAR ifade_node = HİÇLİK
+        ifade_node = HİÇLİK;
         EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
             BU.tuket(TOKEN_TIPLERI["ASSIGN"])
             ifade_node = BU.ifade()
@@ -311,18 +435,18 @@ SINIF Parser
     IŞLEÇ eger_blogu() -> EgerBlogu
         -- EĞER condition İSE statements [DEĞİLSE statements] SON
         BU.tuket(TOKEN_TIPLERI["YAPI_KOSUL_EGER"])  -- 'EĞER'
-        VAR kosul = BU.ifade()
+        kosul = BU.ifade();
         BU.tuket(TOKEN_TIPLERI["YAPI_KOSUL_ISE"])  -- 'İSE'
 
         -- True block
-        VAR dogru_blok = YENİ Blok()
+        dogru_blok = YENİ Blok();
         DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
               BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"] ve
               BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             dogru_blok.komutlar.push(BU.komut())
         SON
 
-        VAR yanlis_blok = HİÇLİK
+        yanlis_blok = HİÇLİK;
 
         -- DEĞİLSE block?
         EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"]
@@ -339,10 +463,13 @@ SINIF Parser
     SON
 
     IŞLEÇ yazdir_komutu() -> YazdirKomutu
-        -- YAZDIR expression;
+        -- YAZDIR expression (semicolon optional)
         BU.tuket(TOKEN_TIPLERI["YAPI_YAZDIR"])
-        VAR ifade = BU.ifade()
-        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        ifade = BU.ifade();
+        -- Semicolon is OPTIONAL for YAZDIR
+        EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"] İSE
+            BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        EĞER SON
         DÖNÜŞ YENİ YazdirKomutu(ifade)
     SON
 
@@ -350,7 +477,7 @@ SINIF Parser
         -- DÖNGÜ statements SON İSE
         BU.tuket(TOKEN_TIPLERI["YAPI_DONGU"])
 
-        VAR blok = YENİ Blok()
+        blok = YENİ Blok();
         DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
               BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             blok.komutlar.push(BU.komut())
@@ -368,10 +495,13 @@ SINIF Parser
     SON
 
     IŞLEÇ donus_komutu() -> DonusKomutu
-        -- DÖNÜŞ expression;
+        -- DÖNÜŞ expression (semicolon optional)
         BU.tuket(TOKEN_TIPLERI["YAPI_DONUS"])
-        VAR ifade = BU.ifade()
-        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        ifade = BU.ifade();
+        -- Semicolon is OPTIONAL for DÖNÜŞ
+        EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"] İSE
+            BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        EĞER SON
         DÖNÜŞ YENİ DonusKomutu(ifade)
     SON
 
@@ -380,7 +510,7 @@ SINIF Parser
         -- - SAYISAL İŞLEÇ topla...
         -- - SAYISAL liste[10];
         -- - SAYISAL s = 10;
-        VAR tip_token = BU.mevcut_token
+        tip_token = BU.mevcut_token;
         BU.tuket(tip_token.tip)
 
         -- Case 1: SAYISAL İŞLEÇ ...
@@ -390,7 +520,7 @@ SINIF Parser
 
         -- Case 2 & 3: SAYISAL s ... (Variable veya Array)
         EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            VAR ad_token = BU.mevcut_token
+            ad_token = BU.mevcut_token;
             BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
             -- Case 2: SAYISAL liste[ ...
@@ -412,7 +542,7 @@ SINIF Parser
     IŞLEÇ dizi_tanimlama(tip_token, ad_token) -> DiziTanimlama
         -- Grammar: (tip_token ve ad_token already consumed) '[' ifade ']' SEMICOLON
         BU.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])
-        VAR boyut_ifadesi = BU.ifade()
+        boyut_ifadesi = BU.ifade();
         BU.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])
         BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
         DÖNÜŞ YENİ DiziTanimlama(tip_token, ad_token, boyut_ifadesi)
@@ -420,13 +550,13 @@ SINIF Parser
 
     IŞLEÇ parametre_listesi() -> array
         -- ( [TYPE IDENTIFIER (COMMA TYPE IDENTIFIER)*]? )
-        VAR parametreler = []
+        parametreler = [];
         BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
         -- If first token is not ')', there are parameters
         EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
             -- First parameter
-            VAR tip_token = BU.mevcut_token
+            tip_token = BU.mevcut_token;
             EĞER tip_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] ve
                tip_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] ve
                tip_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
@@ -434,7 +564,7 @@ SINIF Parser
             SON
             BU.tuket(tip_token.tip)
 
-            VAR ad_token = BU.mevcut_token
+            ad_token = BU.mevcut_token;
             BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
             parametreler.push(YENİ Parametre(tip_token, ad_token))
 
@@ -464,13 +594,13 @@ SINIF Parser
         -- [TYPE]? İŞLEÇ IDENTIFIER ( parameters ) statements SON
         BU.tuket(TOKEN_TIPLERI["YAPI_ISLEC"])  -- 'İŞLEÇ'
 
-        VAR ad_token = BU.mevcut_token
+        ad_token = BU.mevcut_token;
         BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
-        VAR parametreler = BU.parametre_listesi()
+        parametreler = BU.parametre_listesi();
 
         -- Function body
-        VAR govde = YENİ Blok()
+        govde = YENİ Blok();
         DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
               BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             govde.komutlar.push(BU.komut())
@@ -482,7 +612,7 @@ SINIF Parser
 
     IŞLEÇ parse() -> Blok
         -- Parses entire program ve returns AST root (a Block)
-        VAR ana_blok = YENİ Blok()
+        ana_blok = YENİ Blok();
 
         -- Read all statements until EOF
         DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"] İSE
@@ -500,12 +630,12 @@ SINIF Parser
         -- Parses SINIF definition
         BU.tuket(TOKEN_TIPLERI["OOP_SINIF"])  -- 'SINIF'
 
-        VAR sinif_adi = BU.mevcut_token
+        sinif_adi = BU.mevcut_token;
         BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
-        VAR ozellikler = []
-        VAR kurucu = HİÇLİK
-        VAR metodlar = []
+        ozellikler = [];
+        kurucu = HİÇLİK;
+        metodlar = [];
 
         -- Parse SINIF body (until SON)
         DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
@@ -525,7 +655,7 @@ SINIF Parser
             EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] veya
                BU.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] veya
                BU.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"]
-                VAR tip_token = BU.mevcut_token
+                tip_token = BU.mevcut_token;
                 BU.tuket(BU.mevcut_token.tip)
 
                 EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
@@ -544,7 +674,7 @@ SINIF Parser
         -- Parses ÖZELLIK TYPE name; format
         BU.tuket(TOKEN_TIPLERI["OOP_OZELLIK"])  -- 'ÖZELLIK'
 
-        VAR tip_token = BU.mevcut_token
+        tip_token = BU.mevcut_token;
         EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] ve
            BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] ve
            BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
@@ -552,7 +682,7 @@ SINIF Parser
         SON
         BU.tuket(BU.mevcut_token.tip)
 
-        VAR ad_token = BU.mevcut_token
+        ad_token = BU.mevcut_token;
         BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
         BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
 
@@ -564,7 +694,7 @@ SINIF Parser
         BU.tuket(TOKEN_TIPLERI["OOP_KURUCU"])  -- 'KURUCU'
         BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
-        VAR parametreler = []
+        parametreler = [];
         EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
             parametreler.push(BU.parametre())
 
@@ -577,7 +707,7 @@ SINIF Parser
         BU.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
 
         -- Constructor body
-        VAR govde = YENİ Blok()
+        govde = YENİ Blok();
         DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
               BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             govde.komutlar.push(BU.komut())
@@ -589,7 +719,7 @@ SINIF Parser
 
     IŞLEÇ parametre() -> Parametre
         -- Parses TYPE name format (function parameter)
-        VAR tip_token = BU.mevcut_token
+        tip_token = BU.mevcut_token;
         EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] ve
            BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] ve
            BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
@@ -597,7 +727,7 @@ SINIF Parser
         SON
         BU.tuket(BU.mevcut_token.tip)
 
-        VAR ad_token = BU.mevcut_token
+        ad_token = BU.mevcut_token;
         BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
         DÖNÜŞ YENİ Parametre(tip_token, ad_token)
     SON

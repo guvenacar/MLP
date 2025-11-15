@@ -23,7 +23,7 @@ IŞLEÇ main(DİZİ<METIN> args) -> SAYISAL
     METIN output_file = "output";
 
     -- Parse optional flags
-    VAR config = parse_flags(args);
+    config = parse_flags(args);
 
     YAZDIR "MLP Compiler v0.1.0";
     YAZDIR "Compiling: " + input_file;
@@ -89,7 +89,7 @@ YAPI CompilerConfig
 YAPI SON
 
 IŞLEÇ parse_flags(DİZİ<METIN> args) -> CompilerConfig
-    VAR config = CompilerConfig{
+    config = CompilerConfig{
         backend: "asm",
         optimize: YANLIŞ,
         verbose: YANLIŞ,

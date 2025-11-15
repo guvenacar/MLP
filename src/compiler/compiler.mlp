@@ -80,7 +80,7 @@ IŞLEÇ ast_yazdir(node, girinti)
     SON
 
     EĞER TYPE_OF(node) == "IslecTanimlama"
-        VAR donus_tipi = node.donus_tipi != HİÇLİK ? node.donus_tipi.deger : "HİÇLİK"
+        donus_tipi = node.donus_tipi != HİÇLİK ? node.donus_tipi.deger : "HİÇLİK";
         YAZDIR(girinti + "İŞLEÇ Tanımlama: " + node.ad.deger + " (Dönüş Tipi: " + donus_tipi + ")")
         YAZDIR(girinti + "  Parametreler:")
         EĞER UZUNLUK(node.parametreler) == 0
@@ -155,9 +155,9 @@ IŞLEÇ calistir(dosya_adi, dil_json_yolu, dil_kodu)
     -- Main compiler pipeline: File → Lexer → Parser → Generator → Assembly
 
     -- File Reading
-    VAR kaynak_kodu = ""
+    kaynak_kodu = "";
     try
-        kaynak_kodu = DOSYA_OKU(dosya_adi)
+        kaynak_kodu = DOSYA_OKU(dosya_adi);
     catch e
         YAZDIR("HATA: Dosya okunamadı: " + METIN(e))
         CIKIS(1)
@@ -168,9 +168,9 @@ IŞLEÇ calistir(dosya_adi, dil_json_yolu, dil_kodu)
     YAZDIR("----------------------------------------")
 
     -- 1. Lexer (Tokenization)
-    VAR lexer = HİÇLİK
+    lexer = HİÇLİK;
     try
-        lexer = YENİ Lexer(kaynak_kodu, dil_json_yolu, dil_kodu)
+        lexer = YENİ Lexer(kaynak_kodu, dil_json_yolu, dil_kodu);
     catch e
         YAZDIR("HATA (Lexer): " + METIN(e))
         CIKIS(1)
@@ -178,10 +178,10 @@ IŞLEÇ calistir(dosya_adi, dil_json_yolu, dil_kodu)
 
     -- 2. Parser (AST Generation)
     YAZDIR("\n--- PARSER (AST) ---")
-    VAR ast = HİÇLİK
+    ast = HİÇLİK;
     try
-        VAR parser = YENİ Parser(lexer)
-        ast = parser.parse()
+        parser = YENİ Parser(lexer);
+        ast = parser.parse();
         YAZDIR("✅ Ayrıştırma Başarılı!")
     catch e
         YAZDIR("\n!!! HATA (Parser): " + METIN(e))
@@ -191,12 +191,12 @@ IŞLEÇ calistir(dosya_adi, dil_json_yolu, dil_kodu)
     -- 3. Generator (Assembly Code Generation)
     YAZDIR("\n--- GENERATOR (ASM) ---")
     try
-        VAR generator = YENİ Generator(ast)
-        VAR asm_kodu = generator.generate()
+        generator = YENİ Generator(ast);
+        asm_kodu = generator.generate();
 
         YAZDIR(asm_kodu)  -- Print generated Assembly code
 
-        VAR output_asm_file = "build/output.asm"
+        output_asm_file = "build/output.asm";
 
         -- Ensure 'build' directory exists
         DIZIN_OLUSTUR("build")
@@ -217,7 +217,7 @@ SON
 IŞLEÇ main()
     -- Parse command line arguments ve run compiler
 
-    VAR args = PROGRAM_ARGS()
+    args = PROGRAM_ARGS();
 
     -- Simple argument parsing (MLP doesn't have argparse, so manual)
     EĞER UZUNLUK(args) < 2
@@ -230,17 +230,17 @@ IŞLEÇ main()
         CIKIS(1)
     SON
 
-    VAR dosya_adi = args[1]
-    VAR dil_json_yolu = "kurallar/diller.json"
-    VAR dil_kodu = "tr-TR"
+    dosya_adi = args[1];
+    dil_json_yolu = "kurallar/diller.json";
+    dil_kodu = "tr-TR";
 
     -- Parse optional arguments
     EĞER UZUNLUK(args) >= 3
-        dil_json_yolu = args[2]
+        dil_json_yolu = args[2];
     SON
 
     EĞER UZUNLUK(args) >= 5 ve args[3] == "--dil-kodu"
-        dil_kodu = args[4]
+        dil_kodu = args[4];
     SON
 
     -- Run compiler

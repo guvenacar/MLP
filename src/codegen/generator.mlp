@@ -93,7 +93,7 @@ SINIF Generator
 
     IŞLEÇ _degisken_adres_bul(degisken_adi) -> SÖZLÜK
         -- Returns variable's address/size dictionary
-        VAR mevcut_kapsam = BU.degisken_haritalari[UZUNLUK(BU.degisken_haritalari) - 1]
+        mevcut_kapsam = BU.degisken_haritalari[UZUNLUK(BU.degisken_haritalari) - 1];
         EĞER degisken_adi İÇİNDE mevcut_kapsam
             DÖNÜŞ mevcut_kapsam[degisken_adi]
         SON
@@ -106,7 +106,7 @@ SINIF Generator
     IŞLEÇ _degisken_yer_ayir(degisken_adi, adres, boyut) -> SÖZLÜK
         -- Allocates space on stack HER variable/DİZİ
         -- Stores info as {'adres': '...', 'boyut': X}
-        VAR mevcut_kapsam = BU.degisken_haritalari[UZUNLUK(BU.degisken_haritalari) - 1]
+        mevcut_kapsam = BU.degisken_haritalari[UZUNLUK(BU.degisken_haritalari) - 1];
 
         EĞER degisken_adi İÇİNDE mevcut_kapsam
             HATA_FIRLAT YENİ Exception("[Generator] Değişken '" + degisken_adi + "' bu kapsamda zaten tanımlı.")
@@ -114,9 +114,9 @@ SINIF Generator
 
         EĞER adres == HİÇLİK
             -- LOCAL VARIABLE veya ARRAY
-            VAR toplam_byte_boyutu = boyut * 8
+            toplam_byte_boyutu = boyut * 8;
             BU.stack_offset = BU.stack_offset - toplam_byte_boyutu
-            adres = "[rbp" + METIN(BU.stack_offset) + "]"
+            adres = "[rbp" + METIN(BU.stack_offset) + "]";
             BU.emit("sub rsp, " + METIN(toplam_byte_boyutu) + "  ; '" + degisken_adi + "' içİÇİNDE yığında " + METIN(toplam_byte_boyutu) + " byte yer aç")
         SON
 
@@ -135,7 +135,7 @@ SINIF Generator
         -- Walks entire AST ve returns complete Assembly code
 
         -- C library setup (now comes from C_Arayuzu)
-        VAR extern_decls = BU.c_arayuzu.generate_extern_bildirimleri()
+        extern_decls = BU.c_arayuzu.generate_extern_bildirimleri();
         HER decl İÇİNDE extern_decls
             BU.code.push(decl)
         SON
@@ -161,7 +161,7 @@ SINIF Generator
             SON
 
             EĞER UZUNLUK(BU.c_functions) > 0
-                VAR insert_pos = 5 + UZUNLUK(BU.c_structs) + 1
+                insert_pos = 5 + UZUNLUK(BU.c_structs) + 1;
                 BU.code.insert(insert_pos, "; --- C Function Definitions ---")
                 HER i = 0 to UZUNLUK(BU.c_functions) - 1
                     BU.code.insert(insert_pos + 1 + i, "; " + BU.c_functions[i])
@@ -217,7 +217,7 @@ SINIF Generator
         SON
 
         -- 3. Call IŞLEÇ by name (e.g., visit_DegiskenTanimlama)
-        VAR method_name = "visit_" + TYPE_OF(node)
+        method_name = "visit_" + TYPE_OF(node);
         EĞER HAS_METHOD(this, method_name)
             DÖNÜŞ CALL_METHOD(this, method_name, node)
         DEĞILSE
@@ -240,20 +240,20 @@ SINIF Generator
     SON
 
     IŞLEÇ visit_DegiskenTanimlama(node)
-        VAR degisken_adi = node.ad
+        degisken_adi = node.ad;
         BU.emit("; --- DegiskenTanimlama: " + degisken_adi + " ---")
         BU.visit(node.ifade)  -- Calculate value (rax)
-        VAR adres_bilgisi = BU._degisken_yer_ayir(degisken_adi, HİÇLİK, 1)
-        VAR adres = adres_bilgisi["adres"]
+        adres_bilgisi = BU._degisken_yer_ayir(degisken_adi, HİÇLİK, 1);
+        adres = adres_bilgisi["adres"];
         BU.emit("mov " + adres + ", rax")
     SON
 
     IŞLEÇ visit_DiziTanimlama(node)
-        VAR degisken_adi = node.ad.deger
+        degisken_adi = node.ad.deger;
         EĞER TYPE_OF(node.boyut) != "Sayi"
             HATA_FIRLAT YENİ Exception("Dizi boyutu şimdilik sadece sabit bir sayı olmalıdır.")
         SON
-        VAR boyut = PARSE_INT(METIN(node.boyut.deger))
+        boyut = PARSE_INT(METIN(node.boyut.deger));
         EĞER boyut <= 0
             HATA_FIRLAT YENİ Exception("Dizi boyutu pozitif olmalıdır.")
         SON
@@ -273,9 +273,9 @@ SINIF Generator
         EĞER TYPE_OF(node.hedef) == "Degisken"
             -- Target: Simple Variable
             BU.emit("pop rax")
-            VAR degisken_adi = node.hedef.ad
-            VAR adres_bilgisi = BU._degisken_adres_bul(degisken_adi)
-            VAR adres = adres_bilgisi["adres"]
+            degisken_adi = node.hedef.ad;
+            adres_bilgisi = BU._degisken_adres_bul(degisken_adi);
+            adres = adres_bilgisi["adres"];
             BU.emit("mov " + adres + ", rax  ; " + degisken_adi + " = (sonuç)")
         SON
 
@@ -283,9 +283,9 @@ SINIF Generator
             -- Target: Array Access
             BU.emit("; --- Dizi Erişimi (Yazma) [ ] ---")
 
-            VAR dizi_adi = node.hedef.hedef.ad
-            VAR adres_bilgisi = BU._degisken_adres_bul(dizi_adi)
-            VAR dizi_baslangic_adresi_str = adres_bilgisi["adres"]
+            dizi_adi = node.hedef.hedef.ad;
+            adres_bilgisi = BU._degisken_adres_bul(dizi_adi);
+            dizi_baslangic_adresi_str = adres_bilgisi["adres"];
 
             BU.visit(node.hedef.indeks)
             BU.emit("mov rdi, rax")
@@ -310,11 +310,11 @@ SINIF Generator
     SON
 
     IŞLEÇ visit_EgerBlogu(node)
-        VAR degilse_etiketi = BU._yeni_etiket()
-        VAR son_etiket = BU._yeni_etiket()
+        degilse_etiketi = BU._yeni_etiket();
+        son_etiket = BU._yeni_etiket();
         BU.visit(node.kosul)
         BU.emit("cmp rax, 0")
-        VAR hedef_etiket = node.yanlis_blok != HİÇLİK ? degilse_etiketi : son_etiket
+        hedef_etiket = node.yanlis_blok != HİÇLİK ? degilse_etiketi : son_etiket;
         BU.emit("je " + hedef_etiket)
         BU.visit(node.dogru_blok)
         EĞER node.yanlis_blok != HİÇLİK
@@ -326,8 +326,8 @@ SINIF Generator
     SON
 
     IŞLEÇ visit_DonguBlogu(node)
-        VAR basi_etiketi = BU._yeni_etiket()
-        VAR sonu_etiketi = BU._yeni_etiket()
+        basi_etiketi = BU._yeni_etiket();
+        sonu_etiketi = BU._yeni_etiket();
         BU.dongu_cikis_etiketleri.push(sonu_etiketi)
         BU.emit(basi_etiketi + ":")
         BU.visit(node.blok)
@@ -344,11 +344,11 @@ SINIF Generator
     SON
 
     IŞLEÇ visit_IslecTanimlama(node)
-        VAR islec_adi = node.ad.deger
-        VAR asm_etiketi = "_islec_" + islec_adi
+        islec_adi = node.ad.deger;
+        asm_etiketi = "_islec_" + islec_adi;
         BU.islec_haritasi[islec_adi] = asm_etiketi
 
-        VAR islec_kodu = []
+        islec_kodu = [];
         islec_kodu.push("\n; --- İŞLEÇ Tanımı: " + islec_adi + " ---")
         islec_kodu.push(asm_etiketi + ":")
         islec_kodu.push("    push rbp")
@@ -358,13 +358,13 @@ SINIF Generator
         BU.mevcut_islec = node
 
         HER i = 0 to UZUNLUK(node.parametreler) - 1
-            VAR param = node.parametreler[i]
-            VAR param_adi = param.ad.deger
-            VAR adres = "[rbp+" + METIN(16 + i * 8) + "]"
+            param = node.parametreler[i];
+            param_adi = param.ad.deger;
+            adres = "[rbp+" + METIN(16 + i * 8) + "]";
             BU._degisken_yer_ayir(param_adi, adres, 1)
         SON
 
-        VAR eski_main_kodu = BU.main_kodu
+        eski_main_kodu = BU.main_kodu;
         BU.main_kodu = islec_kodu
         BU.visit(node.govde)
         BU.main_kodu = eski_main_kodu
@@ -410,27 +410,27 @@ SINIF Generator
     SON
 
     IŞLEÇ visit_Metin(node)
-        VAR data_label = "str_" + METIN(UZUNLUK(BU.data))
+        data_label = "str_" + METIN(UZUNLUK(BU.data));
         BU.emit_data(data_label + ' db "' + node.deger + '", 0')
         BU.emit("mov rax, " + data_label)
     SON
 
     IŞLEÇ visit_Degisken(node)
-        VAR degisken_adi = node.ad
-        VAR adres_bilgisi = BU._degisken_adres_bul(degisken_adi)
+        degisken_adi = node.ad;
+        adres_bilgisi = BU._degisken_adres_bul(degisken_adi);
         EĞER adres_bilgisi["boyut"] > 1
             HATA_FIRLAT YENİ Exception("HATA: '" + degisken_adi + "' bir dizidir. Elemanına ([i]) erişin.")
         SON
-        VAR adres = adres_bilgisi["adres"]
+        adres = adres_bilgisi["adres"];
         BU.emit("mov rax, " + adres)
     SON
 
     IŞLEÇ visit_DiziErisim(node)
         BU.emit("; --- Dizi Erişimi (Okuma) [ ] ---")
 
-        VAR dizi_adi = node.hedef.ad
-        VAR adres_bilgisi = BU._degisken_adres_bul(dizi_adi)
-        VAR dizi_baslangic_adresi_str = adres_bilgisi["adres"]
+        dizi_adi = node.hedef.ad;
+        adres_bilgisi = BU._degisken_adres_bul(dizi_adi);
+        dizi_baslangic_adresi_str = adres_bilgisi["adres"];
 
         BU.visit(node.indeks)
         BU.emit("mov rdi, rax")
@@ -446,7 +446,7 @@ SINIF Generator
     SON
 
     IŞLEÇ visit_IslecCagirma(node)
-        VAR islec_adi = node.hedef_token.deger
+        islec_adi = node.hedef_token.deger;
         BU.emit("; --- İŞLEÇ Çağırma: " + islec_adi + " ---")
 
         -- 1. Is this a magic C function?
@@ -457,10 +457,10 @@ SINIF Generator
 
         -- 2. Is this a TYD-MLP function we defined?
         EĞER islec_adi İÇİNDE BU.islec_haritasi
-            VAR asm_etiketi = BU.islec_haritasi[islec_adi]
+            asm_etiketi = BU.islec_haritasi[islec_adi];
 
             -- Prepare arguments HER TYD-MLP protocol (stack)
-            VAR arg_sayisi = UZUNLUK(node.argumanlar)
+            arg_sayisi = UZUNLUK(node.argumanlar);
             HER i = arg_sayisi - 1 to 0 step -1
                 BU.visit(node.argumanlar[i])
                 BU.emit("push rax")
@@ -485,7 +485,7 @@ SINIF Generator
         BU.visit(node.sol)
         BU.emit("pop rbx")
 
-        VAR op = node.operator.tip
+        op = node.operator.tip;
 
         EĞER op == TOKEN_TIPLERI["PLUS"] veya op == TOKEN_TIPLERI["OP_ARTI"]
             BU.emit("add rax, rbx")
@@ -525,7 +525,7 @@ SINIF Generator
 
     IŞLEÇ visit_SinifTanimlama(node)
         -- SINIF → C Struct + Constructor + Methods
-        VAR sinif_adi = node.ad
+        sinif_adi = node.ad;
         BU.emit("; --- SINIF Tanımı: " + sinif_adi + " ---")
 
         BU.sinif_haritasi[sinif_adi] = {
@@ -554,8 +554,8 @@ SINIF Generator
         BU.c_structs.push("typedef struct {")
 
         HER ozellik İÇİNDE ozellikler
-            VAR tip_deger = HAS_PROPERTY(ozellik.tip, "deger") ? ozellik.tip.deger : ozellik.tip
-            VAR c_tip = BU._tyd_tip_to_c_tip(tip_deger)
+            tip_deger = HAS_PROPERTY(ozellik.tip, "deger") ? ozellik.tip.deger : ozellik.tip;
+            c_tip = BU._tyd_tip_to_c_tip(tip_deger);
             BU.c_structs.push("    " + c_tip + " " + ozellik.ad + ";")
         SON
 
@@ -567,16 +567,16 @@ SINIF Generator
 
     IŞLEÇ _generate_constructor(sinif_adi, kurucu)
         -- Generates KURUCU function: ClassName_new()
-        VAR func_name = sinif_adi + "_new"
+        func_name = sinif_adi + "_new";
 
-        VAR params = []
+        params = [];
         HER param İÇİNDE kurucu.parametreler
-            VAR c_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
-            VAR param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
+            c_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip);
+            param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad;
             params.push(c_tip + " " + param_name)
         SON
 
-        VAR params_str = STRING_JOIN(params, ", ")
+        params_str = STRING_JOIN(params, ", ");
         BU.c_functions.push("// KURUCU: " + sinif_adi)
         BU.c_functions.push(sinif_adi + "* " + func_name + "(" + params_str + ") {")
         BU.c_functions.push("    " + sinif_adi + "* self = (" + sinif_adi + "*)mlp_alloc(sizeof(" + sinif_adi + "));")
@@ -584,8 +584,8 @@ SINIF Generator
         BU.c_functions.push("    // Field initialization from KURUCU")
         HER komut İÇİNDE kurucu.govde.komutlar
             EĞER TYPE_OF(komut) == "AtamaKomutu"
-                VAR field_name = HAS_PROPERTY(komut.hedef, "ad") ? komut.hedef.ad : METIN(komut.hedef)
-                VAR value = BU._stringify_expression(komut.ifade)
+                field_name = HAS_PROPERTY(komut.hedef, "ad") ? komut.hedef.ad : METIN(komut.hedef);
+                value = BU._stringify_expression(komut.ifade);
                 BU.c_functions.push("    self->" + field_name + " = " + value + ";")
             SON
         SON
@@ -599,22 +599,22 @@ SINIF Generator
 
     IŞLEÇ _generate_method(sinif_adi, metod)
         -- Generates IŞLEÇ function: ClassName_methodname(ClassName* self, ...)
-        VAR metod_adi = HAS_PROPERTY(metod.ad, "deger") ? metod.ad.deger : metod.ad
-        VAR func_name = sinif_adi + "_" + metod_adi
+        metod_adi = HAS_PROPERTY(metod.ad, "deger") ? metod.ad.deger : metod.ad;
+        func_name = sinif_adi + "_" + metod_adi;
 
-        VAR return_tip = "void"
+        return_tip = "void";
         EĞER metod.donus_tipi != HİÇLİK
-            return_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(metod.donus_tipi, "deger") ? metod.donus_tipi.deger : metod.donus_tipi)
+            return_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(metod.donus_tipi, "deger") ? metod.donus_tipi.deger : metod.donus_tipi);
         SON
 
-        VAR params = [sinif_adi + "* self"]
+        params = [sinif_adi + "* self"];
         HER param İÇİNDE metod.parametreler
-            VAR c_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
-            VAR param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
+            c_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip);
+            param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad;
             params.push(c_tip + " " + param_name)
         SON
 
-        VAR params_str = STRING_JOIN(params, ", ")
+        params_str = STRING_JOIN(params, ", ");
         BU.c_functions.push("// METHOD: " + sinif_adi + "." + metod_adi)
         BU.c_functions.push(return_tip + " " + func_name + "(" + params_str + ") {")
         BU.c_functions.push("    // Method body")
@@ -628,10 +628,10 @@ SINIF Generator
     IŞLEÇ _tyd_tip_to_c_tip(tyd_tip) -> METIN
         -- Converts TYD type to C type
         EĞER HAS_METHOD(tyd_tip, "lower")
-            tyd_tip = tyd_tip.lower()
+            tyd_tip = tyd_tip.lower();
         SON
 
-        VAR tip_map = {
+        tip_map = {;
             "SAYISAL": "int64_t",
             "sayısal": "int64_t",
             "sayisal": "int64_t",
@@ -656,15 +656,15 @@ SINIF Generator
             DÖNÜŞ expr.ad
         SON
         EĞER TYPE_OF(expr) == "IkiliIslem"
-            VAR sol = BU._stringify_expression(expr.sol)
-            VAR sag = BU._stringify_expression(expr.sag)
-            VAR op_map = {
+            sol = BU._stringify_expression(expr.sol);
+            sag = BU._stringify_expression(expr.sag);
+            op_map = {;
                 "PLUS": "+", "OP_ARTI": "+",
                 "MINUS": "-", "OP_EKSI": "-",
                 "MUL": "*", "OP_CARP": "*",
                 "DIV": "/", "OP_BOL": "/"
             }
-            VAR op = op_map[expr.operator.tip] ?? "?"
+            op = op_map[expr.operator.tip] ?? "?";
             DÖNÜŞ "(" + sol + " " + op + " " + sag + ")"
         SON
         DÖNÜŞ "/* complex expression */"

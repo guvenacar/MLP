@@ -9,13 +9,13 @@ SINIF Calculator
     SON
 
     IŞLEÇ add(a, b)
-        VAR sum = a + b
+        sum = a + b;
         YAZDIR "Adding numbers..."
         DÖNÜŞ sum
     SON
 
     IŞLEÇ multiply(a, b)
-        VAR product = a * b
+        product = a * b;
         YAZDIR "Multiplying numbers..."
         DÖNÜŞ product
     SON

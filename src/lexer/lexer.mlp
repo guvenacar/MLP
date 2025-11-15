@@ -40,10 +40,10 @@ SINIF Lexer
     IŞLEÇ _normalize_key(text) -> METIN
         -- Converts a keyword to standard (canonical) format for comparison
         -- Handles Turkish character normalization
-        VAR normalized_text = text.casefold()
-        normalized_text = METIN_DEGISTIR(normalized_text, "ı", "i")
-        normalized_text = METIN_DEGISTIR(normalized_text, "İ", "i")
-        normalized_text = METIN_DEGISTIR(normalized_text, "i̇", "i")
+        normalized_text = text.casefold();
+        normalized_text = METIN_DEGISTIR(normalized_text, "ı", "i");
+        normalized_text = METIN_DEGISTIR(normalized_text, "İ", "i");
+        normalized_text = METIN_DEGISTIR(normalized_text, "i̇", "i");
         DÖNÜŞ normalized_text
     IŞLEÇ SON
 
@@ -51,10 +51,10 @@ SINIF Lexer
         -- Loads language profile from JSON
         -- ONLY loads keywords to map
 
-        VAR diller = HİÇLİK
+        diller = HİÇLİK;
         DENE
-            VAR json_content = DOSYA_OKU(json_yolu)
-            diller = JSON_PARSE(json_content)
+            json_content = DOSYA_OKU(json_yolu);
+            diller = JSON_PARSE(json_content);
         YAKALA e
             HATA_FIRLAT YENİ İSTİSNA("Dil JSON dosyası okunamadı: " + json_yolu + ". Hata: " + METIN(e))
         DENE SON
@@ -63,12 +63,12 @@ SINIF Lexer
             HATA_FIRLAT YENİ İSTİSNA("Dil profili '" + dil_kodu + "' JSON'da bulunamadı.")
         EĞER SON
 
-        VAR profil = diller["dil_profili"][dil_kodu]
+        profil = diller["dil_profili"][dil_kodu];
 
-        VAR anahtar_kelime_haritasi = {}
+        anahtar_kelime_haritasi = {};
         HER soyut_tip, somut_kelime İÇİNDE profil
             EĞER soyut_tip İÇİNDE TOKEN_TIPLERI İSE
-                VAR anahtar = BU._normalize_key(somut_kelime)
+                anahtar = BU._normalize_key(somut_kelime);
                 anahtar_kelime_haritasi[anahtar] = soyut_tip
             EĞER SON
         HER SON
@@ -94,7 +94,7 @@ SINIF Lexer
 
     IŞLEÇ peek(miktar) -> METIN
         -- Peeks at next character without advancing
-        VAR peek_konum = BU.konum + miktar
+        peek_konum = BU.konum + miktar;
         EĞER peek_konum >= UZUNLUK(BU.kaynak_kodu) İSE
             DÖNÜŞ HİÇLİK
         EĞER SON
@@ -150,18 +150,18 @@ SINIF Lexer
     -- ===============================================
 
     IŞLEÇ sayi_oku() -> Token
-        VAR sayi_str = ""
-        VAR nokta_kullanildi = YANLIŞ
+        sayi_str = "";
+        nokta_kullanildi = YANLIŞ;
 
         DÖNGÜ BU.mevcut_karakter != HİÇLİK ve (IS_DIGIT(BU.mevcut_karakter) veya BU.mevcut_karakter == ".") İSE
             EĞER BU.mevcut_karakter == "." İSE
                 EĞER nokta_kullanildi İSE
                     HATA_FIRLAT YENİ İSTİSNA("Sayı formatı hatalı: " + sayi_str + ".")
                 EĞER SON
-                nokta_kullanildi = DOĞRU
+                nokta_kullanildi = DOĞRU;
             EĞER SON
 
-            sayi_str = sayi_str + BU.mevcut_karakter
+            sayi_str = sayi_str + BU.mevcut_karakter;
             BU.ilerle(1)
         DÖNGÜ SON
 
@@ -173,11 +173,11 @@ SINIF Lexer
     IŞLEÇ SON
 
     IŞLEÇ metin_oku() -> Token
-        VAR metin = ""
+        metin = "";
         BU.ilerle(1)  -- Skip opening quote
 
         DÖNGÜ BU.mevcut_karakter != HİÇLİK ve BU.mevcut_karakter != "\"" İSE
-            metin = metin + BU.mevcut_karakter
+            metin = metin + BU.mevcut_karakter;
             BU.ilerle(1)
         DÖNGÜ SON
 
@@ -190,17 +190,17 @@ SINIF Lexer
     IŞLEÇ SON
 
     IŞLEÇ kelime_oku() -> Token
-        VAR kelime = ""
+        kelime = "";
 
         DÖNGÜ BU.mevcut_karakter != HİÇLİK ve (IS_ALNUM(BU.mevcut_karakter) veya BU.mevcut_karakter == "_") İSE
-            kelime = kelime + BU.mevcut_karakter
+            kelime = kelime + BU.mevcut_karakter;
             BU.ilerle(1)
         DÖNGÜ SON
 
-        VAR kelime_kontrol_formati = BU._normalize_key(kelime)
+        kelime_kontrol_formati = BU._normalize_key(kelime);
 
         EĞER kelime_kontrol_formati İÇİNDE BU.anahtar_kelimeler İSE
-            VAR token_tipi = BU.anahtar_kelimeler[kelime_kontrol_formati]
+            token_tipi = BU.anahtar_kelimeler[kelime_kontrol_formati];
             DÖNÜŞ YENİ Token(token_tipi, kelime_kontrol_formati)
         DEĞILSE
             DÖNÜŞ YENİ Token(TOKEN_TIPLERI["IDENTIFIER"], kelime)
