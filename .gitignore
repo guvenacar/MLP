@@ -10,7 +10,9 @@ mlp-compiler-*
 output.asm
 output.s
 output.c
+output-*.c
 mlpc
+calculator
 
 # Python (for bootstrap tools)
 __pycache__/
