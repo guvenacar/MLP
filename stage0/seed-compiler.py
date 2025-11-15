@@ -163,6 +163,13 @@ class Assignment(ASTNode):
     value: ASTNode
 
 @dataclass
+class PropertyAssignment(ASTNode):
+    """Property assignment: object.property = value"""
+    object: str
+    property_name: str
+    value: ASTNode
+
+@dataclass
 class BinaryOp(ASTNode):
     """Binary operation: left op right"""
     left: ASTNode
@@ -674,10 +681,48 @@ class Parser:
 
         # Assignment or method call
         if current.type == TokenType.IDENTIFIER:
-            # Look ahead to determine if it's assignment or method call
-            if self.peek().type == TokenType.ASSIGN:
+            # Look ahead to determine if it's:
+            # 1. Type declaration: IDENTIFIER(type) IDENTIFIER(name) = value
+            # 2. Assignment: IDENTIFIER = value
+            # 3. Property assignment: object.property = value
+            # 4. Method call: method(...)
+
+            next_token = self.peek()
+
+            # Check for type declaration: AST ast = ...
+            if next_token.type == TokenType.IDENTIFIER:
+                # Could be: TYPE name = value
+                type_name = current.value
+                self.advance()  # consume type
+                name = self.current().value
+                self.advance()  # consume name
+                if self.current().type == TokenType.ASSIGN:
+                    self.advance()  # consume =
+                    value = self.parse_expression()
+                    return VarDecl(name, type_name, value)
+                else:
+                    # Not a declaration, backtrack and skip
+                    self.advance()
+                    return None
+            elif next_token.type == TokenType.ASSIGN:
                 return self.parse_assignment()
-            elif self.peek().type == TokenType.LPAREN:
+            elif next_token.type == TokenType.DOT:
+                # Could be property assignment: object.property = value
+                # Save position to check
+                obj_name = current.value
+                self.advance()  # consume object name
+                self.advance()  # consume DOT
+                if self.current().type == TokenType.IDENTIFIER:
+                    prop_name = self.current().value
+                    self.advance()  # consume property name
+                    if self.current().type == TokenType.ASSIGN:
+                        # It's a property assignment!
+                        self.advance()  # consume =
+                        value = self.parse_expression()
+                        return PropertyAssignment(obj_name, prop_name, value)
+                # Not a property assignment, skip
+                return None
+            elif next_token.type == TokenType.LPAREN:
                 return self.parse_method_call()
             else:
                 # Just skip unknown identifier statements for now
@@ -1357,22 +1402,57 @@ class CCodeGenerator:
 
     def generate_top_level_function(self, node: MethodDef):
         """Generate top-level C function"""
-        # Generate function signature
-        params_str = ', '.join([f"{self.mlp_type_to_c(ptype)} {pname}" for pname, ptype in node.params])
-        return_type = self.mlp_type_to_c(node.return_type) if node.return_type else 'void'
+        # Special handling for main() function
+        # MLP main() signature: main(args: DİZİ<METIN>) -> SAYISAL
+        # C signature: int main(int argc, char** argv)
+        if node.name == 'main':
+            # Generate the MLP main function with internal name
+            params_str = ', '.join([f"{self.mlp_type_to_c(ptype)} {pname}" for pname, ptype in node.params])
+            return_type = self.mlp_type_to_c(node.return_type) if node.return_type else 'void'
 
-        self.class_methods.append(f"{return_type} {node.name}({params_str}) {{")
+            self.class_methods.append(f"{return_type} mlp_user_main({params_str}) {{")
 
-        # Generate body
-        for stmt in node.body:
-            old_code_len = len(self.c_code)
-            self.c_code = []
-            self.generate_statement(stmt)
-            for line in self.c_code:
-                self.class_methods.append('    ' + line)
-            self.c_code = []
+            # Generate body
+            for stmt in node.body:
+                old_code_len = len(self.c_code)
+                self.c_code = []
+                self.generate_statement(stmt)
+                for line in self.c_code:
+                    self.class_methods.append('    ' + line)
+                self.c_code = []
 
-        self.class_methods.append("}")
+            self.class_methods.append("}")
+
+            # Generate C main() wrapper that converts argc/argv to mlp_array_t*
+            wrapper = []
+            wrapper.append("int main(int argc, char** argv) {")
+            wrapper.append("    // Convert argc/argv to mlp_array_t*")
+            wrapper.append("    mlp_array_t* args = mlp_array_new(argc);")
+            wrapper.append("    for (int i = 0; i < argc; i++) {")
+            wrapper.append("        mlp_array_push(args, (void*)argv[i]);")
+            wrapper.append("    }")
+            wrapper.append("    int result = (int)mlp_user_main(args);")
+            wrapper.append("    mlp_array_free(args);")
+            wrapper.append("    return result;")
+            wrapper.append("}")
+            self.class_methods.append('\n'.join(wrapper))
+        else:
+            # Regular function
+            params_str = ', '.join([f"{self.mlp_type_to_c(ptype)} {pname}" for pname, ptype in node.params])
+            return_type = self.mlp_type_to_c(node.return_type) if node.return_type else 'void'
+
+            self.class_methods.append(f"{return_type} {node.name}({params_str}) {{")
+
+            # Generate body
+            for stmt in node.body:
+                old_code_len = len(self.c_code)
+                self.c_code = []
+                self.generate_statement(stmt)
+                for line in self.c_code:
+                    self.class_methods.append('    ' + line)
+                self.c_code = []
+
+            self.class_methods.append("}")
 
     def generate_class(self, node: ClassDef):
         """Generate C struct for class"""
@@ -1415,9 +1495,14 @@ class CCodeGenerator:
 
     def generate_import(self, node: ImportStatement):
         """Generate import/include statement"""
-        # For now, just add a comment
-        # In the future, this could include actual module files
+        # Add comment for the import
         self.includes.add(f"// KULLAN {node.module_name}")
+
+        # If importing compiler modules, include stubs
+        compiler_modules = ['lexer', 'parser', 'semantic', 'optimizer', 'codegen', 'std']
+        if node.module_name in compiler_modules or '.' in node.module_name:
+            # Add mlp_stubs.h for compiler modules
+            self.includes.add('#include "mlp_stubs.h"')
 
     def generate_method(self, class_name: str, method: MethodDef):
         """Generate C function for method"""
@@ -1485,6 +1570,11 @@ class CCodeGenerator:
         elif isinstance(node, Assignment):
             value_code = self.generate_expression(node.value)
             self.emit(f"{node.target} = {value_code};")
+
+        elif isinstance(node, PropertyAssignment):
+            value_code = self.generate_expression(node.value)
+            # Use . for struct value access
+            self.emit(f"{node.object}.{node.property_name} = {value_code};")
 
         elif isinstance(node, PrintStatement):
             value_code = self.generate_expression(node.value)
@@ -1716,7 +1806,18 @@ class CCodeGenerator:
             'SÖZLÜK': 'mlp_dict_t*',
             'DİZİ': 'mlp_array_t*',  # array
         }
-        return type_map.get(mlp_type, 'void*')
+
+        # Check if it's a known type
+        if mlp_type in type_map:
+            return type_map[mlp_type]
+
+        # For custom types (like AST, CompilerConfig), assume they're struct types
+        # and return as pointer (C convention for custom structs)
+        # Check if it's already a pointer type
+        if mlp_type.endswith('*'):
+            return mlp_type
+        else:
+            return f"{mlp_type}*"
 
     def infer_c_type(self, node: ASTNode) -> str:
         """Infer C type from expression"""
@@ -1772,6 +1873,9 @@ class CCodeGenerator:
                     return 'char*'
                 else:  # length
                     return 'size_t'
+            # Special case for compiler functions
+            elif not node.object and node.method_name == 'parse_flags':
+                return 'CompilerConfig'
             # Default for unknown methods
             return 'void*'
         return 'void*'
@@ -1816,13 +1920,18 @@ def compile_mlp_file(input_file: str, output_file: str):
 
     # Compile C to binary
     print(f"[Seed Compiler] Compiling to binary: {output_file}")
-    subprocess.run([
-        'gcc',
-        c_file,
-        'runtime.o',
-        '-o', output_file,
-        '-I.', '-std=c99'
-    ], check=True)
+
+    # Check if we need to link mlp_stubs (for compiler modules)
+    with open(c_file, 'r') as f:
+        c_content = f.read()
+        needs_stubs = '#include "mlp_stubs.h"' in c_content
+
+    compile_cmd = ['gcc', c_file, 'runtime.o']
+    if needs_stubs:
+        compile_cmd.append('mlp_stubs.o')
+    compile_cmd.extend(['-o', output_file, '-I.', '-std=c99'])
+
+    subprocess.run(compile_cmd, check=True)
 
     print(f"[Seed Compiler] ✅ Success! Created: {output_file}")
 
