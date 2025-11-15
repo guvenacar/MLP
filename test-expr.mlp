@@ -1,0 +1,7 @@
+class Test
+    number a
+
+    method simple(number x) -> number
+        return a + x
+    end
+end

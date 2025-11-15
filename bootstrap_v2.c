@@ -436,6 +436,34 @@ void parser_parse_primary(Parser* p) {
     } else if (parser_check(p, TOK_THIS)) {
         fprintf(p->output, "self");
         parser_advance(p);
+
+        // Handle this.member access
+        while (parser_check(p, TOK_LPAREN) || parser_check(p, TOK_DOT) || parser_check(p, TOK_LBRACKET)) {
+            if (parser_match(p, TOK_LPAREN)) {
+                fprintf(p->output, "(");
+                if (!parser_check(p, TOK_RPAREN)) {
+                    parser_parse_expression(p);
+                    while (parser_match(p, TOK_COMMA)) {
+                        fprintf(p->output, ", ");
+                        parser_parse_expression(p);
+                    }
+                }
+                parser_expect(p, TOK_RPAREN, ") bekleniyor");
+                fprintf(p->output, ")");
+            } else if (parser_match(p, TOK_DOT)) {
+                if (parser_check(p, TOK_IDENT)) {
+                    char* member_name = str_dup(p->lexer->current.value);
+                    parser_advance(p);
+                    fprintf(p->output, "->%s", member_name);
+                    free(member_name);
+                }
+            } else if (parser_match(p, TOK_LBRACKET)) {
+                fprintf(p->output, "[");
+                parser_parse_expression(p);
+                parser_expect(p, TOK_RBRACKET, "] bekleniyor");
+                fprintf(p->output, "]");
+            }
+        }
     } else if (parser_check(p, TOK_NEW)) {
         parser_advance(p);
         // new ClassName(args) -> malloc + constructor
@@ -560,9 +588,10 @@ void parser_parse_unary(Parser* p) {
 void parser_parse_multiplicative(Parser* p) {
     parser_parse_unary(p);
     while (parser_check(p, TOK_STAR) || parser_check(p, TOK_SLASH) || parser_check(p, TOK_PERCENT)) {
-        Token op = p->lexer->current;
+        char* op_str = str_dup(p->lexer->current.value);
         parser_advance(p);
-        fprintf(p->output, " %s ", op.value);
+        fprintf(p->output, " %s ", op_str);
+        free(op_str);
         parser_parse_unary(p);
     }
 }
@@ -570,9 +599,10 @@ void parser_parse_multiplicative(Parser* p) {
 void parser_parse_additive(Parser* p) {
     parser_parse_multiplicative(p);
     while (parser_check(p, TOK_PLUS) || parser_check(p, TOK_MINUS)) {
-        Token op = p->lexer->current;
+        char* op_str = str_dup(p->lexer->current.value);
         parser_advance(p);
-        fprintf(p->output, " %s ", op.value);
+        fprintf(p->output, " %s ", op_str);
+        free(op_str);
         parser_parse_multiplicative(p);
     }
 }
@@ -582,15 +612,17 @@ void parser_parse_comparison(Parser* p) {
     while (parser_check(p, TOK_LT) || parser_check(p, TOK_LE) ||
            parser_check(p, TOK_GT) || parser_check(p, TOK_GE) ||
            parser_check(p, TOK_IN)) {
-        Token op = p->lexer->current;
+        TokenType op_type = p->lexer->current.type;
+        char* op_str = str_dup(p->lexer->current.value);
         parser_advance(p);
-        if (op.type == TOK_IN) {
+        if (op_type == TOK_IN) {
             // x in dict -> dict_contains(dict, x)
             fprintf(p->output, " /* in */ ");
             // Note: operands are reversed for 'in'
         } else {
-            fprintf(p->output, " %s ", op.value);
+            fprintf(p->output, " %s ", op_str);
         }
+        free(op_str);
         parser_parse_additive(p);
     }
 }
@@ -598,9 +630,10 @@ void parser_parse_comparison(Parser* p) {
 void parser_parse_equality(Parser* p) {
     parser_parse_comparison(p);
     while (parser_check(p, TOK_EQ) || parser_check(p, TOK_NE)) {
-        Token op = p->lexer->current;
+        char* op_str = str_dup(p->lexer->current.value);
         parser_advance(p);
-        fprintf(p->output, " %s ", op.value);
+        fprintf(p->output, " %s ", op_str);
+        free(op_str);
         parser_parse_comparison(p);
     }
 }
@@ -608,9 +641,9 @@ void parser_parse_equality(Parser* p) {
 void parser_parse_logical(Parser* p) {
     parser_parse_equality(p);
     while (parser_check(p, TOK_AND) || parser_check(p, TOK_OR)) {
-        Token op = p->lexer->current;
+        bool is_and = parser_check(p, TOK_AND);
         parser_advance(p);
-        fprintf(p->output, " %s ", parser_check(p, TOK_AND) ? "&&" : "||");
+        fprintf(p->output, " %s ", is_and ? "&&" : "||");
         parser_parse_equality(p);
     }
 }
@@ -810,7 +843,7 @@ void parser_parse_method(Parser* p, char* class_name) {
     parser_expect(p, TOK_LPAREN, "( bekleniyor");
 
     // Return type (if specified with ->)
-    fprintf(p->output, "\nvoid* %s_%s(void* self", class_name, method_name);
+    fprintf(p->output, "\nvoid* %s_%s(void* self_param", class_name, method_name);
 
     // Parameters
     if (!parser_check(p, TOK_RPAREN)) {
@@ -843,8 +876,24 @@ void parser_parse_method(Parser* p, char* class_name) {
         }
     }
 
-    fprintf(p->output, ") ");
-    parser_parse_block(p);
+    fprintf(p->output, ") {\n");
+
+    // Method body - cast void* self_param to proper typed self
+    p->indent_level++;
+    indent(p);
+    fprintf(p->output, "%s* self = (%s*)self_param;\n", class_name, class_name);
+
+    // Parse method statements (not as a block with braces)
+    while (!parser_check(p, TOK_EOF) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
+        parser_parse_statement(p);
+    }
+
+    if (parser_check(p, TOK_END) || parser_check(p, TOK_SON)) {
+        parser_advance(p);
+    }
+
+    p->indent_level--;
+    fprintf(p->output, "}\n");
 
     free(method_name);
 }
@@ -879,15 +928,21 @@ void parser_parse_constructor(Parser* p, char* class_name) {
     }
 
     parser_expect(p, TOK_RPAREN, ") bekleniyor");
-    fprintf(p->output, ") ");
+    fprintf(p->output, ") {\n");
 
     // Constructor body
-    fprintf(p->output, "{\n");
     p->indent_level++;
     indent(p);
-    fprintf(p->output, "void* self = malloc(sizeof(struct %s));\n", class_name);
+    fprintf(p->output, "%s* self = malloc(sizeof(%s));\n", class_name, class_name);
 
-    parser_parse_block(p);
+    // Parse constructor statements (not as a block with braces)
+    while (!parser_check(p, TOK_EOF) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
+        parser_parse_statement(p);
+    }
+
+    if (parser_check(p, TOK_END) || parser_check(p, TOK_SON)) {
+        parser_advance(p);
+    }
 
     indent(p);
     fprintf(p->output, "return self;\n");
@@ -913,6 +968,7 @@ void parser_parse_class(Parser* p) {
     fprintf(p->output, "typedef struct %s {\n", class_name);
 
     // Parse class body
+    bool struct_closed = false;
     while (!parser_check(p, TOK_EOF) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
         // Field declaration
         if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
@@ -931,12 +987,18 @@ void parser_parse_class(Parser* p) {
         }
         // Constructor
         else if (parser_check(p, TOK_CONSTRUCTOR)) {
-            fprintf(p->output, "} %s;\n", class_name);
+            if (!struct_closed) {
+                fprintf(p->output, "} %s;\n", class_name);
+                struct_closed = true;
+            }
             parser_parse_constructor(p, class_name);
         }
         // Method
         else if (parser_check(p, TOK_METHOD) || parser_check(p, TOK_OVERRIDE)) {
-            fprintf(p->output, "} %s;\n", class_name);
+            if (!struct_closed) {
+                fprintf(p->output, "} %s;\n", class_name);
+                struct_closed = true;
+            }
             parser_parse_method(p, class_name);
         }
         else {
@@ -944,7 +1006,10 @@ void parser_parse_class(Parser* p) {
         }
     }
 
-    fprintf(p->output, "} %s;\n", class_name);
+    // Close struct if not already closed
+    if (!struct_closed) {
+        fprintf(p->output, "} %s;\n", class_name);
+    }
 
     if (parser_check(p, TOK_END) || parser_check(p, TOK_SON)) {
         parser_advance(p);
@@ -973,7 +1038,8 @@ void parser_parse(Parser* p) {
     fprintf(p->output, "#include <stdlib.h>\n");
     fprintf(p->output, "#include <string.h>\n");
     fprintf(p->output, "#include <stdbool.h>\n");
-    fprintf(p->output, "#include <stdint.h>\n\n");
+    fprintf(p->output, "#include <stdint.h>\n");
+    fprintf(p->output, "#include <ctype.h>\n\n");
 
     // Helper functions for MLP operations
     fprintf(p->output, "// MLP Runtime Helper Functions\n");
@@ -997,23 +1063,40 @@ void parser_parse(Parser* p) {
             parser_parse_kullan(p);
         }
         else if (parser_check(p, TOK_FONKSIYON)) {
-            // Top-level function (simplified)
+            // Top-level function
             parser_advance(p);
             if (parser_check(p, TOK_IDENT)) {
                 char* func_name = str_dup(p->lexer->current.value);
-                fprintf(p->output, "\nvoid* %s", func_name);
+
+                // Special case for main - return int instead of void*
+                if (strcmp(func_name, "main") == 0) {
+                    fprintf(p->output, "\nint %s", func_name);
+                } else {
+                    fprintf(p->output, "\nvoid* %s", func_name);
+                }
+
                 free(func_name);
                 parser_advance(p);
             }
             parser_expect(p, TOK_LPAREN, "( bekleniyor");
             fprintf(p->output, "(");
-            // Skip params for now
+            // TODO: Parse parameters properly
             while (!parser_check(p, TOK_RPAREN) && !parser_check(p, TOK_EOF)) {
                 parser_advance(p);
             }
             parser_expect(p, TOK_RPAREN, ") bekleniyor");
-            fprintf(p->output, ") ");
-            parser_parse_block(p);
+            fprintf(p->output, ") {\n");
+
+            // Parse function body
+            p->indent_level++;
+            while (!parser_check(p, TOK_EOF) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
+                parser_parse_statement(p);
+            }
+            if (parser_check(p, TOK_END) || parser_check(p, TOK_SON)) {
+                parser_advance(p);
+            }
+            p->indent_level--;
+            fprintf(p->output, "}\n");
         }
         else {
             parser_advance(p);
