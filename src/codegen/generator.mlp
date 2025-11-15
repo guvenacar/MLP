@@ -4,634 +4,634 @@
 -- Transpiled from: TYD-MLP/src/generator.py
 -- Date: 2025-11-14
 -- "GOLD COPY" - Array + Heap Supported, Unrefactored Stable Version
--- Walks AST and generates x86-64 Assembly code
+-- Walks AST ve generates x86-64 Assembly code
 
 KULLAN ast.ast_nodes
 KULLAN lexer.tokens
 KULLAN codegen.c_arayuzu
 
-class Generator
-    -- Walks AST and generates complete Assembly code
+SINIF Generator
+    -- Walks AST ve generates complete Assembly code
 
-    ast_koku dynamic
-    code array              -- Generated code (entire output)
-    data array              -- .data section (constants, strings)
-    main_kodu array         -- Instructions inside main function
+    ast_koku DİNAMİK
+    code DİZİ              -- Generated code (entire output)
+    data DİZİ              -- .data section (constants, strings)
+    main_kodu DİZİ         -- Instructions inside main function
 
     -- Scope Management
-    degisken_haritalari array  -- Stack of variable maps (global + local scopes)
-    stack_offset number
+    degisken_haritalari DİZİ  -- Stack of variable maps (global + local scopes)
+    stack_offset SAYISAL
 
-    label_sayaci number
-    dongu_cikis_etiketleri array
+    label_sayaci SAYISAL
+    dongu_cikis_etiketleri DİZİ
 
-    islec_haritasi dict
-    mevcut_islec dynamic
-    c_arayuzu dynamic
+    islec_haritasi SÖZLÜK
+    mevcut_islec DİNAMİK
+    c_arayuzu DİNAMİK
 
     -- Phase 8: OOP Support
-    sinif_haritasi dict
-    c_structs array         -- C struct definitions
-    c_functions array       -- C function definitions (constructors, methods)
+    sinif_haritasi SÖZLÜK
+    c_structs DİZİ         -- C struct definitions
+    c_functions DİZİ       -- C function definitions (KURUCUs, methods)
 
-    constructor(ast_koku)
-        this.ast_koku = ast_koku
-        this.code = []
-        this.data = []
-        this.main_kodu = []
+    KURUCU(ast_koku)
+        BU.ast_koku = ast_koku
+        BU.code = []
+        BU.data = []
+        BU.main_kodu = []
 
-        this.degisken_haritalari = [{}]  -- Start with global scope (main)
-        this.stack_offset = 0
+        BU.degisken_haritalari = [{}]  -- Start with global scope (main)
+        BU.stack_offset = 0
 
-        this.label_sayaci = 0
-        this.dongu_cikis_etiketleri = []
+        BU.label_sayaci = 0
+        BU.dongu_cikis_etiketleri = []
 
-        this.islec_haritasi = {}
-        this.mevcut_islec = null
+        BU.islec_haritasi = {}
+        BU.mevcut_islec = HİÇLİK
 
         -- NEW: Initialize C Interface Layer
-        this.c_arayuzu = new CArayuzu(this)
+        BU.c_arayuzu = YENİ CArayuzu(this)
 
         -- Phase 8: OOP Support
-        this.sinif_haritasi = {}
-        this.c_structs = []
-        this.c_functions = []
-    end
+        BU.sinif_haritasi = {}
+        BU.c_structs = []
+        BU.c_functions = []
+    SON
 
     -- ===============================================
     -- Code Generation Helpers
     -- ===============================================
 
-    method emit(instruction)
-        this.main_kodu.push("    " + instruction)
-    end
+    IŞLEÇ emit(instruction)
+        BU.main_kodu.push("    " + instruction)
+    SON
 
-    method emit_data(data_line)
-        this.data.push("    " + data_line)
-    end
+    IŞLEÇ emit_data(data_line)
+        BU.data.push("    " + data_line)
+    SON
 
-    method _yeni_etiket() -> string
-        this.label_sayaci = this.label_sayaci + 1
-        return "_etiket_" + string(this.label_sayaci)
-    end
+    IŞLEÇ _yeni_etiket() -> METIN
+        BU.label_sayaci = BU.label_sayaci + 1
+        DÖNÜŞ "_etiket_" + METIN(BU.label_sayaci)
+    SON
 
     -- ===============================================
-    -- Scope and Memory Helpers
+    -- Scope ve Memory Helpers
     -- ===============================================
 
-    method _kapsam_gir()
-        this.degisken_haritalari.push({})
-        this.stack_offset = 0
-    end
+    IŞLEÇ _kapsam_gir()
+        BU.degisken_haritalari.push({})
+        BU.stack_offset = 0
+    SON
 
-    method _kapsam_cik()
-        if UZUNLUK(this.degisken_haritalari) > 1
-            this.degisken_haritalari.pop()
-        end
-        this.stack_offset = 0
-    end
+    IŞLEÇ _kapsam_cik()
+        EĞER UZUNLUK(BU.degisken_haritalari) > 1
+            BU.degisken_haritalari.pop()
+        SON
+        BU.stack_offset = 0
+    SON
 
-    method _degisken_adres_bul(degisken_adi) -> dict
+    IŞLEÇ _degisken_adres_bul(degisken_adi) -> SÖZLÜK
         -- Returns variable's address/size dictionary
-        var mevcut_kapsam = this.degisken_haritalari[UZUNLUK(this.degisken_haritalari) - 1]
-        if degisken_adi in mevcut_kapsam
-            return mevcut_kapsam[degisken_adi]
-        end
-        if degisken_adi in this.degisken_haritalari[0]
-            return this.degisken_haritalari[0][degisken_adi]
-        end
-        throw new Exception("[Generator] Tanımlanmamış değişken: " + degisken_adi)
-    end
+        VAR mevcut_kapsam = BU.degisken_haritalari[UZUNLUK(BU.degisken_haritalari) - 1]
+        EĞER degisken_adi İÇİNDE mevcut_kapsam
+            DÖNÜŞ mevcut_kapsam[degisken_adi]
+        SON
+        EĞER degisken_adi İÇİNDE BU.degisken_haritalari[0]
+            DÖNÜŞ BU.degisken_haritalari[0][degisken_adi]
+        SON
+        HATA_FIRLAT YENİ Exception("[Generator] Tanımlanmamış değişken: " + degisken_adi)
+    SON
 
-    method _degisken_yer_ayir(degisken_adi, adres, boyut) -> dict
-        -- Allocates space on stack for variable/array
+    IŞLEÇ _degisken_yer_ayir(degisken_adi, adres, boyut) -> SÖZLÜK
+        -- Allocates space on stack HER variable/DİZİ
         -- Stores info as {'adres': '...', 'boyut': X}
-        var mevcut_kapsam = this.degisken_haritalari[UZUNLUK(this.degisken_haritalari) - 1]
+        VAR mevcut_kapsam = BU.degisken_haritalari[UZUNLUK(BU.degisken_haritalari) - 1]
 
-        if degisken_adi in mevcut_kapsam
-            throw new Exception("[Generator] Değişken '" + degisken_adi + "' bu kapsamda zaten tanımlı.")
-        end
+        EĞER degisken_adi İÇİNDE mevcut_kapsam
+            HATA_FIRLAT YENİ Exception("[Generator] Değişken '" + degisken_adi + "' bu kapsamda zaten tanımlı.")
+        SON
 
-        if adres == null
-            -- LOCAL VARIABLE or ARRAY
-            var toplam_byte_boyutu = boyut * 8
-            this.stack_offset = this.stack_offset - toplam_byte_boyutu
-            adres = "[rbp" + string(this.stack_offset) + "]"
-            this.emit("sub rsp, " + string(toplam_byte_boyutu) + "  ; '" + degisken_adi + "' için yığında " + string(toplam_byte_boyutu) + " byte yer aç")
-        end
+        EĞER adres == HİÇLİK
+            -- LOCAL VARIABLE veya ARRAY
+            VAR toplam_byte_boyutu = boyut * 8
+            BU.stack_offset = BU.stack_offset - toplam_byte_boyutu
+            adres = "[rbp" + METIN(BU.stack_offset) + "]"
+            BU.emit("sub rsp, " + METIN(toplam_byte_boyutu) + "  ; '" + degisken_adi + "' içİÇİNDE yığında " + METIN(toplam_byte_boyutu) + " byte yer aç")
+        SON
 
         mevcut_kapsam[degisken_adi] = {
             "adres": adres,
             "boyut": boyut
         }
-        return mevcut_kapsam[degisken_adi]
-    end
+        DÖNÜŞ mevcut_kapsam[degisken_adi]
+    SON
 
     -- ===============================================
     -- Main Generation Functions
     -- ===============================================
 
-    method generate() -> string
-        -- Walks entire AST and returns complete Assembly code
+    IŞLEÇ generate() -> METIN
+        -- Walks entire AST ve returns complete Assembly code
 
         -- C library setup (now comes from C_Arayuzu)
-        var extern_decls = this.c_arayuzu.generate_extern_bildirimleri()
-        for decl in extern_decls
-            this.code.push(decl)
-        end
+        VAR extern_decls = BU.c_arayuzu.generate_extern_bildirimleri()
+        HER decl İÇİNDE extern_decls
+            BU.code.push(decl)
+        SON
 
-        this.emit_data('format_sayi db "%d", 10, 0')
-        this.emit_data('format_metin db "%s", 10, 0')
+        BU.emit_data('format_sayi db "%d", 10, 0')
+        BU.emit_data('format_metin db "%s", 10, 0')
 
-        this.visit(this.ast_koku)
+        BU.visit(BU.ast_koku)
 
-        -- Phase 8: OOP - Add C Struct and Function definitions
-        if UZUNLUK(this.c_structs) > 0 or UZUNLUK(this.c_functions) > 0
-            this.code.insert(0, "; ========================================")
-            this.code.insert(1, "; Phase 8: OOP - C Code Generation")
-            this.code.insert(2, "; ========================================")
-            this.code.insert(3, ";")
+        -- Phase 8: OOP - Add C Struct ve Function definitions
+        EĞER UZUNLUK(BU.c_structs) > 0 veya UZUNLUK(BU.c_functions) > 0
+            BU.code.insert(0, "; ========================================")
+            BU.code.insert(1, "; Phase 8: OOP - C Code Generation")
+            BU.code.insert(2, "; ========================================")
+            BU.code.insert(3, ";")
 
-            if UZUNLUK(this.c_structs) > 0
-                this.code.insert(4, "; --- C Struct Definitions ---")
-                for i = 0 to UZUNLUK(this.c_structs) - 1
-                    this.code.insert(5 + i, "; " + this.c_structs[i])
-                end
-                this.code.insert(5 + UZUNLUK(this.c_structs), ";")
-            end
+            EĞER UZUNLUK(BU.c_structs) > 0
+                BU.code.insert(4, "; --- C Struct Definitions ---")
+                HER i = 0 to UZUNLUK(BU.c_structs) - 1
+                    BU.code.insert(5 + i, "; " + BU.c_structs[i])
+                SON
+                BU.code.insert(5 + UZUNLUK(BU.c_structs), ";")
+            SON
 
-            if UZUNLUK(this.c_functions) > 0
-                var insert_pos = 5 + UZUNLUK(this.c_structs) + 1
-                this.code.insert(insert_pos, "; --- C Function Definitions ---")
-                for i = 0 to UZUNLUK(this.c_functions) - 1
-                    this.code.insert(insert_pos + 1 + i, "; " + this.c_functions[i])
-                end
-                this.code.insert(insert_pos + 1 + UZUNLUK(this.c_functions), ";")
-            end
+            EĞER UZUNLUK(BU.c_functions) > 0
+                VAR insert_pos = 5 + UZUNLUK(BU.c_structs) + 1
+                BU.code.insert(insert_pos, "; --- C Function Definitions ---")
+                HER i = 0 to UZUNLUK(BU.c_functions) - 1
+                    BU.code.insert(insert_pos + 1 + i, "; " + BU.c_functions[i])
+                SON
+                BU.code.insert(insert_pos + 1 + UZUNLUK(BU.c_functions), ";")
+            SON
 
-            this.code.push("; ========================================")
-            this.code.push("")
-        end
+            BU.code.push("; ========================================")
+            BU.code.push("")
+        SON
 
-        this.code.push("\nsection .data")
-        for line in this.data
-            this.code.push(line)
-        end
+        BU.code.push("\nsection .data")
+        HER line İÇİNDE BU.data
+            BU.code.push(line)
+        SON
 
-        this.code.push("\nsection .text")
-        this.code.push("global main")
-        this.code.push("main:")
-        this.code.push("    push rbp")
-        this.code.push("    mov rbp, rsp")
+        BU.code.push("\nsection .text")
+        BU.code.push("global main")
+        BU.code.push("main:")
+        BU.code.push("    push rbp")
+        BU.code.push("    mov rbp, rsp")
 
-        for line in this.main_kodu
-            this.code.push(line)
-        end
+        HER line İÇİNDE BU.main_kodu
+            BU.code.push(line)
+        SON
 
-        this.code.push("    mov rsp, rbp")
-        this.code.push("    pop rbp")
-        this.code.push("    ret")
+        BU.code.push("    mov rsp, rbp")
+        BU.code.push("    pop rbp")
+        BU.code.push("    ret")
 
-        return STRING_JOIN(this.code, "\n")
-    end
+        DÖNÜŞ STRING_JOIN(BU.code, "\n")
+    SON
 
-    method visit(node)
+    IŞLEÇ visit(node)
         -- Visitor pattern dispatcher
 
         -- 0. SinifTanimlama? (Phase 8: OOP)
-        if TYPE_OF(node) == "SinifTanimlama"
-            this.visit_SinifTanimlama(node)
+        EĞER TYPE_OF(node) == "SinifTanimlama"
+            BU.visit_SinifTanimlama(node)
             return
-        end
+        SON
 
         -- 1. IslecTanimlama?
-        if TYPE_OF(node) == "IslecTanimlama"
-            this.visit_IslecTanimlama(node)
+        EĞER TYPE_OF(node) == "IslecTanimlama"
+            BU.visit_IslecTanimlama(node)
             return
-        end
+        SON
 
         -- 2. DiziTanimlama?
-        if TYPE_OF(node) == "DiziTanimlama"
-            this.visit_DiziTanimlama(node)
+        EĞER TYPE_OF(node) == "DiziTanimlama"
+            BU.visit_DiziTanimlama(node)
             return
-        end
+        SON
 
-        -- 3. Call method by name (e.g., visit_DegiskenTanimlama)
-        var method_name = "visit_" + TYPE_OF(node)
-        if HAS_METHOD(this, method_name)
-            return CALL_METHOD(this, method_name, node)
-        else
-            return this.visit_bilinmeyen(node)
-        end
-    end
+        -- 3. Call IŞLEÇ by name (e.g., visit_DegiskenTanimlama)
+        VAR method_name = "visit_" + TYPE_OF(node)
+        EĞER HAS_METHOD(this, method_name)
+            DÖNÜŞ CALL_METHOD(this, method_name, node)
+        DEĞILSE
+            DÖNÜŞ BU.visit_bilinmeyen(node)
+        SON
+    SON
 
-    method visit_bilinmeyen(node)
-        throw new Exception("[Generator] Tanınmayan AST Düğümü: " + TYPE_OF(node))
-    end
+    IŞLEÇ visit_bilinmeyen(node)
+        HATA_FIRLAT YENİ Exception("[Generator] Tanınmayan AST Düğümü: " + TYPE_OF(node))
+    SON
 
     -- ===============================================
     -- Visitor Functions (Statements)
     -- ===============================================
 
-    method visit_Blok(node)
-        for komut in node.komutlar
-            this.visit(komut)
-        end
-    end
+    IŞLEÇ visit_Blok(node)
+        HER komut İÇİNDE node.komutlar
+            BU.visit(komut)
+        SON
+    SON
 
-    method visit_DegiskenTanimlama(node)
-        var degisken_adi = node.ad
-        this.emit("; --- DegiskenTanimlama: " + degisken_adi + " ---")
-        this.visit(node.ifade)  -- Calculate value (rax)
-        var adres_bilgisi = this._degisken_yer_ayir(degisken_adi, null, 1)
-        var adres = adres_bilgisi["adres"]
-        this.emit("mov " + adres + ", rax")
-    end
+    IŞLEÇ visit_DegiskenTanimlama(node)
+        VAR degisken_adi = node.ad
+        BU.emit("; --- DegiskenTanimlama: " + degisken_adi + " ---")
+        BU.visit(node.ifade)  -- Calculate value (rax)
+        VAR adres_bilgisi = BU._degisken_yer_ayir(degisken_adi, HİÇLİK, 1)
+        VAR adres = adres_bilgisi["adres"]
+        BU.emit("mov " + adres + ", rax")
+    SON
 
-    method visit_DiziTanimlama(node)
-        var degisken_adi = node.ad.deger
-        if TYPE_OF(node.boyut) != "Sayi"
-            throw new Exception("Dizi boyutu şimdilik sadece sabit bir sayı olmalıdır.")
-        end
-        var boyut = PARSE_INT(string(node.boyut.deger))
-        if boyut <= 0
-            throw new Exception("Dizi boyutu pozitif olmalıdır.")
-        end
-        this.emit("; --- Dizi Tanımlama: " + degisken_adi + "[" + string(boyut) + "] ---")
-        this._degisken_yer_ayir(degisken_adi, null, boyut)
-    end
+    IŞLEÇ visit_DiziTanimlama(node)
+        VAR degisken_adi = node.ad.deger
+        EĞER TYPE_OF(node.boyut) != "Sayi"
+            HATA_FIRLAT YENİ Exception("Dizi boyutu şimdilik sadece sabit bir sayı olmalıdır.")
+        SON
+        VAR boyut = PARSE_INT(METIN(node.boyut.deger))
+        EĞER boyut <= 0
+            HATA_FIRLAT YENİ Exception("Dizi boyutu pozitif olmalıdır.")
+        SON
+        BU.emit("; --- Dizi Tanımlama: " + degisken_adi + "[" + METIN(boyut) + "] ---")
+        BU._degisken_yer_ayir(degisken_adi, HİÇLİK, boyut)
+    SON
 
-    method visit_AtamaKomutu(node)
-        this.emit("; --- AtamaKomutu ---")
+    IŞLEÇ visit_AtamaKomutu(node)
+        BU.emit("; --- AtamaKomutu ---")
 
-        -- 1. Calculate assigned value (right side) and save to stack
-        this.visit(node.ifade)
-        this.emit("push rax  ; Atanacak değeri koru")
+        -- 1. Calculate assigned value (right side) ve save to stack
+        BU.visit(node.ifade)
+        BU.emit("push rax  ; Atanacak değeri koru")
 
         -- 2. Determine target (left side)
 
-        if TYPE_OF(node.hedef) == "Degisken"
+        EĞER TYPE_OF(node.hedef) == "Degisken"
             -- Target: Simple Variable
-            this.emit("pop rax")
-            var degisken_adi = node.hedef.ad
-            var adres_bilgisi = this._degisken_adres_bul(degisken_adi)
-            var adres = adres_bilgisi["adres"]
-            this.emit("mov " + adres + ", rax  ; " + degisken_adi + " = (sonuç)")
-        end
+            BU.emit("pop rax")
+            VAR degisken_adi = node.hedef.ad
+            VAR adres_bilgisi = BU._degisken_adres_bul(degisken_adi)
+            VAR adres = adres_bilgisi["adres"]
+            BU.emit("mov " + adres + ", rax  ; " + degisken_adi + " = (sonuç)")
+        SON
 
-        if TYPE_OF(node.hedef) == "DiziErisim"
+        EĞER TYPE_OF(node.hedef) == "DiziErisim"
             -- Target: Array Access
-            this.emit("; --- Dizi Erişimi (Yazma) [ ] ---")
+            BU.emit("; --- Dizi Erişimi (Yazma) [ ] ---")
 
-            var dizi_adi = node.hedef.hedef.ad
-            var adres_bilgisi = this._degisken_adres_bul(dizi_adi)
-            var dizi_baslangic_adresi_str = adres_bilgisi["adres"]
+            VAR dizi_adi = node.hedef.hedef.ad
+            VAR adres_bilgisi = BU._degisken_adres_bul(dizi_adi)
+            VAR dizi_baslangic_adresi_str = adres_bilgisi["adres"]
 
-            this.visit(node.hedef.indeks)
-            this.emit("mov rdi, rax")
-            this.emit("shl rdi, 3")
-            this.emit("lea rax, " + dizi_baslangic_adresi_str)
-            this.emit("add rax, rdi  ; RAX = Elemanın Tam Adresi")
+            BU.visit(node.hedef.indeks)
+            BU.emit("mov rdi, rax")
+            BU.emit("shl rdi, 3")
+            BU.emit("lea rax, " + dizi_baslangic_adresi_str)
+            BU.emit("add rax, rdi  ; RAX = Elemanın Tam Adresi")
 
-            this.emit("mov rdi, rax  ; Hedef adresi RDI'a taşı")
-            this.emit("pop rax       ; Atanacak değeri yığından geri al")
-            this.emit("mov [rdi], rax")
-        end
+            BU.emit("mov rdi, rax  ; Hedef adresi RDI'a taşı")
+            BU.emit("pop rax       ; Atanacak değeri yığından geri al")
+            BU.emit("mov [rdi], rax")
+        SON
 
-        if TYPE_OF(node.hedef) == "SozlukErisim"
+        EĞER TYPE_OF(node.hedef) == "SozlukErisim"
             -- Target: Dictionary Access
-            this.emit("; --- Sözlük Erişimi (Yazma) {{ }} ---")
-            this.emit("pop rsi ; Atanacak değeri RSI'a al")
-            this.c_arayuzu.visit(node.hedef.anahtar)
-            this.emit("mov rdi, rax ; Anahtarı RDI'a al")
-            this.emit("mov rax, 0")
-            this.emit("call sozluk_ekle")
-        end
-    end
+            BU.emit("; --- Sözlük Erişimi (Yazma) {{ }} ---")
+            BU.emit("pop rsi ; Atanacak değeri RSI'a al")
+            BU.c_arayuzu.visit(node.hedef.anahtar)
+            BU.emit("mov rdi, rax ; Anahtarı RDI'a al")
+            BU.emit("mov rax, 0")
+            BU.emit("call sozluk_ekle")
+        SON
+    SON
 
-    method visit_EgerBlogu(node)
-        var degilse_etiketi = this._yeni_etiket()
-        var son_etiket = this._yeni_etiket()
-        this.visit(node.kosul)
-        this.emit("cmp rax, 0")
-        var hedef_etiket = node.yanlis_blok != null ? degilse_etiketi : son_etiket
-        this.emit("je " + hedef_etiket)
-        this.visit(node.dogru_blok)
-        if node.yanlis_blok != null
-            this.emit("jmp " + son_etiket)
-            this.emit(degilse_etiketi + ":")
-            this.visit(node.yanlis_blok)
-        end
-        this.emit(son_etiket + ":")
-    end
+    IŞLEÇ visit_EgerBlogu(node)
+        VAR degilse_etiketi = BU._yeni_etiket()
+        VAR son_etiket = BU._yeni_etiket()
+        BU.visit(node.kosul)
+        BU.emit("cmp rax, 0")
+        VAR hedef_etiket = node.yanlis_blok != HİÇLİK ? degilse_etiketi : son_etiket
+        BU.emit("je " + hedef_etiket)
+        BU.visit(node.dogru_blok)
+        EĞER node.yanlis_blok != HİÇLİK
+            BU.emit("jmp " + son_etiket)
+            BU.emit(degilse_etiketi + ":")
+            BU.visit(node.yanlis_blok)
+        SON
+        BU.emit(son_etiket + ":")
+    SON
 
-    method visit_DonguBlogu(node)
-        var basi_etiketi = this._yeni_etiket()
-        var sonu_etiketi = this._yeni_etiket()
-        this.dongu_cikis_etiketleri.push(sonu_etiketi)
-        this.emit(basi_etiketi + ":")
-        this.visit(node.blok)
-        this.emit("jmp " + basi_etiketi)
-        this.emit(sonu_etiketi + ":")
-        this.dongu_cikis_etiketleri.pop()
-    end
+    IŞLEÇ visit_DonguBlogu(node)
+        VAR basi_etiketi = BU._yeni_etiket()
+        VAR sonu_etiketi = BU._yeni_etiket()
+        BU.dongu_cikis_etiketleri.push(sonu_etiketi)
+        BU.emit(basi_etiketi + ":")
+        BU.visit(node.blok)
+        BU.emit("jmp " + basi_etiketi)
+        BU.emit(sonu_etiketi + ":")
+        BU.dongu_cikis_etiketleri.pop()
+    SON
 
-    method visit_DonguBitirKomutu(node)
-        if UZUNLUK(this.dongu_cikis_etiketleri) == 0
-            throw new Exception("[Generator] 'DÖNGÜ_BITIR' komutu bir 'DÖNGÜ' bloğu içinde olmalıdır.")
-        end
-        this.emit("jmp " + this.dongu_cikis_etiketleri[UZUNLUK(this.dongu_cikis_etiketleri) - 1])
-    end
+    IŞLEÇ visit_DonguBitirKomutu(node)
+        EĞER UZUNLUK(BU.dongu_cikis_etiketleri) == 0
+            HATA_FIRLAT YENİ Exception("[Generator] 'DÖNGÜ_BITIR' komutu bir 'DÖNGÜ' bloğu içinde olmalıdır.")
+        SON
+        BU.emit("jmp " + BU.dongu_cikis_etiketleri[UZUNLUK(BU.dongu_cikis_etiketleri) - 1])
+    SON
 
-    method visit_IslecTanimlama(node)
-        var islec_adi = node.ad.deger
-        var asm_etiketi = "_islec_" + islec_adi
-        this.islec_haritasi[islec_adi] = asm_etiketi
+    IŞLEÇ visit_IslecTanimlama(node)
+        VAR islec_adi = node.ad.deger
+        VAR asm_etiketi = "_islec_" + islec_adi
+        BU.islec_haritasi[islec_adi] = asm_etiketi
 
-        var islec_kodu = []
+        VAR islec_kodu = []
         islec_kodu.push("\n; --- İŞLEÇ Tanımı: " + islec_adi + " ---")
         islec_kodu.push(asm_etiketi + ":")
         islec_kodu.push("    push rbp")
         islec_kodu.push("    mov rbp, rsp")
 
-        this._kapsam_gir()
-        this.mevcut_islec = node
+        BU._kapsam_gir()
+        BU.mevcut_islec = node
 
-        for i = 0 to UZUNLUK(node.parametreler) - 1
-            var param = node.parametreler[i]
-            var param_adi = param.ad.deger
-            var adres = "[rbp+" + string(16 + i * 8) + "]"
-            this._degisken_yer_ayir(param_adi, adres, 1)
-        end
+        HER i = 0 to UZUNLUK(node.parametreler) - 1
+            VAR param = node.parametreler[i]
+            VAR param_adi = param.ad.deger
+            VAR adres = "[rbp+" + METIN(16 + i * 8) + "]"
+            BU._degisken_yer_ayir(param_adi, adres, 1)
+        SON
 
-        var eski_main_kodu = this.main_kodu
-        this.main_kodu = islec_kodu
-        this.visit(node.govde)
-        this.main_kodu = eski_main_kodu
+        VAR eski_main_kodu = BU.main_kodu
+        BU.main_kodu = islec_kodu
+        BU.visit(node.govde)
+        BU.main_kodu = eski_main_kodu
 
-        islec_kodu.push("; " + islec_adi + " için örtük epilog")
+        islec_kodu.push("; " + islec_adi + " içİÇİNDE örtük epilog")
         islec_kodu.push("    mov rsp, rbp")
         islec_kodu.push("    pop rbp")
         islec_kodu.push("    ret")
 
-        for line in islec_kodu
-            this.code.push(line)
-        end
+        HER line İÇİNDE islec_kodu
+            BU.code.push(line)
+        SON
 
-        this.mevcut_islec = null
-        this._kapsam_cik()
-    end
+        BU.mevcut_islec = HİÇLİK
+        BU._kapsam_cik()
+    SON
 
-    method visit_DonusKomutu(node)
-        if this.mevcut_islec == null
-            throw new Exception("'DÖNÜŞ' komutu sadece İŞLEÇ içinde kullanılabilir.")
-        end
-        this.visit(node.ifade)
-        this.emit("    mov rsp, rbp")
-        this.emit("    pop rbp")
-        this.emit("    ret")
-    end
+    IŞLEÇ visit_DonusKomutu(node)
+        EĞER BU.mevcut_islec == HİÇLİK
+            HATA_FIRLAT YENİ Exception("'DÖNÜŞ' komutu sadece İŞLEÇ içinde kullanılabilir.")
+        SON
+        BU.visit(node.ifade)
+        BU.emit("    mov rsp, rbp")
+        BU.emit("    pop rbp")
+        BU.emit("    ret")
+    SON
 
-    method visit_IfadeKomutu(node)
-        this.visit(node.ifade)
-    end
+    IŞLEÇ visit_IfadeKomutu(node)
+        BU.visit(node.ifade)
+    SON
 
-    method visit_YazdirKomutu(node)
-        this.emit("; --- YAZDIR Başlangıç (C Arayüzüne delege edildi) ---")
-        this.c_arayuzu.generate_c_call("YAZDIR", node)
-    end
+    IŞLEÇ visit_YazdirKomutu(node)
+        BU.emit("; --- YAZDIR Başlangıç (C Arayüzüne delege edildi) ---")
+        BU.c_arayuzu.generate_c_call("YAZDIR", node)
+    SON
 
     -- ===============================================
     -- Expression Visitors
     -- ===============================================
 
-    method visit_Sayi(node)
-        this.emit("mov rax, " + string(node.deger))
-    end
+    IŞLEÇ visit_Sayi(node)
+        BU.emit("mov rax, " + METIN(node.deger))
+    SON
 
-    method visit_Metin(node)
-        var data_label = "str_" + string(UZUNLUK(this.data))
-        this.emit_data(data_label + ' db "' + node.deger + '", 0')
-        this.emit("mov rax, " + data_label)
-    end
+    IŞLEÇ visit_Metin(node)
+        VAR data_label = "str_" + METIN(UZUNLUK(BU.data))
+        BU.emit_data(data_label + ' db "' + node.deger + '", 0')
+        BU.emit("mov rax, " + data_label)
+    SON
 
-    method visit_Degisken(node)
-        var degisken_adi = node.ad
-        var adres_bilgisi = this._degisken_adres_bul(degisken_adi)
-        if adres_bilgisi["boyut"] > 1
-            throw new Exception("HATA: '" + degisken_adi + "' bir dizidir. Elemanına ([i]) erişin.")
-        end
-        var adres = adres_bilgisi["adres"]
-        this.emit("mov rax, " + adres)
-    end
+    IŞLEÇ visit_Degisken(node)
+        VAR degisken_adi = node.ad
+        VAR adres_bilgisi = BU._degisken_adres_bul(degisken_adi)
+        EĞER adres_bilgisi["boyut"] > 1
+            HATA_FIRLAT YENİ Exception("HATA: '" + degisken_adi + "' bir dizidir. Elemanına ([i]) erişin.")
+        SON
+        VAR adres = adres_bilgisi["adres"]
+        BU.emit("mov rax, " + adres)
+    SON
 
-    method visit_DiziErisim(node)
-        this.emit("; --- Dizi Erişimi (Okuma) [ ] ---")
+    IŞLEÇ visit_DiziErisim(node)
+        BU.emit("; --- Dizi Erişimi (Okuma) [ ] ---")
 
-        var dizi_adi = node.hedef.ad
-        var adres_bilgisi = this._degisken_adres_bul(dizi_adi)
-        var dizi_baslangic_adresi_str = adres_bilgisi["adres"]
+        VAR dizi_adi = node.hedef.ad
+        VAR adres_bilgisi = BU._degisken_adres_bul(dizi_adi)
+        VAR dizi_baslangic_adresi_str = adres_bilgisi["adres"]
 
-        this.visit(node.indeks)
-        this.emit("mov rdi, rax")
-        this.emit("shl rdi, 3")
-        this.emit("lea rax, " + dizi_baslangic_adresi_str)
-        this.emit("add rax, rdi")
-        this.emit("mov rax, [rax]")
-    end
+        BU.visit(node.indeks)
+        BU.emit("mov rdi, rax")
+        BU.emit("shl rdi, 3")
+        BU.emit("lea rax, " + dizi_baslangic_adresi_str)
+        BU.emit("add rax, rdi")
+        BU.emit("mov rax, [rax]")
+    SON
 
-    method visit_SozlukErisim(node)
-        this.emit("; --- Sözlük Erişimi (Okuma) {{ }} ---")
-        this.c_arayuzu.generate_sozluk_getir(node.anahtar)
-    end
+    IŞLEÇ visit_SozlukErisim(node)
+        BU.emit("; --- Sözlük Erişimi (Okuma) {{ }} ---")
+        BU.c_arayuzu.generate_sozluk_getir(node.anahtar)
+    SON
 
-    method visit_IslecCagirma(node)
-        var islec_adi = node.hedef_token.deger
-        this.emit("; --- İŞLEÇ Çağırma: " + islec_adi + " ---")
+    IŞLEÇ visit_IslecCagirma(node)
+        VAR islec_adi = node.hedef_token.deger
+        BU.emit("; --- İŞLEÇ Çağırma: " + islec_adi + " ---")
 
         -- 1. Is this a magic C function?
-        if this.c_arayuzu.is_c_function(islec_adi)
-            this.c_arayuzu.generate_c_call(islec_adi, node)
+        EĞER BU.c_arayuzu.is_c_function(islec_adi)
+            BU.c_arayuzu.generate_c_call(islec_adi, node)
             return
-        end
+        SON
 
         -- 2. Is this a TYD-MLP function we defined?
-        if islec_adi in this.islec_haritasi
-            var asm_etiketi = this.islec_haritasi[islec_adi]
+        EĞER islec_adi İÇİNDE BU.islec_haritasi
+            VAR asm_etiketi = BU.islec_haritasi[islec_adi]
 
-            -- Prepare arguments for TYD-MLP protocol (stack)
-            var arg_sayisi = UZUNLUK(node.argumanlar)
-            for i = arg_sayisi - 1 to 0 step -1
-                this.visit(node.argumanlar[i])
-                this.emit("push rax")
-            end
+            -- Prepare arguments HER TYD-MLP protocol (stack)
+            VAR arg_sayisi = UZUNLUK(node.argumanlar)
+            HER i = arg_sayisi - 1 to 0 step -1
+                BU.visit(node.argumanlar[i])
+                BU.emit("push rax")
+            SON
 
-            this.emit("call " + asm_etiketi)
+            BU.emit("call " + asm_etiketi)
 
             -- Clean stack
-            if arg_sayisi > 0
-                this.emit("add rsp, " + string(arg_sayisi * 8) + "  ; Yığını temizle")
-            end
+            EĞER arg_sayisi > 0
+                BU.emit("add rsp, " + METIN(arg_sayisi * 8) + "  ; Yığını temizle")
+            SON
             return
-        end
+        SON
 
         -- 3. Not found
-        throw new Exception("Tanımsız İŞLEÇ çağrıldı: " + islec_adi)
-    end
+        HATA_FIRLAT YENİ Exception("Tanımsız İŞLEÇ çağrıldı: " + islec_adi)
+    SON
 
-    method visit_IkiliIslem(node)
-        this.visit(node.sag)
-        this.emit("push rax")
-        this.visit(node.sol)
-        this.emit("pop rbx")
+    IŞLEÇ visit_IkiliIslem(node)
+        BU.visit(node.sag)
+        BU.emit("push rax")
+        BU.visit(node.sol)
+        BU.emit("pop rbx")
 
-        var op = node.operator.tip
+        VAR op = node.operator.tip
 
-        if op == TOKEN_TIPLERI["PLUS"] or op == TOKEN_TIPLERI["OP_ARTI"]
-            this.emit("add rax, rbx")
-        end
+        EĞER op == TOKEN_TIPLERI["PLUS"] veya op == TOKEN_TIPLERI["OP_ARTI"]
+            BU.emit("add rax, rbx")
+        SON
 
-        if op == TOKEN_TIPLERI["MINUS"] or op == TOKEN_TIPLERI["OP_EKSI"]
-            this.emit("sub rax, rbx")
-        end
+        EĞER op == TOKEN_TIPLERI["MINUS"] veya op == TOKEN_TIPLERI["OP_EKSI"]
+            BU.emit("sub rax, rbx")
+        SON
 
-        if op == TOKEN_TIPLERI["MUL"] or op == TOKEN_TIPLERI["OP_CARP"]
-            this.emit("imul rax, rbx")
-        end
+        EĞER op == TOKEN_TIPLERI["MUL"] veya op == TOKEN_TIPLERI["OP_CARP"]
+            BU.emit("imul rax, rbx")
+        SON
 
-        if op == TOKEN_TIPLERI["DIV"] or op == TOKEN_TIPLERI["OP_BOL"]
-            this.emit("xor rdx, rdx")
-            this.emit("idiv rbx")
-        end
+        EĞER op == TOKEN_TIPLERI["DIV"] veya op == TOKEN_TIPLERI["OP_BOL"]
+            BU.emit("xor rdx, rdx")
+            BU.emit("idiv rbx")
+        SON
 
-        if op == TOKEN_TIPLERI["OP_ESIT"] or op == TOKEN_TIPLERI["OP_GT"] or op == TOKEN_TIPLERI["OP_LT"]
-            this.emit("cmp rax, rbx")
-            if op == TOKEN_TIPLERI["OP_ESIT"]
-                this.emit("sete al")
-            end
-            if op == TOKEN_TIPLERI["OP_GT"]
-                this.emit("setg al")
-            end
-            if op == TOKEN_TIPLERI["OP_LT"]
-                this.emit("setl al")
-            end
-            this.emit("movzx rax, al")
-        end
-    end
+        EĞER op == TOKEN_TIPLERI["OP_ESIT"] veya op == TOKEN_TIPLERI["OP_GT"] veya op == TOKEN_TIPLERI["OP_LT"]
+            BU.emit("cmp rax, rbx")
+            EĞER op == TOKEN_TIPLERI["OP_ESIT"]
+                BU.emit("sete al")
+            SON
+            EĞER op == TOKEN_TIPLERI["OP_GT"]
+                BU.emit("setg al")
+            SON
+            EĞER op == TOKEN_TIPLERI["OP_LT"]
+                BU.emit("setl al")
+            SON
+            BU.emit("movzx rax, al")
+        SON
+    SON
 
     -- ===============================================
     -- Phase 8: OOP Support
     -- ===============================================
 
-    method visit_SinifTanimlama(node)
+    IŞLEÇ visit_SinifTanimlama(node)
         -- SINIF → C Struct + Constructor + Methods
-        var sinif_adi = node.ad
-        this.emit("; --- SINIF Tanımı: " + sinif_adi + " ---")
+        VAR sinif_adi = node.ad
+        BU.emit("; --- SINIF Tanımı: " + sinif_adi + " ---")
 
-        this.sinif_haritasi[sinif_adi] = {
+        BU.sinif_haritasi[sinif_adi] = {
             "ozellikler": node.ozellikler,
             "kurucu": node.kurucu,
             "metodlar": node.metodlar
         }
 
         -- STEP 1: Generate C Struct Definition
-        this._generate_c_struct(sinif_adi, node.ozellikler)
+        BU._generate_c_struct(sinif_adi, node.ozellikler)
 
         -- STEP 2: Generate Constructor Function
-        if node.kurucu != null
-            this._generate_constructor(sinif_adi, node.kurucu)
-        end
+        EĞER node.kurucu != HİÇLİK
+            BU._generate_constructor(sinif_adi, node.kurucu)
+        SON
 
         -- STEP 3: Generate Method Functions
-        for metod in node.metodlar
-            this._generate_method(sinif_adi, metod)
-        end
-    end
+        HER metod İÇİNDE node.metodlar
+            BU._generate_method(sinif_adi, metod)
+        SON
+    SON
 
-    method _generate_c_struct(sinif_adi, ozellikler)
+    IŞLEÇ _generate_c_struct(sinif_adi, ozellikler)
         -- Generates C struct definition
-        this.c_structs.push("// SINIF: " + sinif_adi)
-        this.c_structs.push("typedef struct {")
+        BU.c_structs.push("// SINIF: " + sinif_adi)
+        BU.c_structs.push("typedef struct {")
 
-        for ozellik in ozellikler
-            var tip_deger = HAS_PROPERTY(ozellik.tip, "deger") ? ozellik.tip.deger : ozellik.tip
-            var c_tip = this._tyd_tip_to_c_tip(tip_deger)
-            this.c_structs.push("    " + c_tip + " " + ozellik.ad + ";")
-        end
+        HER ozellik İÇİNDE ozellikler
+            VAR tip_deger = HAS_PROPERTY(ozellik.tip, "deger") ? ozellik.tip.deger : ozellik.tip
+            VAR c_tip = BU._tyd_tip_to_c_tip(tip_deger)
+            BU.c_structs.push("    " + c_tip + " " + ozellik.ad + ";")
+        SON
 
-        this.c_structs.push("} " + sinif_adi + ";")
-        this.c_structs.push("")
+        BU.c_structs.push("} " + sinif_adi + ";")
+        BU.c_structs.push("")
 
-        this.emit("; C struct '" + sinif_adi + "' tanımlandı")
-    end
+        BU.emit("; C struct '" + sinif_adi + "' tanımlandı")
+    SON
 
-    method _generate_constructor(sinif_adi, kurucu)
-        -- Generates constructor function: ClassName_new()
-        var func_name = sinif_adi + "_new"
+    IŞLEÇ _generate_constructor(sinif_adi, kurucu)
+        -- Generates KURUCU function: ClassName_new()
+        VAR func_name = sinif_adi + "_new"
 
-        var params = []
-        for param in kurucu.parametreler
-            var c_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
-            var param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
+        VAR params = []
+        HER param İÇİNDE kurucu.parametreler
+            VAR c_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
+            VAR param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
             params.push(c_tip + " " + param_name)
-        end
+        SON
 
-        var params_str = STRING_JOIN(params, ", ")
-        this.c_functions.push("// KURUCU: " + sinif_adi)
-        this.c_functions.push(sinif_adi + "* " + func_name + "(" + params_str + ") {")
-        this.c_functions.push("    " + sinif_adi + "* self = (" + sinif_adi + "*)mlp_alloc(sizeof(" + sinif_adi + "));")
+        VAR params_str = STRING_JOIN(params, ", ")
+        BU.c_functions.push("// KURUCU: " + sinif_adi)
+        BU.c_functions.push(sinif_adi + "* " + func_name + "(" + params_str + ") {")
+        BU.c_functions.push("    " + sinif_adi + "* self = (" + sinif_adi + "*)mlp_alloc(sizeof(" + sinif_adi + "));")
 
-        this.c_functions.push("    // Field initialization from constructor")
-        for komut in kurucu.govde.komutlar
-            if TYPE_OF(komut) == "AtamaKomutu"
-                var field_name = HAS_PROPERTY(komut.hedef, "ad") ? komut.hedef.ad : string(komut.hedef)
-                var value = this._stringify_expression(komut.ifade)
-                this.c_functions.push("    self->" + field_name + " = " + value + ";")
-            end
-        end
+        BU.c_functions.push("    // Field initialization from KURUCU")
+        HER komut İÇİNDE kurucu.govde.komutlar
+            EĞER TYPE_OF(komut) == "AtamaKomutu"
+                VAR field_name = HAS_PROPERTY(komut.hedef, "ad") ? komut.hedef.ad : METIN(komut.hedef)
+                VAR value = BU._stringify_expression(komut.ifade)
+                BU.c_functions.push("    self->" + field_name + " = " + value + ";")
+            SON
+        SON
 
-        this.c_functions.push("    return self;")
-        this.c_functions.push("}")
-        this.c_functions.push("")
+        BU.c_functions.push("    DÖNÜŞ self;")
+        BU.c_functions.push("}")
+        BU.c_functions.push("")
 
-        this.emit("; Constructor '" + func_name + "' tanımlandı")
-    end
+        BU.emit("; Constructor '" + func_name + "' tanımlandı")
+    SON
 
-    method _generate_method(sinif_adi, metod)
-        -- Generates method function: ClassName_methodname(ClassName* self, ...)
-        var metod_adi = HAS_PROPERTY(metod.ad, "deger") ? metod.ad.deger : metod.ad
-        var func_name = sinif_adi + "_" + metod_adi
+    IŞLEÇ _generate_method(sinif_adi, metod)
+        -- Generates IŞLEÇ function: ClassName_methodname(ClassName* self, ...)
+        VAR metod_adi = HAS_PROPERTY(metod.ad, "deger") ? metod.ad.deger : metod.ad
+        VAR func_name = sinif_adi + "_" + metod_adi
 
-        var return_tip = "void"
-        if metod.donus_tipi != null
-            return_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(metod.donus_tipi, "deger") ? metod.donus_tipi.deger : metod.donus_tipi)
-        end
+        VAR return_tip = "void"
+        EĞER metod.donus_tipi != HİÇLİK
+            return_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(metod.donus_tipi, "deger") ? metod.donus_tipi.deger : metod.donus_tipi)
+        SON
 
-        var params = [sinif_adi + "* self"]
-        for param in metod.parametreler
-            var c_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
-            var param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
+        VAR params = [sinif_adi + "* self"]
+        HER param İÇİNDE metod.parametreler
+            VAR c_tip = BU._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
+            VAR param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
             params.push(c_tip + " " + param_name)
-        end
+        SON
 
-        var params_str = STRING_JOIN(params, ", ")
-        this.c_functions.push("// METHOD: " + sinif_adi + "." + metod_adi)
-        this.c_functions.push(return_tip + " " + func_name + "(" + params_str + ") {")
-        this.c_functions.push("    // Method body")
-        this.c_functions.push("    // TODO: Implement method body transformation")
-        this.c_functions.push("}")
-        this.c_functions.push("")
+        VAR params_str = STRING_JOIN(params, ", ")
+        BU.c_functions.push("// METHOD: " + sinif_adi + "." + metod_adi)
+        BU.c_functions.push(return_tip + " " + func_name + "(" + params_str + ") {")
+        BU.c_functions.push("    // Method body")
+        BU.c_functions.push("    // TODO: Implement IŞLEÇ body transformation")
+        BU.c_functions.push("}")
+        BU.c_functions.push("")
 
-        this.emit("; Method '" + func_name + "' tanımlandı")
-    end
+        BU.emit("; Method '" + func_name + "' tanımlandı")
+    SON
 
-    method _tyd_tip_to_c_tip(tyd_tip) -> string
+    IŞLEÇ _tyd_tip_to_c_tip(tyd_tip) -> METIN
         -- Converts TYD type to C type
-        if HAS_METHOD(tyd_tip, "lower")
+        EĞER HAS_METHOD(tyd_tip, "lower")
             tyd_tip = tyd_tip.lower()
-        end
+        SON
 
-        var tip_map = {
+        VAR tip_map = {
             "SAYISAL": "int64_t",
             "sayısal": "int64_t",
             "sayisal": "int64_t",
@@ -641,32 +641,32 @@ class Generator
             "zıtlık": "int64_t",
             "zitlik": "int64_t"
         }
-        return tip_map[tyd_tip] ?? "void*"
-    end
+        DÖNÜŞ tip_map[tyd_tip] ?? "void*"
+    SON
 
-    method _stringify_expression(expr) -> string
-        -- Converts expression to simple string (for C code)
-        if TYPE_OF(expr) == "Sayi"
-            return string(expr.deger)
-        end
-        if TYPE_OF(expr) == "Metin"
-            return '"' + expr.deger + '"'
-        end
-        if TYPE_OF(expr) == "Degisken"
-            return expr.ad
-        end
-        if TYPE_OF(expr) == "IkiliIslem"
-            var sol = this._stringify_expression(expr.sol)
-            var sag = this._stringify_expression(expr.sag)
-            var op_map = {
+    IŞLEÇ _stringify_expression(expr) -> METIN
+        -- Converts expression to simple METIN (HER C code)
+        EĞER TYPE_OF(expr) == "Sayi"
+            DÖNÜŞ METIN(expr.deger)
+        SON
+        EĞER TYPE_OF(expr) == "Metin"
+            DÖNÜŞ '"' + expr.deger + '"'
+        SON
+        EĞER TYPE_OF(expr) == "Degisken"
+            DÖNÜŞ expr.ad
+        SON
+        EĞER TYPE_OF(expr) == "IkiliIslem"
+            VAR sol = BU._stringify_expression(expr.sol)
+            VAR sag = BU._stringify_expression(expr.sag)
+            VAR op_map = {
                 "PLUS": "+", "OP_ARTI": "+",
                 "MINUS": "-", "OP_EKSI": "-",
                 "MUL": "*", "OP_CARP": "*",
                 "DIV": "/", "OP_BOL": "/"
             }
-            var op = op_map[expr.operator.tip] ?? "?"
-            return "(" + sol + " " + op + " " + sag + ")"
-        end
-        return "/* complex expression */"
-    end
-end
+            VAR op = op_map[expr.operator.tip] ?? "?"
+            DÖNÜŞ "(" + sol + " " + op + " " + sag + ")"
+        SON
+        DÖNÜŞ "/* complex expression */"
+    SON
+SON

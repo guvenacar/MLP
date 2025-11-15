@@ -1,21 +1,21 @@
 -- Simple test with proper type annotations
--- Only basic features: class, constructor, method, var, return
+-- Only basic features: class, KURUCU, method, var, return
 
-class Point
-    x number
-    y number
+SINIF Point
+    x SAYISAL
+    y SAYISAL
 
-    constructor(METIN msg)
+    KURUCU(METIN msg)
         YAZDIR msg
-    end
+    SON
 
-    method distance() -> number
-        var dx = x * x
-        var dy = y * y
-        var result = dx + dy
-        return result
-    end
-end
+    IŞLEÇ distance() -> SAYISAL
+        VAR dx = x * x
+        VAR dy = y * y
+        VAR result = dx + dy
+        DÖNÜŞ result
+    SON
+SON
 
 YAZDIR "=== Point Test ==="
 YAZDIR "Test complete!"

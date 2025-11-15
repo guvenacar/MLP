@@ -1,25 +1,25 @@
 -- Simple Calculator Example
 -- Demonstrates: classes, methods, variables, expressions
 
-class Calculator
-    result number
+SINIF Calculator
+    result SAYISAL
 
-    constructor()
+    KURUCU()
         YAZDIR "Calculator initialized"
-    end
+    SON
 
-    method add(a, b)
-        var sum = a + b
+    IŞLEÇ add(a, b)
+        VAR sum = a + b
         YAZDIR "Adding numbers..."
-        return sum
-    end
+        DÖNÜŞ sum
+    SON
 
-    method multiply(a, b)
-        var product = a * b
+    IŞLEÇ multiply(a, b)
+        VAR product = a * b
         YAZDIR "Multiplying numbers..."
-        return product
-    end
-end
+        DÖNÜŞ product
+    SON
+SON
 
 YAZDIR "=== MLP Calculator ==="
 YAZDIR "Test complete!"

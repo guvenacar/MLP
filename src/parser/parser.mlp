@@ -3,602 +3,602 @@
 -- ===============================================
 -- Transpiled from: TYD-MLP/src/parser.py
 -- Date: 2025-11-14
--- Takes Token list from Lexer and builds AST (Abstract Syntax Tree)
+-- Takes Token list from Lexer ve builds AST (Abstract Syntax Tree)
 
 KULLAN lexer.tokens
 KULLAN ast.ast_nodes
 
-class Parser
-    -- Takes token list from Lexer and constructs AST
+SINIF Parser
+    -- Takes token list from Lexer ve constructs AST
 
-    lexer dynamic
-    mevcut_token dynamic
+    lexer DİNAMİK
+    mevcut_token DİNAMİK
 
-    constructor(lexer)
-        this.lexer = lexer
-        this.mevcut_token = this.lexer.sonraki_tokeni_al()  -- Get first token
-    end
+    KURUCU(lexer)
+        BU.lexer = lexer
+        BU.mevcut_token = BU.lexer.sonraki_tokeni_al()  -- Get first token
+    KURUCU SON
 
-    method hata(mesaj)
+    IŞLEÇ hata(mesaj)
         -- Throws parser error
-        throw new Exception("[Sözdizimi Hatası] " + mesaj + ". Bulunan: " + string(this.mevcut_token))
-    end
+        HATA_FIRLAT YENİ İSTİSNA("[Sözdizimi Hatası] " + mesaj + ". Bulunan: " + METIN(BU.mevcut_token))
+    IŞLEÇ SON
 
-    method tuket(token_tipi)
-        -- Consumes current token if it matches expected type
+    IŞLEÇ tuket(token_tipi)
+        -- Consumes current token EĞER it matches expected type
         -- Otherwise throws error
-        if this.mevcut_token.tip == token_tipi
-            this.mevcut_token = this.lexer.sonraki_tokeni_al()
-        else
-            this.hata("Beklenen token: " + token_tipi)
-        end
-    end
+        EĞER BU.mevcut_token.tip == token_tipi İSE
+            BU.mevcut_token = BU.lexer.sonraki_tokeni_al()
+        DEĞILSE
+            BU.hata("Beklenen token: " + token_tipi)
+        EĞER SON
+    IŞLEÇ SON
 
     -- ===============================================
     -- Grammar Rules
     -- ===============================================
 
-    method faktor() -> dynamic
+    IŞLEÇ faktor() -> dynamic
         -- Highest precedence: Numbers, Strings, Variables, Parentheses,
         -- Function Calls, Array Access, Dictionary Access
-        var token = this.mevcut_token
+        VAR token = BU.mevcut_token
 
-        if token.tip == TOKEN_TIPLERI["INTEGER"] or token.tip == TOKEN_TIPLERI["FLOAT"]
-            this.tuket(token.tip)
-            return new Sayi(token)
-        end
+        EĞER token.tip == TOKEN_TIPLERI["INTEGER"] veya token.tip == TOKEN_TIPLERI["FLOAT"]
+            BU.tuket(token.tip)
+            DÖNÜŞ YENİ Sayi(token)
+        SON
 
-        if token.tip == TOKEN_TIPLERI["STRING"]
-            this.tuket(TOKEN_TIPLERI["STRING"])
-            return new Metin(token)
-        end
+        EĞER token.tip == TOKEN_TIPLERI["STRING"]
+            BU.tuket(TOKEN_TIPLERI["STRING"])
+            DÖNÜŞ YENİ Metin(token)
+        SON
 
-        if token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            this.tuket(TOKEN_TIPLERI["IDENTIFIER"])  -- 'd', 'liste', or 'topla'
+        EĞER token.tip == TOKEN_TIPLERI["IDENTIFIER"]
+            BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])  -- 'd', 'liste', veya 'topla'
 
-            if this.mevcut_token.tip == TOKEN_TIPLERI["LEFT_PAREN"]
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["LEFT_PAREN"]
                 -- Function call (topla())
-                return this.islec_cagirma(token)
-            end
+                DÖNÜŞ BU.islec_cagirma(token)
+            SON
 
-            if this.mevcut_token.tip == TOKEN_TIPLERI["LEFT_BRACKET"]
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["LEFT_BRACKET"]
                 -- Array access (liste[])
-                return this.dizi_erisimi(token)
-            end
+                DÖNÜŞ BU.dizi_erisimi(token)
+            SON
 
-            if this.mevcut_token.tip == TOKEN_TIPLERI["LEFT_BRACE"]
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["LEFT_BRACE"]
                 -- Dictionary access (d{})
-                return this.sozluk_erisimi(token)
-            end
+                DÖNÜŞ BU.sozluk_erisimi(token)
+            SON
 
             -- Normal variable reference
-            return new Degisken(token)
-        end
+            DÖNÜŞ YENİ Degisken(token)
+        SON
 
-        if token.tip == TOKEN_TIPLERI["LEFT_PAREN"]
-            this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])
-            var dugum = this.ifade()
-            this.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])
-            return dugum
-        end
+        EĞER token.tip == TOKEN_TIPLERI["LEFT_PAREN"]
+            BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])
+            VAR dugum = BU.ifade()
+            BU.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])
+            DÖNÜŞ dugum
+        SON
 
-        this.hata("Beklenmedik ifade başlangıcı: " + token.tip)
-    end
+        BU.hata("Beklenmedik ifade başlangıcı: " + token.tip)
+    SON
 
-    method islec_cagirma(hedef_token) -> IslecCagirma
+    IŞLEÇ islec_cagirma(hedef_token) -> IslecCagirma
         -- Parses function call arguments
         -- Grammar: '(' [ifade (COMMA ifade)*]? ')'
-        var argumanlar = []
-        this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
+        VAR argumanlar = []
+        BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
         -- If first token is not ')', there are arguments
-        if this.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
+        EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
             -- First argument (can be complex expression like '5 + 2')
-            argumanlar.push(this.ifade())
+            argumanlar.push(BU.ifade())
 
             -- Remaining arguments (comma-separated)
-            while this.mevcut_token.tip == TOKEN_TIPLERI["COMMA"]
-                this.tuket(TOKEN_TIPLERI["COMMA"])  -- ','
-                argumanlar.push(this.ifade())
-            end
-        end
+            DÖNGÜ BU.mevcut_token.tip == TOKEN_TIPLERI["COMMA"] İSE
+                BU.tuket(TOKEN_TIPLERI["COMMA"])  -- ','
+                argumanlar.push(BU.ifade())
+            SON
+        SON
 
-        this.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
-        return new IslecCagirma(hedef_token, argumanlar)
-    end
+        BU.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
+        DÖNÜŞ YENİ IslecCagirma(hedef_token, argumanlar)
+    SON
 
-    method dizi_erisimi(hedef_token) -> DiziErisim
+    IŞLEÇ dizi_erisimi(hedef_token) -> DiziErisim
         -- Grammar: '[' ifade ']'
-        this.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])  -- '['
+        BU.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])  -- '['
 
         -- Index can be complex expression like '5 + 2'
-        var indeks_ifadesi = this.ifade()
+        VAR indeks_ifadesi = BU.ifade()
 
-        this.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])  -- ']'
+        BU.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])  -- ']'
 
-        var hedef_node = new Degisken(hedef_token)
-        return new DiziErisim(hedef_node, indeks_ifadesi)
-    end
+        VAR hedef_node = YENİ Degisken(hedef_token)
+        DÖNÜŞ YENİ DiziErisim(hedef_node, indeks_ifadesi)
+    SON
 
-    method sozluk_erisimi(hedef_token) -> SozlukErisim
+    IŞLEÇ sozluk_erisimi(hedef_token) -> SozlukErisim
         -- Grammar: '{' ifade '}'
-        this.tuket(TOKEN_TIPLERI["LEFT_BRACE"])  -- '{'
+        BU.tuket(TOKEN_TIPLERI["LEFT_BRACE"])  -- '{'
 
         -- Key can be complex expression
-        var anahtar_ifadesi = this.ifade()
+        VAR anahtar_ifadesi = BU.ifade()
 
-        this.tuket(TOKEN_TIPLERI["RIGHT_BRACE"])  -- '}'
+        BU.tuket(TOKEN_TIPLERI["RIGHT_BRACE"])  -- '}'
 
-        var hedef_node = new Degisken(hedef_token)
-        return new SozlukErisim(hedef_node, anahtar_ifadesi)
-    end
+        VAR hedef_node = YENİ Degisken(hedef_token)
+        DÖNÜŞ YENİ SozlukErisim(hedef_node, anahtar_ifadesi)
+    SON
 
-    method terim() -> dynamic
-        -- Medium precedence: Multiplication and Division
+    IŞLEÇ terim() -> dynamic
+        -- Medium precedence: Multiplication ve Division
         -- Grammar: faktor ((MUL | DIV | POWER) faktor)*
-        var sol_dugum = this.faktor()
+        VAR sol_dugum = BU.faktor()
 
-        -- Continue as long as *, /, or ** appears
-        while this.mevcut_token.tip == TOKEN_TIPLERI["MUL"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["DIV"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["POWER"]
+        -- Continue as long as *, /, veya ** appears
+        DÖNGÜ BU.mevcut_token.tip == TOKEN_TIPLERI["MUL"] veya İSE
+              BU.mevcut_token.tip == TOKEN_TIPLERI["DIV"] veya
+              BU.mevcut_token.tip == TOKEN_TIPLERI["POWER"]
 
-            var operator = this.mevcut_token
-            this.tuket(operator.tip)
-            var sag_dugum = this.faktor()
+            VAR operator = BU.mevcut_token
+            BU.tuket(operator.tip)
+            VAR sag_dugum = BU.faktor()
 
-            -- Update left node with new operation node
-            sol_dugum = new IkiliIslem(sol_dugum, operator, sag_dugum)
-        end
+            -- Update left node with YENİ operation node
+            sol_dugum = YENİ IkiliIslem(sol_dugum, operator, sag_dugum)
+        SON
 
-        return sol_dugum
-    end
+        DÖNÜŞ sol_dugum
+    SON
 
-    method ifade() -> dynamic
+    IŞLEÇ ifade() -> dynamic
         -- Lowest precedence: Addition, Subtraction, Comparisons
         -- Grammar: terim ((PLUS | MINUS | comparisons) terim)*
-        var sol_dugum = this.terim()
+        VAR sol_dugum = BU.terim()
 
-        while this.mevcut_token.tip == TOKEN_TIPLERI["PLUS"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["MINUS"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["OP_ESIT_KARSILASTIRMA"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["GT"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["LT"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["GTE"] or
-              this.mevcut_token.tip == TOKEN_TIPLERI["LTE"]
+        DÖNGÜ BU.mevcut_token.tip == TOKEN_TIPLERI["PLUS"] veya İSE
+              BU.mevcut_token.tip == TOKEN_TIPLERI["MINUS"] veya
+              BU.mevcut_token.tip == TOKEN_TIPLERI["OP_ESIT_KARSILASTIRMA"] veya
+              BU.mevcut_token.tip == TOKEN_TIPLERI["GT"] veya
+              BU.mevcut_token.tip == TOKEN_TIPLERI["LT"] veya
+              BU.mevcut_token.tip == TOKEN_TIPLERI["GTE"] veya
+              BU.mevcut_token.tip == TOKEN_TIPLERI["LTE"]
 
-            var operator = this.mevcut_token
-            this.tuket(operator.tip)
-            var sag_dugum = this.terim()
-            sol_dugum = new IkiliIslem(sol_dugum, operator, sag_dugum)
-        end
+            VAR operator = BU.mevcut_token
+            BU.tuket(operator.tip)
+            VAR sag_dugum = BU.terim()
+            sol_dugum = YENİ IkiliIslem(sol_dugum, operator, sag_dugum)
+        SON
 
-        return sol_dugum
-    end
+        DÖNÜŞ sol_dugum
+    SON
 
     -- ===============================================
     -- Statement Parsing
     -- ===============================================
 
-    method komut() -> dynamic
+    IŞLEÇ komut() -> dynamic
         -- Parses a single statement
-        var token = this.mevcut_token
+        VAR token = BU.mevcut_token
 
         -- 0. Phase 8: SINIF definition?
-        if token.tip == TOKEN_TIPLERI["OOP_SINIF"]
-            return this.sinif_tanimlama()
-        end
+        EĞER token.tip == TOKEN_TIPLERI["OOP_SINIF"]
+            DÖNÜŞ BU.sinif_tanimlama()
+        SON
 
         -- 1. MLP SYNTAX: DEĞIŞKEN name: TYPE = value;
-        if token.tip == TOKEN_TIPLERI["TANIMLA_DEGISKEN"]
-            return this.mlp_degisken_tanimlama()
-        end
+        EĞER token.tip == TOKEN_TIPLERI["TANIMLA_DEGISKEN"]
+            DÖNÜŞ BU.mlp_degisken_tanimlama()
+        SON
 
         -- 2. Starts with TYPE?
-        if token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] or
-           token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] or
+        EĞER token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] veya
+           token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] veya
            token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"]
-            return this.tip_ile_baslayan_komut()
-        end
+            DÖNÜŞ BU.tip_ile_baslayan_komut()
+        SON
 
         -- 3. Starts with IŞLEÇ?
-        if token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
-            return this.islec_tanimlama(null)
-        end
+        EĞER token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
+            DÖNÜŞ BU.islec_tanimlama(HİÇLİK)
+        SON
 
         -- 4. EĞER block?
-        if token.tip == TOKEN_TIPLERI["YAPI_KOSUL_EGER"]
-            return this.eger_blogu()
-        end
+        EĞER token.tip == TOKEN_TIPLERI["YAPI_KOSUL_EGER"]
+            DÖNÜŞ BU.eger_blogu()
+        SON
 
         -- 5. YAZDIR statement?
-        if token.tip == TOKEN_TIPLERI["YAPI_YAZDIR"]
-            return this.yazdir_komutu()
-        end
+        EĞER token.tip == TOKEN_TIPLERI["YAPI_YAZDIR"]
+            DÖNÜŞ BU.yazdir_komutu()
+        SON
 
-        -- 6. DÖNGÜ block?
-        if token.tip == TOKEN_TIPLERI["YAPI_DONGU"]
-            return this.dongu_blogu()
-        end
+        -- 6. DÖNGÜ block? İSE
+        EĞER token.tip == TOKEN_TIPLERI["YAPI_DONGU"]
+            DÖNÜŞ BU.dongu_blogu()
+        SON
 
         -- 7. DÖNGÜ_BITIR statement?
-        if token.tip == TOKEN_TIPLERI["YAPI_DONGU_BITIR"]
-            return this.dongu_bitir_komutu()
-        end
+        EĞER token.tip == TOKEN_TIPLERI["YAPI_DONGU_BITIR"]
+            DÖNÜŞ BU.dongu_bitir_komutu()
+        SON
 
         -- 8. DÖNÜŞ statement?
-        if token.tip == TOKEN_TIPLERI["YAPI_DONUS"]
-            return this.donus_komutu()
-        end
+        EĞER token.tip == TOKEN_TIPLERI["YAPI_DONUS"]
+            DÖNÜŞ BU.donus_komutu()
+        SON
 
         -- 9. Assignment OR Function call statement?
-        if token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            var ifade_dugumu = this.ifade()
+        EĞER token.tip == TOKEN_TIPLERI["IDENTIFIER"]
+            VAR ifade_dugumu = BU.ifade()
 
-            -- Case 1: Assignment (s = 10; or d{"key"} = 30;)
-            if this.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
-                -- Check if target is valid (Degisken, DiziErisim, or SozlukErisim)
-                if not (TYPE_OF(ifade_dugumu) == "Degisken" or
-                        TYPE_OF(ifade_dugumu) == "DiziErisim" or
+            -- Case 1: Assignment (s = 10; veya d{"key"} = 30;)
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
+                -- Check EĞER target is valid (Degisken, DiziErisim, veya SozlukErisim)
+                EĞER not (TYPE_OF(ifade_dugumu) == "Degisken" veya
+                        TYPE_OF(ifade_dugumu) == "DiziErisim" veya
                         TYPE_OF(ifade_dugumu) == "SozlukErisim")
-                    this.hata("Atama hedefi geçersiz. Hedef bir değişken, dizi elemanı veya sözlük elemanı olmalıdır.")
-                end
+                    BU.hata("Atama hedefi geçersiz. Hedef bir değişken, dizi elemanı veya sözlük elemanı olmalıdır.")
+                SON
 
-                this.tuket(TOKEN_TIPLERI["ASSIGN"])  -- '='
-                var atanan_deger_ifadesi = this.ifade()
-                this.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';'
-                return new AtamaKomutu(ifade_dugumu, atanan_deger_ifadesi)
-            end
+                BU.tuket(TOKEN_TIPLERI["ASSIGN"])  -- '='
+                VAR atanan_deger_ifadesi = BU.ifade()
+                BU.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';'
+                DÖNÜŞ YENİ AtamaKomutu(ifade_dugumu, atanan_deger_ifadesi)
+            SON
 
             -- Case 2: Function call statement (SOZLUK_OLUSTUR(10);)
-            if this.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"]
-                this.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';'
-                if TYPE_OF(ifade_dugumu) == "IslecCagirma"
-                    return new IfadeKomutu(ifade_dugumu)
-                else
-                    this.hata("Bu ifade tek başına bir komut olamaz: " + string(ifade_dugumu))
-                end
-            end
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["SEMICOLON"]
+                BU.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';'
+                EĞER TYPE_OF(ifade_dugumu) == "IslecCagirma"
+                    DÖNÜŞ YENİ IfadeKomutu(ifade_dugumu)
+                DEĞILSE
+                    BU.hata("Bu ifade tek başına bir komut olamaz: " + string(ifade_dugumu))
+                SON
+            SON
 
-            this.hata("Komutun sonunda ';' veya '=' bekleniyordu")
-        end
+            BU.hata("Komutun sonunda ';' veya '=' bekleniyordu")
+        SON
 
         -- 10. Otherwise it's an error
-        this.hata("Tanınmayan komut başlangıcı: " + string(token))
-    end
+        BU.hata("Tanınmayan komut başlangıcı: " + string(token))
+    SON
 
-    method degisken_tanimlama(tip_token, ad_token) -> DegiskenTanimlama
-        -- Grammar: (tip_token and ad_token already consumed) ASSIGN ifade SEMICOLON
-        this.tuket(TOKEN_TIPLERI["ASSIGN"])
-        var ifade_node = this.ifade()
-        this.tuket(TOKEN_TIPLERI["SEMICOLON"])
-        return new DegiskenTanimlama(tip_token, ad_token, ifade_node)
-    end
+    IŞLEÇ degisken_tanimlama(tip_token, ad_token) -> DegiskenTanimlama
+        -- Grammar: (tip_token ve ad_token already consumed) ASSIGN ifade SEMICOLON
+        BU.tuket(TOKEN_TIPLERI["ASSIGN"])
+        VAR ifade_node = BU.ifade()
+        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        DÖNÜŞ YENİ DegiskenTanimlama(tip_token, ad_token, ifade_node)
+    SON
 
-    method mlp_degisken_tanimlama() -> DegiskenTanimlama
+    IŞLEÇ mlp_degisken_tanimlama() -> DegiskenTanimlama
         -- MLP Syntax: DEĞIŞKEN name: TYPE = value;
-        this.tuket(TOKEN_TIPLERI["TANIMLA_DEGISKEN"])  -- 'DEĞIŞKEN'
+        BU.tuket(TOKEN_TIPLERI["TANIMLA_DEGISKEN"])  -- 'DEĞIŞKEN'
 
         -- Get name
-        var ad_token = this.mevcut_token
-        this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+        VAR ad_token = BU.mevcut_token
+        BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
         -- Expect ':'
-        this.tuket(TOKEN_TIPLERI["COLON"])
+        BU.tuket(TOKEN_TIPLERI["COLON"])
 
         -- Get type
-        var tip_token = this.mevcut_token
-        if tip_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] or
-           tip_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] or
-           tip_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"] or
+        VAR tip_token = BU.mevcut_token
+        EĞER tip_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] veya
+           tip_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] veya
+           tip_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"] veya
            tip_token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            this.tuket(tip_token.tip)
-        else
-            this.hata("Tip anotasyonu bekleniyor")
-        end
+            BU.tuket(tip_token.tip)
+        DEĞILSE
+            BU.hata("Tip anotasyonu bekleniyor")
+        SON
 
         -- Optional initial value
-        var ifade_node = null
-        if this.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
-            this.tuket(TOKEN_TIPLERI["ASSIGN"])
-            ifade_node = this.ifade()
-        end
+        VAR ifade_node = HİÇLİK
+        EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
+            BU.tuket(TOKEN_TIPLERI["ASSIGN"])
+            ifade_node = BU.ifade()
+        SON
 
-        this.tuket(TOKEN_TIPLERI["SEMICOLON"])
-        return new DegiskenTanimlama(tip_token, ad_token, ifade_node)
-    end
+        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        DÖNÜŞ YENİ DegiskenTanimlama(tip_token, ad_token, ifade_node)
+    SON
 
-    method eger_blogu() -> EgerBlogu
+    IŞLEÇ eger_blogu() -> EgerBlogu
         -- EĞER condition İSE statements [DEĞİLSE statements] SON
-        this.tuket(TOKEN_TIPLERI["YAPI_KOSUL_EGER"])  -- 'EĞER'
-        var kosul = this.ifade()
-        this.tuket(TOKEN_TIPLERI["YAPI_KOSUL_ISE"])  -- 'İSE'
+        BU.tuket(TOKEN_TIPLERI["YAPI_KOSUL_EGER"])  -- 'EĞER'
+        VAR kosul = BU.ifade()
+        BU.tuket(TOKEN_TIPLERI["YAPI_KOSUL_ISE"])  -- 'İSE'
 
         -- True block
-        var dogru_blok = new Blok()
-        while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
-              this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"] and
-              this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
-            dogru_blok.komutlar.push(this.komut())
-        end
+        VAR dogru_blok = YENİ Blok()
+        DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
+              BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"] ve
+              BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
+            dogru_blok.komutlar.push(BU.komut())
+        SON
 
-        var yanlis_blok = null
+        VAR yanlis_blok = HİÇLİK
 
         -- DEĞİLSE block?
-        if this.mevcut_token.tip == TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"]
-            this.tuket(TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"])
-            yanlis_blok = new Blok()
-            while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
-                  this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
-                yanlis_blok.komutlar.push(this.komut())
-            end
-        end
+        EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"]
+            BU.tuket(TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"])
+            yanlis_blok = YENİ Blok()
+            DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
+                  BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
+                yanlis_blok.komutlar.push(BU.komut())
+            SON
+        SON
 
-        this.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
-        return new EgerBlogu(kosul, dogru_blok, yanlis_blok)
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
+        DÖNÜŞ YENİ EgerBlogu(kosul, dogru_blok, yanlis_blok)
+    SON
 
-    method yazdir_komutu() -> YazdirKomutu
+    IŞLEÇ yazdir_komutu() -> YazdirKomutu
         -- YAZDIR expression;
-        this.tuket(TOKEN_TIPLERI["YAPI_YAZDIR"])
-        var ifade = this.ifade()
-        this.tuket(TOKEN_TIPLERI["SEMICOLON"])
-        return new YazdirKomutu(ifade)
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_YAZDIR"])
+        VAR ifade = BU.ifade()
+        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        DÖNÜŞ YENİ YazdirKomutu(ifade)
+    SON
 
-    method dongu_blogu() -> DonguBlogu
-        -- DÖNGÜ statements SON
-        this.tuket(TOKEN_TIPLERI["YAPI_DONGU"])
+    IŞLEÇ dongu_blogu() -> DonguBlogu
+        -- DÖNGÜ statements SON İSE
+        BU.tuket(TOKEN_TIPLERI["YAPI_DONGU"])
 
-        var blok = new Blok()
-        while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
-              this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
-            blok.komutlar.push(this.komut())
-        end
+        VAR blok = YENİ Blok()
+        DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
+              BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
+            blok.komutlar.push(BU.komut())
+        SON
 
-        this.tuket(TOKEN_TIPLERI["YAPI_SON"])
-        return new DonguBlogu(blok)
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_SON"])
+        DÖNÜŞ YENİ DonguBlogu(blok)
+    SON
 
-    method dongu_bitir_komutu() -> DonguBitirKomutu
+    IŞLEÇ dongu_bitir_komutu() -> DonguBitirKomutu
         -- DÖNGÜ_BITIR;
-        this.tuket(TOKEN_TIPLERI["YAPI_DONGU_BITIR"])
-        this.tuket(TOKEN_TIPLERI["SEMICOLON"])
-        return new DonguBitirKomutu()
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_DONGU_BITIR"])
+        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        DÖNÜŞ YENİ DonguBitirKomutu()
+    SON
 
-    method donus_komutu() -> DonusKomutu
+    IŞLEÇ donus_komutu() -> DonusKomutu
         -- DÖNÜŞ expression;
-        this.tuket(TOKEN_TIPLERI["YAPI_DONUS"])
-        var ifade = this.ifade()
-        this.tuket(TOKEN_TIPLERI["SEMICOLON"])
-        return new DonusKomutu(ifade)
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_DONUS"])
+        VAR ifade = BU.ifade()
+        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        DÖNÜŞ YENİ DonusKomutu(ifade)
+    SON
 
-    method tip_ile_baslayan_komut() -> dynamic
+    IŞLEÇ tip_ile_baslayan_komut() -> dynamic
         -- Distinguishes commands starting with type (SAYISAL, METİN...)
         -- - SAYISAL İŞLEÇ topla...
         -- - SAYISAL liste[10];
         -- - SAYISAL s = 10;
-        var tip_token = this.mevcut_token
-        this.tuket(tip_token.tip)
+        VAR tip_token = BU.mevcut_token
+        BU.tuket(tip_token.tip)
 
         -- Case 1: SAYISAL İŞLEÇ ...
-        if this.mevcut_token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
-            return this.islec_tanimlama(tip_token)
-        end
+        EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
+            DÖNÜŞ BU.islec_tanimlama(tip_token)
+        SON
 
-        -- Case 2 & 3: SAYISAL s ... (Variable or Array)
-        if this.mevcut_token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            var ad_token = this.mevcut_token
-            this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+        -- Case 2 & 3: SAYISAL s ... (Variable veya Array)
+        EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["IDENTIFIER"]
+            VAR ad_token = BU.mevcut_token
+            BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
             -- Case 2: SAYISAL liste[ ...
-            if this.mevcut_token.tip == TOKEN_TIPLERI["LEFT_BRACKET"]
-                return this.dizi_tanimlama(tip_token, ad_token)
-            end
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["LEFT_BRACKET"]
+                DÖNÜŞ BU.dizi_tanimlama(tip_token, ad_token)
+            SON
 
             -- Case 3: SAYISAL s = ...
-            if this.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
-                return this.degisken_tanimlama(tip_token, ad_token)
-            end
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
+                DÖNÜŞ BU.degisken_tanimlama(tip_token, ad_token)
+            SON
 
-            this.hata("Değişken adından sonra '[' veya '=' bekleniyordu")
-        end
+            BU.hata("Değişken adından sonra '[' veya '=' bekleniyordu")
+        SON
 
-        this.hata("Tip tanımından sonra 'İŞLEÇ' veya değişken adı bekleniyordu")
-    end
+        BU.hata("Tip tanımından sonra 'İŞLEÇ' veya değişken adı bekleniyordu")
+    SON
 
-    method dizi_tanimlama(tip_token, ad_token) -> DiziTanimlama
-        -- Grammar: (tip_token and ad_token already consumed) '[' ifade ']' SEMICOLON
-        this.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])
-        var boyut_ifadesi = this.ifade()
-        this.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])
-        this.tuket(TOKEN_TIPLERI["SEMICOLON"])
-        return new DiziTanimlama(tip_token, ad_token, boyut_ifadesi)
-    end
+    IŞLEÇ dizi_tanimlama(tip_token, ad_token) -> DiziTanimlama
+        -- Grammar: (tip_token ve ad_token already consumed) '[' ifade ']' SEMICOLON
+        BU.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])
+        VAR boyut_ifadesi = BU.ifade()
+        BU.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])
+        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        DÖNÜŞ YENİ DiziTanimlama(tip_token, ad_token, boyut_ifadesi)
+    SON
 
-    method parametre_listesi() -> array
+    IŞLEÇ parametre_listesi() -> array
         -- ( [TYPE IDENTIFIER (COMMA TYPE IDENTIFIER)*]? )
-        var parametreler = []
-        this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
+        VAR parametreler = []
+        BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
         -- If first token is not ')', there are parameters
-        if this.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
+        EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
             -- First parameter
-            var tip_token = this.mevcut_token
-            if tip_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] and
-               tip_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] and
+            VAR tip_token = BU.mevcut_token
+            EĞER tip_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] ve
+               tip_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] ve
                tip_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
-                this.hata("Parametre tipi bekleniyordu (SAYISAL, METİN vb.)")
-            end
-            this.tuket(tip_token.tip)
+                BU.hata("Parametre tipi bekleniyordu (SAYISAL, METİN vb.)")
+            SON
+            BU.tuket(tip_token.tip)
 
-            var ad_token = this.mevcut_token
-            this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
-            parametreler.push(new Parametre(tip_token, ad_token))
+            VAR ad_token = BU.mevcut_token
+            BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+            parametreler.push(YENİ Parametre(tip_token, ad_token))
 
             -- Remaining parameters (comma-separated)
-            while this.mevcut_token.tip == TOKEN_TIPLERI["COMMA"]
-                this.tuket(TOKEN_TIPLERI["COMMA"])
+            DÖNGÜ BU.mevcut_token.tip == TOKEN_TIPLERI["COMMA"] İSE
+                BU.tuket(TOKEN_TIPLERI["COMMA"])
 
-                tip_token = this.mevcut_token
-                if tip_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] and
-                   tip_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] and
+                tip_token = BU.mevcut_token
+                EĞER tip_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] ve
+                   tip_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] ve
                    tip_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
-                    this.hata("Parametre tipi bekleniyordu")
-                end
-                this.tuket(tip_token.tip)
+                    BU.hata("Parametre tipi bekleniyordu")
+                SON
+                BU.tuket(tip_token.tip)
 
-                ad_token = this.mevcut_token
-                this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
-                parametreler.push(new Parametre(tip_token, ad_token))
-            end
-        end
+                ad_token = BU.mevcut_token
+                BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+                parametreler.push(YENİ Parametre(tip_token, ad_token))
+            SON
+        SON
 
-        this.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
-        return parametreler
-    end
+        BU.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
+        DÖNÜŞ parametreler
+    SON
 
-    method islec_tanimlama(donus_tipi_token) -> IslecTanimlama
+    IŞLEÇ islec_tanimlama(donus_tipi_token) -> IslecTanimlama
         -- [TYPE]? İŞLEÇ IDENTIFIER ( parameters ) statements SON
-        this.tuket(TOKEN_TIPLERI["YAPI_ISLEC"])  -- 'İŞLEÇ'
+        BU.tuket(TOKEN_TIPLERI["YAPI_ISLEC"])  -- 'İŞLEÇ'
 
-        var ad_token = this.mevcut_token
-        this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+        VAR ad_token = BU.mevcut_token
+        BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
-        var parametreler = this.parametre_listesi()
+        VAR parametreler = BU.parametre_listesi()
 
         -- Function body
-        var govde = new Blok()
-        while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
-              this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
-            govde.komutlar.push(this.komut())
-        end
+        VAR govde = YENİ Blok()
+        DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
+              BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
+            govde.komutlar.push(BU.komut())
+        SON
 
-        this.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
-        return new IslecTanimlama(ad_token, parametreler, govde, donus_tipi_token)
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
+        DÖNÜŞ YENİ IslecTanimlama(ad_token, parametreler, govde, donus_tipi_token)
+    SON
 
-    method parse() -> Blok
-        -- Parses entire program and returns AST root (a Block)
-        var ana_blok = new Blok()
+    IŞLEÇ parse() -> Blok
+        -- Parses entire program ve returns AST root (a Block)
+        VAR ana_blok = YENİ Blok()
 
         -- Read all statements until EOF
-        while this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
-            ana_blok.komutlar.push(this.komut())
-        end
+        DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"] İSE
+            ana_blok.komutlar.push(BU.komut())
+        SON
 
-        return ana_blok
-    end
+        DÖNÜŞ ana_blok
+    SON
 
     -- ===============================================
     -- Phase 8: OOP Support
     -- ===============================================
 
-    method sinif_tanimlama() -> SinifTanimlama
+    IŞLEÇ sinif_tanimlama() -> SinifTanimlama
         -- Parses SINIF definition
-        this.tuket(TOKEN_TIPLERI["OOP_SINIF"])  -- 'SINIF'
+        BU.tuket(TOKEN_TIPLERI["OOP_SINIF"])  -- 'SINIF'
 
-        var sinif_adi = this.mevcut_token
-        this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+        VAR sinif_adi = BU.mevcut_token
+        BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
-        var ozellikler = []
-        var kurucu = null
-        var metodlar = []
+        VAR ozellikler = []
+        VAR kurucu = HİÇLİK
+        VAR metodlar = []
 
         -- Parse SINIF body (until SON)
-        while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
-              this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
+        DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
+              BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
 
             -- ÖZELLIK definition?
-            if this.mevcut_token.tip == TOKEN_TIPLERI["OOP_OZELLIK"]
-                ozellikler.push(this.ozellik_tanimlama())
-            end
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["OOP_OZELLIK"]
+                ozellikler.push(BU.ozellik_tanimlama())
+            SON
 
             -- KURUCU definition?
-            if this.mevcut_token.tip == TOKEN_TIPLERI["OOP_KURUCU"]
-                kurucu = this.kurucu_tanimlama()
-            end
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["OOP_KURUCU"]
+                kurucu = BU.kurucu_tanimlama()
+            SON
 
             -- IŞLEÇ (method) definition?
-            if this.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] or
-               this.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] or
-               this.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"]
-                var tip_token = this.mevcut_token
-                this.tuket(this.mevcut_token.tip)
+            EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] veya
+               BU.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] veya
+               BU.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"]
+                VAR tip_token = BU.mevcut_token
+                BU.tuket(BU.mevcut_token.tip)
 
-                if this.mevcut_token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
-                    metodlar.push(this.islec_tanimlama(tip_token))
-                else
-                    this.hata("SINIF içinde tip token'dan sonra IŞLEÇ bekleniyor")
-                end
-            end
-        end
+                EĞER BU.mevcut_token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
+                    metodlar.push(BU.islec_tanimlama(tip_token))
+                DEĞILSE
+                    BU.hata("SINIF içinde tip token'dan sonra IŞLEÇ bekleniyor")
+                SON
+            SON
+        SON
 
-        this.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
-        return new SinifTanimlama(sinif_adi, ozellikler, kurucu, metodlar)
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
+        DÖNÜŞ YENİ SinifTanimlama(sinif_adi, ozellikler, kurucu, metodlar)
+    SON
 
-    method ozellik_tanimlama() -> OzellikTanimlama
+    IŞLEÇ ozellik_tanimlama() -> OzellikTanimlama
         -- Parses ÖZELLIK TYPE name; format
-        this.tuket(TOKEN_TIPLERI["OOP_OZELLIK"])  -- 'ÖZELLIK'
+        BU.tuket(TOKEN_TIPLERI["OOP_OZELLIK"])  -- 'ÖZELLIK'
 
-        var tip_token = this.mevcut_token
-        if this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] and
-           this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] and
-           this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
-            this.hata("ÖZELLIK'ten sonra tip bekleniyor")
-        end
-        this.tuket(this.mevcut_token.tip)
+        VAR tip_token = BU.mevcut_token
+        EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] ve
+           BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] ve
+           BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
+            BU.hata("ÖZELLIK'ten sonra tip bekleniyor")
+        SON
+        BU.tuket(BU.mevcut_token.tip)
 
-        var ad_token = this.mevcut_token
-        this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
-        this.tuket(TOKEN_TIPLERI["SEMICOLON"])
+        VAR ad_token = BU.mevcut_token
+        BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+        BU.tuket(TOKEN_TIPLERI["SEMICOLON"])
 
-        return new OzellikTanimlama(tip_token, ad_token, null)
-    end
+        DÖNÜŞ YENİ OzellikTanimlama(tip_token, ad_token, HİÇLİK)
+    SON
 
-    method kurucu_tanimlama() -> KurucuTanimlama
+    IŞLEÇ kurucu_tanimlama() -> KurucuTanimlama
         -- Parses KURUCU(parameters) ... SON format
-        this.tuket(TOKEN_TIPLERI["OOP_KURUCU"])  -- 'KURUCU'
-        this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
+        BU.tuket(TOKEN_TIPLERI["OOP_KURUCU"])  -- 'KURUCU'
+        BU.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
-        var parametreler = []
-        if this.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
-            parametreler.push(this.parametre())
+        VAR parametreler = []
+        EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
+            parametreler.push(BU.parametre())
 
-            while this.mevcut_token.tip == TOKEN_TIPLERI["COMMA"]
-                this.tuket(TOKEN_TIPLERI["COMMA"])
-                parametreler.push(this.parametre())
-            end
-        end
+            DÖNGÜ BU.mevcut_token.tip == TOKEN_TIPLERI["COMMA"] İSE
+                BU.tuket(TOKEN_TIPLERI["COMMA"])
+                parametreler.push(BU.parametre())
+            SON
+        SON
 
-        this.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
+        BU.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
 
         -- Constructor body
-        var govde = new Blok()
-        while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
-              this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
-            govde.komutlar.push(this.komut())
-        end
+        VAR govde = YENİ Blok()
+        DÖNGÜ BU.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] ve İSE
+              BU.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
+            govde.komutlar.push(BU.komut())
+        SON
 
-        this.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
-        return new KurucuTanimlama(parametreler, govde)
-    end
+        BU.tuket(TOKEN_TIPLERI["YAPI_SON"])  -- 'SON'
+        DÖNÜŞ YENİ KurucuTanimlama(parametreler, govde)
+    SON
 
-    method parametre() -> Parametre
+    IŞLEÇ parametre() -> Parametre
         -- Parses TYPE name format (function parameter)
-        var tip_token = this.mevcut_token
-        if this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] and
-           this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] and
-           this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
-            this.hata("Parametre tipinde SAYISAL, METIN veya ZITLIK bekleniyor")
-        end
-        this.tuket(this.mevcut_token.tip)
+        VAR tip_token = BU.mevcut_token
+        EĞER BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] ve
+           BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] ve
+           BU.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
+            BU.hata("Parametre tipinde SAYISAL, METIN veya ZITLIK bekleniyor")
+        SON
+        BU.tuket(BU.mevcut_token.tip)
 
-        var ad_token = this.mevcut_token
-        this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
-        return new Parametre(tip_token, ad_token)
-    end
-end
+        VAR ad_token = BU.mevcut_token
+        BU.tuket(TOKEN_TIPLERI["IDENTIFIER"])
+        DÖNÜŞ YENİ Parametre(tip_token, ad_token)
+    SON
+SON

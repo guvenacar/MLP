@@ -13,190 +13,190 @@ KULLAN ast.ast_nodes
 KULLAN codegen.generator
 
 -- ===============================================
--- AST Debug Printing (for debugging)
+-- AST Debug Printing (HER debugging)
 -- ===============================================
-method ast_yazdir(node, girinti)
+IŞLEÇ ast_yazdir(node, girinti)
     -- Visualizes AST structure
-    -- Currently not called in calistir, but can be used for debugging
+    -- Currently not called İÇİNDE calistir, but can be used HER debugging
 
-    if TYPE_OF(node) == "Blok"
+    EĞER TYPE_OF(node) == "Blok"
         YAZDIR(girinti + "Blok:")
-        for komut in node.komutlar
+        HER komut İÇİNDE node.komutlar
             ast_yazdir(komut, girinti + "  ")
-        end
-    end
+        SON
+    SON
 
-    if TYPE_OF(node) == "DegiskenTanimlama"
+    EĞER TYPE_OF(node) == "DegiskenTanimlama"
         YAZDIR(girinti + "DegiskenTanimlama: Tip=" + node.tip.deger + ", Ad=" + node.ad.deger)
         YAZDIR(girinti + "  Atanan Deger:")
         ast_yazdir(node.ifade, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "DiziTanimlama"
+    EĞER TYPE_OF(node) == "DiziTanimlama"
         YAZDIR(girinti + "Dizi Tanımlama: " + node.ad.deger + " (Tip: " + node.tip.deger + ")")
         YAZDIR(girinti + "  Boyut:")
         ast_yazdir(node.boyut, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "AtamaKomutu"
+    EĞER TYPE_OF(node) == "AtamaKomutu"
         YAZDIR(girinti + "Atama Komutu:")
         YAZDIR(girinti + "  Hedef (Değişken):")
         ast_yazdir(node.hedef, girinti + "    ")
         YAZDIR(girinti + "  Atanan Deger (İfade):")
         ast_yazdir(node.ifade, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "EgerBlogu"
+    EĞER TYPE_OF(node) == "EgerBlogu"
         YAZDIR(girinti + "EGER Blogu:")
         YAZDIR(girinti + "  Kosul:")
         ast_yazdir(node.kosul, girinti + "    ")
         YAZDIR(girinti + "  Dogruysa Yapilacaklar (IF):")
         ast_yazdir(node.dogru_blok, girinti + "    ")
-        if node.yanlis_blok != null
+        EĞER node.yanlis_blok != HİÇLİK
             YAZDIR(girinti + "  Degilse Yapilacaklar (ELSE):")
             ast_yazdir(node.yanlis_blok, girinti + "    ")
-        end
-    end
+        SON
+    SON
 
-    if TYPE_OF(node) == "DonguBlogu"
+    EĞER TYPE_OF(node) == "DonguBlogu"
         YAZDIR(girinti + "DÖNGÜ Blogu:")
         YAZDIR(girinti + "  Döngü İçi Komutlar:")
         ast_yazdir(node.blok, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "DonguBitirKomutu"
+    EĞER TYPE_OF(node) == "DonguBitirKomutu"
         YAZDIR(girinti + "DÖNGÜ_BITIR Komutu (break)")
-    end
+    SON
 
-    if TYPE_OF(node) == "YazdirKomutu"
+    EĞER TYPE_OF(node) == "YazdirKomutu"
         YAZDIR(girinti + "YAZDIR Komutu:")
         YAZDIR(girinti + "  Yazdırılacak İfade:")
         ast_yazdir(node.ifade, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "IfadeKomutu"
+    EĞER TYPE_OF(node) == "IfadeKomutu"
         YAZDIR(girinti + "İfade Komutu (Procedure Call):")
         ast_yazdir(node.ifade, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "IslecTanimlama"
-        var donus_tipi = node.donus_tipi != null ? node.donus_tipi.deger : "HİÇLİK"
+    EĞER TYPE_OF(node) == "IslecTanimlama"
+        VAR donus_tipi = node.donus_tipi != HİÇLİK ? node.donus_tipi.deger : "HİÇLİK"
         YAZDIR(girinti + "İŞLEÇ Tanımlama: " + node.ad.deger + " (Dönüş Tipi: " + donus_tipi + ")")
         YAZDIR(girinti + "  Parametreler:")
-        if UZUNLUK(node.parametreler) == 0
+        EĞER UZUNLUK(node.parametreler) == 0
             YAZDIR(girinti + "    (Yok)")
-        else
-            for param in node.parametreler
+        DEĞILSE
+            HER param İÇİNDE node.parametreler
                 ast_yazdir(param, girinti + "    ")
-            end
-        end
+            SON
+        SON
         YAZDIR(girinti + "  Gövde:")
         ast_yazdir(node.govde, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "Parametre"
+    EĞER TYPE_OF(node) == "Parametre"
         YAZDIR(girinti + "Parametre: " + node.ad.deger + " (Tip: " + node.tip.deger + ")")
-    end
+    SON
 
-    if TYPE_OF(node) == "DonusKomutu"
+    EĞER TYPE_OF(node) == "DonusKomutu"
         YAZDIR(girinti + "DÖNÜŞ Komutu:")
         YAZDIR(girinti + "  Döndürülecek İfade:")
         ast_yazdir(node.ifade, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "IslecCagirma"
+    EĞER TYPE_OF(node) == "IslecCagirma"
         YAZDIR(girinti + "İŞLEÇ Çağırma: " + node.hedef_token.deger)
         YAZDIR(girinti + "  Argümanlar:")
-        if UZUNLUK(node.argumanlar) == 0
+        EĞER UZUNLUK(node.argumanlar) == 0
             YAZDIR(girinti + "    (Yok)")
-        else
-            for arg in node.argumanlar
+        DEĞILSE
+            HER arg İÇİNDE node.argumanlar
                 ast_yazdir(arg, girinti + "    ")
-            end
-        end
-    end
+            SON
+        SON
+    SON
 
-    if TYPE_OF(node) == "DiziErisim"
+    EĞER TYPE_OF(node) == "DiziErisim"
         YAZDIR(girinti + "Dizi Erişimi:")
         YAZDIR(girinti + "  Hedef:")
         ast_yazdir(node.hedef, girinti + "    ")
         YAZDIR(girinti + "  İndeks:")
         ast_yazdir(node.indeks, girinti + "    ")
-    end
+    SON
 
-    if TYPE_OF(node) == "Sayi"
-        YAZDIR(girinti + "Sayi: " + string(node.deger))
-    end
+    EĞER TYPE_OF(node) == "Sayi"
+        YAZDIR(girinti + "Sayi: " + METIN(node.deger))
+    SON
 
-    if TYPE_OF(node) == "Metin"
+    EĞER TYPE_OF(node) == "Metin"
         YAZDIR(girinti + "Metin: " + node.deger)
-    end
+    SON
 
-    if TYPE_OF(node) == "Degisken"
+    EĞER TYPE_OF(node) == "Degisken"
         YAZDIR(girinti + "DegiskenReferansi: " + node.ad)
-    end
+    SON
 
-    if TYPE_OF(node) == "IkiliIslem"
+    EĞER TYPE_OF(node) == "IkiliIslem"
         YAZDIR(girinti + "Islem: " + node.operator.tip)
         YAZDIR(girinti + "  Sol:")
         ast_yazdir(node.sol, girinti + "    ")
         YAZDIR(girinti + "  Sag:")
         ast_yazdir(node.sag, girinti + "    ")
-    end
+    SON
 
     -- If none of the above, unknown node
     YAZDIR(girinti + "Bilinmeyen Dugum: " + TYPE_OF(node))
-end
+SON
 
 -- ===============================================
 -- Main Compiler Function
 -- ===============================================
-method calistir(dosya_adi, dil_json_yolu, dil_kodu)
+IŞLEÇ calistir(dosya_adi, dil_json_yolu, dil_kodu)
     -- Main compiler pipeline: File → Lexer → Parser → Generator → Assembly
 
     -- File Reading
-    var kaynak_kodu = ""
+    VAR kaynak_kodu = ""
     try
         kaynak_kodu = DOSYA_OKU(dosya_adi)
     catch e
-        YAZDIR("HATA: Dosya okunamadı: " + string(e))
+        YAZDIR("HATA: Dosya okunamadı: " + METIN(e))
         CIKIS(1)
-    end
+    SON
 
     YAZDIR("--- KAYNAK KOD (" + dosya_adi + ") ---")
     YAZDIR(kaynak_kodu)
     YAZDIR("----------------------------------------")
 
     -- 1. Lexer (Tokenization)
-    var lexer = null
+    VAR lexer = HİÇLİK
     try
-        lexer = new Lexer(kaynak_kodu, dil_json_yolu, dil_kodu)
+        lexer = YENİ Lexer(kaynak_kodu, dil_json_yolu, dil_kodu)
     catch e
-        YAZDIR("HATA (Lexer): " + string(e))
+        YAZDIR("HATA (Lexer): " + METIN(e))
         CIKIS(1)
-    end
+    SON
 
     -- 2. Parser (AST Generation)
     YAZDIR("\n--- PARSER (AST) ---")
-    var ast = null
+    VAR ast = HİÇLİK
     try
-        var parser = new Parser(lexer)
+        VAR parser = YENİ Parser(lexer)
         ast = parser.parse()
         YAZDIR("✅ Ayrıştırma Başarılı!")
     catch e
-        YAZDIR("\n!!! HATA (Parser): " + string(e))
+        YAZDIR("\n!!! HATA (Parser): " + METIN(e))
         CIKIS(1)
-    end
+    SON
 
     -- 3. Generator (Assembly Code Generation)
     YAZDIR("\n--- GENERATOR (ASM) ---")
     try
-        var generator = new Generator(ast)
-        var asm_kodu = generator.generate()
+        VAR generator = YENİ Generator(ast)
+        VAR asm_kodu = generator.generate()
 
         YAZDIR(asm_kodu)  -- Print generated Assembly code
 
-        var output_asm_file = "build/output.asm"
+        VAR output_asm_file = "build/output.asm"
 
         -- Ensure 'build' directory exists
         DIZIN_OLUSTUR("build")
@@ -206,21 +206,21 @@ method calistir(dosya_adi, dil_json_yolu, dil_kodu)
 
         YAZDIR("\n✅ Assembly Kodu Başarıyla Üretildi -> " + output_asm_file)
     catch e
-        YAZDIR("\n!!! HATA (Generator): " + string(e))
+        YAZDIR("\n!!! HATA (Generator): " + METIN(e))
         CIKIS(1)
-    end
-end
+    SON
+SON
 
 -- ===============================================
 -- Command Line Entry Point
 -- ===============================================
-method main()
-    -- Parse command line arguments and run compiler
+IŞLEÇ main()
+    -- Parse command line arguments ve run compiler
 
-    var args = PROGRAM_ARGS()
+    VAR args = PROGRAM_ARGS()
 
     -- Simple argument parsing (MLP doesn't have argparse, so manual)
-    if UZUNLUK(args) < 2
+    EĞER UZUNLUK(args) < 2
         YAZDIR("Kullanım: mlp <kaynak.tyd> [diller.json] [--dil-kodu tr-TR]")
         YAZDIR("")
         YAZDIR("Örnek:")
@@ -228,24 +228,24 @@ method main()
         YAZDIR("  mlp test.tyd kurallar/diller.json")
         YAZDIR("  mlp test.tyd kurallar/diller.json --dil-kodu tr-TR")
         CIKIS(1)
-    end
+    SON
 
-    var dosya_adi = args[1]
-    var dil_json_yolu = "kurallar/diller.json"
-    var dil_kodu = "tr-TR"
+    VAR dosya_adi = args[1]
+    VAR dil_json_yolu = "kurallar/diller.json"
+    VAR dil_kodu = "tr-TR"
 
     -- Parse optional arguments
-    if UZUNLUK(args) >= 3
+    EĞER UZUNLUK(args) >= 3
         dil_json_yolu = args[2]
-    end
+    SON
 
-    if UZUNLUK(args) >= 5 and args[3] == "--dil-kodu"
+    EĞER UZUNLUK(args) >= 5 ve args[3] == "--dil-kodu"
         dil_kodu = args[4]
-    end
+    SON
 
     -- Run compiler
     calistir(dosya_adi, dil_json_yolu, dil_kodu)
-end
+SON
 
--- Run main if this is the entry point
+-- Run main EĞER this is the entry point
 main()

@@ -8,29 +8,29 @@
 -- ===============================================
 -- Token Class
 -- ===============================================
-class Token
+SINIF Token
     -- Represents a single word or symbol in our language
-    tip string
-    deger dynamic  -- Can be null, string, or number
+    tip METIN
+    deger DİNAMİK  -- Can be null, string, or number
 
-    constructor(tip, deger)
-        this.tip = tip
-        this.deger = deger
-    end
+    KURUCU(tip, deger)
+        BU.tip = tip
+        BU.deger = deger
+    KURUCU SON
 
     -- String representation for debugging
-    override method toString() -> string
-        if this.deger != null
-            return "<" + this.tip + ": " + string(this.deger) + ">"
-        end
-        return "<" + this.tip + ">"
-    end
-end
+    ÜZERİNE_YAZ IŞLEÇ toString() -> METIN
+        EĞER BU.deger != HİÇLİK İSE
+            DÖNÜŞ "<" + BU.tip + ": " + METIN(BU.deger) + ">"
+        EĞER SON
+        DÖNÜŞ "<" + BU.tip + ">"
+    IŞLEÇ SON
+SINIF SON
 
 -- ===============================================
 -- All Abstract Token Types
 -- ===============================================
-var TOKEN_TIPLERI = {
+VAR TOKEN_TIPLERI = {
     -- Type Definitions (Keywords - from JSON)
     "TANIMLA_DEGISKEN": "TANIMLA_DEGISKEN",  -- MLP Syntax: DEĞIŞKEN
     "TANIMLA_SAYI": "TANIMLA_SAYI",

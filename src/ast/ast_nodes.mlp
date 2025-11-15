@@ -8,269 +8,269 @@
 -- ===============================================
 -- Base AST Node
 -- ===============================================
-class ASTNode
-    -- Base class for all AST nodes
+SINIF ASTNode
+    -- Base SINIF for all AST nodes
     -- No fields needed - just for inheritance
-end
+SON
 
 -- ===============================================
 -- Expressions (produce values)
 -- ===============================================
 
-class Sayi : ASTNode
+SINIF Sayi : ASTNode
     -- Represents a numeric value (10, 3.14)
-    token dynamic
-    deger dynamic
+    token DİNAMİK
+    deger DİNAMİK
 
-    constructor(token)
-        this.token = token
-        this.deger = token.deger
-    end
-end
+    KURUCU(token)
+        BU.token = token
+        BU.deger = token.deger
+    SON
+SON
 
-class Metin : ASTNode
-    -- Represents a string value ("hello")
-    token dynamic
-    deger dynamic
+SINIF Metin : ASTNode
+    -- Represents a METIN value ("hello")
+    token DİNAMİK
+    deger DİNAMİK
 
-    constructor(token)
-        this.token = token
-        this.deger = token.deger
-    end
-end
+    KURUCU(token)
+        BU.token = token
+        BU.deger = token.deger
+    SON
+SON
 
-class Degisken : ASTNode
+SINIF Degisken : ASTNode
     -- Represents variable usage (a, topla)
-    token dynamic
-    ad string
+    token DİNAMİK
+    ad METIN
 
-    constructor(token)
-        this.token = token
-        this.ad = token.deger
-    end
-end
+    KURUCU(token)
+        BU.token = token
+        BU.ad = token.deger
+    SON
+SON
 
-class IkiliIslem : ASTNode
+SINIF IkiliIslem : ASTNode
     -- Represents binary operation (a + b, s > 10)
-    sol dynamic     -- Left side (ASTNode)
-    operator dynamic -- Operator token (+, -, >, ESIT)
-    sag dynamic     -- Right side (ASTNode)
+    sol DİNAMİK     -- Left side (ASTNode)
+    operator DİNAMİK -- Operator token (+, -, >, ESIT)
+    sag DİNAMİK     -- Right side (ASTNode)
 
-    constructor(sol, operator_token, sag)
-        this.sol = sol
-        this.operator = operator_token
-        this.sag = sag
-    end
-end
+    KURUCU(sol, operator_token, sag)
+        BU.sol = sol
+        BU.operator = operator_token
+        BU.sag = sag
+    SON
+SON
 
 -- ===============================================
 -- Statements (perform actions)
 -- ===============================================
 
-class DegiskenTanimlama : ASTNode
+SINIF DegiskenTanimlama : ASTNode
     -- Variable declaration (SAYISAL s = 10;)
-    tip dynamic      -- Type token (SAYISAL, METIN, etc.)
-    ad string        -- Variable name ('s')
-    ifade dynamic    -- Assigned value AST (10)
+    tip DİNAMİK      -- Type token (SAYISAL, METIN, etc.)
+    ad METIN        -- Variable name ('s')
+    ifade DİNAMİK    -- Assigned value AST (10)
 
-    constructor(tip_token, degisken_adi_token, ifade_node)
-        this.tip = tip_token
-        this.ad = degisken_adi_token.deger
-        this.ifade = ifade_node
-    end
-end
+    KURUCU(tip_token, degisken_adi_token, ifade_node)
+        BU.tip = tip_token
+        BU.ad = degisken_adi_token.deger
+        BU.ifade = ifade_node
+    SON
+SON
 
-class Blok : ASTNode
+SINIF Blok : ASTNode
     -- Block containing multiple statements ({ ... })
-    komutlar array
+    komutlar DİZİ
 
-    constructor()
-        this.komutlar = []
-    end
-end
+    KURUCU()
+        BU.komutlar = []
+    SON
+SON
 
-class EgerBlogu : ASTNode
+SINIF EgerBlogu : ASTNode
     -- IF condition THEN block [ELSE block] END
-    kosul dynamic        -- Condition node
-    dogru_blok dynamic   -- True block
-    yanlis_blok dynamic  -- False block (can be null)
+    kosul DİNAMİK        -- Condition node
+    dogru_blok DİNAMİK   -- True block
+    yanlis_blok DİNAMİK  -- False block (can be HİÇLİK)
 
-    constructor(kosul_node, dogru_blok_node, yanlis_blok_node)
-        this.kosul = kosul_node
-        this.dogru_blok = dogru_blok_node
-        this.yanlis_blok = yanlis_blok_node
-    end
-end
+    KURUCU(kosul_node, dogru_blok_node, yanlis_blok_node)
+        BU.kosul = kosul_node
+        BU.dogru_blok = dogru_blok_node
+        BU.yanlis_blok = yanlis_blok_node
+    SON
+SON
 
-class YazdirKomutu : ASTNode
+SINIF YazdirKomutu : ASTNode
     -- PRINT expression; statement
-    ifade dynamic
+    ifade DİNAMİK
 
-    constructor(ifade_node)
-        this.ifade = ifade_node
-    end
-end
+    KURUCU(ifade_node)
+        BU.ifade = ifade_node
+    SON
+SON
 
-class AtamaKomutu : ASTNode
+SINIF AtamaKomutu : ASTNode
     -- Assignment to existing variable (s = s + 1;)
-    hedef dynamic    -- Target variable
-    ifade dynamic    -- Assigned expression
+    hedef DİNAMİK    -- Target variable
+    ifade DİNAMİK    -- Assigned expression
 
-    constructor(hedef_node, ifade_node)
-        this.hedef = hedef_node
-        this.ifade = ifade_node
-    end
-end
+    KURUCU(hedef_node, ifade_node)
+        BU.hedef = hedef_node
+        BU.ifade = ifade_node
+    SON
+SON
 
-class DonguBlogu : ASTNode
+SINIF DonguBlogu : ASTNode
     -- LOOP ... END block
-    blok dynamic
+    blok DİNAMİK
 
-    constructor(blok_node)
-        this.blok = blok_node
-    end
-end
+    KURUCU(blok_node)
+        BU.blok = blok_node
+    SON
+SON
 
-class DonguBitirKomutu : ASTNode
+SINIF DonguBitirKomutu : ASTNode
     -- BREAK; statement
     -- No additional data needed
-    constructor()
-    end
-end
+    KURUCU()
+    SON
+SON
 
-class Parametre : ASTNode
+SINIF Parametre : ASTNode
     -- Single parameter in function definition (SAYISAL a)
-    tip dynamic
-    ad dynamic
+    tip DİNAMİK
+    ad DİNAMİK
 
-    constructor(tip_token, ad_token)
-        this.tip = tip_token
-        this.ad = ad_token
-    end
-end
+    KURUCU(tip_token, ad_token)
+        BU.tip = tip_token
+        BU.ad = ad_token
+    SON
+SON
 
-class IslecTanimlama : ASTNode
+SINIF IslecTanimlama : ASTNode
     -- Function definition (ISLEC ... END)
-    ad dynamic              -- Function name token
-    parametreler array      -- Parameter list
-    govde dynamic           -- Body block
-    donus_tipi dynamic      -- Optional return type
+    ad DİNAMİK              -- Function name token
+    parametreler DİZİ      -- Parameter list
+    govde DİNAMİK           -- Body block
+    donus_tipi DİNAMİK      -- Optional DÖNÜŞ type
 
-    constructor(ad_token, parametreler_list, govde_node, donus_tipi_token)
-        this.ad = ad_token
-        this.parametreler = parametreler_list
-        this.govde = govde_node
-        this.donus_tipi = donus_tipi_token
-    end
-end
+    KURUCU(ad_token, parametreler_list, govde_node, donus_tipi_token)
+        BU.ad = ad_token
+        BU.parametreler = parametreler_list
+        BU.govde = govde_node
+        BU.donus_tipi = donus_tipi_token
+    SON
+SON
 
-class DonusKomutu : ASTNode
+SINIF DonusKomutu : ASTNode
     -- RETURN expression; statement
-    ifade dynamic
+    ifade DİNAMİK
 
-    constructor(ifade_node)
-        this.ifade = ifade_node
-    end
-end
+    KURUCU(ifade_node)
+        BU.ifade = ifade_node
+    SON
+SON
 
-class IslecCagirma : ASTNode
+SINIF IslecCagirma : ASTNode
     -- Function call (topla(5, 10))
-    hedef_token dynamic     -- Function name token
-    argumanlar array        -- Argument list
+    hedef_token DİNAMİK     -- Function name token
+    argumanlar DİZİ        -- Argument list
 
-    constructor(hedef_token, argumanlar_listesi)
-        this.hedef_token = hedef_token
-        this.argumanlar = argumanlar_listesi
-    end
-end
+    KURUCU(hedef_token, argumanlar_listesi)
+        BU.hedef_token = hedef_token
+        BU.argumanlar = argumanlar_listesi
+    SON
+SON
 
-class IfadeKomutu : ASTNode
+SINIF IfadeKomutu : ASTNode
     -- Expression as statement (selam_ver();)
-    ifade dynamic
+    ifade DİNAMİK
 
-    constructor(ifade_node)
-        this.ifade = ifade_node
-    end
-end
+    KURUCU(ifade_node)
+        BU.ifade = ifade_node
+    SON
+SON
 
-class DiziTanimlama : ASTNode
+SINIF DiziTanimlama : ASTNode
     -- Array declaration (SAYISAL liste[10];)
-    tip dynamic
-    ad dynamic
-    boyut dynamic
+    tip DİNAMİK
+    ad DİNAMİK
+    boyut DİNAMİK
 
-    constructor(tip_token, ad_token, boyut_node)
-        this.tip = tip_token
-        this.ad = ad_token
-        this.boyut = boyut_node
-    end
-end
+    KURUCU(tip_token, ad_token, boyut_node)
+        BU.tip = tip_token
+        BU.ad = ad_token
+        BU.boyut = boyut_node
+    SON
+SON
 
-class DiziErisim : ASTNode
+SINIF DiziErisim : ASTNode
     -- Array element access (liste[3])
-    hedef dynamic    -- Array variable
-    indeks dynamic   -- Index expression
+    hedef DİNAMİK    -- Array variable
+    indeks DİNAMİK   -- Index expression
 
-    constructor(hedef_node, indeks_node)
-        this.hedef = hedef_node
-        this.indeks = indeks_node
-    end
-end
+    KURUCU(hedef_node, indeks_node)
+        BU.hedef = hedef_node
+        BU.indeks = indeks_node
+    SON
+SON
 
-class SozlukErisim : ASTNode
+SINIF SozlukErisim : ASTNode
     -- Dictionary element access (sozluk{"key"})
-    hedef dynamic     -- Dictionary variable
-    anahtar dynamic   -- Key expression
+    hedef DİNAMİK     -- Dictionary variable
+    anahtar DİNAMİK   -- Key expression
 
-    constructor(hedef_node, anahtar_node)
-        this.hedef = hedef_node
-        this.anahtar = anahtar_node
-    end
+    KURUCU(hedef_node, anahtar_node)
+        BU.hedef = hedef_node
+        BU.anahtar = anahtar_node
+    SON
 
-    override method toString() -> string
-        return "SozlukErisim(hedef=" + this.hedef.ad + ", anahtar=" + string(this.anahtar) + ")"
-    end
-end
+    ÜZERİNE_YAZ IŞLEÇ toString() -> METIN
+        DÖNÜŞ "SozlukErisim(hedef=" + BU.hedef.ad + ", anahtar=" + METIN(BU.anahtar) + ")"
+    SON
+SON
 
 -- ===============================================
 -- OOP Structures (Phase 8)
 -- ===============================================
 
-class OzellikTanimlama : ASTNode
+SINIF OzellikTanimlama : ASTNode
     -- Class field definition (ÖZELLIK tip ad;)
-    tip dynamic              -- Type token (SAYISAL, METIN, etc.)
-    ad string                -- Field name
-    varsayilan_deger dynamic -- Optional default value
+    tip DİNAMİK              -- Type token (SAYISAL, METIN, etc.)
+    ad METIN                -- Field name
+    varsayilan_deger DİNAMİK -- Optional default value
 
-    constructor(tip_token, ad_token, varsayilan_deger)
-        this.tip = tip_token
-        this.ad = ad_token.deger
-        this.varsayilan_deger = varsayilan_deger
-    end
-end
+    KURUCU(tip_token, ad_token, varsayilan_deger)
+        BU.tip = tip_token
+        BU.ad = ad_token.deger
+        BU.varsayilan_deger = varsayilan_deger
+    SON
+SON
 
-class KurucuTanimlama : ASTNode
+SINIF KurucuTanimlama : ASTNode
     -- Constructor definition (KURUCU(params) ... SON)
-    parametreler array   -- Parameter list
-    govde dynamic        -- Body block
+    parametreler DİZİ   -- Parameter list
+    govde DİNAMİK        -- Body block
 
-    constructor(parametreler_list, govde_node)
-        this.parametreler = parametreler_list
-        this.govde = govde_node
-    end
-end
+    KURUCU(parametreler_list, govde_node)
+        BU.parametreler = parametreler_list
+        BU.govde = govde_node
+    SON
+SON
 
-class SinifTanimlama : ASTNode
+SINIF SinifTanimlama : ASTNode
     -- Class definition (SINIF ad ... SON)
-    ad string            -- Class name
-    ozellikler array     -- OzellikTanimlama list
-    kurucu dynamic       -- KurucuTanimlama (optional)
-    metodlar array       -- IslecTanimlama list (methods)
+    ad METIN            -- Class name
+    ozellikler DİZİ     -- OzellikTanimlama list
+    kurucu DİNAMİK       -- KurucuTanimlama (optional)
+    metodlar DİZİ       -- IslecTanimlama list (methods)
 
-    constructor(ad_token, ozellikler_list, kurucu_node, metodlar_list)
-        this.ad = ad_token.deger
-        this.ozellikler = ozellikler_list
-        this.kurucu = kurucu_node
-        this.metodlar = metodlar_list
-    end
-end
+    KURUCU(ad_token, ozellikler_list, kurucu_node, metodlar_list)
+        BU.ad = ad_token.deger
+        BU.ozellikler = ozellikler_list
+        BU.kurucu = kurucu_node
+        BU.metodlar = metodlar_list
+    SON
+SON

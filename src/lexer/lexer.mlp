@@ -10,364 +10,364 @@ KULLAN std.io
 KULLAN std.strings
 KULLAN lexer.tokens
 
-class Lexer
+SINIF Lexer
     -- Reads TYD source code and converts it to Token list
     -- Works based on language profile loaded from JSON
 
-    kaynak_kodu string
-    konum number
-    mevcut_karakter string  -- Can be null
-    anahtar_kelimeler dict
+    kaynak_kodu METIN
+    konum SAYISAL
+    mevcut_karakter METIN  -- Can be null
+    anahtar_kelimeler SÖZLÜK
 
-    constructor(kaynak_kodu, dil_json_yolu, dil_kodu)
-        this.kaynak_kodu = kaynak_kodu
-        this.konum = 0
+    KURUCU(kaynak_kodu, dil_json_yolu, dil_kodu)
+        BU.kaynak_kodu = kaynak_kodu
+        BU.konum = 0
 
-        if UZUNLUK(this.kaynak_kodu) > 0
-            this.mevcut_karakter = KARAKTER_AL(this.kaynak_kodu, 0)
-        else
-            this.mevcut_karakter = null
-        end
+        EĞER UZUNLUK(BU.kaynak_kodu) > 0 İSE
+            BU.mevcut_karakter = KARAKTER_AL(BU.kaynak_kodu, 0)
+        DEĞILSE
+            BU.mevcut_karakter = HİÇLİK
+        EĞER SON
 
         -- Load keywords from JSON
-        this.anahtar_kelimeler = this.dil_yukle(dil_json_yolu, dil_kodu)
-    end
+        BU.anahtar_kelimeler = BU.dil_yukle(dil_json_yolu, dil_kodu)
+    KURUCU SON
 
     -- ===============================================
     -- Normalization & Loading
     -- ===============================================
 
-    method _normalize_key(text) -> string
+    IŞLEÇ _normalize_key(text) -> METIN
         -- Converts a keyword to standard (canonical) format for comparison
         -- Handles Turkish character normalization
-        var normalized_text = text.casefold()
+        VAR normalized_text = text.casefold()
         normalized_text = METIN_DEGISTIR(normalized_text, "ı", "i")
         normalized_text = METIN_DEGISTIR(normalized_text, "İ", "i")
         normalized_text = METIN_DEGISTIR(normalized_text, "i̇", "i")
-        return normalized_text
-    end
+        DÖNÜŞ normalized_text
+    IŞLEÇ SON
 
-    method dil_yukle(json_yolu, dil_kodu) -> dict
+    IŞLEÇ dil_yukle(json_yolu, dil_kodu) -> SÖZLÜK
         -- Loads language profile from JSON
         -- ONLY loads keywords to map
 
-        var diller = null
-        try
-            var json_content = DOSYA_OKU(json_yolu)
+        VAR diller = HİÇLİK
+        DENE
+            VAR json_content = DOSYA_OKU(json_yolu)
             diller = JSON_PARSE(json_content)
-        catch e
-            throw new Exception("Dil JSON dosyası okunamadı: " + json_yolu + ". Hata: " + string(e))
-        end
+        YAKALA e
+            HATA_FIRLAT YENİ İSTİSNA("Dil JSON dosyası okunamadı: " + json_yolu + ". Hata: " + METIN(e))
+        DENE SON
 
-        if dil_kodu not in diller["dil_profili"]
-            throw new Exception("Dil profili '" + dil_kodu + "' JSON'da bulunamadı.")
-        end
+        EĞER dil_kodu İÇİNDE_DEĞİL diller["dil_profili"] İSE
+            HATA_FIRLAT YENİ İSTİSNA("Dil profili '" + dil_kodu + "' JSON'da bulunamadı.")
+        EĞER SON
 
-        var profil = diller["dil_profili"][dil_kodu]
+        VAR profil = diller["dil_profili"][dil_kodu]
 
-        var anahtar_kelime_haritasi = {}
-        for soyut_tip, somut_kelime in profil
-            if soyut_tip in TOKEN_TIPLERI
-                var anahtar = this._normalize_key(somut_kelime)
+        VAR anahtar_kelime_haritasi = {}
+        HER soyut_tip, somut_kelime İÇİNDE profil
+            EĞER soyut_tip İÇİNDE TOKEN_TIPLERI İSE
+                VAR anahtar = BU._normalize_key(somut_kelime)
                 anahtar_kelime_haritasi[anahtar] = soyut_tip
-            end
-        end
+            EĞER SON
+        HER SON
 
-        YAZDIR("[Lexer] Dil profili yüklendi: " + dil_kodu + ". " + string(UZUNLUK(anahtar_kelime_haritasi)) + " anahtar kelime tanındı.")
+        YAZDIR("[Lexer] Dil profili yüklendi: " + dil_kodu + ". " + METIN(UZUNLUK(anahtar_kelime_haritasi)) + " anahtar kelime tanındı.")
 
-        return anahtar_kelime_haritasi
-    end
+        DÖNÜŞ anahtar_kelime_haritasi
+    IŞLEÇ SON
 
     -- ===============================================
     -- Navigation & Helper Functions
     -- ===============================================
 
-    method ilerle(miktar)
+    IŞLEÇ ilerle(miktar)
         -- Moves forward by 'miktar' characters in text
-        this.konum = this.konum + miktar
-        if this.konum >= UZUNLUK(this.kaynak_kodu)
-            this.mevcut_karakter = null  -- End of File (EOF)
-        else
-            this.mevcut_karakter = KARAKTER_AL(this.kaynak_kodu, this.konum)
-        end
-    end
+        BU.konum = BU.konum + miktar
+        EĞER BU.konum >= UZUNLUK(BU.kaynak_kodu) İSE
+            BU.mevcut_karakter = HİÇLİK  -- End of File (EOF)
+        DEĞILSE
+            BU.mevcut_karakter = KARAKTER_AL(BU.kaynak_kodu, BU.konum)
+        EĞER SON
+    IŞLEÇ SON
 
-    method peek(miktar) -> string
+    IŞLEÇ peek(miktar) -> METIN
         -- Peeks at next character without advancing
-        var peek_konum = this.konum + miktar
-        if peek_konum >= UZUNLUK(this.kaynak_kodu)
-            return null
-        end
-        return KARAKTER_AL(this.kaynak_kodu, peek_konum)
-    end
+        VAR peek_konum = BU.konum + miktar
+        EĞER peek_konum >= UZUNLUK(BU.kaynak_kodu) İSE
+            DÖNÜŞ HİÇLİK
+        EĞER SON
+        DÖNÜŞ KARAKTER_AL(BU.kaynak_kodu, peek_konum)
+    IŞLEÇ SON
 
-    method mevcut_dilim(uzunluk) -> string
+    IŞLEÇ mevcut_dilim(uzunluk) -> METIN
         -- Gets text slice of 'uzunluk' length from current position
-        if this.konum + uzunluk > UZUNLUK(this.kaynak_kodu)
-            return null
-        end
-        return ALT_METIN(this.kaynak_kodu, this.konum, uzunluk)
-    end
+        EĞER BU.konum + uzunluk > UZUNLUK(BU.kaynak_kodu) İSE
+            DÖNÜŞ HİÇLİK
+        EĞER SON
+        DÖNÜŞ ALT_METIN(BU.kaynak_kodu, BU.konum, uzunluk)
+    IŞLEÇ SON
 
     -- ===============================================
     -- Comment Skipping Functions
     -- ===============================================
 
-    method bosluk_atla()
-        while this.mevcut_karakter != null and IS_WHITESPACE(this.mevcut_karakter)
-            this.ilerle(1)
-        end
-    end
+    IŞLEÇ bosluk_atla()
+        DÖNGÜ BU.mevcut_karakter != HİÇLİK ve IS_WHITESPACE(BU.mevcut_karakter) İSE
+            BU.ilerle(1)
+        DÖNGÜ SON
+    IŞLEÇ SON
 
-    method tek_satirli_yorum_atla()
-        while this.mevcut_karakter != null and this.mevcut_karakter != "\n"
-            this.ilerle(1)
-        end
-        if this.mevcut_karakter == "\n"
-            this.ilerle(1)  -- Skip newline too
-        end
-    end
+    IŞLEÇ tek_satirli_yorum_atla()
+        DÖNGÜ BU.mevcut_karakter != HİÇLİK ve BU.mevcut_karakter != "\n" İSE
+            BU.ilerle(1)
+        DÖNGÜ SON
+        EĞER BU.mevcut_karakter == "\n" İSE
+            BU.ilerle(1)  -- Skip newline too
+        EĞER SON
+    IŞLEÇ SON
 
-    method cok_satirli_yorum_atla()
+    IŞLEÇ cok_satirli_yorum_atla()
         -- Skips until '---' is found
-        while this.mevcut_karakter != null
-            if this.mevcut_dilim(3) == "---"
-                this.ilerle(3)  -- Skip closing symbol
-                return  -- Exit comment
-            end
+        DÖNGÜ BU.mevcut_karakter != HİÇLİK İSE
+            EĞER BU.mevcut_dilim(3) == "---" İSE
+                BU.ilerle(3)  -- Skip closing symbol
+                DÖNÜŞ  -- Exit comment
+            EĞER SON
 
-            if this.mevcut_karakter == null
-                break
-            end
-            this.ilerle(1)
-        end
+            EĞER BU.mevcut_karakter == HİÇLİK İSE
+                DÖNGÜ_BITIR
+            EĞER SON
+            BU.ilerle(1)
+        DÖNGÜ SON
 
-        throw new Exception("Dosya sonuna ulaşıldı, ancak '---' yorum bloğu kapatılmadı.")
-    end
+        HATA_FIRLAT YENİ İSTİSNA("Dosya sonuna ulaşıldı, ancak '---' yorum bloğu kapatılmadı.")
+    IŞLEÇ SON
 
     -- ===============================================
     -- Token Reading Functions
     -- ===============================================
 
-    method sayi_oku() -> Token
-        var sayi_str = ""
-        var nokta_kullanildi = false
+    IŞLEÇ sayi_oku() -> Token
+        VAR sayi_str = ""
+        VAR nokta_kullanildi = YANLIŞ
 
-        while this.mevcut_karakter != null and (IS_DIGIT(this.mevcut_karakter) or this.mevcut_karakter == ".")
-            if this.mevcut_karakter == "."
-                if nokta_kullanildi
-                    throw new Exception("Sayı formatı hatalı: " + sayi_str + ".")
-                end
-                nokta_kullanildi = true
-            end
+        DÖNGÜ BU.mevcut_karakter != HİÇLİK ve (IS_DIGIT(BU.mevcut_karakter) veya BU.mevcut_karakter == ".") İSE
+            EĞER BU.mevcut_karakter == "." İSE
+                EĞER nokta_kullanildi İSE
+                    HATA_FIRLAT YENİ İSTİSNA("Sayı formatı hatalı: " + sayi_str + ".")
+                EĞER SON
+                nokta_kullanildi = DOĞRU
+            EĞER SON
 
-            sayi_str = sayi_str + this.mevcut_karakter
-            this.ilerle(1)
-        end
+            sayi_str = sayi_str + BU.mevcut_karakter
+            BU.ilerle(1)
+        DÖNGÜ SON
 
-        if nokta_kullanildi
-            return new Token(TOKEN_TIPLERI["FLOAT"], PARSE_FLOAT(sayi_str))
-        else
-            return new Token(TOKEN_TIPLERI["INTEGER"], PARSE_INT(sayi_str))
-        end
-    end
+        EĞER nokta_kullanildi İSE
+            DÖNÜŞ YENİ Token(TOKEN_TIPLERI["FLOAT"], PARSE_FLOAT(sayi_str))
+        DEĞILSE
+            DÖNÜŞ YENİ Token(TOKEN_TIPLERI["INTEGER"], PARSE_INT(sayi_str))
+        EĞER SON
+    IŞLEÇ SON
 
-    method metin_oku() -> Token
-        var metin = ""
-        this.ilerle(1)  -- Skip opening quote
+    IŞLEÇ metin_oku() -> Token
+        VAR metin = ""
+        BU.ilerle(1)  -- Skip opening quote
 
-        while this.mevcut_karakter != null and this.mevcut_karakter != "\""
-            metin = metin + this.mevcut_karakter
-            this.ilerle(1)
-        end
+        DÖNGÜ BU.mevcut_karakter != HİÇLİK ve BU.mevcut_karakter != "\"" İSE
+            metin = metin + BU.mevcut_karakter
+            BU.ilerle(1)
+        DÖNGÜ SON
 
-        if this.mevcut_karakter == null
-            throw new Exception("Metin (string) kapatılmadı.")
-        end
+        EĞER BU.mevcut_karakter == HİÇLİK İSE
+            HATA_FIRLAT YENİ İSTİSNA("Metin (string) kapatılmadı.")
+        EĞER SON
 
-        this.ilerle(1)  -- Skip closing quote
-        return new Token(TOKEN_TIPLERI["STRING"], metin)
-    end
+        BU.ilerle(1)  -- Skip closing quote
+        DÖNÜŞ YENİ Token(TOKEN_TIPLERI["STRING"], metin)
+    IŞLEÇ SON
 
-    method kelime_oku() -> Token
-        var kelime = ""
+    IŞLEÇ kelime_oku() -> Token
+        VAR kelime = ""
 
-        while this.mevcut_karakter != null and (IS_ALNUM(this.mevcut_karakter) or this.mevcut_karakter == "_")
-            kelime = kelime + this.mevcut_karakter
-            this.ilerle(1)
-        end
+        DÖNGÜ BU.mevcut_karakter != HİÇLİK ve (IS_ALNUM(BU.mevcut_karakter) veya BU.mevcut_karakter == "_") İSE
+            kelime = kelime + BU.mevcut_karakter
+            BU.ilerle(1)
+        DÖNGÜ SON
 
-        var kelime_kontrol_formati = this._normalize_key(kelime)
+        VAR kelime_kontrol_formati = BU._normalize_key(kelime)
 
-        if kelime_kontrol_formati in this.anahtar_kelimeler
-            var token_tipi = this.anahtar_kelimeler[kelime_kontrol_formati]
-            return new Token(token_tipi, kelime_kontrol_formati)
-        else
-            return new Token(TOKEN_TIPLERI["IDENTIFIER"], kelime)
-        end
-    end
+        EĞER kelime_kontrol_formati İÇİNDE BU.anahtar_kelimeler İSE
+            VAR token_tipi = BU.anahtar_kelimeler[kelime_kontrol_formati]
+            DÖNÜŞ YENİ Token(token_tipi, kelime_kontrol_formati)
+        DEĞILSE
+            DÖNÜŞ YENİ Token(TOKEN_TIPLERI["IDENTIFIER"], kelime)
+        EĞER SON
+    IŞLEÇ SON
 
     -- ===============================================
     -- Main Tokenization Engine (Pragmatic Core)
     -- ===============================================
 
-    method sonraki_tokeni_al() -> Token
+    IŞLEÇ sonraki_tokeni_al() -> Token
         -- Finds and returns next Token from source
         -- Symbols ('+', '{', '==', '--') are HARD-CODED
 
-        while this.mevcut_karakter != null
+        DÖNGÜ BU.mevcut_karakter != HİÇLİK İSE
 
             -- 1. Whitespace
-            if IS_WHITESPACE(this.mevcut_karakter)
-                this.bosluk_atla()
-                continue
-            end
+            EĞER IS_WHITESPACE(BU.mevcut_karakter) İSE
+                BU.bosluk_atla()
+                DÖNGÜ_DEVAM
+            EĞER SON
 
             -- 2. Keywords/Identifiers (Dynamic Map)
-            if IS_ALPHA(this.mevcut_karakter) or this.mevcut_karakter == "_"
-                return this.kelime_oku()
-            end
+            EĞER IS_ALPHA(BU.mevcut_karakter) veya BU.mevcut_karakter == "_" İSE
+                DÖNÜŞ BU.kelime_oku()
+            EĞER SON
 
             -- 3. Numbers (Fixed Rule)
-            if IS_DIGIT(this.mevcut_karakter)
-                return this.sayi_oku()
-            end
+            EĞER IS_DIGIT(BU.mevcut_karakter) İSE
+                DÖNÜŞ BU.sayi_oku()
+            EĞER SON
 
             -- 4. Strings (Fixed Rule)
-            if this.mevcut_karakter == "\""
-                return this.metin_oku()
-            end
+            EĞER BU.mevcut_karakter == "\"" İSE
+                DÖNÜŞ BU.metin_oku()
+            EĞER SON
 
             -- 5. SYMBOLS, OPERATORS, COMMENTS (Hard-coded Core)
 
             -- Comments (---, --, -)
-            if this.mevcut_karakter == "-"
-                if this.peek(1) == "-"
-                    this.ilerle(1)
-                    this.ilerle(1)  -- Skip two '-'
-                    if this.mevcut_karakter == "-"
-                        this.ilerle(1)  -- Skip third '-'
-                        this.cok_satirli_yorum_atla()
-                        continue
-                    else
-                        this.tek_satirli_yorum_atla()
-                        continue
-                    end
-                else
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["MINUS"], "-")
-                end
-            end
+            EĞER BU.mevcut_karakter == "-" İSE
+                EĞER BU.peek(1) == "-" İSE
+                    BU.ilerle(1)
+                    BU.ilerle(1)  -- Skip two '-'
+                    EĞER BU.mevcut_karakter == "-" İSE
+                        BU.ilerle(1)  -- Skip third '-'
+                        BU.cok_satirli_yorum_atla()
+                        DÖNGÜ_DEVAM
+                    DEĞILSE
+                        BU.tek_satirli_yorum_atla()
+                        DÖNGÜ_DEVAM
+                    EĞER SON
+                DEĞILSE
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["MINUS"], "-")
+                EĞER SON
+            EĞER SON
 
             -- Power (**)
-            if this.mevcut_karakter == "*"
-                if this.peek(1) == "*"
-                    this.ilerle(1)
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["POWER"], "**")
-                else
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["MUL"], "*")
-                end
-            end
+            EĞER BU.mevcut_karakter == "*" İSE
+                EĞER BU.peek(1) == "*" İSE
+                    BU.ilerle(1)
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["POWER"], "**")
+                DEĞILSE
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["MUL"], "*")
+                EĞER SON
+            EĞER SON
 
             -- Comparisons (==, >=, <=)
-            if this.mevcut_karakter == "="
-                if this.peek(1) == "="
-                    this.ilerle(1)
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["OP_ESIT_KARSILASTIRMA"], "==")
-                else
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["ASSIGN"], "=")
-                end
-            end
+            EĞER BU.mevcut_karakter == "=" İSE
+                EĞER BU.peek(1) == "=" İSE
+                    BU.ilerle(1)
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["OP_ESIT_KARSILASTIRMA"], "==")
+                DEĞILSE
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["ASSIGN"], "=")
+                EĞER SON
+            EĞER SON
 
-            if this.mevcut_karakter == ">"
-                if this.peek(1) == "="
-                    this.ilerle(1)
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["GTE"], ">=")
-                else
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["GT"], ">")
-                end
-            end
+            EĞER BU.mevcut_karakter == ">" İSE
+                EĞER BU.peek(1) == "=" İSE
+                    BU.ilerle(1)
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["GTE"], ">=")
+                DEĞILSE
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["GT"], ">")
+                EĞER SON
+            EĞER SON
 
-            if this.mevcut_karakter == "<"
-                if this.peek(1) == "="
-                    this.ilerle(1)
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["LTE"], "<=")
-                else
-                    this.ilerle(1)
-                    return new Token(TOKEN_TIPLERI["LT"], "<")
-                end
-            end
+            EĞER BU.mevcut_karakter == "<" İSE
+                EĞER BU.peek(1) == "=" İSE
+                    BU.ilerle(1)
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["LTE"], "<=")
+                DEĞILSE
+                    BU.ilerle(1)
+                    DÖNÜŞ YENİ Token(TOKEN_TIPLERI["LT"], "<")
+                EĞER SON
+            EĞER SON
 
             -- Single Character Symbols
 
-            if this.mevcut_karakter == "+"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["PLUS"], "+")
-            end
+            EĞER BU.mevcut_karakter == "+" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["PLUS"], "+")
+            EĞER SON
 
-            if this.mevcut_karakter == "/"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["DIV"], "/")
-            end
+            EĞER BU.mevcut_karakter == "/" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["DIV"], "/")
+            EĞER SON
 
-            if this.mevcut_karakter == "("
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["LEFT_PAREN"], "(")
-            end
+            EĞER BU.mevcut_karakter == "(" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["LEFT_PAREN"], "(")
+            EĞER SON
 
-            if this.mevcut_karakter == ")"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["RIGHT_PAREN"], ")")
-            end
+            EĞER BU.mevcut_karakter == ")" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["RIGHT_PAREN"], ")")
+            EĞER SON
 
-            if this.mevcut_karakter == "["
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["LEFT_BRACKET"], "[")
-            end
+            EĞER BU.mevcut_karakter == "[" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["LEFT_BRACKET"], "[")
+            EĞER SON
 
-            if this.mevcut_karakter == "]"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["RIGHT_BRACKET"], "]")
-            end
+            EĞER BU.mevcut_karakter == "]" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["RIGHT_BRACKET"], "]")
+            EĞER SON
 
-            if this.mevcut_karakter == ";"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["SEMICOLON"], ";")
-            end
+            EĞER BU.mevcut_karakter == ";" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["SEMICOLON"], ";")
+            EĞER SON
 
-            if this.mevcut_karakter == ":"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["COLON"], ":")
-            end
+            EĞER BU.mevcut_karakter == ":" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["COLON"], ":")
+            EĞER SON
 
-            if this.mevcut_karakter == ","
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["COMMA"], ",")
-            end
+            EĞER BU.mevcut_karakter == "," İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["COMMA"], ",")
+            EĞER SON
 
             -- Dictionary Syntax
-            if this.mevcut_karakter == "{"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["LEFT_BRACE"], "{")
-            end
+            EĞER BU.mevcut_karakter == "{" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["LEFT_BRACE"], "{")
+            EĞER SON
 
-            if this.mevcut_karakter == "}"
-                this.ilerle(1)
-                return new Token(TOKEN_TIPLERI["RIGHT_BRACE"], "}")
-            end
+            EĞER BU.mevcut_karakter == "}" İSE
+                BU.ilerle(1)
+                DÖNÜŞ YENİ Token(TOKEN_TIPLERI["RIGHT_BRACE"], "}")
+            EĞER SON
 
             -- 6. Error (Unrecognized character)
-            throw new Exception("Tanınmayan karakter: '" + this.mevcut_karakter + "'")
-        end
+            HATA_FIRLAT YENİ İSTİSNA("Tanınmayan karakter: '" + BU.mevcut_karakter + "'")
+        DÖNGÜ SON
 
         -- Loop ended, end of file
-        return new Token(TOKEN_TIPLERI["EOF"], null)
-    end
-end
+        DÖNÜŞ YENİ Token(TOKEN_TIPLERI["EOF"], HİÇLİK)
+    IŞLEÇ SON
+SINIF SON
