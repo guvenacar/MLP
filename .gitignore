@@ -56,3 +56,17 @@ stage0/output/
 stage1/output/
 stage2/output/
 stage3/output/
+
+# Test/example compilation outputs (root level only)
+/test-*.c
+/test-*
+!/test-*.mlp
+/calculator*.c
+/calculator-*
+!/calculator*.mlp
+/shapes-*.c
+/shapes-*
+!/shapes-*.mlp
+/mlp-v*.c
+/mlp-v[0-9]
+/mlp-v[0-9][0-9]

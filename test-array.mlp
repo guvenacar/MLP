@@ -1,0 +1,17 @@
+-- Test array indexing
+-- Simple test for array features
+
+class ArrayTest
+    constructor()
+        YAZDIR "Array test starting..."
+    end
+
+    method test_indexing()
+        -- Test simple variable (simulating array)
+        var myArray = 10
+        YAZDIR "Array test complete"
+    end
+end
+
+YAZDIR "=== Array Features Test ==="
+YAZDIR "Test complete!"

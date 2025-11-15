@@ -1,0 +1,21 @@
+-- Simple test with proper type annotations
+-- Only basic features: class, constructor, method, var, return
+
+class Point
+    x number
+    y number
+
+    constructor(METIN msg)
+        YAZDIR msg
+    end
+
+    method distance() -> number
+        var dx = x * x
+        var dy = y * y
+        var result = dx + dy
+        return result
+    end
+end
+
+YAZDIR "=== Point Test ==="
+YAZDIR "Test complete!"
