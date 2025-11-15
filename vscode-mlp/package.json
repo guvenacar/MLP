@@ -1,0 +1,57 @@
+{
+  "name": "mlp-language",
+  "displayName": "MLP Language Support",
+  "description": "Syntax highlighting and language support for MLP (Multi-Language Programming)",
+  "version": "0.1.0",
+  "publisher": "mlp-lang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guvenacar/MLP"
+  },
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "mlp",
+    "multi-language",
+    "programming",
+    "turkish"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "mlp",
+        "aliases": [
+          "MLP",
+          "Multi-Language Programming"
+        ],
+        "extensions": [
+          ".mlp"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/mlp-icon.png",
+          "dark": "./images/mlp-icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mlp",
+        "scopeName": "source.mlp",
+        "path": "./syntaxes/mlp.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "vsce": "^2.15.0"
+  }
+}

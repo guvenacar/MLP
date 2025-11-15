@@ -1,0 +1,25 @@
+-- Simple Calculator Example
+-- Demonstrates: classes, methods, variables, expressions
+
+class Calculator
+    result number
+
+    constructor()
+        YAZDIR "Calculator initialized"
+    end
+
+    method add(a, b)
+        var sum = a + b
+        YAZDIR "Adding numbers..."
+        return sum
+    end
+
+    method multiply(a, b)
+        var product = a * b
+        YAZDIR "Multiplying numbers..."
+        return product
+    end
+end
+
+YAZDIR "=== MLP Calculator ==="
+YAZDIR "Test complete!"
