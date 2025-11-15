@@ -1,0 +1,14 @@
+-- Test if with method call
+
+class Test
+    constructor()
+        var arg = "--verbose"
+        if arg.starts_with("--")
+            YAZDIR "Starts with --"
+        else
+            YAZDIR "Does not start"
+        end
+    end
+end
+
+YAZDIR "=== Test ==="

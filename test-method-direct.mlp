@@ -1,0 +1,10 @@
+-- Direct method call test
+
+class Test
+    constructor()
+        var arg = "--verbose"
+        YAZDIR arg.starts_with("--")
+    end
+end
+
+YAZDIR "=== Test ==="

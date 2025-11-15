@@ -1,0 +1,8 @@
+-- Test if with method call on one line
+class Test
+    constructor()
+        var arg = "--verbose"
+        if arg.starts_with("--") YAZDIR "YES" else YAZDIR "NO" end
+    end
+end
+YAZDIR "=== Test ==="
