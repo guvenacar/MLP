@@ -81,12 +81,7 @@ IŞLEÇ print_usage()
     YAZDIR "  --help          Show this help";
 IŞLEÇ SON
 
-YAPI CompilerConfig
-    METIN backend;
-    ZITLIK optimize;
-    ZITLIK verbose;
-    ZITLIK dump_ast;
-YAPI SON
+-- CompilerConfig struct is defined in mlp_stubs.h
 
 IŞLEÇ parse_flags(DİZİ<METIN> args) -> CompilerConfig
     CompilerConfig config = CompilerConfig{

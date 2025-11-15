@@ -44,33 +44,5 @@ SemanticModule* semantic = &semantic_instance;
 OptimizerModule* optimizer = &optimizer_instance;
 CodegenModule* codegen = &codegen_instance;
 
-// Stub implementations
-CompilerConfig parse_flags(mlp_array_t* args) {
-    CompilerConfig config = {
-        .backend = "asm",
-        .optimize = false,
-        .verbose = false,
-        .dump_ast = false
-    };
-    return config;
-}
-
-void print_usage(void) {
-    printf("Usage: mlp <input-file> [options]\n");
-}
-
-void print_debug(void) {
-    printf("[DEBUG] AST dump not implemented\n");
-}
-
-void analyze(AST* ast) {
-    printf("[SEMANTIC] Analysis placeholder\n");
-}
-
-void write_file(char* filename, char* content) {
-    FILE* f = fopen(filename, "w");
-    if (f) {
-        fprintf(f, "%s", content);
-        fclose(f);
-    }
-}
+// Note: parse_flags(), print_usage(), print_debug(), analyze(), write_file()
+// are implemented in main.mlp, not here

@@ -40,12 +40,8 @@ typedef struct {
     char* (*generate)(AST* ast, char* backend);
 } CodegenModule;
 
-// Stub function declarations
-CompilerConfig parse_flags(mlp_array_t* args);
-void print_usage(void);
-void print_debug(void);
-void analyze(AST* ast);
-void write_file(char* filename, char* content);
+// Note: parse_flags(), print_usage(), print_debug(), analyze(), write_file()
+// are implemented in user code (main.mlp), not stubbed here
 
 // Module instances
 extern LexerModule* lexer;

@@ -1331,6 +1331,20 @@ class CCodeGenerator:
             for stmt in self.ast.statements
         )
 
+        # Collect all top-level functions for forward declarations
+        top_level_functions = [
+            stmt for stmt in self.ast.statements
+            if isinstance(stmt, MethodDef)
+        ]
+
+        # Generate forward declarations for all functions (except main)
+        function_declarations = []
+        for func in top_level_functions:
+            if func.name != 'main':  # main() gets special handling
+                params_str = ', '.join([f"{self.mlp_type_to_c(ptype)} {pname}" for pname, ptype in func.params])
+                return_type = self.mlp_type_to_c(func.return_type) if func.return_type else 'void'
+                function_declarations.append(f"{return_type} {func.name}({params_str});")
+
         # Process all top-level statements
         has_main_stmts = False
         for stmt in self.ast.statements:
@@ -1364,6 +1378,10 @@ class CCodeGenerator:
         result = '\n'.join(self.includes) + '\n\n'
         if self.class_structs:
             result += '\n'.join(self.class_structs) + '\n\n'
+        # Add forward declarations
+        if function_declarations:
+            result += '// Forward declarations\n'
+            result += '\n'.join(function_declarations) + '\n\n'
         if self.class_methods:
             result += '\n'.join(self.class_methods) + '\n\n'
         result += '\n'.join(self.c_code)
