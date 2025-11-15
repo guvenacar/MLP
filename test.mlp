@@ -1,0 +1,12 @@
+class Calculator
+    number result
+
+    constructor(number initial)
+        this.result = initial
+    end
+
+    method add(number x) -> number
+        this.result = this.result + x
+        return this.result
+    end
+end
