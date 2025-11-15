@@ -1,0 +1,30 @@
+-- Test EŞLEŞTIR (match/switch) statement
+-- This tests pattern matching syntax
+
+class MatchTest
+    constructor()
+        YAZDIR "Testing match statement..."
+    end
+
+    method test_match()
+        var value = 2
+
+        YAZDIR "Matching value:"
+
+        -- Match statement
+        EŞLEŞTIR value
+            DURUM 1
+                YAZDIR "Value is one"
+            DURUM 2
+                YAZDIR "Value is two"
+            DURUM 3
+                YAZDIR "Value is three"
+            VARSAYILAN
+                YAZDIR "Value is something else"
+        EŞLEŞTIR SON
+
+        YAZDIR "Match test complete!"
+    end
+end
+
+YAZDIR "=== Match Statement Test ==="

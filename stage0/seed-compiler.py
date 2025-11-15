@@ -56,10 +56,14 @@ class TokenType(Enum):
     HER = auto()        # for/each
     İÇİNDE = auto()     # in
     DÖNÜŞ = auto()      # return
+    DÖNGÜ_DEVAM = auto()  # continue
     DEĞIŞKEN = auto()   # var
     BU = auto()         # this
     YENİ = auto()       # new
     SON = auto()        # end
+    EŞLEŞTIR = auto()   # match/switch
+    DURUM = auto()      # case
+    VARSAYILAN = auto() # default
 
     # Types - English
     STRING = auto()
@@ -212,6 +216,31 @@ class WhileStatement(ASTNode):
     body: List[ASTNode]
 
 @dataclass
+class ForEachStatement(ASTNode):
+    """For-each loop: HER (var1, var2) İÇİNDE collection"""
+    loop_vars: List[str]  # Variable names (e.g., ["index", "item"])
+    iterable: ASTNode      # The collection to iterate over
+    body: List[ASTNode]
+
+@dataclass
+class ContinueStatement(ASTNode):
+    """Continue statement: DÖNGÜ_DEVAM"""
+    pass
+
+@dataclass
+class MatchCase(ASTNode):
+    """Single case in match statement"""
+    pattern: ASTNode  # Pattern to match (can be literal or identifier)
+    body: List[ASTNode]
+
+@dataclass
+class MatchStatement(ASTNode):
+    """Match/switch statement: EŞLEŞTIR value ... EŞLEŞTIR SON"""
+    value: ASTNode  # Value to match against
+    cases: List[MatchCase]
+    default_case: Optional[List[ASTNode]]  # VARSAYILAN case
+
+@dataclass
 class ReturnStatement(ASTNode):
     """Return statement"""
     value: Optional[ASTNode]
@@ -287,10 +316,14 @@ class Lexer:
             'HER': TokenType.HER,
             'İÇİNDE': TokenType.İÇİNDE,
             'DÖNÜŞ': TokenType.DÖNÜŞ,
+            'DÖNGÜ_DEVAM': TokenType.DÖNGÜ_DEVAM,
             'DEĞIŞKEN': TokenType.DEĞIŞKEN,
             'BU': TokenType.BU,
             'YENİ': TokenType.YENİ,
             'SON': TokenType.SON,
+            'EŞLEŞTIR': TokenType.EŞLEŞTIR,
+            'DURUM': TokenType.DURUM,
+            'VARSAYILAN': TokenType.VARSAYILAN,
 
             # Turkish types
             'METIN': TokenType.METIN,
@@ -552,6 +585,19 @@ class Parser:
         if current.type in [TokenType.WHILE, TokenType.DONGU]:
             return self.parse_while()
 
+        # For-each statement (HER)
+        if current.type == TokenType.HER:
+            return self.parse_for_each()
+
+        # Continue statement (DÖNGÜ_DEVAM)
+        if current.type == TokenType.DÖNGÜ_DEVAM:
+            self.advance()
+            return ContinueStatement()
+
+        # Match statement (EŞLEŞTIR)
+        if current.type == TokenType.EŞLEŞTIR:
+            return self.parse_match()
+
         # Return statement (return or DÖNÜŞ)
         if current.type in [TokenType.RETURN, TokenType.DÖNÜŞ]:
             return self.parse_return()
@@ -771,6 +817,93 @@ class Parser:
         elif self.current().type == TokenType.SON:
             self.advance()
         return WhileStatement(condition, body)
+
+    def parse_for_each(self) -> ForEachStatement:
+        """Parse for-each loop: HER (var1, var2) İÇİNDE collection"""
+        self.advance()  # consume HER
+
+        # Parse loop variables: (index, item) or just (item)
+        loop_vars = []
+        if self.current().type == TokenType.LPAREN:
+            self.advance()  # consume '('
+            while self.current().type != TokenType.RPAREN:
+                if self.current().type == TokenType.IDENTIFIER:
+                    loop_vars.append(self.current().value)
+                    self.advance()
+                if self.current().type == TokenType.COMMA:
+                    self.advance()
+            self.expect(TokenType.RPAREN)
+
+        # Expect İÇİNDE
+        if self.current().type == TokenType.İÇİNDE:
+            self.advance()
+
+        # Parse iterable expression
+        iterable = self.parse_expression()
+
+        # Parse body
+        body = []
+        while self.current().type not in [TokenType.HER, TokenType.EOF]:
+            # Check for HER SON (end of for-each)
+            if self.current().type == TokenType.HER:
+                if self.peek().type == TokenType.SON:
+                    break
+            stmt = self.parse_statement()
+            if stmt:
+                body.append(stmt)
+
+        # Expect HER SON
+        if self.current().type == TokenType.HER:
+            self.advance()
+        if self.current().type == TokenType.SON:
+            self.advance()
+
+        return ForEachStatement(loop_vars, iterable, body)
+
+    def parse_match(self) -> MatchStatement:
+        """Parse match statement: EŞLEŞTIR value"""
+        self.advance()  # consume EŞLEŞTIR
+
+        # Parse value to match
+        value = self.parse_expression()
+
+        # Parse cases
+        cases = []
+        default_case = None
+
+        while self.current().type not in [TokenType.EŞLEŞTIR, TokenType.EOF]:
+            # DURUM pattern
+            if self.current().type == TokenType.DURUM:
+                self.advance()
+                pattern = self.parse_expression()
+
+                # Parse case body (until next DURUM or VARSAYILAN or EŞLEŞTIR)
+                case_body = []
+                while self.current().type not in [TokenType.DURUM, TokenType.VARSAYILAN, TokenType.EŞLEŞTIR, TokenType.EOF]:
+                    stmt = self.parse_statement()
+                    if stmt:
+                        case_body.append(stmt)
+
+                cases.append(MatchCase(pattern, case_body))
+
+            # VARSAYILAN (default case)
+            elif self.current().type == TokenType.VARSAYILAN:
+                self.advance()
+                default_case = []
+                while self.current().type not in [TokenType.EŞLEŞTIR, TokenType.EOF]:
+                    stmt = self.parse_statement()
+                    if stmt:
+                        default_case.append(stmt)
+            else:
+                self.advance()
+
+        # Expect EŞLEŞTIR SON
+        if self.current().type == TokenType.EŞLEŞTIR:
+            self.advance()
+        if self.current().type == TokenType.SON:
+            self.advance()
+
+        return MatchStatement(value, cases, default_case)
 
     def parse_return(self) -> ReturnStatement:
         """Parse return statement (return/DÖNÜŞ)"""
@@ -1085,6 +1218,67 @@ class CCodeGenerator:
             for stmt in node.body:
                 self.generate_statement(stmt)
             self.indent_level -= 1
+            self.emit("}")
+
+        elif isinstance(node, ForEachStatement):
+            # Generate C for loop from for-each
+            # HER (index, item) İÇİNDE array → for(size_t index=0; index<length; index++)
+            iterable_code = self.generate_expression(node.iterable)
+
+            if len(node.loop_vars) == 2:
+                # Two variables: index and item
+                index_var = node.loop_vars[0]
+                item_var = node.loop_vars[1]
+                self.emit(f"size_t {index_var}_len = mlp_array_length({iterable_code});")
+                self.emit(f"for (size_t {index_var} = 0; {index_var} < {index_var}_len; {index_var}++) {{")
+                self.indent_level += 1
+                self.emit(f"void* {item_var} = mlp_array_get({iterable_code}, {index_var});")
+                for stmt in node.body:
+                    self.generate_statement(stmt)
+                self.indent_level -= 1
+                self.emit("}")
+            elif len(node.loop_vars) == 1:
+                # One variable: just item
+                item_var = node.loop_vars[0]
+                self.emit(f"size_t _i_len = mlp_array_length({iterable_code});")
+                self.emit(f"for (size_t _i = 0; _i < _i_len; _i++) {{")
+                self.indent_level += 1
+                self.emit(f"void* {item_var} = mlp_array_get({iterable_code}, _i);")
+                for stmt in node.body:
+                    self.generate_statement(stmt)
+                self.indent_level -= 1
+                self.emit("}")
+
+        elif isinstance(node, ContinueStatement):
+            self.emit("continue;")
+
+        elif isinstance(node, MatchStatement):
+            # Generate if-else chain from match statement
+            # EŞLEŞTIR value DURUM x → if (value == x)
+            value_code = self.generate_expression(node.value)
+
+            first_case = True
+            for case in node.cases:
+                pattern_code = self.generate_expression(case.pattern)
+                if first_case:
+                    self.emit(f"if ({value_code} == {pattern_code}) {{")
+                    first_case = False
+                else:
+                    self.emit(f"}} else if ({value_code} == {pattern_code}) {{")
+
+                self.indent_level += 1
+                for stmt in case.body:
+                    self.generate_statement(stmt)
+                self.indent_level -= 1
+
+            # Default case
+            if node.default_case:
+                self.emit("} else {")
+                self.indent_level += 1
+                for stmt in node.default_case:
+                    self.generate_statement(stmt)
+                self.indent_level -= 1
+
             self.emit("}")
 
         elif isinstance(node, ReturnStatement):

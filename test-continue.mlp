@@ -1,0 +1,29 @@
+-- Test DÖNGÜ_DEVAM (continue) statement
+-- This tests the continue keyword
+
+class ContinueTest
+    constructor()
+        YAZDIR "Testing continue statement..."
+    end
+
+    method test_continue()
+        var count = 0
+
+        YAZDIR "Loop with continue:"
+
+        -- While loop with continue
+        while count < 5
+            count = count + 1
+
+            -- Skip even numbers (simulated)
+            var check = count
+            DÖNGÜ_DEVAM
+
+            YAZDIR "This should not print"
+        end
+
+        YAZDIR "Continue test complete!"
+    end
+end
+
+YAZDIR "=== Continue Statement Test ==="

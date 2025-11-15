@@ -1,0 +1,24 @@
+-- Test HER...İÇİNDE (for-each) loops
+-- This tests the for-each syntax
+
+class ForEachTest
+    constructor()
+        YAZDIR "Testing for-each loops..."
+    end
+
+    method test_foreach()
+        -- Create an array
+        var numbers = [10, 20, 30, 40, 50]
+
+        YAZDIR "Iterating over array with index and item:"
+
+        -- For-each with index and item
+        HER (index, item) İÇİNDE numbers
+            YAZDIR "Processing item..."
+        HER SON
+
+        YAZDIR "For-each test complete!"
+    end
+end
+
+YAZDIR "=== For-Each Test ==="
