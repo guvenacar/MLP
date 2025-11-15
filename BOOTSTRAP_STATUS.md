@@ -55,11 +55,16 @@
 - ✅ examples/04-calculator-typed.mlp - Calculator with type annotations
 - ✅ Both compile to working C executables
 
-## ✅ Recently Implemented (FAZ 1 Complete!)
+## ✅ Recently Implemented
 
-### Array Support
+### FAZ 1: Array Support ✅
 - ✅ **Array literals** - [item1, item2, item3]
 - ✅ **Array indexing** - args[1]
+
+### FAZ 2: Control Flow ✅
+- ✅ **HER...İÇİNDE** (for-each) - HER (index, item) İÇİNDE collection
+- ✅ **DÖNGÜ_DEVAM** (continue) - Loop continue statement
+- ✅ **EŞLEŞTIR** (match/switch) - Pattern matching with DURUM/VARSAYILAN
 
 ## ❌ Not Yet Implemented (Needed for src/compiler/main.mlp)
 
@@ -69,9 +74,6 @@
 - ❌ **Generic types** - DİZİ<METIN> (Array<String>)
 - ❌ **Property access** - object.property
 - ❌ **Module method calls** - module.method()
-- ❌ **EŞLEŞTIR** (match/switch) - Pattern matching
-- ❌ **HER** (for-each) - For-each loops
-- ❌ **DÖNGÜ_DEVAM** (continue) - Loop continue
 - ❌ **String methods** - str.starts_with(), str.substring()
 - ❌ **Struct literals** - Config{field: value}
 
@@ -97,8 +99,11 @@
 ✅ Field access
 ✅ Method calls within same class
 ✅ Mixed English/Turkish keywords
-✅ **Array literals** - [1, 2, 3] (NEW!)
-✅ **Array indexing** - arr[0] (NEW!)
+✅ **Array literals** - [1, 2, 3] (FAZ 1)
+✅ **Array indexing** - arr[0] (FAZ 1)
+✅ **For-each loops** - HER (index, item) İÇİNDE array (FAZ 2)
+✅ **Continue statement** - DÖNGÜ_DEVAM (FAZ 2)
+✅ **Pattern matching** - EŞLEŞTIR...DURUM...VARSAYILAN (FAZ 2)
 
 ### What Cannot Be Compiled Yet
 ❌ The full MLP compiler (src/compiler/main.mlp) - still missing features
