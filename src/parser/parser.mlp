@@ -41,7 +41,8 @@ class Parser
     method faktor() -> dynamic
         -- Highest precedence: Numbers, Strings, Variables, Parentheses,
         -- Function Calls, Array Access, Dictionary Access
-        var token = this.mevcut_token
+        token;
+        token = this.mevcut_token
 
         if token.tip == TOKEN_TIPLERI["INTEGER"] or token.tip == TOKEN_TIPLERI["FLOAT"]
             this.tuket(token.tip)
@@ -77,7 +78,8 @@ class Parser
 
         if token.tip == TOKEN_TIPLERI["LEFT_PAREN"]
             this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])
-            var dugum = this.ifade()
+            dugum;
+            dugum = this.ifade()
             this.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])
             return dugum
         end
@@ -88,7 +90,8 @@ class Parser
     method islec_cagirma(hedef_token) -> IslecCagirma
         -- Parses function call arguments
         -- Grammar: '(' [ifade (COMMA ifade)*]? ')'
-        var argumanlar = []
+        argumanlar;
+        argumanlar = []
         this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
         -- If first token is not ')', there are arguments
@@ -112,11 +115,13 @@ class Parser
         this.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])  -- '['
 
         -- Index can be complex expression like '5 + 2'
-        var indeks_ifadesi = this.ifade()
+        indeks_ifadesi;
+        indeks_ifadesi = this.ifade()
 
         this.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])  -- ']'
 
-        var hedef_node = new Degisken(hedef_token)
+        hedef_node;
+        hedef_node = new Degisken(hedef_token)
         return new DiziErisim(hedef_node, indeks_ifadesi)
     end
 
@@ -125,27 +130,32 @@ class Parser
         this.tuket(TOKEN_TIPLERI["LEFT_BRACE"])  -- '{'
 
         -- Key can be complex expression
-        var anahtar_ifadesi = this.ifade()
+        anahtar_ifadesi;
+        anahtar_ifadesi = this.ifade()
 
         this.tuket(TOKEN_TIPLERI["RIGHT_BRACE"])  -- '}'
 
-        var hedef_node = new Degisken(hedef_token)
+        hedef_node;
+        hedef_node = new Degisken(hedef_token)
         return new SozlukErisim(hedef_node, anahtar_ifadesi)
     end
 
     method terim() -> dynamic
         -- Medium precedence: Multiplication and Division
         -- Grammar: faktor ((MUL | DIV | POWER) faktor)*
-        var sol_dugum = this.faktor()
+        sol_dugum;
+        sol_dugum = this.faktor()
 
         -- Continue as long as *, /, or ** appears
         while this.mevcut_token.tip == TOKEN_TIPLERI["MUL"] or
               this.mevcut_token.tip == TOKEN_TIPLERI["DIV"] or
               this.mevcut_token.tip == TOKEN_TIPLERI["POWER"]
 
-            var operator = this.mevcut_token
+            operator;
+            operator = this.mevcut_token
             this.tuket(operator.tip)
-            var sag_dugum = this.faktor()
+            sag_dugum;
+            sag_dugum = this.faktor()
 
             -- Update left node with new operation node
             sol_dugum = new IkiliIslem(sol_dugum, operator, sag_dugum)
@@ -157,7 +167,8 @@ class Parser
     method ifade() -> dynamic
         -- Lowest precedence: Addition, Subtraction, Comparisons
         -- Grammar: terim ((PLUS | MINUS | comparisons) terim)*
-        var sol_dugum = this.terim()
+        sol_dugum;
+        sol_dugum = this.terim()
 
         while this.mevcut_token.tip == TOKEN_TIPLERI["PLUS"] or
               this.mevcut_token.tip == TOKEN_TIPLERI["MINUS"] or
@@ -167,9 +178,11 @@ class Parser
               this.mevcut_token.tip == TOKEN_TIPLERI["GTE"] or
               this.mevcut_token.tip == TOKEN_TIPLERI["LTE"]
 
-            var operator = this.mevcut_token
+            operator;
+            operator = this.mevcut_token
             this.tuket(operator.tip)
-            var sag_dugum = this.terim()
+            sag_dugum;
+            sag_dugum = this.terim()
             sol_dugum = new IkiliIslem(sol_dugum, operator, sag_dugum)
         end
 
@@ -182,7 +195,8 @@ class Parser
 
     method komut() -> dynamic
         -- Parses a single statement
-        var token = this.mevcut_token
+        token;
+        token = this.mevcut_token
 
         -- 0. Phase 8: SINIF definition?
         if token.tip == TOKEN_TIPLERI["OOP_SINIF"]
@@ -233,7 +247,8 @@ class Parser
 
         -- 9. Assignment OR Function call statement?
         if token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            var ifade_dugumu = this.ifade()
+            ifade_dugumu;
+            ifade_dugumu = this.ifade()
 
             -- Case 1: Assignment (s = 10; or d{"key"} = 30;)
             if this.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
@@ -245,7 +260,8 @@ class Parser
                 end
 
                 this.tuket(TOKEN_TIPLERI["ASSIGN"])  -- '='
-                var atanan_deger_ifadesi = this.ifade()
+                atanan_deger_ifadesi;
+                atanan_deger_ifadesi = this.ifade()
                 this.tuket(TOKEN_TIPLERI["SEMICOLON"])  -- ';'
                 return new AtamaKomutu(ifade_dugumu, atanan_deger_ifadesi)
             end
@@ -270,7 +286,8 @@ class Parser
     method degisken_tanimlama(tip_token, ad_token) -> DegiskenTanimlama
         -- Grammar: (tip_token and ad_token already consumed) ASSIGN ifade SEMICOLON
         this.tuket(TOKEN_TIPLERI["ASSIGN"])
-        var ifade_node = this.ifade()
+        ifade_node;
+        ifade_node = this.ifade()
         this.tuket(TOKEN_TIPLERI["SEMICOLON"])
         return new DegiskenTanimlama(tip_token, ad_token, ifade_node)
     end
@@ -280,14 +297,16 @@ class Parser
         this.tuket(TOKEN_TIPLERI["TANIMLA_DEGISKEN"])  -- 'DEĞIŞKEN'
 
         -- Get name
-        var ad_token = this.mevcut_token
+        ad_token;
+        ad_token = this.mevcut_token
         this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
         -- Expect ':'
         this.tuket(TOKEN_TIPLERI["COLON"])
 
         -- Get type
-        var tip_token = this.mevcut_token
+        tip_token;
+        tip_token = this.mevcut_token
         if tip_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] or
            tip_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] or
            tip_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"] or
@@ -298,7 +317,8 @@ class Parser
         end
 
         -- Optional initial value
-        var ifade_node = null
+        ifade_node;
+        ifade_node = null
         if this.mevcut_token.tip == TOKEN_TIPLERI["ASSIGN"]
             this.tuket(TOKEN_TIPLERI["ASSIGN"])
             ifade_node = this.ifade()
@@ -311,18 +331,21 @@ class Parser
     method eger_blogu() -> EgerBlogu
         -- EĞER condition İSE statements [DEĞİLSE statements] SON
         this.tuket(TOKEN_TIPLERI["YAPI_KOSUL_EGER"])  -- 'EĞER'
-        var kosul = this.ifade()
+        kosul;
+        kosul = this.ifade()
         this.tuket(TOKEN_TIPLERI["YAPI_KOSUL_ISE"])  -- 'İSE'
 
         -- True block
-        var dogru_blok = new Blok()
+        dogru_blok;
+        dogru_blok = new Blok()
         while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
               this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"] and
               this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             dogru_blok.komutlar.push(this.komut())
         end
 
-        var yanlis_blok = null
+        yanlis_blok;
+        yanlis_blok = null
 
         -- DEĞİLSE block?
         if this.mevcut_token.tip == TOKEN_TIPLERI["YAPI_KOSUL_DEGILSE"]
@@ -341,7 +364,8 @@ class Parser
     method yazdir_komutu() -> YazdirKomutu
         -- YAZDIR expression;
         this.tuket(TOKEN_TIPLERI["YAPI_YAZDIR"])
-        var ifade = this.ifade()
+        ifade;
+        ifade = this.ifade()
         this.tuket(TOKEN_TIPLERI["SEMICOLON"])
         return new YazdirKomutu(ifade)
     end
@@ -350,7 +374,8 @@ class Parser
         -- DÖNGÜ statements SON
         this.tuket(TOKEN_TIPLERI["YAPI_DONGU"])
 
-        var blok = new Blok()
+        blok;
+        blok = new Blok()
         while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
               this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             blok.komutlar.push(this.komut())
@@ -370,7 +395,8 @@ class Parser
     method donus_komutu() -> DonusKomutu
         -- DÖNÜŞ expression;
         this.tuket(TOKEN_TIPLERI["YAPI_DONUS"])
-        var ifade = this.ifade()
+        ifade;
+        ifade = this.ifade()
         this.tuket(TOKEN_TIPLERI["SEMICOLON"])
         return new DonusKomutu(ifade)
     end
@@ -380,7 +406,8 @@ class Parser
         -- - SAYISAL İŞLEÇ topla...
         -- - SAYISAL liste[10];
         -- - SAYISAL s = 10;
-        var tip_token = this.mevcut_token
+        tip_token;
+        tip_token = this.mevcut_token
         this.tuket(tip_token.tip)
 
         -- Case 1: SAYISAL İŞLEÇ ...
@@ -390,7 +417,8 @@ class Parser
 
         -- Case 2 & 3: SAYISAL s ... (Variable or Array)
         if this.mevcut_token.tip == TOKEN_TIPLERI["IDENTIFIER"]
-            var ad_token = this.mevcut_token
+            ad_token;
+            ad_token = this.mevcut_token
             this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
             -- Case 2: SAYISAL liste[ ...
@@ -412,7 +440,8 @@ class Parser
     method dizi_tanimlama(tip_token, ad_token) -> DiziTanimlama
         -- Grammar: (tip_token and ad_token already consumed) '[' ifade ']' SEMICOLON
         this.tuket(TOKEN_TIPLERI["LEFT_BRACKET"])
-        var boyut_ifadesi = this.ifade()
+        boyut_ifadesi;
+        boyut_ifadesi = this.ifade()
         this.tuket(TOKEN_TIPLERI["RIGHT_BRACKET"])
         this.tuket(TOKEN_TIPLERI["SEMICOLON"])
         return new DiziTanimlama(tip_token, ad_token, boyut_ifadesi)
@@ -420,13 +449,15 @@ class Parser
 
     method parametre_listesi() -> array
         -- ( [TYPE IDENTIFIER (COMMA TYPE IDENTIFIER)*]? )
-        var parametreler = []
+        parametreler;
+        parametreler = []
         this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
         -- If first token is not ')', there are parameters
         if this.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
             -- First parameter
-            var tip_token = this.mevcut_token
+            tip_token;
+            tip_token = this.mevcut_token
             if tip_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] and
                tip_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] and
                tip_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
@@ -434,7 +465,8 @@ class Parser
             end
             this.tuket(tip_token.tip)
 
-            var ad_token = this.mevcut_token
+            ad_token;
+            ad_token = this.mevcut_token
             this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
             parametreler.push(new Parametre(tip_token, ad_token))
 
@@ -464,13 +496,16 @@ class Parser
         -- [TYPE]? İŞLEÇ IDENTIFIER ( parameters ) statements SON
         this.tuket(TOKEN_TIPLERI["YAPI_ISLEC"])  -- 'İŞLEÇ'
 
-        var ad_token = this.mevcut_token
+        ad_token;
+        ad_token = this.mevcut_token
         this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
-        var parametreler = this.parametre_listesi()
+        parametreler;
+        parametreler = this.parametre_listesi()
 
         -- Function body
-        var govde = new Blok()
+        govde;
+        govde = new Blok()
         while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
               this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             govde.komutlar.push(this.komut())
@@ -482,7 +517,8 @@ class Parser
 
     method parse() -> Blok
         -- Parses entire program and returns AST root (a Block)
-        var ana_blok = new Blok()
+        ana_blok;
+        ana_blok = new Blok()
 
         -- Read all statements until EOF
         while this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
@@ -500,12 +536,16 @@ class Parser
         -- Parses SINIF definition
         this.tuket(TOKEN_TIPLERI["OOP_SINIF"])  -- 'SINIF'
 
-        var sinif_adi = this.mevcut_token
+        sinif_adi;
+        sinif_adi = this.mevcut_token
         this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
 
-        var ozellikler = []
-        var kurucu = null
-        var metodlar = []
+        ozellikler;
+        ozellikler = []
+        kurucu;
+        kurucu = null
+        metodlar;
+        metodlar = []
 
         -- Parse SINIF body (until SON)
         while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
@@ -525,7 +565,8 @@ class Parser
             if this.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_SAYI"] or
                this.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_METIN"] or
                this.mevcut_token.tip == TOKEN_TIPLERI["TANIMLA_BOOL"]
-                var tip_token = this.mevcut_token
+                tip_token;
+                tip_token = this.mevcut_token
                 this.tuket(this.mevcut_token.tip)
 
                 if this.mevcut_token.tip == TOKEN_TIPLERI["YAPI_ISLEC"]
@@ -544,7 +585,8 @@ class Parser
         -- Parses ÖZELLIK TYPE name; format
         this.tuket(TOKEN_TIPLERI["OOP_OZELLIK"])  -- 'ÖZELLIK'
 
-        var tip_token = this.mevcut_token
+        tip_token;
+        tip_token = this.mevcut_token
         if this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] and
            this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] and
            this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
@@ -552,7 +594,8 @@ class Parser
         end
         this.tuket(this.mevcut_token.tip)
 
-        var ad_token = this.mevcut_token
+        ad_token;
+        ad_token = this.mevcut_token
         this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
         this.tuket(TOKEN_TIPLERI["SEMICOLON"])
 
@@ -564,7 +607,8 @@ class Parser
         this.tuket(TOKEN_TIPLERI["OOP_KURUCU"])  -- 'KURUCU'
         this.tuket(TOKEN_TIPLERI["LEFT_PAREN"])  -- '('
 
-        var parametreler = []
+        parametreler;
+        parametreler = []
         if this.mevcut_token.tip != TOKEN_TIPLERI["RIGHT_PAREN"]
             parametreler.push(this.parametre())
 
@@ -577,7 +621,8 @@ class Parser
         this.tuket(TOKEN_TIPLERI["RIGHT_PAREN"])  -- ')'
 
         -- Constructor body
-        var govde = new Blok()
+        govde;
+        govde = new Blok()
         while this.mevcut_token.tip != TOKEN_TIPLERI["YAPI_SON"] and
               this.mevcut_token.tip != TOKEN_TIPLERI["EOF"]
             govde.komutlar.push(this.komut())
@@ -589,7 +634,8 @@ class Parser
 
     method parametre() -> Parametre
         -- Parses TYPE name format (function parameter)
-        var tip_token = this.mevcut_token
+        tip_token;
+        tip_token = this.mevcut_token
         if this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_SAYI"] and
            this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_METIN"] and
            this.mevcut_token.tip != TOKEN_TIPLERI["TANIMLA_BOOL"]
@@ -597,7 +643,8 @@ class Parser
         end
         this.tuket(this.mevcut_token.tip)
 
-        var ad_token = this.mevcut_token
+        ad_token;
+        ad_token = this.mevcut_token
         this.tuket(TOKEN_TIPLERI["IDENTIFIER"])
         return new Parametre(tip_token, ad_token)
     end

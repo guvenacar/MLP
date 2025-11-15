@@ -40,7 +40,8 @@ class Lexer
     method _normalize_key(text) -> string
         -- Converts a keyword to standard (canonical) format for comparison
         -- Handles Turkish character normalization
-        var normalized_text = text.casefold()
+        normalized_text;
+        normalized_text = text.casefold()
         normalized_text = METIN_DEGISTIR(normalized_text, "ı", "i")
         normalized_text = METIN_DEGISTIR(normalized_text, "İ", "i")
         normalized_text = METIN_DEGISTIR(normalized_text, "i̇", "i")
@@ -51,9 +52,11 @@ class Lexer
         -- Loads language profile from JSON
         -- ONLY loads keywords to map
 
-        var diller = null
+        diller;
+        diller = null
         try
-            var json_content = DOSYA_OKU(json_yolu)
+            json_content;
+            json_content = DOSYA_OKU(json_yolu)
             diller = JSON_PARSE(json_content)
         catch e
             throw new Exception("Dil JSON dosyası okunamadı: " + json_yolu + ". Hata: " + string(e))
@@ -63,12 +66,15 @@ class Lexer
             throw new Exception("Dil profili '" + dil_kodu + "' JSON'da bulunamadı.")
         end
 
-        var profil = diller["dil_profili"][dil_kodu]
+        profil;
+        profil = diller["dil_profili"][dil_kodu]
 
-        var anahtar_kelime_haritasi = {}
+        anahtar_kelime_haritasi;
+        anahtar_kelime_haritasi = {}
         for soyut_tip, somut_kelime in profil
             if soyut_tip in TOKEN_TIPLERI
-                var anahtar = this._normalize_key(somut_kelime)
+                anahtar;
+                anahtar = this._normalize_key(somut_kelime)
                 anahtar_kelime_haritasi[anahtar] = soyut_tip
             end
         end
@@ -94,7 +100,8 @@ class Lexer
 
     method peek(miktar) -> string
         -- Peeks at next character without advancing
-        var peek_konum = this.konum + miktar
+        peek_konum;
+        peek_konum = this.konum + miktar
         if peek_konum >= UZUNLUK(this.kaynak_kodu)
             return null
         end
@@ -150,8 +157,10 @@ class Lexer
     -- ===============================================
 
     method sayi_oku() -> Token
-        var sayi_str = ""
-        var nokta_kullanildi = false
+        sayi_str;
+        sayi_str = ""
+        nokta_kullanildi;
+        nokta_kullanildi = false
 
         while this.mevcut_karakter != null and (IS_DIGIT(this.mevcut_karakter) or this.mevcut_karakter == ".")
             if this.mevcut_karakter == "."
@@ -173,7 +182,8 @@ class Lexer
     end
 
     method metin_oku() -> Token
-        var metin = ""
+        metin;
+        metin = ""
         this.ilerle(1)  -- Skip opening quote
 
         while this.mevcut_karakter != null and this.mevcut_karakter != "\""
@@ -190,17 +200,20 @@ class Lexer
     end
 
     method kelime_oku() -> Token
-        var kelime = ""
+        kelime;
+        kelime = ""
 
         while this.mevcut_karakter != null and (IS_ALNUM(this.mevcut_karakter) or this.mevcut_karakter == "_")
             kelime = kelime + this.mevcut_karakter
             this.ilerle(1)
         end
 
-        var kelime_kontrol_formati = this._normalize_key(kelime)
+        kelime_kontrol_formati;
+        kelime_kontrol_formati = this._normalize_key(kelime)
 
         if kelime_kontrol_formati in this.anahtar_kelimeler
-            var token_tipi = this.anahtar_kelimeler[kelime_kontrol_formati]
+            token_tipi;
+            token_tipi = this.anahtar_kelimeler[kelime_kontrol_formati]
             return new Token(token_tipi, kelime_kontrol_formati)
         else
             return new Token(TOKEN_TIPLERI["IDENTIFIER"], kelime)

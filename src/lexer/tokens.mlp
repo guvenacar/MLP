@@ -30,7 +30,8 @@ end
 -- ===============================================
 -- All Abstract Token Types
 -- ===============================================
-var TOKEN_TIPLERI = {
+TOKEN_TIPLERI;
+TOKEN_TIPLERI = {
     -- Type Definitions (Keywords - from JSON)
     "TANIMLA_DEGISKEN": "TANIMLA_DEGISKEN",  -- MLP Syntax: DEĞIŞKEN
     "TANIMLA_SAYI": "TANIMLA_SAYI",

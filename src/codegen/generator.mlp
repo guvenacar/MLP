@@ -93,7 +93,8 @@ class Generator
 
     method _degisken_adres_bul(degisken_adi) -> dict
         -- Returns variable's address/size dictionary
-        var mevcut_kapsam = this.degisken_haritalari[UZUNLUK(this.degisken_haritalari) - 1]
+        mevcut_kapsam;
+        mevcut_kapsam = this.degisken_haritalari[UZUNLUK(this.degisken_haritalari) - 1]
         if degisken_adi in mevcut_kapsam
             return mevcut_kapsam[degisken_adi]
         end
@@ -106,7 +107,8 @@ class Generator
     method _degisken_yer_ayir(degisken_adi, adres, boyut) -> dict
         -- Allocates space on stack for variable/array
         -- Stores info as {'adres': '...', 'boyut': X}
-        var mevcut_kapsam = this.degisken_haritalari[UZUNLUK(this.degisken_haritalari) - 1]
+        mevcut_kapsam;
+        mevcut_kapsam = this.degisken_haritalari[UZUNLUK(this.degisken_haritalari) - 1]
 
         if degisken_adi in mevcut_kapsam
             throw new Exception("[Generator] Değişken '" + degisken_adi + "' bu kapsamda zaten tanımlı.")
@@ -114,7 +116,8 @@ class Generator
 
         if adres == null
             -- LOCAL VARIABLE or ARRAY
-            var toplam_byte_boyutu = boyut * 8
+            toplam_byte_boyutu;
+            toplam_byte_boyutu = boyut * 8
             this.stack_offset = this.stack_offset - toplam_byte_boyutu
             adres = "[rbp" + string(this.stack_offset) + "]"
             this.emit("sub rsp, " + string(toplam_byte_boyutu) + "  ; '" + degisken_adi + "' için yığında " + string(toplam_byte_boyutu) + " byte yer aç")
@@ -135,7 +138,8 @@ class Generator
         -- Walks entire AST and returns complete Assembly code
 
         -- C library setup (now comes from C_Arayuzu)
-        var extern_decls = this.c_arayuzu.generate_extern_bildirimleri()
+        extern_decls;
+        extern_decls = this.c_arayuzu.generate_extern_bildirimleri()
         for decl in extern_decls
             this.code.push(decl)
         end
@@ -161,7 +165,8 @@ class Generator
             end
 
             if UZUNLUK(this.c_functions) > 0
-                var insert_pos = 5 + UZUNLUK(this.c_structs) + 1
+                insert_pos;
+                insert_pos = 5 + UZUNLUK(this.c_structs) + 1
                 this.code.insert(insert_pos, "; --- C Function Definitions ---")
                 for i = 0 to UZUNLUK(this.c_functions) - 1
                     this.code.insert(insert_pos + 1 + i, "; " + this.c_functions[i])
@@ -217,7 +222,8 @@ class Generator
         end
 
         -- 3. Call method by name (e.g., visit_DegiskenTanimlama)
-        var method_name = "visit_" + TYPE_OF(node)
+        method_name;
+        method_name = "visit_" + TYPE_OF(node)
         if HAS_METHOD(this, method_name)
             return CALL_METHOD(this, method_name, node)
         else
@@ -240,20 +246,25 @@ class Generator
     end
 
     method visit_DegiskenTanimlama(node)
-        var degisken_adi = node.ad
+        degisken_adi;
+        degisken_adi = node.ad
         this.emit("; --- DegiskenTanimlama: " + degisken_adi + " ---")
         this.visit(node.ifade)  -- Calculate value (rax)
-        var adres_bilgisi = this._degisken_yer_ayir(degisken_adi, null, 1)
-        var adres = adres_bilgisi["adres"]
+        adres_bilgisi;
+        adres_bilgisi = this._degisken_yer_ayir(degisken_adi, null, 1)
+        adres;
+        adres = adres_bilgisi["adres"]
         this.emit("mov " + adres + ", rax")
     end
 
     method visit_DiziTanimlama(node)
-        var degisken_adi = node.ad.deger
+        degisken_adi;
+        degisken_adi = node.ad.deger
         if TYPE_OF(node.boyut) != "Sayi"
             throw new Exception("Dizi boyutu şimdilik sadece sabit bir sayı olmalıdır.")
         end
-        var boyut = PARSE_INT(string(node.boyut.deger))
+        boyut;
+        boyut = PARSE_INT(string(node.boyut.deger))
         if boyut <= 0
             throw new Exception("Dizi boyutu pozitif olmalıdır.")
         end
@@ -273,9 +284,12 @@ class Generator
         if TYPE_OF(node.hedef) == "Degisken"
             -- Target: Simple Variable
             this.emit("pop rax")
-            var degisken_adi = node.hedef.ad
-            var adres_bilgisi = this._degisken_adres_bul(degisken_adi)
-            var adres = adres_bilgisi["adres"]
+            degisken_adi;
+            degisken_adi = node.hedef.ad
+            adres_bilgisi;
+            adres_bilgisi = this._degisken_adres_bul(degisken_adi)
+            adres;
+            adres = adres_bilgisi["adres"]
             this.emit("mov " + adres + ", rax  ; " + degisken_adi + " = (sonuç)")
         end
 
@@ -283,9 +297,12 @@ class Generator
             -- Target: Array Access
             this.emit("; --- Dizi Erişimi (Yazma) [ ] ---")
 
-            var dizi_adi = node.hedef.hedef.ad
-            var adres_bilgisi = this._degisken_adres_bul(dizi_adi)
-            var dizi_baslangic_adresi_str = adres_bilgisi["adres"]
+            dizi_adi;
+            dizi_adi = node.hedef.hedef.ad
+            adres_bilgisi;
+            adres_bilgisi = this._degisken_adres_bul(dizi_adi)
+            dizi_baslangic_adresi_str;
+            dizi_baslangic_adresi_str = adres_bilgisi["adres"]
 
             this.visit(node.hedef.indeks)
             this.emit("mov rdi, rax")
@@ -310,11 +327,14 @@ class Generator
     end
 
     method visit_EgerBlogu(node)
-        var degilse_etiketi = this._yeni_etiket()
-        var son_etiket = this._yeni_etiket()
+        degilse_etiketi;
+        degilse_etiketi = this._yeni_etiket()
+        son_etiket;
+        son_etiket = this._yeni_etiket()
         this.visit(node.kosul)
         this.emit("cmp rax, 0")
-        var hedef_etiket = node.yanlis_blok != null ? degilse_etiketi : son_etiket
+        hedef_etiket;
+        hedef_etiket = node.yanlis_blok != null ? degilse_etiketi : son_etiket
         this.emit("je " + hedef_etiket)
         this.visit(node.dogru_blok)
         if node.yanlis_blok != null
@@ -326,8 +346,10 @@ class Generator
     end
 
     method visit_DonguBlogu(node)
-        var basi_etiketi = this._yeni_etiket()
-        var sonu_etiketi = this._yeni_etiket()
+        basi_etiketi;
+        basi_etiketi = this._yeni_etiket()
+        sonu_etiketi;
+        sonu_etiketi = this._yeni_etiket()
         this.dongu_cikis_etiketleri.push(sonu_etiketi)
         this.emit(basi_etiketi + ":")
         this.visit(node.blok)
@@ -344,11 +366,14 @@ class Generator
     end
 
     method visit_IslecTanimlama(node)
-        var islec_adi = node.ad.deger
-        var asm_etiketi = "_islec_" + islec_adi
+        islec_adi;
+        islec_adi = node.ad.deger
+        asm_etiketi;
+        asm_etiketi = "_islec_" + islec_adi
         this.islec_haritasi[islec_adi] = asm_etiketi
 
-        var islec_kodu = []
+        islec_kodu;
+        islec_kodu = []
         islec_kodu.push("\n; --- İŞLEÇ Tanımı: " + islec_adi + " ---")
         islec_kodu.push(asm_etiketi + ":")
         islec_kodu.push("    push rbp")
@@ -358,13 +383,17 @@ class Generator
         this.mevcut_islec = node
 
         for i = 0 to UZUNLUK(node.parametreler) - 1
-            var param = node.parametreler[i]
-            var param_adi = param.ad.deger
-            var adres = "[rbp+" + string(16 + i * 8) + "]"
+            param;
+            param = node.parametreler[i]
+            param_adi;
+            param_adi = param.ad.deger
+            adres;
+            adres = "[rbp+" + string(16 + i * 8) + "]"
             this._degisken_yer_ayir(param_adi, adres, 1)
         end
 
-        var eski_main_kodu = this.main_kodu
+        eski_main_kodu;
+        eski_main_kodu = this.main_kodu
         this.main_kodu = islec_kodu
         this.visit(node.govde)
         this.main_kodu = eski_main_kodu
@@ -410,27 +439,34 @@ class Generator
     end
 
     method visit_Metin(node)
-        var data_label = "str_" + string(UZUNLUK(this.data))
+        data_label;
+        data_label = "str_" + string(UZUNLUK(this.data))
         this.emit_data(data_label + ' db "' + node.deger + '", 0')
         this.emit("mov rax, " + data_label)
     end
 
     method visit_Degisken(node)
-        var degisken_adi = node.ad
-        var adres_bilgisi = this._degisken_adres_bul(degisken_adi)
+        degisken_adi;
+        degisken_adi = node.ad
+        adres_bilgisi;
+        adres_bilgisi = this._degisken_adres_bul(degisken_adi)
         if adres_bilgisi["boyut"] > 1
             throw new Exception("HATA: '" + degisken_adi + "' bir dizidir. Elemanına ([i]) erişin.")
         end
-        var adres = adres_bilgisi["adres"]
+        adres;
+        adres = adres_bilgisi["adres"]
         this.emit("mov rax, " + adres)
     end
 
     method visit_DiziErisim(node)
         this.emit("; --- Dizi Erişimi (Okuma) [ ] ---")
 
-        var dizi_adi = node.hedef.ad
-        var adres_bilgisi = this._degisken_adres_bul(dizi_adi)
-        var dizi_baslangic_adresi_str = adres_bilgisi["adres"]
+        dizi_adi;
+        dizi_adi = node.hedef.ad
+        adres_bilgisi;
+        adres_bilgisi = this._degisken_adres_bul(dizi_adi)
+        dizi_baslangic_adresi_str;
+        dizi_baslangic_adresi_str = adres_bilgisi["adres"]
 
         this.visit(node.indeks)
         this.emit("mov rdi, rax")
@@ -446,7 +482,8 @@ class Generator
     end
 
     method visit_IslecCagirma(node)
-        var islec_adi = node.hedef_token.deger
+        islec_adi;
+        islec_adi = node.hedef_token.deger
         this.emit("; --- İŞLEÇ Çağırma: " + islec_adi + " ---")
 
         -- 1. Is this a magic C function?
@@ -457,10 +494,12 @@ class Generator
 
         -- 2. Is this a TYD-MLP function we defined?
         if islec_adi in this.islec_haritasi
-            var asm_etiketi = this.islec_haritasi[islec_adi]
+            asm_etiketi;
+            asm_etiketi = this.islec_haritasi[islec_adi]
 
             -- Prepare arguments for TYD-MLP protocol (stack)
-            var arg_sayisi = UZUNLUK(node.argumanlar)
+            arg_sayisi;
+            arg_sayisi = UZUNLUK(node.argumanlar)
             for i = arg_sayisi - 1 to 0 step -1
                 this.visit(node.argumanlar[i])
                 this.emit("push rax")
@@ -485,7 +524,8 @@ class Generator
         this.visit(node.sol)
         this.emit("pop rbx")
 
-        var op = node.operator.tip
+        op;
+        op = node.operator.tip
 
         if op == TOKEN_TIPLERI["PLUS"] or op == TOKEN_TIPLERI["OP_ARTI"]
             this.emit("add rax, rbx")
@@ -525,7 +565,8 @@ class Generator
 
     method visit_SinifTanimlama(node)
         -- SINIF → C Struct + Constructor + Methods
-        var sinif_adi = node.ad
+        sinif_adi;
+        sinif_adi = node.ad
         this.emit("; --- SINIF Tanımı: " + sinif_adi + " ---")
 
         this.sinif_haritasi[sinif_adi] = {
@@ -554,8 +595,10 @@ class Generator
         this.c_structs.push("typedef struct {")
 
         for ozellik in ozellikler
-            var tip_deger = HAS_PROPERTY(ozellik.tip, "deger") ? ozellik.tip.deger : ozellik.tip
-            var c_tip = this._tyd_tip_to_c_tip(tip_deger)
+            tip_deger;
+            tip_deger = HAS_PROPERTY(ozellik.tip, "deger") ? ozellik.tip.deger : ozellik.tip
+            c_tip;
+            c_tip = this._tyd_tip_to_c_tip(tip_deger)
             this.c_structs.push("    " + c_tip + " " + ozellik.ad + ";")
         end
 
@@ -567,16 +610,21 @@ class Generator
 
     method _generate_constructor(sinif_adi, kurucu)
         -- Generates constructor function: ClassName_new()
-        var func_name = sinif_adi + "_new"
+        func_name;
+        func_name = sinif_adi + "_new"
 
-        var params = []
+        params;
+        params = []
         for param in kurucu.parametreler
-            var c_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
-            var param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
+            c_tip;
+            c_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
+            param_name;
+            param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
             params.push(c_tip + " " + param_name)
         end
 
-        var params_str = STRING_JOIN(params, ", ")
+        params_str;
+        params_str = STRING_JOIN(params, ", ")
         this.c_functions.push("// KURUCU: " + sinif_adi)
         this.c_functions.push(sinif_adi + "* " + func_name + "(" + params_str + ") {")
         this.c_functions.push("    " + sinif_adi + "* self = (" + sinif_adi + "*)mlp_alloc(sizeof(" + sinif_adi + "));")
@@ -584,8 +632,10 @@ class Generator
         this.c_functions.push("    // Field initialization from constructor")
         for komut in kurucu.govde.komutlar
             if TYPE_OF(komut) == "AtamaKomutu"
-                var field_name = HAS_PROPERTY(komut.hedef, "ad") ? komut.hedef.ad : string(komut.hedef)
-                var value = this._stringify_expression(komut.ifade)
+                field_name;
+                field_name = HAS_PROPERTY(komut.hedef, "ad") ? komut.hedef.ad : string(komut.hedef)
+                value;
+                value = this._stringify_expression(komut.ifade)
                 this.c_functions.push("    self->" + field_name + " = " + value + ";")
             end
         end
@@ -599,22 +649,29 @@ class Generator
 
     method _generate_method(sinif_adi, metod)
         -- Generates method function: ClassName_methodname(ClassName* self, ...)
-        var metod_adi = HAS_PROPERTY(metod.ad, "deger") ? metod.ad.deger : metod.ad
-        var func_name = sinif_adi + "_" + metod_adi
+        metod_adi;
+        metod_adi = HAS_PROPERTY(metod.ad, "deger") ? metod.ad.deger : metod.ad
+        func_name;
+        func_name = sinif_adi + "_" + metod_adi
 
-        var return_tip = "void"
+        return_tip;
+        return_tip = "void"
         if metod.donus_tipi != null
             return_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(metod.donus_tipi, "deger") ? metod.donus_tipi.deger : metod.donus_tipi)
         end
 
-        var params = [sinif_adi + "* self"]
+        params;
+        params = [sinif_adi + "* self"]
         for param in metod.parametreler
-            var c_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
-            var param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
+            c_tip;
+            c_tip = this._tyd_tip_to_c_tip(HAS_PROPERTY(param.tip, "deger") ? param.tip.deger : param.tip)
+            param_name;
+            param_name = HAS_PROPERTY(param.ad, "deger") ? param.ad.deger : param.ad
             params.push(c_tip + " " + param_name)
         end
 
-        var params_str = STRING_JOIN(params, ", ")
+        params_str;
+        params_str = STRING_JOIN(params, ", ")
         this.c_functions.push("// METHOD: " + sinif_adi + "." + metod_adi)
         this.c_functions.push(return_tip + " " + func_name + "(" + params_str + ") {")
         this.c_functions.push("    // Method body")
@@ -631,7 +688,8 @@ class Generator
             tyd_tip = tyd_tip.lower()
         end
 
-        var tip_map = {
+        tip_map;
+        tip_map = {
             "SAYISAL": "int64_t",
             "sayısal": "int64_t",
             "sayisal": "int64_t",
@@ -656,15 +714,19 @@ class Generator
             return expr.ad
         end
         if TYPE_OF(expr) == "IkiliIslem"
-            var sol = this._stringify_expression(expr.sol)
-            var sag = this._stringify_expression(expr.sag)
-            var op_map = {
+            sol;
+            sol = this._stringify_expression(expr.sol)
+            sag;
+            sag = this._stringify_expression(expr.sag)
+            op_map;
+            op_map = {
                 "PLUS": "+", "OP_ARTI": "+",
                 "MINUS": "-", "OP_EKSI": "-",
                 "MUL": "*", "OP_CARP": "*",
                 "DIV": "/", "OP_BOL": "/"
             }
-            var op = op_map[expr.operator.tip] ?? "?"
+            op;
+            op = op_map[expr.operator.tip] ?? "?"
             return "(" + sol + " " + op + " " + sag + ")"
         end
         return "/* complex expression */"

@@ -80,7 +80,8 @@ method ast_yazdir(node, girinti)
     end
 
     if TYPE_OF(node) == "IslecTanimlama"
-        var donus_tipi = node.donus_tipi != null ? node.donus_tipi.deger : "HİÇLİK"
+        donus_tipi;
+        donus_tipi = node.donus_tipi != null ? node.donus_tipi.deger : "HİÇLİK"
         YAZDIR(girinti + "İŞLEÇ Tanımlama: " + node.ad.deger + " (Dönüş Tipi: " + donus_tipi + ")")
         YAZDIR(girinti + "  Parametreler:")
         if UZUNLUK(node.parametreler) == 0
@@ -155,7 +156,8 @@ method calistir(dosya_adi, dil_json_yolu, dil_kodu)
     -- Main compiler pipeline: File → Lexer → Parser → Generator → Assembly
 
     -- File Reading
-    var kaynak_kodu = ""
+    kaynak_kodu;
+    kaynak_kodu = ""
     try
         kaynak_kodu = DOSYA_OKU(dosya_adi)
     catch e
@@ -168,7 +170,8 @@ method calistir(dosya_adi, dil_json_yolu, dil_kodu)
     YAZDIR("----------------------------------------")
 
     -- 1. Lexer (Tokenization)
-    var lexer = null
+    lexer;
+    lexer = null
     try
         lexer = new Lexer(kaynak_kodu, dil_json_yolu, dil_kodu)
     catch e
@@ -178,9 +181,11 @@ method calistir(dosya_adi, dil_json_yolu, dil_kodu)
 
     -- 2. Parser (AST Generation)
     YAZDIR("\n--- PARSER (AST) ---")
-    var ast = null
+    ast;
+    ast = null
     try
-        var parser = new Parser(lexer)
+        parser;
+        parser = new Parser(lexer)
         ast = parser.parse()
         YAZDIR("✅ Ayrıştırma Başarılı!")
     catch e
@@ -191,12 +196,15 @@ method calistir(dosya_adi, dil_json_yolu, dil_kodu)
     -- 3. Generator (Assembly Code Generation)
     YAZDIR("\n--- GENERATOR (ASM) ---")
     try
-        var generator = new Generator(ast)
-        var asm_kodu = generator.generate()
+        generator;
+        generator = new Generator(ast)
+        asm_kodu;
+        asm_kodu = generator.generate()
 
         YAZDIR(asm_kodu)  -- Print generated Assembly code
 
-        var output_asm_file = "build/output.asm"
+        output_asm_file;
+        output_asm_file = "build/output.asm"
 
         -- Ensure 'build' directory exists
         DIZIN_OLUSTUR("build")
@@ -217,7 +225,8 @@ end
 method main()
     -- Parse command line arguments and run compiler
 
-    var args = PROGRAM_ARGS()
+    args;
+    args = PROGRAM_ARGS()
 
     -- Simple argument parsing (MLP doesn't have argparse, so manual)
     if UZUNLUK(args) < 2
@@ -230,9 +239,12 @@ method main()
         CIKIS(1)
     end
 
-    var dosya_adi = args[1]
-    var dil_json_yolu = "kurallar/diller.json"
-    var dil_kodu = "tr-TR"
+    dosya_adi;
+    dosya_adi = args[1]
+    dil_json_yolu;
+    dil_json_yolu = "kurallar/diller.json"
+    dil_kodu;
+    dil_kodu = "tr-TR"
 
     -- Parse optional arguments
     if UZUNLUK(args) >= 3

@@ -27,7 +27,7 @@ typedef enum {
 
     // MLP Keywords
     TOK_CLASS, TOK_CONSTRUCTOR, TOK_METHOD, TOK_OVERRIDE,
-    TOK_FONKSIYON, TOK_ISLEC, TOK_VAR, TOK_SAYISAL, TOK_METIN, TOK_MANTIKSAL,
+    TOK_FONKSIYON, TOK_ISLEC, TOK_SAYISAL, TOK_METIN, TOK_MANTIKSAL,
     TOK_DIZI, TOK_DONUSTUR, TOK_EGER, TOK_DEGILSE, TOK_ISE,
     TOK_HER, TOK_ICINDE, TOK_YAZDIR, TOK_DOGRU, TOK_YANLIS, TOK_NULL,
     TOK_YAPI, TOK_YENI, TOK_KULLAN, TOK_PAKET, TOK_SINIF,
@@ -195,7 +195,6 @@ Token lexer_read_ident(Lexer* lex) {
         {"override", TOK_OVERRIDE},
         {"fonksiyon", TOK_FONKSIYON}, {"FONKSİYON", TOK_FONKSIYON},
         {"işleç", TOK_ISLEC}, {"İŞLEÇ", TOK_ISLEC},
-        {"var", TOK_VAR}, {"VAR", TOK_VAR},
         {"sayısal", TOK_SAYISAL}, {"SAYISAL", TOK_SAYISAL},
         {"metin", TOK_METIN}, {"METİN", TOK_METIN},
         {"mantıksal", TOK_MANTIKSAL}, {"MANTIKSAL", TOK_MANTIKSAL},
@@ -441,7 +440,6 @@ const char* mlp_type_to_c(TokenType type) {
         case TOK_DIZI: case TOK_ARRAY_TYPE: return "void**";
         case TOK_DYNAMIC: return "void*";
         case TOK_DICT: return "void*";
-        case TOK_VAR: return "char*";  // var keyword defaults to string
         default: return "char*";  // Untyped defaults to string (char*)
     }
 }
@@ -941,9 +939,9 @@ void parser_parse_return_statement(Parser* p) {
 void parser_parse_statement(Parser* p) {
     // Variable declaration
     if (parser_check(p, TOK_SAYISAL) || parser_check(p, TOK_METIN) ||
-        parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_VAR) ||
-        parser_check(p, TOK_DYNAMIC) || parser_check(p, TOK_STRING_TYPE) ||
-        parser_check(p, TOK_NUMBER_TYPE) || parser_check(p, TOK_ARRAY_TYPE)) {
+        parser_check(p, TOK_MANTIKSAL) || parser_check(p, TOK_DYNAMIC) ||
+        parser_check(p, TOK_STRING_TYPE) || parser_check(p, TOK_NUMBER_TYPE) ||
+        parser_check(p, TOK_ARRAY_TYPE)) {
         parser_parse_var_declaration(p);
     }
     // If statement
