@@ -74,3 +74,11 @@ stage3/output/
 # Stage compiler outputs (root level)
 /stage*-compiler
 /stage*-compiler.c
+
+# Self-hosting test outputs
+/mlp-proof
+/mlp-proof.c
+/mlp-v*
+/mlp-v*.c
+/test-out
+/test-out.c
