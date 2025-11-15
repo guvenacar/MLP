@@ -1,0 +1,7 @@
+-- Test VAR declaration
+
+IŞLEÇ test_func() -> SAYISAL
+    VAR x = 42
+    YAZDIR x
+    DÖNÜŞ 0
+IŞLEÇ SON

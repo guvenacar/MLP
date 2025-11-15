@@ -344,6 +344,7 @@ class Lexer:
             'DÖNÜŞ': TokenType.DÖNÜŞ,
             'DÖNGÜ_DEVAM': TokenType.DÖNGÜ_DEVAM,
             'DEĞIŞKEN': TokenType.DEĞIŞKEN,
+            'VAR': TokenType.VAR,  # Uppercase alias for var
             'BU': TokenType.BU,
             'YENİ': TokenType.YENİ,
             'SON': TokenType.SON,
@@ -630,7 +631,15 @@ class Parser:
             return self.parse_top_level_function()
 
         # If statement (if or EĞER)
+        # But NOT if it's EĞER SON (if statement ending)
         if current.type in [TokenType.IF, TokenType.EĞER]:
+            # Peek ahead - if next is SON, it's an if ending marker
+            if self.peek().type == TokenType.SON:
+                # EĞER SON - this marks end of if statement, not a new if
+                # Consume EĞER only, leave SON for parent to see
+                self.advance()  # consume EĞER
+                # Don't consume SON - let the parent if/while/function see it and stop
+                return None
             self.advance()  # consume if/EĞER
             return self.parse_if()
 
