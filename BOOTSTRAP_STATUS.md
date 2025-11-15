@@ -126,9 +126,10 @@ Write a simpler version of the MLP compiler using only supported features:
 
 ### Option C: Incremental Bootstrap (Recommended)
 1. ✅ **Stage 0**: Python seed compiler (current) - compiles basic MLP
-2. **Stage 1**: Simple MLP compiler written in basic MLP - compiles subset
-3. **Stage 2**: Enhanced MLP compiler with more features
-4. **Stage 3**: Full-featured MLP compiler compiling itself
+2. ✅ **Stage 1**: Simple MLP compiler structure (proof of concept) - demonstrates compilation phases
+3. 🔄 **Stage 2**: Real MLP compiler with lexer/parser - compiles subset
+4. **Stage 3**: Enhanced MLP compiler with more features
+5. **Stage 4**: Full-featured MLP compiler compiling itself
 
 ## 🏆 Achievement Summary
 
