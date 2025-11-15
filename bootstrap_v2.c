@@ -205,7 +205,7 @@ Token lexer_read_ident(Lexer* lex) {
         {"değilse", TOK_DEGILSE}, {"DEĞİLSE", TOK_DEGILSE},
         {"ise", TOK_ISE}, {"İSE", TOK_ISE},
         {"her", TOK_HER}, {"HER", TOK_HER},
-        {"içinde", TOK_ICINDE}, {"İÇİNDE", TOK_ICINDE},
+        {"içinde", TOK_ICINDE}, {"İÇİNDE", TOK_ICINDE}, {"in", TOK_ICINDE},
         {"yazdır", TOK_YAZDIR}, {"YAZDIR", TOK_YAZDIR},
         {"uzunluk", TOK_UZUNLUK}, {"UZUNLUK", TOK_UZUNLUK},
         {"doğru", TOK_DOGRU}, {"DOĞRU", TOK_DOGRU},
@@ -615,28 +615,36 @@ void parser_parse_primary(Parser* p) {
         parser_expect(p, TOK_RBRACKET, "] bekleniyor");
         fprintf(p->output, "}");
     } else if (parser_match(p, TOK_LBRACE)) {
-        // Dict literal {key: value, ...}
-        fprintf(p->output, "dict_new("); // TODO: proper dict implementation
-        int count = 0;
-        if (!parser_check(p, TOK_RBRACE)) {
+        // Dict literal {key: value, ...} or empty {}
+        if (parser_check(p, TOK_RBRACE)) {
+            // Empty dict
+            parser_advance(p);
+            fprintf(p->output, "dict_new()");
+        } else {
+            // Dict with entries - use initialization block
+            fprintf(p->output, "({ Dict* _d = dict_new(); ");
+
+            // First entry
+            fprintf(p->output, "dict_set(_d, ");
             parser_parse_expression(p);
-            count++;
-            if (parser_match(p, TOK_COLON)) {
-                fprintf(p->output, ", ");
-                parser_parse_expression(p);
-            }
+            parser_expect(p, TOK_COLON, ": bekleniyor");
+            fprintf(p->output, ", ");
+            parser_parse_expression(p);
+            fprintf(p->output, "); ");
+
             while (parser_match(p, TOK_COMMA)) {
+                if (parser_check(p, TOK_RBRACE)) break;
+                fprintf(p->output, "dict_set(_d, ");
+                parser_parse_expression(p);
+                parser_expect(p, TOK_COLON, ": bekleniyor");
                 fprintf(p->output, ", ");
                 parser_parse_expression(p);
-                count++;
-                if (parser_match(p, TOK_COLON)) {
-                    fprintf(p->output, ", ");
-                    parser_parse_expression(p);
-                }
+                fprintf(p->output, "); ");
             }
+
+            parser_expect(p, TOK_RBRACE, "} bekleniyor");
+            fprintf(p->output, "_d; })");
         }
-        parser_expect(p, TOK_RBRACE, "} bekleniyor");
-        fprintf(p->output, ")");
     }
 }
 
@@ -843,18 +851,75 @@ void parser_parse_for_loop(Parser* p) {
         return;
     }
 
-    char* var_name = str_dup(p->lexer->current.value);
+    char* var1_name = str_dup(p->lexer->current.value);
     parser_advance(p);
 
-    parser_expect(p, TOK_ICINDE, "İÇİNDE bekleniyor");
+    // Check for second variable (for dictionary iteration: key, value)
+    char* var2_name = NULL;
+    if (parser_match(p, TOK_COMMA)) {
+        if (!parser_check(p, TOK_IDENT)) {
+            fprintf(stderr, "Hata: İkinci döngü değişkeni bekleniyor\n");
+            free(var1_name);
+            return;
+        }
+        var2_name = str_dup(p->lexer->current.value);
+        parser_advance(p);
+    }
 
-    // HER item İÇİNDE list -> for (int i = 0; i < list_len; i++)
-    fprintf(p->output, "for (int %s_i = 0; %s_i < ", var_name, var_name);
+    // Accept both TOK_ICINDE and TOK_IN for "in" keyword
+    if (!parser_match(p, TOK_ICINDE) && !parser_match(p, TOK_IN)) {
+        fprintf(stderr, "Hata: İÇİNDE/in bekleniyor\n");
+        free(var1_name);
+        if (var2_name) free(var2_name);
+        return;
+    }
+
+    // Save collection expression to a variable
+    fprintf(p->output, "{ void* _iter_collection = ");
     parser_parse_expression(p);
-    fprintf(p->output, "_len; %s_i++) ", var_name);
+    fprintf(p->output, ";\n");
+    p->indent_level++;
 
-    parser_parse_block(p);
-    free(var_name);
+    if (var2_name) {
+        // Dictionary iteration: for key, value in dict
+        indent(p);
+        fprintf(p->output, "int _iter_size = dict_size(_iter_collection);\n");
+        indent(p);
+        fprintf(p->output, "for (int _iter_i = 0; _iter_i < _iter_size; _iter_i++) {\n");
+        p->indent_level++;
+        indent(p);
+        fprintf(p->output, "void* %s = dict_key_at(_iter_collection, _iter_i);\n", var1_name);
+        indent(p);
+        fprintf(p->output, "void* %s = dict_value_at(_iter_collection, _iter_i);\n", var2_name);
+    } else {
+        // Array iteration: for item in list
+        indent(p);
+        fprintf(p->output, "Array* _iter_array = (Array*)_iter_collection;\n");
+        indent(p);
+        fprintf(p->output, "for (int _iter_i = 0; _iter_i < _iter_array->len; _iter_i++) {\n");
+        p->indent_level++;
+        indent(p);
+        fprintf(p->output, "void* %s = _iter_array->items[_iter_i];\n", var1_name);
+    }
+
+    // Parse loop body
+    while (!parser_check(p, TOK_EOF) && !parser_check(p, TOK_END) && !parser_check(p, TOK_SON)) {
+        parser_parse_statement(p);
+    }
+
+    if (parser_check(p, TOK_END) || parser_check(p, TOK_SON)) {
+        parser_advance(p);
+    }
+
+    p->indent_level--;
+    indent(p);
+    fprintf(p->output, "}\n");
+    p->indent_level--;
+    indent(p);
+    fprintf(p->output, "}\n");
+
+    free(var1_name);
+    if (var2_name) free(var2_name);
 }
 
 void parser_parse_return_statement(Parser* p) {
@@ -1219,11 +1284,20 @@ void parser_parse(Parser* p) {
 
     // Helper functions for MLP operations
     fprintf(p->output, "// MLP Runtime Helper Functions\n");
-    fprintf(p->output, "typedef struct { void** items; int len; int cap; } Array;\n\n");
+    fprintf(p->output, "typedef struct { void** items; int len; int cap; } Array;\n");
+    fprintf(p->output, "typedef struct { void* key; void* value; } DictEntry;\n");
+    fprintf(p->output, "typedef struct { DictEntry* entries; int len; int cap; } Dict;\n\n");
     fprintf(p->output, "Array* array_new() { Array* a = malloc(sizeof(Array)); a->items = malloc(16*sizeof(void*)); a->len = 0; a->cap = 16; return a; }\n");
     fprintf(p->output, "void array_push(Array* a, void* item) { if(a->len >= a->cap) { a->cap *= 2; a->items = realloc(a->items, a->cap*sizeof(void*)); } a->items[a->len++] = item; }\n");
     fprintf(p->output, "void* array_pop(Array* a) { return a->len > 0 ? a->items[--a->len] : NULL; }\n");
     fprintf(p->output, "void array_insert(Array* a, int idx, void* item) { if(a->len >= a->cap) { a->cap *= 2; a->items = realloc(a->items, a->cap*sizeof(void*)); } memmove(&a->items[idx+1], &a->items[idx], (a->len-idx)*sizeof(void*)); a->items[idx] = item; a->len++; }\n\n");
+    fprintf(p->output, "Dict* dict_new() { Dict* d = malloc(sizeof(Dict)); d->entries = malloc(16*sizeof(DictEntry)); d->len = 0; d->cap = 16; return d; }\n");
+    fprintf(p->output, "void dict_set(Dict* d, void* key, void* value) { for(int i=0; i<d->len; i++) { if(d->entries[i].key == key || (d->entries[i].key && key && strcmp((char*)d->entries[i].key, (char*)key)==0)) { d->entries[i].value = value; return; } } if(d->len >= d->cap) { d->cap *= 2; d->entries = realloc(d->entries, d->cap*sizeof(DictEntry)); } d->entries[d->len].key = key; d->entries[d->len].value = value; d->len++; }\n");
+    fprintf(p->output, "void* dict_get(Dict* d, void* key) { for(int i=0; i<d->len; i++) { if(d->entries[i].key == key || (d->entries[i].key && key && strcmp((char*)d->entries[i].key, (char*)key)==0)) return d->entries[i].value; } return NULL; }\n");
+    fprintf(p->output, "int dict_size(void* d) { return d ? ((Dict*)d)->len : 0; }\n");
+    fprintf(p->output, "void* dict_key_at(void* d, int idx) { return ((Dict*)d)->entries[idx].key; }\n");
+    fprintf(p->output, "void* dict_value_at(void* d, int idx) { return ((Dict*)d)->entries[idx].value; }\n");
+    fprintf(p->output, "bool dict_contains(void* d, void* key) { return dict_get((Dict*)d, key) != NULL; }\n\n");
     fprintf(p->output, "char* str_lower(char* s) { char* r = strdup(s); for(int i=0; r[i]; i++) r[i] = tolower(r[i]); return r; }\n");
     fprintf(p->output, "char* str_substr(char* s, int start, int len) { char* r = malloc(len+1); strncpy(r, s+start, len); r[len] = 0; return r; }\n");
     fprintf(p->output, "bool str_startswith(char* s, char* prefix) { return strncmp(s, prefix, strlen(prefix)) == 0; }\n");
