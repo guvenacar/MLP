@@ -1,0 +1,8 @@
+// English MLP Example - Hello World
+
+İŞLEÇ greet() {
+    YAZDIR("Hello from MLP!")
+    YAZDIR("Multi-Language Programming")
+}
+
+greet()

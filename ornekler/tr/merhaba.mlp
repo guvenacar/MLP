@@ -1,0 +1,8 @@
+-- Türkçe MLP Örneği - Merhaba Dünya
+
+İŞLEÇ selamla() İSE
+    YAZDIR "Merhaba MLP'den!"
+    YAZDIR "Çok Dilli Programlama"
+SON
+
+selamla()

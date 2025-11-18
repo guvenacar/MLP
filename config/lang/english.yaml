@@ -1,0 +1,77 @@
+# English Language Definition for MLP
+
+language:
+  name: "English"
+  code: "en"
+  native_name: "English"
+  encoding: "UTF-8"
+  is_default: false
+
+keywords:
+  # Data Types
+  SAYISAL: "number"   # maps to internal SAYISAL
+  METIN: "string"     # maps to internal METIN
+  BOOL: "bool"        # maps to internal BOOL
+
+  # Structures
+  YAPI: "struct"      # maps to internal YAPI
+
+  # Control Flow
+  EĞER: "if"          # maps to internal EĞER
+  İSE: "then"         # maps to internal İSE
+  DEĞİLSE: "else"     # maps to internal DEĞİLSE
+  SON: "end"          # maps to internal SON
+
+  # Loops
+  DÖNGÜ: "loop"            # maps to internal DÖNGÜ
+  DÖNGÜ_BITIR: "break"     # maps to internal DÖNGÜ_BITIR
+
+  # Functions
+  İŞLEÇ: "function"   # maps to internal İŞLEÇ
+  DÖNÜŞ: "return"     # maps to internal DÖNÜŞ
+
+  # I/O
+  YAZDIR: "print"     # maps to internal YAZDIR
+
+operators:
+  # Same as Turkish (operators are language-independent)
+  PLUS: "+"
+  MINUS: "-"
+  MULTIPLY: "*"
+  DIVIDE: "/"
+
+  # Comparison
+  EQUAL: "=="
+  NOT_EQUAL: "!="
+  LESS_THAN: "<"
+  GREATER_THAN: ">"
+  LESS_EQUAL: "<="
+  GREATER_EQUAL: ">="
+
+  # Assignment
+  ASSIGN: "="
+
+punctuation:
+  SEMICOLON: ";"
+  LPAREN: "("
+  RPAREN: ")"
+  LBRACE: "{"        # English uses { for block start
+  RBRACE: "}"        # English uses } for block end
+  LBRACKET: "["
+  RBRACKET: "]"
+  COMMA: ","
+
+comments:
+  single_line: "//"
+  multi_line_start: "/*"
+  multi_line_end: "*/"
+
+# Alternative syntax support
+alternatives:
+  # Support both "then" and "{" for blocks
+  block_start:
+    - "then"
+    - "{"
+  block_end:
+    - "end"
+    - "}"

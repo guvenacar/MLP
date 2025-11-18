@@ -1,0 +1,8 @@
+// English MLP Example - Hello World
+
+function greet() {
+    print("Hello from MLP!")
+    print("Multi-Language Programming")
+}
+
+greet()

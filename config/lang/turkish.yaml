@@ -1,0 +1,68 @@
+# Turkish Language Definition for MLP
+# Türkçe Dil Tanımı
+
+language:
+  name: "Turkish"
+  code: "tr"
+  native_name: "Türkçe"
+  encoding: "UTF-8"
+  is_default: true  # Internal representation
+
+keywords:
+  # Data Types
+  SAYISAL: "SAYISAL"  # number/int
+  METIN: "METIN"      # string
+  BOOL: "BOOL"        # boolean
+
+  # Structures
+  YAPI: "YAPI"        # struct
+
+  # Control Flow
+  EĞER: "EĞER"        # if
+  İSE: "İSE"          # then
+  DEĞİLSE: "DEĞİLSE"  # else
+  SON: "SON"          # end
+
+  # Loops
+  DÖNGÜ: "DÖNGÜ"            # loop
+  DÖNGÜ_BITIR: "DÖNGÜ_BITIR" # break
+
+  # Functions
+  İŞLEÇ: "İŞLEÇ"      # function
+  DÖNÜŞ: "DÖNÜŞ"      # return
+
+  # I/O
+  YAZDIR: "YAZDIR"    # print
+
+operators:
+  # Arithmetic
+  PLUS: "+"
+  MINUS: "-"
+  MULTIPLY: "*"
+  DIVIDE: "/"
+
+  # Comparison
+  EQUAL: "=="
+  NOT_EQUAL: "!="
+  LESS_THAN: "<"
+  GREATER_THAN: ">"
+  LESS_EQUAL: "<="
+  GREATER_EQUAL: ">="
+
+  # Assignment
+  ASSIGN: "="
+
+punctuation:
+  SEMICOLON: ";"
+  LPAREN: "("
+  RPAREN: ")"
+  LBRACE: "İSE"  # Turkish uses İSE for block start
+  RBRACE: "SON"  # Turkish uses SON for block end
+  LBRACKET: "["
+  RBRACKET: "]"
+  COMMA: ","
+
+comments:
+  single_line: "--"
+  multi_line_start: "--[["
+  multi_line_end: "]]--"

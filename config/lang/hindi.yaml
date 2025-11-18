@@ -1,0 +1,81 @@
+# Hindi Language Definition for MLP
+# हिन्दी भाषा परिभाषा
+
+language:
+  name: "Hindi"
+  code: "hi"
+  native_name: "हिन्दी"
+  encoding: "UTF-8"
+  is_default: false
+
+keywords:
+  # Data Types (डेटा प्रकार)
+  SAYISAL: "संख्या"    # number - maps to internal SAYISAL
+  METIN: "पाठ"         # string - maps to internal METIN
+  BOOL: "बूल"          # boolean - maps to internal BOOL
+
+  # Structures (संरचनाएं)
+  YAPI: "संरचना"       # struct - maps to internal YAPI
+
+  # Control Flow (नियंत्रण प्रवाह)
+  EĞER: "यदि"          # if - maps to internal EĞER
+  İSE: "है"            # then - maps to internal İSE
+  DEĞİLSE: "अन्यथा"    # else - maps to internal DEĞİLSE
+  SON: "समाप्त"        # end - maps to internal SON
+
+  # Loops (लूप)
+  DÖNGÜ: "लूप"              # loop - maps to internal DÖNGÜ
+  DÖNGÜ_BITIR: "तोड़ो"      # break - maps to internal DÖNGÜ_BITIR
+
+  # Functions (फ़ंक्शन)
+  İŞLEÇ: "कार्य"       # function - maps to internal İŞLEÇ
+  DÖNÜŞ: "वापसी"       # return - maps to internal DÖNÜŞ
+
+  # I/O (इनपुट/आउटपुट)
+  YAZDIR: "लिखो"       # print - maps to internal YAZDIR
+
+operators:
+  # Operators are language-independent (same symbols globally)
+  PLUS: "+"
+  MINUS: "-"
+  MULTIPLY: "*"
+  DIVIDE: "/"
+
+  # Comparison
+  EQUAL: "=="
+  NOT_EQUAL: "!="
+  LESS_THAN: "<"
+  GREATER_THAN: ">"
+  LESS_EQUAL: "<="
+  GREATER_EQUAL: ">="
+
+  # Assignment
+  ASSIGN: "="
+
+punctuation:
+  SEMICOLON: ";"
+  LPAREN: "("
+  RPAREN: ")"
+  LBRACE: "है"        # Hindi uses है (hai) for block start
+  RBRACE: "समाप्त"    # Hindi uses समाप्त (samapt) for block end
+  LBRACKET: "["
+  RBRACKET: "]"
+  COMMA: ","
+
+comments:
+  single_line: "--"
+  multi_line_start: "--[["
+  multi_line_end: "]]--"
+
+# UTF-8 Characters used in Hindi
+# This helps the lexer identify Hindi code
+unicode_markers:
+  devanagari_range: "0x0900-0x097F"
+  common_keywords:
+    - "यदि"      # if
+    - "है"       # then
+    - "अन्यथा"   # else
+    - "लूप"      # loop
+    - "कार्य"    # function
+    - "वापसी"    # return
+    - "लिखो"     # print
