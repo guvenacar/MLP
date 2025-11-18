@@ -94,3 +94,6 @@ test_english_only
 test_russian
 test_chinese
 test_hindi
+
+# Benchmark binaries
+bench_*
