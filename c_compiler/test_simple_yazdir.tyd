@@ -1,5 +1,0 @@
-YAZDIR "Test 1";
-YAZDIR "Test 2";
-YAZDIR "Test 3";
-METIN x = "X";
-YAZDIR x;

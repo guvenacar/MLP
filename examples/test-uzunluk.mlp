@@ -1,0 +1,3 @@
+METIN mesaj = "Merhaba Dunya MLP!";
+SAYISAL uzunluk = STRING_UZUNLUK(mesaj);
+YAZDIR uzunluk;

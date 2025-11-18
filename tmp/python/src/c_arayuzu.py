@@ -5,11 +5,11 @@ from src import ast_nodes # AST düğümlerini içe aktarmak için (Degisken, Me
 class CArayuzu:
     """
     Generator (Kod Üretici) için bir yardımcı sınıftır.
-    TYD-MLP ve C dünyası arasındaki köprüyü (FFI) yönetir.
+    MLP ve C dünyası arasındaki köprüyü (FFI) yönetir.
     """
     def __init__(self, generator):
         self.generator = generator
-        # Bilinen (sihirli) C fonksiyonları ve TYD-MLP'deki adları
+        # Bilinen (sihirli) C fonksiyonları ve MLP'deki adları
         self.c_fonksiyonlari = {
             # YENİ VE ESKİ TEMİZLİK FONKSİYONLARI (free/malloc)
             "YENI": "malloc",

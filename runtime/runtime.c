@@ -361,7 +361,7 @@ char* tyd_fix_cwd() {
         return NULL;
     }
 
-    // 3. Dizin adını al (örn: /home/pardus/proje/c_compiler)
+    // 3. Dizin adını al (örn: /home/pardus/proje/c_bootstrap)
     char* dir = dirname(path_copy);
 
     // 4. 'dir' şu anda path_copy'nin içini işaret ediyor.
@@ -394,7 +394,7 @@ char* runtime_dizin_al() {
         return NULL;
     }
 
-    // 3. Dizin adını al (örn: /home/pardus/proje/c_compiler)
+    // 3. Dizin adını al (örn: /home/pardus/proje/c_bootstrap)
     char* dir = dirname(path_copy);
 
     // 4. 'dir' şu anda path_copy'nin içini işaret ediyor.
@@ -413,8 +413,8 @@ char* runtime_dizin_al() {
 // =============================================================================
 // STRING İŞLEMLERİ (BOOTSTRAP FONKSİYONLARI)
 // =============================================================================
-// NOT: Bu fonksiyonlar sadece TYD compiler'ını TYD'de yazmak için gerekli.
-// Self-hosting tamamlandıktan sonra bu işlevler TYD'de yeniden yazılacak.
+// NOT: Bu fonksiyonlar sadece MLP compiler'ını MLP'de yazmak için gerekli.
+// Self-hosting tamamlandıktan sonra bu işlevler MLP'de yeniden yazılacak.
 
 /**
  * STRING_KARAKTER_AL - String'in belirtilen indeksindeki karakteri döndürür

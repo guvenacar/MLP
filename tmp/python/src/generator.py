@@ -342,7 +342,7 @@ class Generator:
     # --- İfade (Expression) Ziyaretçileri ---
 
     def visit_Sayi(self, node):
-        # Float sayıları integer'a çevir (TYD şu an sadece integer destekliyor)
+        # Float sayıları integer'a çevir (MLP şu an sadece integer destekliyor)
         deger = int(node.deger) if isinstance(node.deger, float) else node.deger
         self.emit(f"mov rax, {deger}")
 
@@ -490,12 +490,12 @@ class Generator:
             # Evet, tüm işi C Arayüzü yapsın
             self.c_arayuzu.generate_c_call(islec_adi, node)
             
-        # 2. Bu, bizim tanımladığımız bir TYD-MLP işlemi mi? (TOPLA)
+        # 2. Bu, bizim tanımladığımız bir MLP işlemi mi? (TOPLA)
         elif islec_adi in self.islec_haritasi:
-            # Evet, kendi TYD-MLP fonksiyonumuzu çağır
+            # Evet, kendi MLP fonksiyonumuzu çağır
             asm_etiketi = self.islec_haritasi[islec_adi]
             
-            # Argümanları TYD-MLP protokolü (yığın) için hazırla
+            # Argümanları MLP protokolü (yığın) için hazırla
             arg_sayisi = len(node.argumanlar)
             for arg in reversed(node.argumanlar):
                 self.visit(arg) # Argüman değerini RAX'e hesapla

@@ -151,8 +151,8 @@ def calistir(dosya_adi, dil_json_yolu, dil_kodu='tr-TR'):
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='TYD-MLP Compiler')
-    parser.add_argument('kaynak', help='TYD kaynak dosyası (.tyd)')
+    parser = argparse.ArgumentParser(description='MLP Compiler')
+    parser.add_argument('kaynak', help='MLP kaynak dosyası (.mlp)')
     parser.add_argument('dil_json', nargs='?', default='kurallar/diller.json', 
                         help='Dil kuralları JSON dosyası (varsayılan: kurallar/diller.json)')
     parser.add_argument('--dil-kodu', default='tr-TR', 

@@ -11,7 +11,7 @@ OUTPUT_O = "build/output.o"
 RUNTIME_O = "build/runtime.o"
 EXECUTABLE = "build/program"
 # Kullanıcının varsayılan olarak derleyeceği dosya
-DEFAULT_SOURCE = "ornekler/test-birlestirme.tyd" 
+DEFAULT_SOURCE = "examples/test-birlestirme.mlp" 
 
 # --- Yardımcı Fonksiyon ---
 def run_command(command, step_name):
@@ -57,7 +57,7 @@ def run_command(command, step_name):
 # --- Ana Fonksiyon ---
 def build_and_run(source_file):
     
-    print(f"--- TYD-MLP Derleyici Zinciri Başlatıldı (Kaynak: {source_file}) ---")
+    print(f"--- MLP Derleyici Zinciri Başlatıldı (Kaynak: {source_file}) ---")
     
     # 1. build dizinini oluştur
     os.makedirs('build', exist_ok=True)

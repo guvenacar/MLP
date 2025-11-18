@@ -1,7 +1,7 @@
-<!-- 🔒 UYARI: BU DOSYA TYD DİLİNİN TEK GERÇEĞİDİR (SINGLE SOURCE OF TRUTH) -->
+<!-- 🔒 UYARI: BU DOSYA MLP DİLİNİN TEK GERÇEĞİDİR (SINGLE SOURCE OF TRUTH) -->
 <!-- 🚫 HİÇBİR AI/GELIŞTIRICI BU DOSYAYI SPECS_LOCK.md OLMADAN DEĞİŞTİREMEZ -->
 
-# TYD Dil Spesifikasyonu v2.0
+# MLP Dil Spesifikasyonu v2.0
 
 **Durum:** 🔒 **LOCKED** - Değişiklik için SPECS_LOCK.md'ye kayıt gerekli
 **Son Güncelleme:** 17 Kasım 2024
@@ -38,8 +38,8 @@ YAZDIR "Merhaba Dünya!"
 
 Derlemek için:
 ```bash
-cd c_compiler
-./calistir.sh merhaba.tyd
+cd c_bootstrap
+./calistir.sh merhaba.mlp
 ```
 
 ### Tam Örnek
@@ -115,9 +115,9 @@ code --install-extension vscode-tyd/tyd-language-0.1.0.vsix
 - Hover bilgileri
 
 ✅ **Build Komutları**
-- **Ctrl+Shift+B**: Aktif TYD dosyasını derle
+- **Ctrl+Shift+B**: Aktif MLP dosyasını derle
 - **F5**: Derle ve çalıştır
-- Command Palette: "TYD: Build All" → Tüm .tyd dosyalarını derle
+- Command Palette: "MLP: Build All" → Tüm .mlp dosyalarını derle
 
 ✅ **Diagnostics**
 - Gerçek zamanlı sözdizimi kontrolü
@@ -126,7 +126,7 @@ code --install-extension vscode-tyd/tyd-language-0.1.0.vsix
 
 ### Kullanım
 
-1. Yeni bir `.tyd` dosyası oluşturun
+1. Yeni bir `.mlp` dosyası oluşturun
 2. Kodunuzu yazın (IntelliSense aktif olacak)
 3. **Ctrl+Shift+B** ile derleyin
 4. Terminal'de sonuçları görün
@@ -238,7 +238,7 @@ isim = "Mehmet"               -- ❌ Noktalı virgül YOK
 
 ### String Literals ve Escape Characters
 
-TYD tam UTF-8 ve escape character desteği sağlar:
+MLP tam UTF-8 ve escape character desteği sağlar:
 
 ```tyd
 -- Temel string
@@ -478,7 +478,7 @@ YAZDIR dizin
 
 ### Variable Scope
 
-TYD 20 seviye derinliğe kadar nested scope destekler:
+MLP 20 seviye derinliğe kadar nested scope destekler:
 
 ```tyd
 SAYISAL x = 10;  -- Global scope (level 0)
@@ -505,7 +505,7 @@ YAZDIR x  -- 10 (global scope)
 ### Compiler Mimarisi
 
 ```
-TYD Kaynak Kodu (.tyd)
+MLP Kaynak Kodu (.mlp)
     ↓
 ┌────────────────┐
 │   LEXER        │  → Token stream (UTF-8 aware)
@@ -560,7 +560,7 @@ Executable
 
 ### Hata Mesajları
 
-TYD compiler çok detaylı hata mesajları verir:
+MLP compiler çok detaylı hata mesajları verir:
 
 ```
 ╔════════════════════════════════════════════════════════════╗
@@ -578,8 +578,8 @@ TYD compiler çok detaylı hata mesajları verir:
 ### Derleme Süreci
 
 ```bash
-# Adım 1: TYD → Assembly
-./c_compiler/compiler_test input.tyd output.asm
+# Adım 1: MLP → Assembly
+./c_bootstrap/compiler_test input.mlp output.asm
 
 # Adım 2: Assembly → Object
 nasm -f elf64 output.asm -o output.o
@@ -588,7 +588,7 @@ nasm -f elf64 output.asm -o output.o
 gcc output.o runtime/runtime.o -o output -no-pie
 
 # Veya hepsini birden:
-./c_compiler/calistir.sh input.tyd
+./c_bootstrap/calistir.sh input.mlp
 ```
 
 ---
@@ -637,7 +637,7 @@ gcc output.o runtime/runtime.o -o output -no-pie
 - Standard library başlangıcı
 
 **v3.0 (Mart 2025) - SELF-HOSTING:**
-- TYD compiler'ı TYD'de yazılacak
+- MLP compiler'ı MLP'de yazılacak
 - Bootstrap döngüsü tamamlanacak
 - Self-hosting test başarılı olacak
 
@@ -650,9 +650,9 @@ gcc output.o runtime/runtime.o -o output -no-pie
 
 ## 🆚 DİĞER DİLLERLE KARŞILAŞTIRMA
 
-### TYD vs Python
+### MLP vs Python
 
-| Özellik | TYD | Python |
+| Özellik | MLP | Python |
 |---------|-----|--------|
 | **Dil** | Türkçe | İngilizce |
 | **Tip** | Statik (compile-time) | Dinamik (runtime) |
@@ -674,7 +674,7 @@ print(fibonacci(10))
 ```
 
 ```tyd
--- TYD
+-- MLP
 İŞLEÇ fibonacci(n) İSE
     EĞER n <= 1 İSE
         DÖNÜŞ n
@@ -685,9 +685,9 @@ SON
 YAZDIR fibonacci(10)
 ```
 
-### TYD vs C
+### MLP vs C
 
-| Özellik | TYD | C |
+| Özellik | MLP | C |
 |---------|-----|---|
 | **Dil** | Türkçe | İngilizce |
 | **Syntax** | Yüksek seviye | Düşük seviye |
@@ -714,7 +714,7 @@ int main() {
 ```
 
 ```tyd
--- TYD
+-- MLP
 İŞLEÇ fibonacci(n) İSE
     EĞER n <= 1 İSE
         DÖNÜŞ n
@@ -725,9 +725,9 @@ SON
 YAZDIR fibonacci(10)
 ```
 
-### TYD vs Go
+### MLP vs Go
 
-| Özellik | TYD | Go |
+| Özellik | MLP | Go |
 |---------|-----|---|
 | **Dil** | Türkçe | İngilizce |
 | **Concurrency** | Yok (henüz) | Goroutines |
@@ -736,7 +736,7 @@ YAZDIR fibonacci(10)
 | **GC** | Yok | Var |
 | **Syntax** | SON blokları | Curly braces |
 
-### TYD'nin Avantajları
+### MLP'nin Avantajları
 
 ✅ **Türkçe:** Türkçe konuşanlar için doğal
 ✅ **Basit:** Minimal syntax, kolay öğrenme
@@ -745,7 +745,7 @@ YAZDIR fibonacci(10)
 ✅ **Şeffaf:** Compiler C'de, anlaşılır
 ✅ **Eğitim:** Compiler nasıl çalışır öğretir
 
-### TYD'nin Dezavantajları
+### MLP'nin Dezavantajları
 
 ❌ **Genç:** Henüz stabil değil
 ❌ **Ekosistem:** Kütüphane yok
@@ -814,7 +814,7 @@ YAZDIR ilk
 METIN mod_yaz = "w";
 SAYISAL dosya = DOSYA_AC("test.txt", mod_yaz);
 
-METIN mesaj = "Merhaba TYD!\nBu ikinci satır.";
+METIN mesaj = "Merhaba MLP!\nBu ikinci satır.";
 DOSYA_YAZ(dosya, mesaj)
 DOSYA_KAPAT(dosya)
 
@@ -860,7 +860,7 @@ YAZDIR global_x
 
 ### Kural 4: Python Yasağı - Sadece C!
 
-**TYD-MLP projesi tamamen Python bağımlılığından kurtulmuştur.**
+**MLP projesi tamamen Python bağımlılığından kurtulmuştur.**
 
 ❌ **KESINLIKLE YASAK:**
 ```bash
@@ -876,7 +876,7 @@ gcc tool.c -o tool
 ```
 
 **NEDEN?**
-1. **Self-Hosting Hedefi:** TYD kendini derleyecek
+1. **Self-Hosting Hedefi:** MLP kendini derleyecek
 2. **Bağımsızlık:** Hiçbir harici runtime yok
 3. **Performans:** C native performans
 4. **Tutarlılık:** Her şey C'de
@@ -890,7 +890,7 @@ gcc tool.c -o tool
 ```
 ✅ Aşama 0: Python Prototipi (Tamamlandı, Kaldırıldı)
 ✅ Aşama 1: C Bootstrap Compiler (TAMAMLANDI - %100)
-🚧 Aşama 2: TYD ile TYD Compiler (DEVAM EDİYOR)
+🚧 Aşama 2: MLP ile MLP Compiler (DEVAM EDİYOR)
 ⏳ Aşama 3: Self-Hosting (HEDEF)
 ```
 
@@ -906,8 +906,8 @@ gcc tool.c -o tool
 
 ### Proje Yapısı
 ```
-TYD-MLP/
-├── c_compiler/          # C Bootstrap Compiler
+MLP/
+├── c_bootstrap/          # C Bootstrap Compiler
 │   ├── compiler_test    # Ana executable
 │   ├── c_lexer.c/h      # Lexer
 │   ├── c_parser.c/h     # Parser
@@ -917,8 +917,8 @@ TYD-MLP/
 │   └── runtime.c        # Built-in fonksiyonlar
 ├── vscode-tyd/          # VSCode Extension
 │   └── tyd-language-0.1.0.vsix
-├── tyd_compiler/        # TYD ile yazılmış compiler (gelecek)
-├── ornekler/            # Örnek programlar
+├── mlp_compiler/        # MLP ile yazılmış compiler (gelecek)
+├── examples/            # Örnek programlar
 └── SPECS.md            # Bu dosya
 ```
 
@@ -926,14 +926,14 @@ TYD-MLP/
 
 ```bash
 # Compiler'ı derle
-cd c_compiler
+cd c_bootstrap
 gcc main.c c_lexer.c c_parser.c c_generator.c -o compiler_test -no-pie
 
-# TYD dosyası derle ve çalıştır
-./calistir.sh ../ornekler/fibonacci.tyd
+# MLP dosyası derle ve çalıştır
+./calistir.sh ../examples/fibonacci.mlp
 
 # Sadece compile et
-./compiler_test input.tyd output.asm
+./compiler_test input.mlp output.asm
 
 # VSCode extension kur
 code --install-extension ../vscode-tyd/tyd-language-0.1.0.vsix
@@ -941,10 +941,10 @@ code --install-extension ../vscode-tyd/tyd-language-0.1.0.vsix
 
 ### Test Örnekleri
 
-- `tyd_compiler/escape_test.tyd` - Escape character testleri
-- `tyd_compiler/multiline_test.tyd` - Multi-line ve nested yapılar
-- `tyd_compiler/full_lang_test.tyd` - Tam dil özellikleri
-- `tyd_compiler/comment_test.tyd` - Yorum testleri
+- `mlp_compiler/escape_test.mlp` - Escape character testleri
+- `mlp_compiler/multiline_test.mlp` - Multi-line ve nested yapılar
+- `mlp_compiler/full_lang_test.mlp` - Tam dil özellikleri
+- `mlp_compiler/comment_test.mlp` - Yorum testleri
 
 ---
 
@@ -959,13 +959,13 @@ code --install-extension ../vscode-tyd/tyd-language-0.1.0.vsix
 
 ### Topluluk
 
-- GitHub: `github.com/guvenacar/TYD-MLP`
+- GitHub: `github.com/guvenacar/MLP`
 - Issues: Hata raporları ve özellik istekleri
 - Discussions: Genel tartışmalar
 
 ---
 
-**© 2024 TYD-MLP Projesi - Tüm hakları saklıdır**
+**© 2024 MLP Projesi - Tüm hakları saklıdır**
 
 **Versiyon:** 2.0
 **Son Güncelleme:** 17 Kasım 2024

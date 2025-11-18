@@ -1,9 +1,9 @@
-Elbette, işte TYD-MLP derleyicisinin tam iş akışı (pipeline) özeti:
+Elbette, işte MLP derleyicisinin tam iş akışı (pipeline) özeti:
 
-### ⛓️ TYD-MLP İş Akışı (Pipeline)
+### ⛓️ MLP İş Akışı (Pipeline)
 
 ```
-[Kullanıcı Kodu (ornekler/test.tyd)]
+[Kullanıcı Kodu (examples/test.mlp)]
            |
            v
 [Python Motoru (src/compiler.py)]

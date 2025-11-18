@@ -1,31 +1,31 @@
-# 🎉 TYD Self-Hosting Compiler Milestone
+# 🎉 MLP Self-Hosting Compiler Milestone
 
 ## Özet
 
 **Tarih:** 2025-11-18
 **Durum:** ✅ TAMAMLANDI
 
-TYD (Türkçe Yazılım Dili) artık **tam anlamıyla self-hosting** bir programlama dilidir! Derleyicinin üç ana bileşeni (Lexer, Parser, Generator) başarıyla TYD dilinde yazıldı ve derlendi.
+MLP (Multi-Language Programming) artık **tam anlamıyla self-hosting** bir programlama dilidir! Derleyicinin üç ana bileşeni (Lexer, Parser, Generator) başarıyla MLP dilinde yazıldı ve derlendi.
 
 ## 📊 İstatistikler
 
 ### Self-Hosting Bileşenleri
 
-| Bileşen | Dosya | TYD Satırları | Assembly Satırları | Fonksiyon Sayısı |
+| Bileşen | Dosya | MLP Satırları | Assembly Satırları | Fonksiyon Sayısı |
 |---------|-------|---------------|-------------------|------------------|
-| **Lexer** | `tyd_compiler/tyd_lexer.tyd` | 548 | 1,806 | 17 |
-| **Parser** | `tyd_compiler/tyd_parser.tyd` | 189 | - | 7 |
-| **Generator** | `tyd_compiler/tyd_generator.tyd` | 190 | 671 | 9 |
-| **Test** | `test_self_hosting.tyd` | 176 | 865 | - |
+| **Lexer** | `mlp_compiler/tyd_lexer.mlp` | 548 | 1,806 | 17 |
+| **Parser** | `mlp_compiler/tyd_parser.mlp` | 189 | - | 7 |
+| **Generator** | `mlp_compiler/tyd_generator.mlp` | 190 | 671 | 9 |
+| **Test** | `test_self_hosting.mlp` | 176 | 865 | - |
 | **TOPLAM** | - | **1,103** | **3,342** | **33** |
 
 ### Bootstrap Derleyici (C)
 
 | Bileşen | Dosya | C Satırları | Durum |
 |---------|-------|-------------|-------|
-| **Lexer** | `c_compiler/c_lexer.c` | ~800 | ✅ |
-| **Parser** | `c_compiler/c_parser.c` | ~1,200 | ✅ |
-| **Generator** | `c_compiler/c_generator.c` | ~1,500 | ✅ |
+| **Lexer** | `c_bootstrap/c_lexer.c` | ~800 | ✅ |
+| **Parser** | `c_bootstrap/c_parser.c` | ~1,200 | ✅ |
+| **Generator** | `c_bootstrap/c_generator.c` | ~1,500 | ✅ |
 | **Runtime** | `runtime/runtime.c` | ~200 | ✅ |
 | **TOPLAM** | - | **~3,700** | **✅** |
 
@@ -64,23 +64,23 @@ TYD (Türkçe Yazılım Dili) artık **tam anlamıyla self-hosting** bir program
 ## 📁 Proje Yapısı
 
 ```
-TYD-MLP/
-├── c_compiler/              # Bootstrap Compiler (C)
+MLP/
+├── c_bootstrap/              # Bootstrap Compiler (C)
 │   ├── c_lexer.c/h         # Lexer
 │   ├── c_parser.c/h        # Parser
 │   ├── c_generator.c/h     # Code Generator
 │   └── main.c              # Entry point
 │
-├── tyd_compiler/            # Self-Hosting Compiler (TYD)
-│   ├── tyd_lexer.tyd       # ✅ 548 satır - Lexer
-│   ├── tyd_parser.tyd      # ✅ 189 satır - Parser
-│   └── tyd_generator.tyd   # ✅ 190 satır - Generator
+├── mlp_compiler/            # Self-Hosting Compiler (MLP)
+│   ├── tyd_lexer.mlp       # ✅ 548 satır - Lexer
+│   ├── tyd_parser.mlp      # ✅ 189 satır - Parser
+│   └── tyd_generator.mlp   # ✅ 190 satır - Generator
 │
 ├── runtime/
 │   └── runtime.c           # Runtime library (printf wrappers)
 │
-├── test_self_hosting.tyd   # Self-hosting pipeline test
-├── SPECS.md                # TYD Language Specification
+├── test_self_hosting.mlp   # Self-hosting pipeline test
+├── SPECS.md                # MLP Language Specification
 └── README.md
 ```
 
@@ -90,23 +90,23 @@ TYD-MLP/
 - ❌ İlk prototip - artık kullanılmıyor
 
 ### Stage 1: C Bootstrap Compiler (TAMAMLANDI)
-- ✅ C dilinde yazılmış tam özellikli TYD derleyicisi
-- ✅ Tüm TYD özelliklerini destekler
+- ✅ C dilinde yazılmış tam özellikli MLP derleyicisi
+- ✅ Tüm MLP özelliklerini destekler
 - ✅ x86-64 assembly üretir
 
-### Stage 2: TYD Self-Hosting Compiler (TAMAMLANDI)
-- ✅ **Lexer** - TYD dilinde yazılmış, C derleyici ile derlendi
-- ✅ **Parser** - TYD dilinde yazılmış, C derleyici ile derlendi
-- ✅ **Generator** - TYD dilinde yazılmış, C derleyici ile derlendi
+### Stage 2: MLP Self-Hosting Compiler (TAMAMLANDI)
+- ✅ **Lexer** - MLP dilinde yazılmış, C derleyici ile derlendi
+- ✅ **Parser** - MLP dilinde yazılmış, C derleyici ile derlendi
+- ✅ **Generator** - MLP dilinde yazılmış, C derleyici ile derlendi
 
 ### Stage 3: Full Self-Hosting (HEDEFLENİYOR)
 - 🚧 Stage 2 bileşenlerini entegre et
-- 🚧 TYD derleyicisini TYD derleyicisi ile derle
+- 🚧 MLP derleyicisini MLP derleyicisi ile derle
 - 🚧 Bootstrap zincirini kapat
 
 ## 🔬 Örnek Kod
 
-### Basit Bir TYD Programı
+### Basit Bir MLP Programı
 ```tyd
 -- Fibonacci hesaplama
 İŞLEÇ fibonacci(n) İSE
@@ -157,7 +157,7 @@ SON
    - Çözüm: setge ve setle assembly komutları eklendi
 
 4. **String Karşılaştırma**
-   - TYD'de string karşılaştırma fonksiyonu yoktu
+   - MLP'de string karşılaştırma fonksiyonu yoktu
    - Çözüm: STRING_ESIT_MI() runtime fonksiyonu eklendi
 
 5. **Semicolon Kullanımı**
@@ -167,19 +167,19 @@ SON
 ## 📈 Performans Metrikleri
 
 ### Derleme Süreleri (Yaklaşık)
-- `tyd_lexer.tyd`: ~0.1s (548 satır → 1,806 assembly)
-- `tyd_parser.tyd`: ~0.05s (189 satır → assembly)
-- `tyd_generator.tyd`: ~0.05s (190 satır → 671 assembly)
+- `tyd_lexer.mlp`: ~0.1s (548 satır → 1,806 assembly)
+- `tyd_parser.mlp`: ~0.05s (189 satır → assembly)
+- `tyd_generator.mlp`: ~0.05s (190 satır → 671 assembly)
 
 ### Kod Büyüme Oranı
-- Lexer: 1 TYD satırı → 3.3 assembly satırı
-- Generator: 1 TYD satırı → 3.5 assembly satırı
-- Ortalama: **1 TYD satırı ≈ 3-4 assembly satırı**
+- Lexer: 1 MLP satırı → 3.3 assembly satırı
+- Generator: 1 MLP satırı → 3.5 assembly satırı
+- Ortalama: **1 MLP satırı ≈ 3-4 assembly satırı**
 
 ## 🔮 Gelecek Hedefler
 
 ### Kısa Vade
-- [ ] Stage 3: TYD derleyicisini TYD ile derle
+- [ ] Stage 3: MLP derleyicisini MLP ile derle
 - [ ] Struct desteğini tamamla (parser + generator)
 - [ ] File I/O desteği
 - [ ] Hata mesajlarını iyileştir
@@ -220,9 +220,9 @@ SON
 
 ## 🙏 Teşekkürler
 
-Bu proje, Türkçe bir programlama dilinin gerçekten işlevsel olabileceğini kanıtladı. TYD artık kendi kendini derleyebilen, tam özellikli bir programlama dilidir!
+Bu proje, Türkçe bir programlama dilinin gerçekten işlevsel olabileceğini kanıtladı. MLP artık kendi kendini derleyebilen, tam özellikli bir programlama dilidir!
 
 ---
 
-**TYD - Türkçe Yazılım Dili**
+**MLP - Multi-Language Programming**
 *"Kendi dilinde, kendi derleyicisi!"*

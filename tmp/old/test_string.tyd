@@ -1,3 +1,0 @@
-METIN a = "Merhaba";
-SAYISAL uzunluk = STRING_UZUNLUK(a);
-YAZDIR uzunluk

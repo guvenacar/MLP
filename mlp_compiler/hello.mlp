@@ -1,0 +1,4 @@
+-- Basit test programı
+
+YAZDIR "Merhaba MLP Dunyasi!"
+YAZDIR "Bu MLP derleyicisi tarafindan derlendi"

@@ -8,7 +8,7 @@ from src.tokens import Token, TOKEN_TIPLERI
 
 class Lexer:
     """
-    TYD kaynak kodunu okur ve onu Token (Jeton) listesine dönüştürür.
+    MLP kaynak kodunu okur ve onu Token (Jeton) listesine dönüştürür.
     JSON'dan yüklenen dil profiline göre çalışır.
     """
     def __init__(self, kaynak_kodu, dil_json_yolu, dil_kodu='tr-TR'):

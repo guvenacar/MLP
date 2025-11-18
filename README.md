@@ -1,29 +1,29 @@
-# TYD - Türkçe Yazılım Dili
+# MLP - Multi-Language Programming
 
 > **"Kendi Dilinde, Kendi Derleyicisi!"** 🇹🇷
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue)]()
 [![Status](https://img.shields.io/badge/status-Self--Hosting%20✅-success)]()
-[![Compiler](https://img.shields.io/badge/compiler-C%20Bootstrap%20%2B%20TYD-orange)]()
+[![Compiler](https://img.shields.io/badge/compiler-C%20Bootstrap%20%2B%20MLP-orange)]()
 
 ---
 
 ## 🎉 Proje Durumu: SELF-HOSTING BAŞARILI!
 
-**TYD artık kendi kendini derleyebilen bir programlama dili!** 🚀
+**MLP artık kendi kendini derleyebilen bir programlama dili!** 🚀
 
 - ✅ **Bootstrap Compiler** (C dilinde): Tam çalışır durumda
-- ✅ **Self-Hosting Compiler** (TYD dilinde): 927 satır TYD kodu
+- ✅ **Self-Hosting Compiler** (MLP dilinde): 927 satır MLP kodu
 - ✅ **x86-64 Assembly Üretimi**: NASM syntax
 - ✅ **Struct Desteği**: YAPI keyword ile yapılandırılmış veri
 - ✅ **Arrays, Functions, Loops**: Tam functional
 
 ---
 
-## 🎯 TYD Nedir?
+## 🎯 MLP Nedir?
 
-**TYD (Türkçe Yazılım Dili)**, Türkçe anahtar kelimelerle programlama yapmanızı sağlayan, sistem seviyesinde çalışan bir programlama dilidir.
+**MLP (Multi-Language Programming)**, Türkçe anahtar kelimelerle programlama yapmanızı sağlayan, sistem seviyesinde çalışan bir programlama dilidir.
 
 ### Örnek Kod
 
@@ -62,19 +62,19 @@ Fibonacci(10) = 55
 
 ```bash
 # Repo'yu klonla
-git clone https://github.com/guvenacar/TYD-MLP.git
-cd TYD-MLP
+git clone https://github.com/guvenacar/MLP.git
+cd MLP
 
 # Bootstrap compiler'ı derle
-gcc -c c_compiler/c_lexer.c -o c_lexer.o
-gcc -c c_compiler/c_parser.c -o c_parser.o
-gcc -c c_compiler/c_generator.c -o c_generator.o
-gcc -c c_compiler/main.c -o main.o
+gcc -c c_bootstrap/c_lexer.c -o c_lexer.o
+gcc -c c_bootstrap/c_parser.c -o c_parser.o
+gcc -c c_bootstrap/c_generator.c -o c_generator.o
+gcc -c c_bootstrap/main.c -o main.o
 gcc -c runtime/runtime.c -o runtime.o
 gcc c_lexer.o c_parser.o c_generator.o main.o runtime.o -o compiler_test -no-pie
 
 # Örnek program derle
-./compiler_test ornekler/merhaba.tyd merhaba.asm
+./compiler_test examples/merhaba.mlp merhaba.asm
 
 # Assembly'i binary'ye çevir
 nasm -f elf64 merhaba.asm -o merhaba.o
@@ -119,31 +119,31 @@ gcc merhaba.o runtime.o -o merhaba -no-pie
 ## 🏗️ Proje Yapısı
 
 ```
-TYD-MLP/
-├── c_compiler/              # Bootstrap Compiler (C)
+MLP/
+├── c_bootstrap/              # Bootstrap Compiler (C)
 │   ├── c_lexer.c/h         # Lexer: Source → Tokens
 │   ├── c_parser.c/h        # Parser: Tokens → AST
 │   ├── c_ast.h             # AST Node Definitions
 │   ├── c_generator.c/h     # Generator: AST → Assembly
 │   └── main.c              # Entry Point
 │
-├── tyd_compiler/            # Self-Hosting Compiler (TYD)
-│   ├── tyd_lexer.tyd       # ✅ 548 satır - Lexer
-│   ├── tyd_parser.tyd      # ✅ 189 satır - Parser
-│   └── tyd_generator.tyd   # ✅ 190 satır - Generator
+├── mlp_compiler/            # Self-Hosting Compiler (MLP)
+│   ├── tyd_lexer.mlp       # ✅ 548 satır - Lexer
+│   ├── tyd_parser.mlp      # ✅ 189 satır - Parser
+│   └── tyd_generator.mlp   # ✅ 190 satır - Generator
 │
-├── tydc.tyd                 # ✅ 57 satır - Compiler Driver (Stage 3)
+├── mlpc.mlp                 # ✅ 57 satır - Compiler Driver (Stage 3)
 │
 ├── runtime/
 │   └── runtime.c           # Runtime Library (I/O, strings)
 │
-├── ornekler/               # Example Programs
-│   ├── merhaba.tyd         # Hello World
-│   ├── fibonacci.tyd       # Fibonacci
-│   ├── array_test.tyd      # Array operations
-│   └── struct_test.tyd     # Struct demo
+├── examples/               # Example Programs
+│   ├── merhaba.mlp         # Hello World
+│   ├── fibonacci.mlp       # Fibonacci
+│   ├── array_test.mlp      # Array operations
+│   └── struct_test.mlp     # Struct demo
 │
-├── test_self_hosting.tyd   # Full self-hosting pipeline test
+├── test_self_hosting.mlp   # Full self-hosting pipeline test
 ├── SPECS.md                # Language Specification
 ├── SELF_HOSTING_MILESTONE.md  # Self-hosting documentation
 └── README.md               # This file
@@ -219,49 +219,49 @@ YAZDIR sonuc  -- 8
 
 ## 🚀 Self-Hosting Mimarisi
 
-TYD, **bootstrap** sürecini tamamlamış bir dildir:
+MLP, **bootstrap** sürecini tamamlamış bir dildir:
 
 ### Stage 1: Bootstrap Compiler (C)
 ```
 C Source Code (3,700 satır)
     ↓ [GCC]
-TYD Compiler Executable
+MLP Compiler Executable
 ```
 
 **Görevleri:**
-- ✅ TYD kaynak kodunu okur
+- ✅ MLP kaynak kodunu okur
 - ✅ Lexical analysis (tokenization)
 - ✅ Syntax analysis (AST construction)
 - ✅ x86-64 Assembly üretir
 
-### Stage 2: Self-Hosting Compiler (TYD)
+### Stage 2: Self-Hosting Compiler (MLP)
 ```
-TYD Source Code (927 satır)
+MLP Source Code (927 satır)
     ↓ [Stage 1 Compiler]
 Assembly Code (3,342 satır)
     ↓ [NASM + GCC]
-TYD Compiler (TYD ile yazılmış!)
+MLP Compiler (MLP ile yazılmış!)
 ```
 
 **Bileşenler:**
-- ✅ `tyd_lexer.tyd` (548 satır) - Tokenization
-- ✅ `tyd_parser.tyd` (189 satır) - AST construction
-- ✅ `tyd_generator.tyd` (190 satır) - Assembly generation
+- ✅ `tyd_lexer.mlp` (548 satır) - Tokenization
+- ✅ `tyd_parser.mlp` (189 satır) - AST construction
+- ✅ `tyd_generator.mlp` (190 satır) - Assembly generation
 
 ### Stage 3: Compiler Driver ✅
 ```
-tydc.tyd (57 satır)
+mlpc.mlp (57 satır)
     ↓ [Integrates all components]
 Full Compiler Pipeline
 ```
 
 **Bileşenler:**
-- ✅ `tydc.tyd` (57 satır) - Main compiler driver
+- ✅ `mlpc.mlp` (57 satır) - Main compiler driver
 - ✅ Pipeline demonstration: Source → Lexer → Parser → Generator → Assembly
 
 **Durum:** Stage 3 tamamlandı! 🎉🚀
 
-**Toplam Self-Hosting Kod:** 984 satır TYD (lexer + parser + generator + driver)
+**Toplam Self-Hosting Kod:** 984 satır MLP (lexer + parser + generator + driver)
 
 ---
 
@@ -270,18 +270,18 @@ Full Compiler Pipeline
 | Metrik | Değer |
 |--------|-------|
 | **Bootstrap Compiler (C)** | ~3,700 satır |
-| **Self-Hosting Compiler (TYD)** | 984 satır (lexer + parser + generator + driver) |
+| **Self-Hosting Compiler (MLP)** | 984 satır (lexer + parser + generator + driver) |
 | **Runtime Library (C)** | ~200 satır |
 | **Assembly Çıktısı** | ~2,713 satır (self-hosting code için) |
-| **Kod Büyüme Oranı** | 1 TYD → ~2.8 assembly satırı |
+| **Kod Büyüme Oranı** | 1 MLP → ~2.8 assembly satırı |
 | **Desteklenen Fonksiyonlar** | 33+ (lexer, parser, generator) |
 | **Test Dosyaları** | 5+ (merhaba, fibonacci, array, struct, driver) |
 | **Pipeline Stages** | 3 (Bootstrap, Self-Hosting, Driver) ✅ |
 
 ### Derleme Performansı
-- **Lexer**: 548 satır TYD → ~0.1s
-- **Parser**: 189 satır TYD → ~0.05s
-- **Generator**: 190 satır TYD → ~0.05s
+- **Lexer**: 548 satır MLP → ~0.1s
+- **Parser**: 189 satır MLP → ~0.05s
+- **Generator**: 190 satır MLP → ~0.05s
 
 ---
 
@@ -305,7 +305,7 @@ YAZDIR     - Print
 ```
 
 ### UTF-8 Karakter Desteği
-TYD, tam UTF-8 desteği ile Türkçe karakterleri tanır:
+MLP, tam UTF-8 desteği ile Türkçe karakterleri tanır:
 - ✅ Ğ, ğ
 - ✅ İ, ı
 - ✅ Ş, ş
@@ -330,32 +330,32 @@ TYD, tam UTF-8 desteği ile Türkçe karakterleri tanır:
 ### Self-Hosting Test
 
 ```bash
-./compiler_test test_self_hosting.tyd test_output.asm
+./compiler_test test_self_hosting.mlp test_output.asm
 ```
 
-Bu test, TYD compiler'ın üç bileşenini (Lexer → Parser → Generator) simulasyonla gösterir.
+Bu test, MLP compiler'ın üç bileşenini (Lexer → Parser → Generator) simulasyonla gösterir.
 
 ### Örnek Programlar
 
 ```bash
 # Hello World
-./compiler_test ornekler/merhaba.tyd merhaba.asm
+./compiler_test examples/merhaba.mlp merhaba.asm
 
 # Fibonacci
-./compiler_test ornekler/fibonacci.tyd fibonacci.asm
+./compiler_test examples/fibonacci.mlp fibonacci.asm
 
 # Array Test
-./compiler_test ornekler/array_test.tyd array_test.asm
+./compiler_test examples/array_test.mlp array_test.asm
 
 # Struct Test
-./compiler_test test_struct.tyd struct_test.asm
+./compiler_test test_struct.mlp struct_test.asm
 ```
 
 ---
 
 ## 📖 Dokümantasyon
 
-- **[SPECS.md](./SPECS.md)** - TYD Language Specification
+- **[SPECS.md](./SPECS.md)** - MLP Language Specification
   - Syntax kuralları
   - Semantik tanımlar
   - Type system
@@ -498,14 +498,14 @@ YAZDIR topla(5, 3)  -- 8
 
 #### 4. **Module Sistemi**
 ```tyd
--- matematik.tyd
+-- matematik.mlp
 MODÜL Matematik İSE
     İŞLEÇ topla(a, b) İSE
         DÖNÜŞ a + b
     SON
 SON
 
--- main.tyd
+-- main.mlp
 KULLAN Matematik
 
 YAZDIR Matematik.topla(5, 3)
@@ -562,14 +562,14 @@ add rax, 3
 
 #### 3. **Debug Bilgisi**
 - DWARF format debug info
-- Source maps (assembly → TYD line mapping)
+- Source maps (assembly → MLP line mapping)
 - Stack traces
 - Variable inspection
 
 #### 4. **Better Error Messages**
 ```
 Hata: Beklenmeyen token
-  --> merhaba.tyd:5:10
+  --> merhaba.mlp:5:10
    |
  5 |     EĞER x > 10
    |               ^ ';' veya 'İSE' bekleniyor
@@ -590,13 +590,13 @@ Hata: Beklenmeyen token
 
 #### 3. **WebAssembly Target**
 ```bash
-tyd compile --target wasm program.tyd
+tyd compile --target wasm program.mlp
 ```
 
 #### 4. **Cross-Compilation**
 ```bash
-tyd compile --target linux-arm64 program.tyd
-tyd compile --target windows-x64 program.tyd
+tyd compile --target linux-arm64 program.mlp
+tyd compile --target windows-x64 program.mlp
 ```
 
 ### Araçlar & Ecosystem
@@ -625,8 +625,8 @@ bağımlılıklar:
 
 #### 4. **Formatter & Linter**
 ```bash
-tyd fmt program.tyd  # Auto-format
-tyd lint program.tyd  # Style check
+tyd fmt program.mlp  # Auto-format
+tyd lint program.mlp  # Style check
 ```
 
 #### 5. **Documentation Generator**
@@ -740,7 +740,7 @@ GitHub Actions ile otomatik test
 - Interactive playground
 
 #### 2. **Online Playground**
-Browser'da TYD dene (WASM ile)
+Browser'da MLP dene (WASM ile)
 
 #### 3. **Example Repository**
 - 100+ örnek program
@@ -776,7 +776,7 @@ Bu proje MIT lisansı altında lisanslanmıştır.
 ```
 MIT License
 
-Copyright (c) 2025 TYD Contributors
+Copyright (c) 2025 MLP Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -801,7 +801,7 @@ SOFTWARE.
 
 ## 🙏 Teşekkürler
 
-TYD, şu açık kaynak projelerden ilham almıştır:
+MLP, şu açık kaynak projelerden ilham almıştır:
 
 - **C** - Systems programming
 - **Python** - Language design
@@ -814,25 +814,25 @@ TYD, şu açık kaynak projelerden ilham almıştır:
 
 ## 📧 İletişim
 
-- **GitHub Issues**: [github.com/guvenacar/TYD-MLP/issues](https://github.com/guvenacar/TYD-MLP/issues)
+- **GitHub Issues**: [github.com/guvenacar/MLP/issues](https://github.com/guvenacar/MLP/issues)
 - **Email**: guven.acar@gmail.com
-- **Discussions**: [github.com/guvenacar/TYD-MLP/discussions](https://github.com/guvenacar/TYD-MLP/discussions)
+- **Discussions**: [github.com/guvenacar/MLP/discussions](https://github.com/guvenacar/MLP/discussions)
 
 ---
 
 ## 🌟 Başarılar
 
-**TYD, sıfırdan self-hosting bir compiler yaratmanın mümkün olduğunu kanıtladı!**
+**MLP, sıfırdan self-hosting bir compiler yaratmanın mümkün olduğunu kanıtladı!**
 
 - ✅ **Bootstrap Compiler** (C) - 3,700 satır
-- ✅ **Self-Hosting Compiler** (TYD) - 984 satır
+- ✅ **Self-Hosting Compiler** (MLP) - 984 satır
 - ✅ **Full Pipeline** - Lexer → Parser → Generator → Driver
-- ✅ **Stage 3 Complete** - tydc.tyd compiler driver
+- ✅ **Stage 3 Complete** - mlpc.mlp compiler driver
 - ✅ **x86-64 Assembly** - NASM compatible
 - ✅ **Struct Support** - YAPI keyword
 - ✅ **Arrays & Functions** - Full featured
 
-**TYD, Türkçe ile sistem programlama yapmanın kapısını açtı!** 🇹🇷
+**MLP, Türkçe ile sistem programlama yapmanın kapısını açtı!** 🇹🇷
 
 **Tüm 3 bootstrap stage'i tamamlandı!** 🚀
 

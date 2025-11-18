@@ -1,0 +1,13 @@
+-- ===============================================
+-- MLP Örnek 5: İşleçler (Fonksiyonlar)
+-- ===============================================
+
+-- İşleç tanımlama (fonksiyon gibi)
+SAYISAL İŞLEÇ TOPLA(SAYISAL a, SAYISAL b)
+    DÖNÜŞ a + b
+SON İŞLEÇ
+
+-- İşleç kullanımı
+SAYISAL sonuc = TOPLA(5, 7);
+
+YAZDIR sonuc; -- Beklenen çıktı: 12

@@ -1,0 +1,18 @@
+-- ===============================================
+-- MLP Örnek 4: Döngüler
+-- (SPECS.md UYUMLU: ; YOK)
+-- ===============================================
+
+SAYISAL sayac = 0;
+
+DÖNGÜ
+    sayac = sayac + 1
+    YAZDIR sayac
+    
+    EĞER sayac == 5 İSE
+        YAZDIR "Döngü bitiyor..."
+        DÖNGÜ_BITIR
+    SON EĞER
+SON DÖNGÜ
+
+YAZDIR "Döngü tamamlandı"

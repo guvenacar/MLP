@@ -1,0 +1,8 @@
+-- ===============================================
+-- MLP Örnek 1: Merhaba Dünya
+-- ===============================================
+-- Bu en basit MLP programıdır.
+-- Ekrana "Merhaba Dünya!" yazdırır.
+
+YAZDIR "Merhaba Dünya!";
+YAZDIR "MLP'ye hoş geldiniz!";
