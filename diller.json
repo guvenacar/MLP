@@ -56,6 +56,7 @@
         "while": ["пока", "ПОКА"],
         "for": ["для", "ДЛЯ"],
         "break": ["прервать", "ПРЕРВАТЬ"],
+        "end": ["конец", "КОНЕЦ"],
         "function": ["функция", "ФУНКЦИЯ"],
         "return": ["вернуть", "ВЕРНУТЬ"],
         "print": ["печать", "ПЕЧАТЬ"],
@@ -76,11 +77,33 @@
         "while": ["当"],
         "for": ["对于"],
         "break": ["中断"],
+        "end": ["结束"],
         "function": ["函数"],
         "return": ["返回"],
         "print": ["打印"],
         "true": ["真"],
         "false": ["假"]
+      }
+    },
+    {
+      "id": "hi-IN",
+      "name": "हिन्दी (Hindi)",
+      "description": "Hindi programming keywords",
+      "keywords": {
+        "int": ["संख्या", "sankhya"],
+        "string": ["पाठ", "paath"],
+        "if": ["अगर", "agar"],
+        "then": ["तो", "to"],
+        "else": ["नहीं_तो", "nahin_to"],
+        "while": ["जब_तक", "jab_tak"],
+        "for": ["प्रत्येक", "pratyék"],
+        "break": ["तोड़ो", "todo"],
+        "end": ["समाप्त", "samaapt"],
+        "function": ["फलन", "falan"],
+        "return": ["वापसी", "vaapsi"],
+        "print": ["लिखो", "likho"],
+        "true": ["सत्य", "satya"],
+        "false": ["झूठ", "jhooth"]
       }
     },
     {
