@@ -83,3 +83,7 @@ tydc_unified
 test_hello
 test_hello.o
 test_hello.asm
+
+# Preprocessor outputs
+*.preprocessed.mlp
+*.preprocessed.tyd
