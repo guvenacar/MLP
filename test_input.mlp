@@ -1,0 +1,6 @@
+-- Test MLP dosyası
+-- Bu dosya mlpdc compiler tarafından işlenecek
+
+YAZDIR "Merhaba MLP!"
+SAYISAL x = 42
+YAZDIR x

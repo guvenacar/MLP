@@ -10,4 +10,4 @@ SAYISAL f2 = DOSYA_AC(dosya2, mod_w);
 SAYISAL n = DOSYA_YAZ(f2, icerik);
 SAYISAL k2 = DOSYA_KAPAT(f2);
 
-YAZDIR "Tamamlandi";
+YAZDIR "Tamamlandi"
