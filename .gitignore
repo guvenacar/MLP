@@ -70,3 +70,10 @@ stage3/output/
 /mlp-v*.c
 /mlp-v[0-9]
 /mlp-v[0-9][0-9]
+
+# Binary executables
+compiler_test
+mlpdc
+mlpdc_demo
+*.o
+*.asm
