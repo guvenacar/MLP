@@ -208,6 +208,145 @@ print result
 **System:**
 - `get_cwd()` - Get current working directory
 
+**GUI (Desktop Applications):**
+- `gui_window_create(title, w, h)` - Create window
+- `gui_button_create(win, text, x, y, w, h)` - Add button
+- `gui_label_create(win, text, x, y)` - Add label
+- `gui_canvas_draw_rect(canvas, x, y, w, h)` - Draw rectangle
+- `gui_poll_event()` - Get next event
+- See [GUI Development Guide](#desktop-gui-development) for full API
+
+---
+
+## 🎨 Desktop GUI Development
+
+MLP supports creating **native desktop applications** with graphical interfaces!
+
+### Quick Example
+
+**English:**
+```mlp
+-- lang: en-US
+int window = gui_window_create("My App", 800, 600);
+int button = gui_button_create(window, "Click Me", 300, 250, 120, 40);
+int count = 0;
+
+gui_window_show(window)
+
+while
+    int event = gui_poll_event();
+
+    if event == 1 then  -- Quit event
+        break
+    end
+
+    if event == 2 then  -- Button click
+        int clicked = gui_get_clicked_button();
+        if clicked == button then
+            count = count + 1
+            print "Button clicked! Count:"
+            print count
+        end
+    end
+end
+
+gui_window_destroy(window)
+```
+
+**Turkish:**
+```mlp
+-- lang: tr-TR
+SAYISAL pencere = gui_window_create("Uygulamam", 800, 600);
+SAYISAL buton = gui_button_create(pencere, "Tıkla", 300, 250, 120, 40);
+SAYISAL sayac = 0;
+
+gui_window_show(pencere)
+
+DÖNGÜ
+    SAYISAL olay = gui_poll_event();
+
+    EĞER olay == 1 İSE  -- Kapatma olayı
+        DÖNGÜ_BITIR
+    SON
+
+    EĞER olay == 2 İSE  -- Buton tıklama
+        SAYISAL tiklanan = gui_get_clicked_button();
+        EĞER tiklanan == buton İSE
+            sayac = sayac + 1
+            YAZDIR "Buton tıklandı! Sayı:"
+            YAZDIR sayac
+        SON
+    SON
+SON
+
+gui_window_destroy(pencere)
+```
+
+### VSCode Development Workflow
+
+**1. Install Prerequisites:**
+```bash
+# Linux/Ubuntu
+sudo apt install libsdl2-dev
+
+# macOS
+brew install sdl2
+```
+
+**2. Install MLP VSCode Extension:**
+```bash
+code --install-extension vscode-mlp/mlp-language-*.vsix
+```
+
+**3. Create Your GUI App:**
+- Create new `.mlp` file
+- Write GUI code with IntelliSense
+- Press `Ctrl+Shift+B` to build
+- Run your application!
+
+**4. Features:**
+- ✅ Syntax highlighting for GUI functions
+- ✅ Code snippets (`guiwin`, `guibtn`, `guicanvas`)
+- ✅ One-click build and run
+- ✅ Error highlighting
+- ✅ Multi-language support
+
+### Example Projects
+
+**Button Counter:**
+```mlp
+-- Simple click counter with label update
+int window = gui_window_create("Counter", 400, 200);
+int label = gui_label_create(window, "Count: 0", 150, 50);
+int button = gui_button_create(window, "Click", 150, 100, 100, 40);
+-- Event loop with click handling...
+```
+
+**Canvas Drawing:**
+```mlp
+-- Draw shapes on canvas
+int canvas = gui_canvas_create(window, 0, 0, 800, 600);
+gui_canvas_set_color(canvas, 255, 0, 0);
+gui_canvas_draw_rect(canvas, 100, 100, 200, 150);
+gui_canvas_draw_circle(canvas, 400, 300, 80);
+```
+
+**Complete Documentation:**
+- 📖 **[GUI Development Guide](GUI_DEVELOPMENT_GUIDE.md)** - Full tutorial
+- 🎨 **[GUI Design Spec](GUI_DESIGN.md)** - API reference
+- 💡 **Examples:** `example_gui_button.mlp`, `example_gui_turkish.mlp`
+
+### GUI Backend Options
+
+| Backend | Platform | Use Case | Status |
+|---------|----------|----------|--------|
+| **Mock** | All | Testing/Demo | ✅ Ready |
+| **SDL2** | Cross-platform | Games/Multimedia | 🔄 Recommended |
+| **GTK** | Linux | Native Desktop | 📋 Planned |
+| **Raylib** | Cross-platform | Graphics | 📋 Planned |
+
+**Current Status:** Mock backend included for testing. Real SDL2 backend ready to implement!
+
 ---
 
 ## 🛠️ Usage
