@@ -293,16 +293,51 @@ void visit_Sayi(ASTNode* node) {
     asm_append(&text_section, buffer);
 }
 
+// Helper function: Escape special characters for NASM assembly
+char* escape_string_for_asm(const char* input) {
+    static char buffer[2048];
+    int j = 0;
+
+    for (int i = 0; input[i] != '\0' && j < 2046; i++) {
+        char c = input[i];
+
+        // Escape special characters
+        if (c == '\n') {
+            buffer[j++] = '\\';
+            buffer[j++] = 'n';
+        } else if (c == '\t') {
+            buffer[j++] = '\\';
+            buffer[j++] = 't';
+        } else if (c == '\r') {
+            buffer[j++] = '\\';
+            buffer[j++] = 'r';
+        } else if (c == '\\') {
+            buffer[j++] = '\\';
+            buffer[j++] = '\\';
+        } else if (c == '\"') {
+            buffer[j++] = '\\';
+            buffer[j++] = '\"';
+        } else {
+            buffer[j++] = c;
+        }
+    }
+    buffer[j] = '\0';
+    return buffer;
+}
+
 void visit_Metin(ASTNode* node) {
     // String literal'i .data bölümüne ekle ve adresini RAX'e yükle
     char etiket[64];
-    char buffer[512];
+    char buffer[2048];
 
     // Benzersiz etiket oluştur
     sprintf(etiket, "str_%d", metin_sayaci++);
 
+    // Escape special characters for assembly
+    char* escaped = escape_string_for_asm(node->sabit_data.deger);
+
     // .data bölümüne string ekle (null-terminated)
-    sprintf(buffer, "%s: db \"%s\", 0", etiket, node->sabit_data.deger);
+    sprintf(buffer, "%s: db \"%s\", 0", etiket, escaped);
     asm_append(&data_section, buffer);
 
     // String'in adresini RAX'e yükle
@@ -1151,6 +1186,11 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern dosya_oku");
     asm_append(&data_section, "extern dosya_yaz");
     asm_append(&data_section, "extern dosya_kapat");
+    asm_append(&data_section, "extern string_karakter_al");
+    asm_append(&data_section, "extern string_alt");
+    asm_append(&data_section, "extern karakter_kodu");
+    asm_append(&data_section, "extern kodu_karaktere");
+    asm_append(&data_section, "extern runtime_dizin_al");
     asm_append(&data_section, "extern runtime_dizin_al"); // Self-host için eklendi
     asm_append(&data_section, "extern tyd_fix_cwd"); // ✅ yeni
 
