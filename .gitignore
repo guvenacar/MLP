@@ -87,3 +87,6 @@ test_hello.asm
 # Preprocessor outputs
 *.preprocessed.mlp
 *.preprocessed.tyd
+
+# Test binaries
+test_direct_turkish
