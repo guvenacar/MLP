@@ -90,3 +90,4 @@ test_hello.asm
 
 # Test binaries
 test_direct_turkish
+test_english_only
