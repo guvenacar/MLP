@@ -100,3 +100,8 @@ bench_*
 
 # GUI demo binaries
 gui_demo*
+
+# JSON parser tests
+test_json
+test_json_parser
+runtime/test_json.c
