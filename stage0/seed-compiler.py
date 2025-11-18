@@ -1141,7 +1141,7 @@ class CCodeGenerator:
 # Main Compiler
 # ===============================================
 
-def compile_mlp_file(input_file: str, output_file: str):
+def compile_mlp_file(input_file: str, output_file: str, gui_backend: str = None):
     """Compile MLP file to executable"""
     print(f"[Seed Compiler] Compiling {input_file}...")
 
@@ -1175,36 +1175,81 @@ def compile_mlp_file(input_file: str, output_file: str):
         print("[Seed Compiler] Compiling runtime library...")
         subprocess.run(['gcc', '-c', runtime_c, '-o', 'runtime.o'], check=True)
 
+    # Compile GUI backend if specified
+    gui_objects = []
+    gui_libs = []
+    if gui_backend == 'sdl2':
+        gui_sdl_c = 'runtime/gui_sdl.c'
+        if os.path.exists(gui_sdl_c):
+            print("[Seed Compiler] Compiling SDL2 GUI backend...")
+            # Get SDL2 flags
+            try:
+                sdl_cflags = subprocess.check_output(['sdl2-config', '--cflags'], text=True).strip().split()
+                sdl_libs = subprocess.check_output(['sdl2-config', '--libs'], text=True).strip().split()
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                print("[Seed Compiler] Warning: sdl2-config not found, using default flags")
+                sdl_cflags = ['-I/usr/include/SDL2']
+                sdl_libs = ['-lSDL2']
+
+            # Compile GUI SDL
+            subprocess.run(['gcc', '-c', gui_sdl_c, '-o', 'gui_sdl.o'] + sdl_cflags, check=True)
+            gui_objects.append('gui_sdl.o')
+            gui_libs.extend(sdl_libs)
+            print("[Seed Compiler] SDL2 GUI backend compiled")
+        else:
+            print(f"[Seed Compiler] Warning: SDL2 GUI backend not found at {gui_sdl_c}")
+
     # Compile C to binary
     print(f"[Seed Compiler] Compiling to binary: {output_file}")
-    subprocess.run([
+    compile_cmd = [
         'gcc',
         c_file,
-        'runtime.o',
+        'runtime.o'
+    ] + gui_objects + [
         '-o', output_file,
-        '-I.', '-std=c99'
-    ], check=True)
+        '-I.', '-std=c99', '-lm'
+    ] + gui_libs
+
+    subprocess.run(compile_cmd, check=True)
 
     print(f"[Seed Compiler] ✅ Success! Created: {output_file}")
+    if gui_backend:
+        print(f"[Seed Compiler] GUI Backend: {gui_backend}")
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 seed-compiler.py <input.mlp> [output]")
-        print("   or: python3 seed-compiler.py <input.mlp> -o <output>")
+        print("Usage: python3 seed-compiler.py <input.mlp> [output] [--gui=sdl2]")
+        print("   or: python3 seed-compiler.py <input.mlp> -o <output> [--gui=sdl2]")
+        print("")
+        print("Options:")
+        print("  --gui=sdl2    Enable SDL2 GUI backend")
         sys.exit(1)
 
     input_file = sys.argv[1]
     output_file = 'output'
+    gui_backend = None
 
-    # Parse output file: supports both "-o output" and just "output"
-    if len(sys.argv) >= 3:
-        if sys.argv[2] == '-o' and len(sys.argv) >= 4:
-            output_file = sys.argv[3]
-        elif sys.argv[2] != '-o':
-            output_file = sys.argv[2]
+    # Parse arguments
+    i = 2
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+
+        if arg == '-o' and i + 1 < len(sys.argv):
+            output_file = sys.argv[i + 1]
+            i += 2
+        elif arg.startswith('--gui='):
+            gui_backend = arg.split('=')[1]
+            i += 1
+        elif not arg.startswith('-'):
+            # Assume it's the output file
+            output_file = arg
+            i += 1
+        else:
+            print(f"Unknown option: {arg}")
+            sys.exit(1)
 
     try:
-        compile_mlp_file(input_file, output_file)
+        compile_mlp_file(input_file, output_file, gui_backend)
     except Exception as e:
         print(f"[Seed Compiler] ❌ Error: {e}")
         import traceback
