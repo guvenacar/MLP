@@ -77,3 +77,9 @@ mlpdc
 mlpdc_demo
 *.o
 *.asm
+
+# Compiler executables
+tydc_unified
+test_hello
+test_hello.o
+test_hello.asm
