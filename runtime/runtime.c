@@ -1,167 +1,48 @@
-/*
- * ===============================================
- * MLP Runtime Library (C)
- * ===============================================
- * Provides core runtime support for MLP programs
- * - Memory management
- * - String operations
- * - I/O operations
- * - Array/Dictionary operations
- * - Type conversions
- */
-
-#define _POSIX_C_SOURCE 200809L
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#include <stdint.h>
+#include <unistd.h>  // readlink için
+#include <libgen.h>  // dirname için
+#include <errno.h>   // errno için
 
-// ===============================================
-// Type Definitions
-// ===============================================
+// Forward declarations
+char* runtime_dizin_al();
+
+// Çalıştırılabilir dosyanın tam yolunu alır
+char* get_executable_path() {
+    char* path = (char*)malloc(1024);
+    if (path == NULL) return NULL;
+
+    ssize_t len = readlink("/proc/self/exe", path, 1023);
+    if (len != -1) {
+        path[len] = '\0';
+        return path;
+    }
+
+    free(path);
+    return NULL;
+}
+
+void yazdir_sayi(int64_t sayi) {
+    printf("%ld\n", sayi);
+}
+
+void yazdir_metin(const char* metin) {
+    printf("%s\n", metin);
+}
 
 typedef struct {
-    char* data;
-    size_t length;
-    size_t capacity;
-} mlp_string_t;
+    char* anahtar;
+    int64_t deger;
+    int kullanilmis;
+} SozlukGirdisi;
 
-typedef struct {
-    void** items;
-    size_t length;
-    size_t capacity;
-} mlp_array_t;
+SozlukGirdisi* sozluk_tablosu = NULL;
+int sozluk_boyutu = 0;
 
-typedef struct mlp_dict_entry {
-    char* key;
-    void* value;
-    struct mlp_dict_entry* next;
-} mlp_dict_entry_t;
-
-typedef struct {
-    mlp_dict_entry_t** buckets;
-    size_t size;
-    size_t capacity;
-} mlp_dict_t;
-
-// ===============================================
-// Memory Management
-// ===============================================
-
-void* mlp_malloc(size_t size) {
-    void* ptr = malloc(size);
-    if (!ptr) {
-        fprintf(stderr, "MLP Runtime Error: Memory allocation failed\n");
-        exit(1);
-    }
-    return ptr;
-}
-
-void* mlp_realloc(void* ptr, size_t size) {
-    void* new_ptr = realloc(ptr, size);
-    if (!new_ptr && size > 0) {
-        fprintf(stderr, "MLP Runtime Error: Memory reallocation failed\n");
-        exit(1);
-    }
-    return new_ptr;
-}
-
-void mlp_free(void* ptr) {
-    if (ptr) {
-        free(ptr);
-    }
-}
-
-// ===============================================
-// String Operations
-// ===============================================
-
-mlp_string_t* mlp_string_new(const char* str) {
-    mlp_string_t* s = mlp_malloc(sizeof(mlp_string_t));
-    s->length = strlen(str);
-    s->capacity = s->length + 1;
-    s->data = mlp_malloc(s->capacity);
-    strcpy(s->data, str);
-    return s;
-}
-
-mlp_string_t* mlp_string_concat(mlp_string_t* s1, mlp_string_t* s2) {
-    mlp_string_t* result = mlp_malloc(sizeof(mlp_string_t));
-    result->length = s1->length + s2->length;
-    result->capacity = result->length + 1;
-    result->data = mlp_malloc(result->capacity);
-    strcpy(result->data, s1->data);
-    strcat(result->data, s2->data);
-    return result;
-}
-
-void mlp_string_free(mlp_string_t* s) {
-    if (s) {
-        mlp_free(s->data);
-        mlp_free(s);
-    }
-}
-
-char* mlp_string_to_cstr(mlp_string_t* s) {
-    return s->data;
-}
-
-// ===============================================
-// Array Operations
-// ===============================================
-
-mlp_array_t* mlp_array_new(size_t initial_capacity) {
-    mlp_array_t* arr = mlp_malloc(sizeof(mlp_array_t));
-    arr->length = 0;
-    arr->capacity = initial_capacity > 0 ? initial_capacity : 8;
-    arr->items = mlp_malloc(sizeof(void*) * arr->capacity);
-    return arr;
-}
-
-void mlp_array_push(mlp_array_t* arr, void* item) {
-    if (arr->length >= arr->capacity) {
-        arr->capacity *= 2;
-        arr->items = mlp_realloc(arr->items, sizeof(void*) * arr->capacity);
-    }
-    arr->items[arr->length++] = item;
-}
-
-void* mlp_array_get(mlp_array_t* arr, size_t index) {
-    if (index >= arr->length) {
-        fprintf(stderr, "MLP Runtime Error: Array index out of bounds\n");
-        exit(1);
-    }
-    return arr->items[index];
-}
-
-void mlp_array_set(mlp_array_t* arr, size_t index, void* item) {
-    if (index >= arr->length) {
-        fprintf(stderr, "MLP Runtime Error: Array index out of bounds\n");
-        exit(1);
-    }
-    arr->items[index] = item;
-}
-
-size_t mlp_array_length(mlp_array_t* arr) {
-    return arr->length;
-}
-
-void mlp_array_free(mlp_array_t* arr) {
-    if (arr) {
-        mlp_free(arr->items);
-        mlp_free(arr);
-    }
-}
-
-// ===============================================
-// Dictionary Operations
-// ===============================================
-
-#define MLP_DICT_INITIAL_CAPACITY 16
-
-static unsigned long mlp_hash(const char* str) {
+unsigned long hash_fonksiyonu(const char *str) {
     unsigned long hash = 5381;
     int c;
     while ((c = *str++)) {
@@ -170,210 +51,490 @@ static unsigned long mlp_hash(const char* str) {
     return hash;
 }
 
-mlp_dict_t* mlp_dict_new(void) {
-    mlp_dict_t* dict = mlp_malloc(sizeof(mlp_dict_t));
-    dict->capacity = MLP_DICT_INITIAL_CAPACITY;
-    dict->size = 0;
-    dict->buckets = mlp_malloc(sizeof(mlp_dict_entry_t*) * dict->capacity);
-    for (size_t i = 0; i < dict->capacity; i++) {
-        dict->buckets[i] = NULL;
+void sozluk_yok_et(void) {
+    if (sozluk_tablosu == NULL) return;
+    for (int i = 0; i < sozluk_boyutu; i++) {
+        if (sozluk_tablosu[i].kullanilmis && sozluk_tablosu[i].anahtar != NULL) {
+            free(sozluk_tablosu[i].anahtar);
+        }
     }
-    return dict;
+    free(sozluk_tablosu);
+    sozluk_tablosu = NULL;
+    sozluk_boyutu = 0;
 }
 
-void mlp_dict_set(mlp_dict_t* dict, const char* key, void* value) {
-    unsigned long hash_value = mlp_hash(key);
-    size_t index = hash_value % dict->capacity;
+void sozluk_olustur(int boyut) {
+    if (sozluk_tablosu != NULL) {
+        sozluk_yok_et();
+    }
+    sozluk_boyutu = boyut;
+    sozluk_tablosu = (SozlukGirdisi*)calloc(sozluk_boyutu, sizeof(SozlukGirdisi));
+    if (sozluk_tablosu == NULL) {
+        fprintf(stderr, "Hata: Sözlük için hafıza ayrılamadı.\n");
+        exit(1);
+    }
+}
 
-    mlp_dict_entry_t* entry = dict->buckets[index];
-    while (entry) {
-        if (strcmp(entry->key, key) == 0) {
-            entry->value = value;
+void sozluk_ekle(const char* anahtar, int64_t deger) {
+    if (sozluk_tablosu == NULL) {
+        fprintf(stderr, "Hata: Sözlük başlatılmamış.\n");
+        return;
+    }
+    unsigned long hash = hash_fonksiyonu(anahtar);
+    int indeks = hash % sozluk_boyutu;
+    int baslangic_indeksi = indeks;
+    while (sozluk_tablosu[indeks].kullanilmis) {
+        if (strcmp(sozluk_tablosu[indeks].anahtar, anahtar) == 0) {
+            sozluk_tablosu[indeks].deger = deger;
             return;
         }
-        entry = entry->next;
-    }
-
-    // Create new entry
-    mlp_dict_entry_t* new_entry = mlp_malloc(sizeof(mlp_dict_entry_t));
-    new_entry->key = strdup(key);
-    new_entry->value = value;
-    new_entry->next = dict->buckets[index];
-    dict->buckets[index] = new_entry;
-    dict->size++;
-}
-
-void* mlp_dict_get(mlp_dict_t* dict, const char* key) {
-    unsigned long hash_value = mlp_hash(key);
-    size_t index = hash_value % dict->capacity;
-
-    mlp_dict_entry_t* entry = dict->buckets[index];
-    while (entry) {
-        if (strcmp(entry->key, key) == 0) {
-            return entry->value;
+        indeks = (indeks + 1) % sozluk_boyutu;
+        if (indeks == baslangic_indeksi) {
+            fprintf(stderr, "Hata: Sözlük dolu!\n");
+            return;
         }
-        entry = entry->next;
     }
-    return NULL;
+    sozluk_tablosu[indeks].anahtar = strdup(anahtar);
+    sozluk_tablosu[indeks].deger = deger;
+    sozluk_tablosu[indeks].kullanilmis = 1;
 }
 
-bool mlp_dict_has(mlp_dict_t* dict, const char* key) {
-    return mlp_dict_get(dict, key) != NULL;
-}
-
-void mlp_dict_free(mlp_dict_t* dict) {
-    if (dict) {
-        for (size_t i = 0; i < dict->capacity; i++) {
-            mlp_dict_entry_t* entry = dict->buckets[i];
-            while (entry) {
-                mlp_dict_entry_t* next = entry->next;
-                free(entry->key);
-                mlp_free(entry);
-                entry = next;
-            }
+int64_t sozluk_getir(const char* anahtar) {
+    if (sozluk_tablosu == NULL) {
+        fprintf(stderr, "Hata: Sözlük başlatılmamış.\n");
+        return -1;
+    }
+    unsigned long hash = hash_fonksiyonu(anahtar);
+    int indeks = hash % sozluk_boyutu;
+    int baslangic_indeksi = indeks;
+    while (sozluk_tablosu[indeks].kullanilmis) {
+        if (strcmp(sozluk_tablosu[indeks].anahtar, anahtar) == 0) {
+            return sozluk_tablosu[indeks].deger;
         }
-        mlp_free(dict->buckets);
-        mlp_free(dict);
+        indeks = (indeks + 1) % sozluk_boyutu;
+        if (indeks == baslangic_indeksi) {
+            break;
+        }
     }
+    fprintf(stderr, "Hata: Anahtar bulunamadı: %s\n", anahtar);
+    return -1;
 }
 
-// ===============================================
-// I/O Operations
-// ===============================================
+char* string_birlestir(const char* str1, const char* str2) {
+    
+    // ⚠️ KORUMA: Gelen string'lerden herhangi biri NULL ise
+    // (Bellek hatası/Segfault riskini engellemek için)
+    if (str1 == NULL || str2 == NULL) {
+        // Hata ayıklama için terminale yazdıralım
+        fprintf(stderr, "Hata: Birleştirme için NULL string argümanı alındı.\n");
+        return NULL; // Bu, Assembly'ye de NULL dönecektir.
+    }
+    
+    // 1. Yeni string'in toplam uzunluğunu hesapla (+1, null terminator için)
+    size_t uzunluk = strlen(str1) + strlen(str2) + 1;
 
-void mlp_print(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    vprintf(format, args);
-    va_end(args);
-    printf("\n");
+    // 2. Yeni hafıza bloğu ayır (Dinamik hafıza yönetimi)
+    char* yeni_str = (char*)malloc(uzunluk);
+    if (yeni_str == NULL) {
+        fprintf(stderr, "Hata: Birleştirme için hafıza ayrılamadı.\n");
+        return NULL; 
+    }
+
+    // 3. İlk string'i yeni bloğa kopyala
+    strcpy(yeni_str, str1);
+
+    // 4. İkinci string'i ilkinin sonuna ekle (birleştir)
+    strcat(yeni_str, str2);
+
+    // 5. Birleştirilmiş yeni string'in adresini döndür
+    return yeni_str;
 }
 
-void mlp_yazdir(const char* str) {
-    printf("%s\n", str);
+// NOT: Bu fonksiyonun döndürdüğü string'in hafızasını 
+// SIL komutu veya SOZLUK_YOK_ET gibi fonksiyonlarla serbest bırakmayı unutmamalıyız.
+
+int string_karsilastir(const char* str1, const char* str2) {
+    // strcmp her iki string eşitse 0 döndürür.
+    // Assembly'de bu sonucu doğrudan kullanacağız.
+    return strcmp(str1, str2);
 }
 
-char* mlp_file_read(const char* path) {
-    FILE* file = fopen(path, "r");
-    if (!file) {
-        fprintf(stderr, "MLP Runtime Error: Cannot open file '%s'\n", path);
+/**
+ * STRING_ESIT_MI - İki string'in eşit olup olmadığını kontrol eder
+ * @param str1: İlk string
+ * @param str2: İkinci string
+ * @return: Eşitse 1, değilse 0 (Boolean)
+ */
+int64_t string_esit_mi(const char* str1, const char* str2) {
+    if (str1 == NULL || str2 == NULL) {
+        return 0;  // NULL stringler eşit değildir
+    }
+    return strcmp(str1, str2) == 0 ? 1 : 0;
+}
+
+/**
+ * STRING_UZUNLUK - String'in uzunluğunu döndürür
+ * @param str: String
+ * @return: String uzunluğu (karakter sayısı)
+ */
+int64_t string_uzunluk(const char* str) {
+    if (str == NULL) {
+        fprintf(stderr, "HATA [STRING_UZUNLUK]: NULL string\n");
+        return 0;
+    }
+    return (int64_t)strlen(str);
+}
+
+// =============================================================================
+// FILE I/O FONKSİYONLARI
+// =============================================================================
+
+/**
+ * DOSYA_AC - Dosya açar ve dosya tanıtıcısını (FILE*) döndürür
+ * @param yol: Dosya yolu (string) - relative veya absolute
+ * @param mod: Açma modu ("r", "w", "a", vb.)
+ * @return: FILE* pointer (int64_t olarak cast edilmiş)
+ *
+ * NOT: Eğer yol relative ise (/ ile başlamıyorsa), programın bulunduğu
+ * dizin ile birleştirilerek absolute path oluşturulur. Bu sayede
+ * program farklı dizinlerden çalıştırılsa bile dosyaları bulabilir.
+ */
+int64_t dosya_ac(const char* yol, const char* mod) {
+    if (yol == NULL || mod == NULL) {
+        fprintf(stderr, "HATA [DOSYA_AC]: NULL argüman alındı\n");
+        return 0; // NULL pointer
+    }
+
+    char* kullanilacak_yol = NULL;
+    int path_allocated = 0; // Flag to track if we allocated memory
+
+    // Path absolute mi kontrol et (/ ile başlıyorsa absolute)
+    if (yol[0] == '/') {
+        // Absolute path - olduğu gibi kullan
+        kullanilacak_yol = (char*)yol;
+    } else {
+        // Relative path - executable'ın dizini ile birleştir
+        char* exe_dir = runtime_dizin_al();
+        if (exe_dir == NULL) {
+            fprintf(stderr, "HATA [DOSYA_AC]: Executable dizini alınamadı\n");
+            return 0;
+        }
+
+        // Birleştir: exe_dir + "/" + yol
+        size_t uzunluk = strlen(exe_dir) + 1 + strlen(yol) + 1;
+        kullanilacak_yol = (char*)malloc(uzunluk);
+        if (kullanilacak_yol == NULL) {
+            free(exe_dir);
+            fprintf(stderr, "HATA [DOSYA_AC]: Hafıza ayırma hatası\n");
+            return 0;
+        }
+
+        snprintf(kullanilacak_yol, uzunluk, "%s/%s", exe_dir, yol);
+        free(exe_dir);
+        path_allocated = 1;
+    }
+
+    FILE* dosya = fopen(kullanilacak_yol, mod);
+
+    if (dosya == NULL) {
+        fprintf(stderr, "HATA [DOSYA_AC]: Dosya açılamadı: %s\n", kullanilacak_yol);
+        if (path_allocated) {
+            free(kullanilacak_yol);
+        }
+        return 0;
+    }
+
+    // Eğer yeni path oluşturduysak, onu serbest bırak
+    if (path_allocated) {
+        free(kullanilacak_yol);
+    }
+
+    // FILE* pointer'ı int64_t olarak döndür
+    return (int64_t)dosya;
+}
+
+/**
+ * DOSYA_OKU - Dosyadan tüm içeriği okur ve string olarak döndürür
+ * @param dosya_ptr: FILE* pointer (int64_t olarak)
+ * @return: Dosya içeriği (dynamically allocated string)
+ */
+char* dosya_oku(int64_t dosya_ptr) {
+    FILE* dosya = (FILE*)dosya_ptr;
+
+    if (dosya == NULL) {
+        fprintf(stderr, "HATA [DOSYA_OKU]: Geçersiz dosya pointer\n");
         return NULL;
     }
 
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    // Dosya boyutunu öğren
+    fseek(dosya, 0, SEEK_END);
+    long dosya_boyutu = ftell(dosya);
+    fseek(dosya, 0, SEEK_SET);
 
-    char* content = mlp_malloc(size + 1);
-    fread(content, 1, size, file);
-    content[size] = '\0';
-
-    fclose(file);
-    return content;
-}
-
-bool mlp_file_write(const char* path, const char* content) {
-    FILE* file = fopen(path, "w");
-    if (!file) {
-        fprintf(stderr, "MLP Runtime Error: Cannot write to file '%s'\n", path);
-        return false;
+    if (dosya_boyutu < 0) {
+        fprintf(stderr, "HATA [DOSYA_OKU]: Dosya boyutu okunamadı\n");
+        return NULL;
     }
 
-    fputs(content, file);
-    fclose(file);
-    return true;
-}
-
-// ===============================================
-// Type Conversions
-// ===============================================
-
-char* mlp_int_to_string(long value) {
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%ld", value);
-    return strdup(buffer);
-}
-
-char* mlp_float_to_string(double value) {
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%g", value);
-    return strdup(buffer);
-}
-
-long mlp_string_to_int(const char* str) {
-    return atol(str);
-}
-
-double mlp_string_to_float(const char* str) {
-    return atof(str);
-}
-
-// ===============================================
-// Utility Functions
-// ===============================================
-
-size_t mlp_string_length(const char* str) {
-    return strlen(str);
-}
-
-char mlp_char_at(const char* str, size_t index) {
-    if (index >= strlen(str)) {
-        fprintf(stderr, "MLP Runtime Error: String index out of bounds\n");
-        exit(1);
-    }
-    return str[index];
-}
-
-char* mlp_string_replace(const char* str, const char* old, const char* new) {
-    char* result;
-    int i, cnt = 0;
-    int newlen = strlen(new);
-    int oldlen = strlen(old);
-
-    // Count occurrences
-    for (i = 0; str[i] != '\0'; i++) {
-        if (strstr(&str[i], old) == &str[i]) {
-            cnt++;
-            i += oldlen - 1;
-        }
+    // Bellek ayır
+    char* icerik = (char*)malloc(dosya_boyutu + 1);
+    if (icerik == NULL) {
+        fprintf(stderr, "HATA [DOSYA_OKU]: Hafıza ayırma hatası\n");
+        return NULL;
     }
 
-    result = mlp_malloc(i + cnt * (newlen - oldlen) + 1);
+    // Dosyayı oku
+    size_t okunan = fread(icerik, 1, dosya_boyutu, dosya);
+    icerik[okunan] = '\0'; // Null terminator
 
-    i = 0;
-    while (*str) {
-        if (strstr(str, old) == str) {
-            strcpy(&result[i], new);
-            i += newlen;
-            str += oldlen;
-        } else {
-            result[i++] = *str++;
-        }
+    return icerik;
+}
+
+/**
+ * DOSYA_YAZ - Dosyaya string yazar
+ * @param dosya_ptr: FILE* pointer (int64_t olarak)
+ * @param veri: Yazılacak string
+ * @return: Yazılan byte sayısı
+ */
+int64_t dosya_yaz(int64_t dosya_ptr, const char* veri) {
+    FILE* dosya = (FILE*)dosya_ptr;
+
+    if (dosya == NULL) {
+        fprintf(stderr, "HATA [DOSYA_YAZ]: Geçersiz dosya pointer\n");
+        return -1;
     }
 
-    result[i] = '\0';
+    if (veri == NULL) {
+        fprintf(stderr, "HATA [DOSYA_YAZ]: NULL veri\n");
+        return -1;
+    }
+
+    size_t yazilan = fwrite(veri, 1, strlen(veri), dosya);
+    return (int64_t)yazilan;
+}
+
+/**
+ * DOSYA_KAPAT - Dosyayı kapatır
+ * @param dosya_ptr: FILE* pointer (int64_t olarak)
+ * @return: 0 başarılı, -1 hata
+ */
+int64_t dosya_kapat(int64_t dosya_ptr) {
+    FILE* dosya = (FILE*)dosya_ptr;
+
+    if (dosya == NULL) {
+        fprintf(stderr, "HATA [DOSYA_KAPAT]: Geçersiz dosya pointer (NULL)\n");
+        return -1;
+    }
+
+    int sonuc = fclose(dosya);
+    if (sonuc != 0) {
+        fprintf(stderr, "HATA [DOSYA_KAPAT]: Dosya kapatılamadı (errno=%d)\n", errno);
+        return -1;
+    }
+
+    return 0;
+}
+
+// =============================================================================
+// YOL (PATH) YÖNETİMİ
+// =============================================================================
+
+/**
+ * DIZIN_AL - Çalışan programın bulunduğu dizini döndürür.
+ * (Self-hosting için dosya yolu sorununu çözer)
+ * * @return: Programın dizin yolu (char*). Bu hafıza 'free' edilmeli.
+ */
+char* tyd_fix_cwd() {
+    // 1. Programın tam yolunu al (zaten var olan fonksiyon)
+    char* exe_path = get_executable_path();
+    if (exe_path == NULL) {
+        fprintf(stderr, "HATA [DIZIN_AL]: Program yolu alınamadı.\n");
+        return NULL;
+    }
+
+    // 2. 'dirname' girdisini değiştirebilir, bu yüzden bir kopya üzerinde çalış
+    // (Aksi takdirde 'exe_path' belleği bozulabilir)
+    char* path_copy = strdup(exe_path);
+    if (path_copy == NULL) {
+        free(exe_path);
+        fprintf(stderr, "HATA [DIZIN_AL]: Hafıza kopyalama hatası.\n");
+        return NULL;
+    }
+
+    // 3. Dizin adını al (örn: /home/pardus/proje/c_compiler)
+    char* dir = dirname(path_copy);
+
+    // 4. 'dir' şu anda path_copy'nin içini işaret ediyor.
+    // Bellek sızıntısını önlemek için 'dir'in de bir kopyasını oluşturup 
+    // onu döndürmeliyiz.
+    char* result = strdup(dir);
+
+    // 5. Ara bellekleri temizle
+    free(exe_path);   // Orijinal path'i serbest bırak
+    free(path_copy);  // Kopyayı serbest bırak
+
+    // 6. Yeni, bağımsız dizin kopyasını döndür
     return result;
 }
 
-// ===============================================
-// Error Handling
-// ===============================================
-
-void mlp_error(const char* message) {
-    fprintf(stderr, "MLP Runtime Error: %s\n", message);
-    exit(1);
-}
-
-void mlp_assert(bool condition, const char* message) {
-    if (!condition) {
-        mlp_error(message);
+char* runtime_dizin_al() {
+    // 1. Programın tam yolunu al (zaten var olan fonksiyon)
+    char* exe_path = get_executable_path();
+    if (exe_path == NULL) {
+        fprintf(stderr, "HATA [DIZIN_AL]: Program yolu alınamadı.\n");
+        return NULL;
     }
+
+    // 2. 'dirname' girdisini değiştirebilir, bu yüzden bir kopya üzerinde çalış
+    // (Aksi takdirde 'exe_path' belleği bozulabilir)
+    char* path_copy = strdup(exe_path);
+    if (path_copy == NULL) {
+        free(exe_path);
+        fprintf(stderr, "HATA [DIZIN_AL]: Hafıza kopyalama hatası.\n");
+        return NULL;
+    }
+
+    // 3. Dizin adını al (örn: /home/pardus/proje/c_compiler)
+    char* dir = dirname(path_copy);
+
+    // 4. 'dir' şu anda path_copy'nin içini işaret ediyor.
+    // Bellek sızıntısını önlemek için 'dir'in de bir kopyasını oluşturup
+    // onu döndürmeliyiz.
+    char* result = strdup(dir);
+
+    // 5. Ara bellekleri temizle
+    free(exe_path);   // Orijinal path'i serbest bırak
+    free(path_copy);  // Kopyayı serbest bırak
+
+    // 6. Yeni, bağımsız dizin kopyasını döndür
+    return result;
 }
 
-// ===============================================
-// Main Entry Point Helper
-// ===============================================
+// =============================================================================
+// STRING İŞLEMLERİ (BOOTSTRAP FONKSİYONLARI)
+// =============================================================================
+// NOT: Bu fonksiyonlar sadece TYD compiler'ını TYD'de yazmak için gerekli.
+// Self-hosting tamamlandıktan sonra bu işlevler TYD'de yeniden yazılacak.
 
-int mlp_run_main(int (*user_main)(int, char**), int argc, char** argv) {
-    return user_main(argc, argv);
+/**
+ * STRING_KARAKTER_AL - String'in belirtilen indeksindeki karakteri döndürür
+ * @param str: Kaynak string
+ * @param indeks: Karakter indeksi (0-tabanlı)
+ * @return: Tek karakterlik string (dynamically allocated)
+ *
+ * Örnek: STRING_KARAKTER_AL("Merhaba", 0) -> "M"
+ */
+char* string_karakter_al(const char* str, int64_t indeks) {
+    if (str == NULL) {
+        fprintf(stderr, "HATA [STRING_KARAKTER_AL]: NULL string\n");
+        return NULL;
+    }
+
+    int64_t uzunluk = strlen(str);
+    if (indeks < 0 || indeks >= uzunluk) {
+        fprintf(stderr, "HATA [STRING_KARAKTER_AL]: İndeks sınır dışı (indeks=%ld, uzunluk=%ld)\n",
+                indeks, uzunluk);
+        return NULL;
+    }
+
+    // Tek karakterlik string oluştur
+    char* sonuc = (char*)malloc(2); // 1 karakter + null terminator
+    if (sonuc == NULL) {
+        fprintf(stderr, "HATA [STRING_KARAKTER_AL]: Hafıza ayırma hatası\n");
+        return NULL;
+    }
+
+    sonuc[0] = str[indeks];
+    sonuc[1] = '\0';
+
+    return sonuc;
 }
+
+/**
+ * STRING_ALT - String'in bir kısmını (substring) döndürür
+ * @param str: Kaynak string
+ * @param baslangic: Başlangıç indeksi (0-tabanlı, dahil)
+ * @param uzunluk: Alınacak karakter sayısı
+ * @return: Substring (dynamically allocated)
+ *
+ * Örnek: STRING_ALT("Merhaba", 3, 2) -> "ha"
+ */
+char* string_alt(const char* str, int64_t baslangic, int64_t uzunluk) {
+    if (str == NULL) {
+        fprintf(stderr, "HATA [STRING_ALT]: NULL string\n");
+        return NULL;
+    }
+
+    int64_t str_uzunluk = strlen(str);
+
+    if (baslangic < 0 || baslangic >= str_uzunluk) {
+        fprintf(stderr, "HATA [STRING_ALT]: Başlangıç indeksi sınır dışı\n");
+        return NULL;
+    }
+
+    if (uzunluk < 0) {
+        fprintf(stderr, "HATA [STRING_ALT]: Negatif uzunluk\n");
+        return NULL;
+    }
+
+    // Gerçek alınabilecek uzunluğu hesapla (string sonunu aşmamalı)
+    int64_t gercek_uzunluk = uzunluk;
+    if (baslangic + uzunluk > str_uzunluk) {
+        gercek_uzunluk = str_uzunluk - baslangic;
+    }
+
+    // Yeni string için bellek ayır
+    char* sonuc = (char*)malloc(gercek_uzunluk + 1);
+    if (sonuc == NULL) {
+        fprintf(stderr, "HATA [STRING_ALT]: Hafıza ayırma hatası\n");
+        return NULL;
+    }
+
+    // Karakterleri kopyala
+    strncpy(sonuc, str + baslangic, gercek_uzunluk);
+    sonuc[gercek_uzunluk] = '\0';
+
+    return sonuc;
+}
+
+/**
+ * KARAKTER_KODU - Bir karakterin ASCII kodunu döndürür
+ * @param karakter_str: Tek karakterlik string
+ * @return: ASCII kodu (int64_t)
+ *
+ * Örnek: KARAKTER_KODU("A") -> 65
+ */
+int64_t karakter_kodu(const char* karakter_str) {
+    if (karakter_str == NULL || karakter_str[0] == '\0') {
+        fprintf(stderr, "HATA [KARAKTER_KODU]: NULL veya boş string\n");
+        return -1;
+    }
+
+    return (int64_t)karakter_str[0];
+}
+
+/**
+ * KODU_KARAKTERE - ASCII kodunu karaktere dönüştürür
+ * @param kod: ASCII kodu
+ * @return: Tek karakterlik string (dynamically allocated)
+ *
+ * Örnek: KODU_KARAKTERE(65) -> "A"
+ */
+char* kodu_karaktere(int64_t kod) {
+    if (kod < 0 || kod > 127) {
+        fprintf(stderr, "HATA [KODU_KARAKTERE]: Geçersiz ASCII kodu: %ld\n", kod);
+        return NULL;
+    }
+
+    char* sonuc = (char*)malloc(2);
+    if (sonuc == NULL) {
+        fprintf(stderr, "HATA [KODU_KARAKTERE]: Hafıza ayırma hatası\n");
+        return NULL;
+    }
+
+    sonuc[0] = (char)kod;
+    sonuc[1] = '\0';
+
+    return sonuc;
+}
+
