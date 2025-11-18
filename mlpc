@@ -18,6 +18,7 @@ usage() {
     echo "Options:"
     echo "  -o <output>     Output executable name (default: input name)"
     echo "  --lang=<id>     Force language (e.g., tr-TR, ru-RU)"
+    echo "  --gui=<backend> GUI backend: mock (default) or sdl2"
     echo "  --keep-asm      Keep assembly file"
     echo "  --keep-prep     Keep preprocessed file"
     echo "  --no-prep       Skip preprocessor (English-only source)"
@@ -26,6 +27,7 @@ usage() {
     echo "Examples:"
     echo "  mlpc program.mlp"
     echo "  mlpc program.mlp -o myapp"
+    echo "  mlpc gui_app.mlp --gui=sdl2"
     echo "  mlpc turkish.mlp --lang=tr-TR"
     echo "  mlpc english.mlp --no-prep"
     exit 1
@@ -35,6 +37,7 @@ usage() {
 INPUT_FILE=""
 OUTPUT_NAME=""
 LANGUAGE=""
+GUI_BACKEND="mock"
 KEEP_ASM=false
 KEEP_PREP=false
 NO_PREP=false
@@ -48,6 +51,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --lang=*)
             LANGUAGE="${1#*=}"
+            shift
+            ;;
+        --gui=*)
+            GUI_BACKEND="${1#*=}"
             shift
             ;;
         --keep-asm)
@@ -148,7 +155,34 @@ echo ""
 
 # STAGE 4: Link
 echo -e "${YELLOW}[4/4] Linking...${NC}"
-gcc "$OBJ_FILE" "$SCRIPT_DIR/runtime/runtime.o" -o "$OUTPUT_NAME" -no-pie
+
+# Choose GUI backend
+if [[ "$GUI_BACKEND" == "sdl2" ]]; then
+    # Check if SDL2 runtime is compiled
+    if [[ ! -f "$SCRIPT_DIR/runtime/gui_sdl.o" ]]; then
+        echo -e "${YELLOW}      Compiling SDL2 runtime...${NC}"
+        cd "$SCRIPT_DIR/runtime"
+        gcc -c gui_sdl.c -o gui_sdl.o $(pkg-config --cflags sdl2) 2>&1
+        cd - > /dev/null
+    fi
+
+    # Link with SDL2
+    gcc "$OBJ_FILE" "$SCRIPT_DIR/runtime/runtime.o" "$SCRIPT_DIR/runtime/gui_sdl.o" \
+        -o "$OUTPUT_NAME" $(pkg-config --libs sdl2) -no-pie
+
+    if [[ "$VERBOSE" == true ]]; then
+        echo "      Using SDL2 GUI backend"
+    fi
+else
+    # Link with mock runtime (default)
+    gcc "$OBJ_FILE" "$SCRIPT_DIR/runtime/runtime.o" "$SCRIPT_DIR/runtime/gui_mock.o" \
+        -o "$OUTPUT_NAME" -no-pie
+
+    if [[ "$VERBOSE" == true ]]; then
+        echo "      Using mock GUI backend (console)"
+    fi
+fi
+
 echo -e "${GREEN}      ✓ Executable created${NC}"
 echo ""
 
