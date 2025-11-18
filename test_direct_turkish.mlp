@@ -1,0 +1,6 @@
+-- Test: Direkt Türkçe .mlp -> asm -> exe çalışıyor mu?
+-- Preprocessor KULLANMADAN
+
+SAYISAL x = 42;
+YAZDIR "Merhaba Dünya"
+YAZDIR x
