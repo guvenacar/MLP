@@ -92,7 +92,6 @@ fi
 
 # Determine output name
 BASENAME=$(basename "$INPUT_FILE" .mlp)
-BASENAME=$(basename "$BASENAME" .tyd)
 if [[ -z "$OUTPUT_NAME" ]]; then
     OUTPUT_NAME="$BASENAME"
 fi

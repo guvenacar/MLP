@@ -17,7 +17,7 @@ YAZDIR ""
 -- =============================================
 
 -- Input/Output files (hardcoded for now)
-METIN input_file = "test_hello.tyd";
+METIN input_file = "test_hello.mlp";
 METIN output_file = "test_hello.asm";
 
 YAZDIR "[CONFIG] Input:  "

@@ -1,6 +1,6 @@
 YAZDIR "Path Resolution Test"
 
-METIN dosya_yolu = "ornekler/hello.tyd"
+METIN dosya_yolu = "ornekler/hello.mlp"
 METIN mod = "r"
 SAYISAL dosya = DOSYA_AC(dosya_yolu, mod)
 

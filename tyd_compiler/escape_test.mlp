@@ -12,7 +12,7 @@ YAZDIR "Satır 1\nSatır 2\nSatır 3"
 YAZDIR "Kolon1\tKolon2\tKolon3"
 
 -- Backslash testi
-YAZDIR "C:\\dosyalar\\test.tyd"
+YAZDIR "C:\\dosyalar\\test.mlp"
 
 -- Kombinasyon testi
 YAZDIR "\"Merhaba\"\n\tTYD\n\t\t\"Dünya!\""

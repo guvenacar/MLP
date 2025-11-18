@@ -6,12 +6,12 @@ set -e
 TYD_KAYNAK_DOSYASI=$1
 
 if [ -z "$TYD_KAYNAK_DOSYASI" ]; then
-    echo "Kullanım: ./derle.sh <dosya_adi.tyd>"
+    echo "Kullanım: ./derle.sh <dosya_adi.mlp>"
     exit 1
 fi
 
 # Dosya adından uzantıyı kaldırarak temel adı al
-TEMEL_AD=$(basename -s .tyd "$TYD_KAYNAK_DOSYASI")
+TEMEL_AD=$(basename -s .mlp "$TYD_KAYNAK_DOSYASI")
 
 ASM_DOSYASI="$TEMEL_AD.asm"
 NESNE_DOSYASI="$TEMEL_AD.o"

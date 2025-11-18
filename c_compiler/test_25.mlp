@@ -2,7 +2,7 @@ YAZDIR "=== TYD Self-Hosting Demo v1 ===";
 
 YAZDIR "Kaynak kod okunuyor...";
 
-METIN kaynak_dosya = "ornekler/hello.tyd";
+METIN kaynak_dosya = "ornekler/hello.mlp";
 METIN mod = "r";
 SAYISAL dosya = DOSYA_AC(kaynak_dosya, mod);
 
@@ -22,9 +22,4 @@ METIN asm4 = "global main\n";
 METIN cikti_dosya = "build/generated.asm";
 METIN mod_yaz = "w";
 SAYISAL cikti = DOSYA_AC(cikti_dosya, mod_yaz);
-
-SAYISAL n1 = DOSYA_YAZ(cikti, asm1);
-SAYISAL n2 = DOSYA_YAZ(cikti, asm2);
-SAYISAL n3 = DOSYA_YAZ(cikti, asm3);
-SAYISAL n4 = DOSYA_YAZ(cikti, asm4);
 

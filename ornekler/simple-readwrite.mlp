@@ -1,4 +1,4 @@
-METIN dosya1 = "ornekler/hello.tyd";
+METIN dosya1 = "ornekler/hello.mlp";
 METIN mod_r = "r";
 SAYISAL f1 = DOSYA_AC(dosya1, mod_r);
 METIN icerik = DOSYA_OKU(f1);

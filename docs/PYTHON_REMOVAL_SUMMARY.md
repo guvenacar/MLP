@@ -49,13 +49,13 @@ mlp_preprocessor <input.mlp> [--lang=LANG] <output.mlp>
 **Test Sonuçları:**
 ```bash
 # Türkçe kaynak kod
-$ cat test.tyd
+$ cat test.mlp
 sayisal x = 42;
 yazdir("Değer:")
 yazdir(x)
 
 # Preprocessing
-$ ./mlp_preprocessor test.tyd --lang=tr-TR test_en.mlp
+$ ./mlp_preprocessor test.mlp --lang=tr-TR test_en.mlp
 
 # İngilizce çıktı
 $ cat test_en.mlp
@@ -76,7 +76,7 @@ python3 "$SCRIPT_DIR/dil_cevirici.py" "$INPUT_FILE" $LANG_ARG "$PREP_FILE"
 
 **Test Sonuçları:**
 ```bash
-$ ./mlpc test_turkish.tyd --lang=tr-TR
+$ ./mlpc test_turkish.mlp --lang=tr-TR
 === MLP Compiler Pipeline ===
 [1/4] Preprocessing...      ✓ Preprocessed
 [2/4] Compiling to assembly... ✓ Assembly generated

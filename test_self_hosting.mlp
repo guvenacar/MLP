@@ -14,7 +14,7 @@ YAZDIR "AŞAMA 1: Lexer - Tokenization"
 YAZDIR "Kaynak kod: "
 YAZDIR test_source
 
--- Lexer'ı başlat (tyd_lexer.tyd'den)
+-- Lexer'ı başlat (tyd_lexer.mlp'den)
 -- lexer_init(test_source)
 
 -- Token sayısı
