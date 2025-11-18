@@ -1,0 +1,270 @@
+-- ===============================================
+-- MLP Language Preprocessor (dil_cevirici.mlp)
+-- ===============================================
+-- Translates multi-language source code to English keywords
+-- Pipeline: Multi-lang Source → English → Compiler
+--
+-- Version 1.0: Turkish → English (hardcoded)
+-- Future: JSON-based multi-language support
+-- ===============================================
+
+YAZDIR "=== MLP Language Preprocessor v1.0 ==="
+YAZDIR ""
+
+-- =============================================
+-- CONFIGURATION
+-- =============================================
+
+METIN input_file = "test_turkish.mlp";
+METIN output_file = "test_turkish.preprocessed.mlp";
+
+YAZDIR "[CONFIG] Input:  "
+YAZDIR input_file
+YAZDIR "[CONFIG] Output: "
+YAZDIR output_file
+YAZDIR ""
+
+-- =============================================
+-- STAGE 1: READ SOURCE FILE
+-- =============================================
+
+YAZDIR "[1/3] Reading source file..."
+
+METIN read_mode = "r";
+SAYISAL file_handle = DOSYA_AC(input_file, read_mode);
+
+EĞER file_handle == 0 İSE
+    YAZDIR "ERROR: Cannot open input file!"
+    YAZDIR "Aborting."
+DEĞİLSE
+    METIN source_code = DOSYA_OKU(file_handle);
+    SAYISAL close_result = DOSYA_KAPAT(file_handle);
+
+    SAYISAL source_len = STRING_UZUNLUK(source_code);
+    YAZDIR "      Source loaded: "
+    YAZDIR source_len
+    YAZDIR " bytes"
+    YAZDIR ""
+
+    -- =============================================
+    -- STAGE 2: LANGUAGE DETECTION
+    -- =============================================
+
+    YAZDIR "[2/3] Detecting language..."
+
+    -- Look for "-- lang: XX-XX" in first 200 chars
+    METIN detected_lang = "tr-TR";  -- Default to Turkish for now
+
+    YAZDIR "      Language: "
+    YAZDIR detected_lang
+    YAZDIR ""
+
+    -- =============================================
+    -- STAGE 3: KEYWORD TRANSLATION
+    -- =============================================
+
+    YAZDIR "[3/3] Translating keywords..."
+    YAZDIR "      Turkish → English"
+    YAZDIR ""
+
+    -- Simple state machine
+    -- States: 0=CODE, 1=STRING, 2=COMMENT
+    SAYISAL state = 0;
+    METIN translated = "";
+    METIN current_word = "";
+    SAYISAL i = 0;
+
+    DÖNGÜ
+        EĞER i >= source_len İSE
+            DÖNGÜ_BITIR
+        SON
+
+        METIN c = STRING_KARAKTER_AL(source_code, i);
+        SAYISAL kod = KARAKTER_KODU(c);
+
+        -- Check for string delimiter (")
+        EĞER kod == 34 İSE  -- 34 = "
+            EĞER state == 0 İSE
+                -- Entering string
+                state = 1
+                translated = STRING_BIRLESTIR(translated, c)
+            DEĞİLSE
+                EĞER state == 1 İSE
+                    -- Exiting string
+                    state = 0
+                    translated = STRING_BIRLESTIR(translated, c)
+                SON
+            SON
+            current_word = ""
+            i = i + 1
+        DEĞİLSE
+            -- Check for comment start (--)
+            EĞER kod == 45 İSE  -- 45 = -
+                EĞER state == 0 İSE
+                    -- Peek next char
+                    SAYISAL next_pos = i + 1;
+                    EĞER next_pos < source_len İSE
+                        METIN next_c = STRING_KARAKTER_AL(source_code, next_pos);
+                        SAYISAL next_kod = KARAKTER_KODU(next_c);
+
+                        EĞER next_kod == 45 İSE
+                            -- Start of comment
+                            state = 2
+                        SON
+                    SON
+                SON
+            SON
+
+            -- Check for newline (exit comment)
+            EĞER kod == 10 İSE  -- 10 = \n
+                EĞER state == 2 İSE
+                    state = 0
+                SON
+            SON
+
+            -- Process character based on state
+            EĞER state == 1 İSE
+                -- In string: keep as-is
+                translated = STRING_BIRLESTIR(translated, c)
+                i = i + 1
+            DEĞİLSE
+                EĞER state == 2 İSE
+                    -- In comment: keep as-is
+                    translated = STRING_BIRLESTIR(translated, c)
+                    i = i + 1
+                DEĞİLSE
+                    -- In code: check for keywords
+                    -- Word boundary: space, newline, semicolon, etc.
+                    SAYISAL is_boundary = 0;
+
+                    EĞER kod == 32 İSE is_boundary = 1 SON   -- space
+                    EĞER kod == 10 İSE is_boundary = 1 SON   -- \n
+                    EĞER kod == 9 İSE is_boundary = 1 SON    -- \t
+                    EĞER kod == 59 İSE is_boundary = 1 SON   -- ;
+                    EĞER kod == 40 İSE is_boundary = 1 SON   -- (
+                    EĞER kod == 41 İSE is_boundary = 1 SON   -- )
+
+                    EĞER is_boundary == 1 İSE
+                        -- Translate word if it's a keyword
+                        METIN translated_word = translate_keyword(current_word);
+                        translated = STRING_BIRLESTIR(translated, translated_word)
+                        translated = STRING_BIRLESTIR(translated, c)
+                        current_word = ""
+                        i = i + 1
+                    DEĞİLSE
+                        -- Build word
+                        current_word = STRING_BIRLESTIR(current_word, c)
+                        i = i + 1
+                    SON
+                SON
+            SON
+        SON
+    SON
+
+    -- Process final word
+    EĞER STRING_UZUNLUK(current_word) > 0 İSE
+        METIN translated_word = translate_keyword(current_word);
+        translated = STRING_BIRLESTIR(translated, translated_word)
+    SON
+
+    YAZDIR "Translation complete"
+    YAZDIR ""
+
+    -- =============================================
+    -- STAGE 4: WRITE OUTPUT
+    -- =============================================
+
+    YAZDIR "[4/4] Writing preprocessed file..."
+
+    METIN write_mode = "w";
+    SAYISAL out_handle = DOSYA_AC(output_file, write_mode);
+
+    EĞER out_handle == 0 İSE
+        YAZDIR "ERROR: Cannot create output file!"
+    DEĞİLSE
+        SAYISAL bytes_written = DOSYA_YAZ(out_handle, translated);
+        SAYISAL close_out = DOSYA_KAPAT(out_handle);
+
+        YAZDIR "      Written: "
+        YAZDIR bytes_written
+        YAZDIR " bytes"
+        YAZDIR ""
+
+        YAZDIR "========================================="
+        YAZDIR "PREPROCESSING SUCCESSFUL!"
+        YAZDIR "========================================="
+        YAZDIR "Output: "
+        YAZDIR output_file
+    SON
+SON
+
+YAZDIR ""
+YAZDIR "Preprocessor finished."
+
+-- =============================================
+-- HELPER FUNCTION: KEYWORD TRANSLATION
+-- =============================================
+
+İŞLEÇ translate_keyword(word) İSE
+    -- Turkish → English keyword translation
+    -- Returns translated word or original if not a keyword
+
+    -- Type keywords
+    EĞER STRING_ESIT_MI(word, "SAYISAL") == 1 İSE DÖNÜŞ "int" SON
+    EĞER STRING_ESIT_MI(word, "sayisal") == 1 İSE DÖNÜŞ "int" SON
+    EĞER STRING_ESIT_MI(word, "METIN") == 1 İSE DÖNÜŞ "string" SON
+    EĞER STRING_ESIT_MI(word, "metin") == 1 İSE DÖNÜŞ "string" SON
+
+    -- Control flow
+    EĞER STRING_ESIT_MI(word, "EĞER") == 1 İSE DÖNÜŞ "if" SON
+    EĞER STRING_ESIT_MI(word, "eğer") == 1 İSE DÖNÜŞ "if" SON
+    EĞER STRING_ESIT_MI(word, "EGER") == 1 İSE DÖNÜŞ "if" SON
+    EĞER STRING_ESIT_MI(word, "eger") == 1 İSE DÖNÜŞ "if" SON
+
+    EĞER STRING_ESIT_MI(word, "İSE") == 1 İSE DÖNÜŞ "then" SON
+    EĞER STRING_ESIT_MI(word, "ise") == 1 İSE DÖNÜŞ "then" SON
+
+    EĞER STRING_ESIT_MI(word, "DEĞİLSE") == 1 İSE DÖNÜŞ "else" SON
+    EĞER STRING_ESIT_MI(word, "değilse") == 1 İSE DÖNÜŞ "else" SON
+    EĞER STRING_ESIT_MI(word, "DEGILSE") == 1 İSE DÖNÜŞ "else" SON
+    EĞER STRING_ESIT_MI(word, "degilse") == 1 İSE DÖNÜŞ "else" SON
+
+    EĞER STRING_ESIT_MI(word, "DÖNGÜ") == 1 İSE DÖNÜŞ "while" SON
+    EĞER STRING_ESIT_MI(word, "döngü") == 1 İSE DÖNÜŞ "while" SON
+    EĞER STRING_ESIT_MI(word, "DONGU") == 1 İSE DÖNÜŞ "while" SON
+    EĞER STRING_ESIT_MI(word, "dongu") == 1 İSE DÖNÜŞ "while" SON
+
+    EĞER STRING_ESIT_MI(word, "DÖNGÜ_BITIR") == 1 İSE DÖNÜŞ "break" SON
+    EĞER STRING_ESIT_MI(word, "döngü_bitir") == 1 İSE DÖNÜŞ "break" SON
+    EĞER STRING_ESIT_MI(word, "DONGU_BITIR") == 1 İSE DÖNÜŞ "break" SON
+
+    EĞER STRING_ESIT_MI(word, "SON") == 1 İSE DÖNÜŞ "end" SON
+    EĞER STRING_ESIT_MI(word, "son") == 1 İSE DÖNÜŞ "end" SON
+
+    -- Functions
+    EĞER STRING_ESIT_MI(word, "İŞLEÇ") == 1 İSE DÖNÜŞ "function" SON
+    EĞER STRING_ESIT_MI(word, "işleç") == 1 İSE DÖNÜŞ "function" SON
+    EĞER STRING_ESIT_MI(word, "ISLEC") == 1 İSE DÖNÜŞ "function" SON
+    EĞER STRING_ESIT_MI(word, "islec") == 1 İSE DÖNÜŞ "function" SON
+
+    EĞER STRING_ESIT_MI(word, "DÖNÜŞ") == 1 İSE DÖNÜŞ "return" SON
+    EĞER STRING_ESIT_MI(word, "dönüş") == 1 İSE DÖNÜŞ "return" SON
+    EĞER STRING_ESIT_MI(word, "DONUS") == 1 İSE DÖNÜŞ "return" SON
+    EĞER STRING_ESIT_MI(word, "donus") == 1 İSE DÖNÜŞ "return" SON
+
+    -- I/O
+    EĞER STRING_ESIT_MI(word, "YAZDIR") == 1 İSE DÖNÜŞ "print" SON
+    EĞER STRING_ESIT_MI(word, "yazdir") == 1 İSE DÖNÜŞ "print" SON
+
+    -- Boolean
+    EĞER STRING_ESIT_MI(word, "DOĞRU") == 1 İSE DÖNÜŞ "true" SON
+    EĞER STRING_ESIT_MI(word, "doğru") == 1 İSE DÖNÜŞ "true" SON
+    EĞER STRING_ESIT_MI(word, "DOGRU") == 1 İSE DÖNÜŞ "true" SON
+
+    EĞER STRING_ESIT_MI(word, "YANLIŞ") == 1 İSE DÖNÜŞ "false" SON
+    EĞER STRING_ESIT_MI(word, "yanlış") == 1 İSE DÖNÜŞ "false" SON
+    EĞER STRING_ESIT_MI(word, "YANLIS") == 1 İSE DÖNÜŞ "false" SON
+
+    -- Not a keyword, return original
+    DÖNÜŞ word
+SON

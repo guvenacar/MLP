@@ -1,0 +1,45 @@
+-- lang: tr-TR
+-- GUI Örnek: Buton Tıklama Sayacı
+
+YAZDIR "=== MLP GUI Demo: Buton Sayacı ==="
+YAZDIR ""
+
+SAYISAL pencere = gui_window_create("Sayaç Uygulaması", 400, 300);
+SAYISAL etiket = gui_label_create(pencere, "Sayı: 0", 50, 50);
+SAYISAL buton = gui_button_create(pencere, "Tıkla!", 50, 100, 150, 40);
+
+SAYISAL sayi = 0;
+gui_window_show(pencere)
+
+YAZDIR ""
+YAZDIR "Olay döngüsü başlatılıyor..."
+YAZDIR ""
+
+-- Olay döngüsü (3 tıklama sonra çıkış simülasyonu)
+DÖNGÜ
+    SAYISAL olay = gui_poll_event();
+
+    EĞER olay == 1 İSE
+        -- GUI_EVENT_QUIT (Kapatma)
+        YAZDIR "Çıkış olayı alındı, kapatılıyor..."
+        DÖNGÜ_BITIR
+    SON
+
+    EĞER olay == 2 İSE
+        -- GUI_EVENT_BUTTON_CLICK (Buton tıklama)
+        SAYISAL tiklanan = gui_get_clicked_button();
+        EĞER tiklanan == buton İSE
+            sayi = sayi + 1
+            YAZDIR "Buton tıklandı! Yeni sayı:"
+            YAZDIR sayi
+
+            -- Etiketi güncelle
+            gui_label_set_text(etiket, "Sayı güncellendi")
+        SON
+    SON
+SON
+
+YAZDIR ""
+YAZDIR "Temizleniyor..."
+gui_window_destroy(pencere)
+YAZDIR "=== GUI Demo Tamamlandı ==="

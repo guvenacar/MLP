@@ -1,0 +1,4 @@
+-- Simple test program for TYD compiler
+
+YAZDIR "Hello World!"
+YAZDIR "Compiled by TYD"
