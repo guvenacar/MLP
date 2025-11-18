@@ -1202,6 +1202,24 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern string_karakter_al");
     asm_append(&data_section, "extern string_alt");
 
+    // GUI functions (gui_mock.c or real GUI backend)
+    asm_append(&data_section, "extern gui_window_create");
+    asm_append(&data_section, "extern gui_window_show");
+    asm_append(&data_section, "extern gui_window_hide");
+    asm_append(&data_section, "extern gui_window_destroy");
+    asm_append(&data_section, "extern gui_button_create");
+    asm_append(&data_section, "extern gui_label_create");
+    asm_append(&data_section, "extern gui_label_set_text");
+    asm_append(&data_section, "extern gui_poll_event");
+    asm_append(&data_section, "extern gui_get_clicked_button");
+    asm_append(&data_section, "extern gui_canvas_create");
+    asm_append(&data_section, "extern gui_canvas_clear");
+    asm_append(&data_section, "extern gui_canvas_set_color");
+    asm_append(&data_section, "extern gui_canvas_draw_rect");
+    asm_append(&data_section, "extern gui_canvas_draw_circle");
+    asm_append(&data_section, "extern gui_canvas_render");
+    asm_append(&data_section, "extern int_to_string");
+
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld
     asm_append(&data_section, "    format_metin db \"%s\", 10, 0");

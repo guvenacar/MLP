@@ -97,3 +97,6 @@ test_hindi
 
 # Benchmark binaries
 bench_*
+
+# GUI demo binaries
+gui_demo*
