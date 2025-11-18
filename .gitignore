@@ -105,3 +105,6 @@ gui_demo*
 test_json
 test_json_parser
 runtime/test_json.c
+
+# MLP Preprocessor
+mlp_preprocessor
