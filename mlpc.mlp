@@ -1,7 +1,0 @@
--- C runtime fonksiyonları (extern)
--- LANGUAGE_MAP yükle
-SAYISAL lang_map = LOAD_LANGUAGES("diller.json");
-
--- Keyword çevir
-METIN translated = TRANSLATE_KEYWORD(lang_map, "eğer");
--- translated = "if"
