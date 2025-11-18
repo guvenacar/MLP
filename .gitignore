@@ -5,6 +5,8 @@ build/
 *.out
 program
 mlp-compiler-*
+compiler_test
+hello
 
 # Compiler outputs
 output.asm
