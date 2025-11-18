@@ -1,5 +1,6 @@
+-- lang: tr-TR
 -- Test: Direkt Türkçe .mlp -> asm -> exe çalışıyor mu?
--- Preprocessor KULLANMADAN
+-- Preprocessor ile İngilizceye çevrilecek
 
 SAYISAL x = 42;
 YAZDIR "Merhaba Dünya"

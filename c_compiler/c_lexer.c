@@ -61,31 +61,29 @@ typedef struct {
     TokenType type;
 } KeywordMap;
 
-// Python'daki ANAHTAR_KELIMELER'e karşılık gelen C dizisi
-// NOT: Tüm Türkçe karakterleri (İ, Ç, Ğ, Ö, Ş, Ü, ı) küçük/büyük harf uyumu ile yazmalısınız.
-// Şimdilik sadece temel yapılar eklenmiştir.
+// English-only keywords for MLP compiler
+// Multi-language support via preprocessor (dil_cevirici.py)
+// All source languages (Turkish, Russian, Chinese, etc.) are translated to English
 KeywordMap keywords[] = {
-    // Tip Tanımlamaları
-    {"SAYISAL", TOKEN_TANIMLA_SAYI},
-    {"METIN",   TOKEN_TANIMLA_METIN},
+    // Type Declarations
+    {"int",    TOKEN_TANIMLA_SAYI},
+    {"string", TOKEN_TANIMLA_METIN},
 
-    // Yapısal Anahtar Kelimeler
-    {"YAZDIR",  TOKEN_YAPI_YAZDIR},
-    {"EĞER",    TOKEN_YAPI_KOSUL_EGER},
-    {"İSE",     TOKEN_YAPI_KOSUL_ISE},
-    {"DEĞİLSE", TOKEN_YAPI_KOSUL_DEGILSE},
-    {"İŞLEÇ",   TOKEN_YAPI_ISLEC}, // Zaten ekli
-    {"DÖNÜŞ",   TOKEN_YAPI_DONUS}, // <-- YENİ
-    {"DÖNGÜ",   TOKEN_YAPI_DONGU},
-    {"DÖNGÜ_BITIR", TOKEN_YAPI_DONGU_BITIR},
-    {"SON",     TOKEN_YAPI_SON},
-    {"YAPI",    TOKEN_YAPI_STRUCT}, // Struct tanımlama
+    // Control Flow Keywords
+    {"print",    TOKEN_YAPI_YAZDIR},
+    {"if",       TOKEN_YAPI_KOSUL_EGER},
+    {"then",     TOKEN_YAPI_KOSUL_ISE},
+    {"else",     TOKEN_YAPI_KOSUL_DEGILSE},
+    {"function", TOKEN_YAPI_ISLEC},
+    {"return",   TOKEN_YAPI_DONUS},
+    {"while",    TOKEN_YAPI_DONGU},
+    {"break",    TOKEN_YAPI_DONGU_BITIR},
+    {"end",      TOKEN_YAPI_SON},
+    {"struct",   TOKEN_YAPI_STRUCT},
 
-    // NOT: DOSYA_AC, DOSYA_OKU, DOSYA_YAZ, DOSYA_KAPAT built-in fonksiyonlar olarak
-    // IDENTIFIER token'ı olarak kalacak (anahtar kelime değil)
+    // Built-in functions (DOSYA_AC, DOSYA_OKU, etc.) remain as identifiers
 
-    // NOT: Dizinin sonunu işaret etmek için tipik C null sonlandırma tekniği kullanılır
-    {NULL, TOKEN_EOF} 
+    {NULL, TOKEN_EOF}
 };
 
 /**
