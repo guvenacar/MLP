@@ -1,0 +1,262 @@
+{
+  "version": "1.0",
+  "description": "MLP Syntax Style Definitions - Support for multiple programming syntax styles",
+  "default_syntax": "mlp",
+
+  "syntax_styles": [
+    {
+      "id": "mlp",
+      "name": "MLP/Ada Style",
+      "description": "Original MLP syntax with then/end keywords",
+      "example": "if x > 0 then\n    print \"Positive\"\nend",
+      "patterns": {
+        "if_statement": {
+          "pattern": "if {condition} then\n{body}\nend",
+          "multi_branch": "if {condition} then\n{body}\nelse\n{else_body}\nend"
+        },
+        "while_loop": {
+          "pattern": "while\n{body}\nend"
+        },
+        "function_def": {
+          "pattern": "function {name}({params}) then\n{body}\nend"
+        },
+        "print_statement": {
+          "pattern": "print {expression}"
+        },
+        "statement_terminator": "",
+        "block_indent": "    "
+      }
+    },
+
+    {
+      "id": "c",
+      "name": "C/C++/Java Style",
+      "description": "C-family brace-based syntax",
+      "example": "if (x > 0) {\n    print(\"Positive\");\n}",
+      "patterns": {
+        "if_statement": {
+          "pattern": "if ({condition}) {\n{body}\n}",
+          "multi_branch": "if ({condition}) {\n{body}\n} else {\n{else_body}\n}"
+        },
+        "while_loop": {
+          "pattern": "while ({condition}) {\n{body}\n}"
+        },
+        "function_def": {
+          "pattern": "function {name}({params}) {\n{body}\n}"
+        },
+        "print_statement": {
+          "pattern": "print({expression})"
+        },
+        "statement_terminator": ";",
+        "block_indent": "    "
+      },
+      "transformations": {
+        "if": {
+          "from": "if\\s*\\((.+?)\\)\\s*\\{",
+          "to": "if \\1 then",
+          "close_from": "\\}",
+          "close_to": "end"
+        },
+        "else": {
+          "from": "\\}\\s*else\\s*\\{",
+          "to": "else"
+        },
+        "while": {
+          "from": "while\\s*\\((.+?)\\)\\s*\\{",
+          "to": "while",
+          "close_from": "\\}",
+          "close_to": "end"
+        },
+        "function": {
+          "from": "function\\s+(\\w+)\\s*\\((.*)\\)\\s*\\{",
+          "to": "function \\1(\\2) then",
+          "close_from": "\\}",
+          "close_to": "end"
+        },
+        "print": {
+          "from": "print\\s*\\((.+?)\\)",
+          "to": "print \\1"
+        },
+        "semicolon": {
+          "from": ";\\s*$",
+          "to": ""
+        }
+      }
+    },
+
+    {
+      "id": "python",
+      "name": "Python Style",
+      "description": "Indentation-based syntax with colons",
+      "example": "if x > 0:\n    print(\"Positive\")",
+      "patterns": {
+        "if_statement": {
+          "pattern": "if {condition}:\n{body}",
+          "multi_branch": "if {condition}:\n{body}\nelse:\n{else_body}"
+        },
+        "while_loop": {
+          "pattern": "while {condition}:\n{body}"
+        },
+        "function_def": {
+          "pattern": "def {name}({params}):\n{body}"
+        },
+        "print_statement": {
+          "pattern": "print({expression})"
+        },
+        "statement_terminator": "",
+        "block_indent": "    "
+      },
+      "transformations": {
+        "if": {
+          "from": "if\\s+(.+?):",
+          "to": "if \\1 then",
+          "detect_end": "dedent"
+        },
+        "else": {
+          "from": "else:",
+          "to": "else",
+          "detect_end": "dedent"
+        },
+        "while": {
+          "from": "while\\s+(.+?):",
+          "to": "while",
+          "detect_end": "dedent"
+        },
+        "function": {
+          "from": "def\\s+(\\w+)\\s*\\((.*)\\):",
+          "to": "function \\1(\\2) then",
+          "detect_end": "dedent"
+        },
+        "print": {
+          "from": "print\\s*\\((.+?)\\)",
+          "to": "print \\1"
+        }
+      }
+    },
+
+    {
+      "id": "javascript",
+      "name": "JavaScript/TypeScript Style",
+      "description": "JavaScript-style syntax",
+      "example": "if (x > 0) {\n    console.log(\"Positive\");\n}",
+      "patterns": {
+        "if_statement": {
+          "pattern": "if ({condition}) {\n{body}\n}",
+          "multi_branch": "if ({condition}) {\n{body}\n} else {\n{else_body}\n}"
+        },
+        "while_loop": {
+          "pattern": "while ({condition}) {\n{body}\n}"
+        },
+        "function_def": {
+          "pattern": "function {name}({params}) {\n{body}\n}"
+        },
+        "print_statement": {
+          "pattern": "console.log({expression})"
+        },
+        "statement_terminator": ";",
+        "block_indent": "    "
+      },
+      "transformations": {
+        "console_log": {
+          "from": "console\\.log\\s*\\((.+?)\\)",
+          "to": "print \\1"
+        },
+        "if": {
+          "from": "if\\s*\\((.+?)\\)\\s*\\{",
+          "to": "if \\1 then",
+          "close_from": "\\}",
+          "close_to": "end"
+        },
+        "else": {
+          "from": "\\}\\s*else\\s*\\{",
+          "to": "else"
+        },
+        "semicolon": {
+          "from": ";\\s*$",
+          "to": ""
+        }
+      }
+    },
+
+    {
+      "id": "ruby",
+      "name": "Ruby Style",
+      "description": "Ruby-style syntax",
+      "example": "if x > 0\n  puts \"Positive\"\nend",
+      "patterns": {
+        "if_statement": {
+          "pattern": "if {condition}\n{body}\nend",
+          "multi_branch": "if {condition}\n{body}\nelse\n{else_body}\nend"
+        },
+        "while_loop": {
+          "pattern": "while {condition}\n{body}\nend"
+        },
+        "function_def": {
+          "pattern": "def {name}({params})\n{body}\nend"
+        },
+        "print_statement": {
+          "pattern": "puts {expression}"
+        },
+        "statement_terminator": "",
+        "block_indent": "  "
+      },
+      "transformations": {
+        "puts": {
+          "from": "puts\\s+(.+?)$",
+          "to": "print \\1"
+        },
+        "def": {
+          "from": "def\\s+(\\w+)\\s*\\((.*)\\)",
+          "to": "function \\1(\\2) then"
+        }
+      }
+    }
+  ],
+
+  "syntax_detection": {
+    "auto_detect": true,
+    "detection_rules": [
+      {
+        "syntax_id": "c",
+        "indicators": ["if (", ") {", "};", "} else {"],
+        "confidence_threshold": 2
+      },
+      {
+        "syntax_id": "python",
+        "indicators": ["if ", ":", "def ", "    "],
+        "confidence_threshold": 2
+      },
+      {
+        "syntax_id": "javascript",
+        "indicators": ["console.log", "function ", "const ", "let "],
+        "confidence_threshold": 1
+      },
+      {
+        "syntax_id": "ruby",
+        "indicators": ["puts ", "def ", "end"],
+        "confidence_threshold": 2
+      },
+      {
+        "syntax_id": "mlp",
+        "indicators": ["then", "end", "print "],
+        "confidence_threshold": 2,
+        "is_default": true
+      }
+    ]
+  },
+
+  "usage_examples": [
+    {
+      "description": "Specify syntax in file header",
+      "code": "-- lang: tr-TR\n-- syntax: c\n\neğer (x > 0) {\n    yazdir(\"Pozitif\");\n}"
+    },
+    {
+      "description": "Auto-detect syntax from code patterns",
+      "code": "-- lang: ru-RU\n\nесли (x > 0) {\n    печать(\"Положительное\");\n}"
+    },
+    {
+      "description": "Mix language with syntax preference",
+      "code": "-- lang: hi-IN\n-- syntax: python\n\nअगर x > 0:\n    लिखो(\"सकारात्मक\")"
+    }
+  ]
+}
