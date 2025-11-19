@@ -229,61 +229,43 @@ def _apply_transformation_rules(self, code, rules, syntax_id):
 
 ---
 
-**3. While Loop Syntax → CONDITIONED (Recommended for Usability)**
+**3. While Loop Syntax → CONDITIONED WITHOUT 'then' ✅ FINAL DECISION**
 
-**Karar:** `while condition then` (conditioned while)
+**Karar:** `while condition` (NO 'then' keyword)
 
 **Gerekçe:**
-
-**Original (Infinite Loop):**
-```mlp
-while
-    if x > 10 then
-        break
-    end if
-    x = x + 1
-end while
-```
-- ❌ More verbose
-- ❌ Condition buried inside
-- ❌ Harder to read intent
-- ✅ Simpler parser
-
-**Alternative (Conditioned):**
-```mlp
-while x <= 10 then
-    x = x + 1
-end while
-```
-- ✅ Clearer intent
-- ✅ Less verbose
-- ✅ More familiar to programmers
-- ❌ Slightly more complex parser
-
-**Comparison to Other Languages:**
-- Python: `while condition:`
-- C: `while (condition) {`
-- VB.NET: `While condition ... End While`
-- Pascal: `while condition do ... end`
-
-**99% of languages use conditioned while!**
+- ✅ **Consistent with Industry:** Most languages use `while condition` (Python, C, Java, Rust)
+- ✅ **'then' is for 'if' only:** Semantically, `then` belongs to conditional branching, not loops
+- ✅ **Cleaner Syntax:** Less verbose than `while condition then`
+- ✅ **Parser Simplicity:** Easy to distinguish - `if` has `then`, `while` doesn't
 
 **Implementation:**
-```
-// BASE_SYNTAX.md update
-while condition then
-    -- body
+```mlp
+// Conditioned while (recommended)
+while x <= 10
+    x = x + 1
 end while
 
-// For infinite loops, use explicit:
-while true then
+// Infinite loop (when needed)
+while true
     if exit_condition then
         break
     end if
 end while
 ```
 
-**Parser Change:** Minimal - already has condition evaluation logic from `if`
+**Comparison to Other Languages:**
+- Python: `while condition:` ✅ (no then)
+- C/Java: `while (condition) {` ✅ (no then)
+- VB.NET: `While condition` ✅ (no then)
+- Pascal: `while condition do` (do, not then)
+
+**Parser Rule:**
+- `if` → requires `then` keyword
+- `while` → NO `then` keyword
+- `for` → uses `to` keyword
+
+**BASE_SYNTAX.md Update Needed:** Change from infinite-only to conditioned while
 
 ---
 
@@ -293,11 +275,11 @@ end while
 |----------|----------|----------|
 | 1. Lexer | Update to Base IR (English) | MEDIUM |
 | 2. Terminators | Explicit (`end if`, `end while`) | HIGH |
-| 3. While | Conditioned (`while x > 0 then`) | MEDIUM |
+| 3. While | Conditioned (`while x > 0`) NO 'then' | MEDIUM |
 
 **Next Steps:**
 1. ✅ Merge demo files to main (Web Claude - DONE)
-2. ⏳ Update BASE_SYNTAX.md with conditioned while
+2. ✅ Update BASE_SYNTAX.md with conditioned while (DONE - already correct)
 3. ⏳ Implement block type tracking in dil_cevirici.py
 4. ⏳ Update lexer.c with Base IR keywords
 5. ⏳ Test end-to-end pipeline

@@ -105,19 +105,27 @@ for i = 10 to 0 step -1
 end for
 ```
 
-### While Loop (Infinite with Break)
+### While Loop
 ```mlp
-while
-    if x > 10 then
+// Conditioned while (standard usage)
+while x <= 10
+    print x
+    x = x + 1
+end while
+
+// Infinite loop (when needed)
+while true
+    if should_exit then
         break
     end if
-    x = x + 1
+    process()
 end while
 ```
 
 **Notes:**
 - For loop: inclusive range (0 to 10 includes both 0 and 10)
-- While: infinite loop, use `break` to exit
+- While: supports condition (no `then` keyword - only `if` uses `then`)
+- Use `while true` for infinite loops with explicit `break`
 - Block ends with `end for` or `end while`
 
 ---
