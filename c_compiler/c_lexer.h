@@ -19,16 +19,20 @@ typedef enum {
     TOKEN_TANIMLA_BOOL,   // BOOL
 
     // --- Yapısal Anahtar Kelimeler ---
-    TOKEN_YAPI_YAZDIR,    // YAZDIR
-    TOKEN_YAPI_KOSUL_EGER, // EĞER
-    TOKEN_YAPI_KOSUL_ISE,  // İSE
-    TOKEN_YAPI_KOSUL_DEGILSE, // DEĞİLSE
-    TOKEN_YAPI_ISLEC,     // İŞLEÇ
-    TOKEN_YAPI_DONUS,     // DÖNÜŞ
-    TOKEN_YAPI_DONGU,     // DÖNGÜ
-    TOKEN_YAPI_DONGU_BITIR, // DÖNGÜ_BITIR
-    TOKEN_YAPI_SON,       // SON
-    TOKEN_YAPI_STRUCT,    // YAPI (Struct tanımlama)
+    TOKEN_YAPI_YAZDIR,    // print
+    TOKEN_YAPI_KOSUL_EGER, // if
+    TOKEN_YAPI_KOSUL_ISE,  // then
+    TOKEN_YAPI_KOSUL_DEGILSE, // else
+    TOKEN_YAPI_ISLEC,     // function
+    TOKEN_YAPI_DONUS,     // return
+    TOKEN_YAPI_DONGU,     // while
+    TOKEN_YAPI_DONGU_BITIR, // break
+    TOKEN_YAPI_DONGU_DEVAM, // continue
+    TOKEN_YAPI_FOR,       // for
+    TOKEN_YAPI_TO,        // to
+    TOKEN_YAPI_STEP,      // step
+    TOKEN_YAPI_SON,       // end
+    TOKEN_YAPI_STRUCT,    // struct
 
     // --- Operatörler ve Ayırıcılar ---
     // --- Operatörler ve Ayırıcılar ---

@@ -61,8 +61,8 @@ typedef struct {
     TokenType type;
 } KeywordMap;
 
-// English-only keywords for MLP compiler
-// Multi-language support via preprocessor (dil_cevirici.py)
+// English Base IR keywords for MLP compiler
+// Multi-language support via preprocessor (stage0/mlp_preprocessor.py)
 // All source languages (Turkish, Russian, Chinese, etc.) are translated to English
 KeywordMap keywords[] = {
     // Type Declarations
@@ -77,11 +77,17 @@ KeywordMap keywords[] = {
     {"function", TOKEN_YAPI_ISLEC},
     {"return",   TOKEN_YAPI_DONUS},
     {"while",    TOKEN_YAPI_DONGU},
+    {"for",      TOKEN_YAPI_FOR},
+    {"to",       TOKEN_YAPI_TO},
+    {"step",     TOKEN_YAPI_STEP},
     {"break",    TOKEN_YAPI_DONGU_BITIR},
+    {"continue", TOKEN_YAPI_DONGU_DEVAM},
     {"end",      TOKEN_YAPI_SON},
     {"struct",   TOKEN_YAPI_STRUCT},
 
-    // Built-in functions (DOSYA_AC, DOSYA_OKU, etc.) remain as identifiers
+    // Boolean literals
+    {"true",     TOKEN_IDENTIFIER},  // Will be handled as identifier
+    {"false",    TOKEN_IDENTIFIER},  // Will be handled as identifier
 
     {NULL, TOKEN_EOF}
 };
