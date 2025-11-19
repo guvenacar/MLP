@@ -1,0 +1,20 @@
+-- lang: en-US
+-- syntax: python
+
+-- Test: English keywords + Python-style syntax
+int x = 10
+
+if x > 0:
+    print "positive"
+else:
+    print "negative"
+
+for i in range(0, 5):
+    print i
+
+while x > 0:
+    x = x - 1
+    if x == 5:
+        break
+
+print "Done!"
