@@ -1,0 +1,22 @@
+-- lang: tr-TR
+-- syntax: c
+-- Test: C-style syntax with Turkish keywords
+
+SAYISAL x = 10;
+METIN mesaj = "Merhaba C-Style!";
+
+eğer (x > 5) {
+    yazdir("X büyük");
+    yazdir(x);
+}
+
+SAYISAL i = 0;
+döngü {
+    yazdir(i);
+    i = i + 1;
+    eğer (i >= 3) {
+        bitir;
+    }
+}
+
+yazdir("Test tamamlandı!");
