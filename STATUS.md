@@ -1,5 +1,27 @@
 # MLP Project Status - 20 Kasım 2025
 
+## 📍 Repository Information
+
+**GitHub Repository:** https://github.com/guvenacar/MLP.git  
+**Current Branch:** `main`  
+**Latest Commit:** c777976 (Status document added)  
+**Previous Commit:** 8eb3750 (Rollback to stable state)
+
+**Active Branches:**
+- `main` ← **CURRENT** (stable, ready for integration)
+- `claude/sdl2-gui-implementation-01LeoPH6UPn458c11VdhEWxL` (Web Claude's demo)
+- `feature/MLP-multilang` (multilang experimental)
+- Other claude/* branches (various experiments)
+
+**For Collaboration:**
+```bash
+git clone https://github.com/guvenacar/MLP.git
+cd MLP
+git checkout main  # Start here
+```
+
+---
+
 ## 🎯 Current State: STABLE & READY FOR REDESIGN
 
 ### ✅ Working Components
