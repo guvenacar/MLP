@@ -1,584 +1,522 @@
-/**
- * ===============================================
- * MLP SDL2 GUI Backend
- * ===============================================
- * Production-grade windowing and graphics support
- * using SDL2 library for cross-platform GUI applications
+/*
+ * MLP GUI Runtime - SDL2 Backend
  *
- * Features:
- * - Window creation and management
- * - Event handling (keyboard, mouse, window events)
- * - 2D rendering with SDL2 renderer
- * - Basic shapes and text rendering
- * - Color management
- * - Frame timing and FPS control
- *
- * Dependencies:
- * - SDL2 (libsdl2-dev)
- * - SDL2_ttf for text rendering (optional)
- * - SDL2_image for image loading (optional)
+ * Real GUI implementation using SDL2
+ * Compile: gcc -c gui_sdl.c -o gui_sdl.o $(pkg-config --cflags sdl2)
+ * Link: gcc ... gui_sdl.o $(pkg-config --libs sdl2)
  */
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
-// ===============================================
-// Type Definitions
-// ===============================================
+// ===========================
+// Constants & Configuration
+// ===========================
 
-typedef struct {
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    bool is_running;
-    int width;
-    int height;
-    const char* title;
-    Uint32 window_flags;
-    int fps;
-    Uint32 frame_delay;
-} MLPWindow;
+#define MAX_WIDGETS 100
+#define MAX_WINDOWS 10
 
-typedef struct {
-    int x;
-    int y;
-} MLPPoint;
+#define GUI_EVENT_NONE 0
+#define GUI_EVENT_QUIT 1
+#define GUI_EVENT_BUTTON_CLICK 2
+#define GUI_EVENT_KEY_PRESS 3
+#define GUI_EVENT_MOUSE_MOVE 4
 
-typedef struct {
-    int x;
-    int y;
-    int width;
-    int height;
-} MLPRect;
-
-typedef struct {
-    Uint8 r;
-    Uint8 g;
-    Uint8 b;
-    Uint8 a;
-} MLPColor;
+// ===========================
+// Data Structures
+// ===========================
 
 typedef enum {
-    MLP_EVENT_NONE = 0,
-    MLP_EVENT_QUIT,
-    MLP_EVENT_KEY_DOWN,
-    MLP_EVENT_KEY_UP,
-    MLP_EVENT_MOUSE_DOWN,
-    MLP_EVENT_MOUSE_UP,
-    MLP_EVENT_MOUSE_MOVE,
-    MLP_EVENT_WINDOW_RESIZE
-} MLPEventType;
+    WIDGET_BUTTON,
+    WIDGET_LABEL,
+    WIDGET_TEXTBOX,
+    WIDGET_CANVAS
+} WidgetType;
 
 typedef struct {
-    MLPEventType type;
-    union {
-        struct {
-            int key_code;
-            bool shift;
-            bool ctrl;
-            bool alt;
-        } key;
-        struct {
-            int x;
-            int y;
-            int button;
-        } mouse;
-        struct {
-            int width;
-            int height;
-        } window;
-    } data;
-} MLPEvent;
+    long id;
+    WidgetType type;
+    long window_id;
+    SDL_Rect rect;
+    char text[256];
+    int visible;
+    // Button specific
+    int is_hovered;
+    int is_pressed;
+    // Canvas specific
+    SDL_Renderer* renderer;
+    SDL_Color draw_color;
+} Widget;
 
-// ===============================================
+typedef struct {
+    long id;
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    char title[256];
+    int width;
+    int height;
+    int visible;
+    int closed;
+} WindowInfo;
+
+// ===========================
 // Global State
-// ===============================================
+// ===========================
 
-static MLPWindow* g_main_window = NULL;
+static WindowInfo windows[MAX_WINDOWS];
+static int window_count = 0;
 
-// ===============================================
-// Color Utilities
-// ===============================================
+static Widget widgets[MAX_WIDGETS];
+static int widget_count = 0;
 
-MLPColor mlp_color_create(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
-    MLPColor color = {r, g, b, a};
-    return color;
+static int current_event = GUI_EVENT_NONE;
+static long clicked_button_id = 0;
+static int mouse_x = 0;
+static int mouse_y = 0;
+
+static int sdl_initialized = 0;
+
+// ===========================
+// Helper Functions
+// ===========================
+
+static void ensure_sdl_init() {
+    if (!sdl_initialized) {
+        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+            fprintf(stderr, "[GUI] SDL_Init Error: %s\n", SDL_GetError());
+            exit(1);
+        }
+        sdl_initialized = 1;
+        printf("[GUI] SDL2 initialized\n");
+    }
 }
 
-MLPColor mlp_color_rgb(Uint8 r, Uint8 g, Uint8 b) {
-    return mlp_color_create(r, g, b, 255);
+static WindowInfo* find_window(long id) {
+    for (int i = 0; i < window_count; i++) {
+        if (windows[i].id == id) {
+            return &windows[i];
+        }
+    }
+    return NULL;
 }
 
-// Predefined colors
-const MLPColor MLP_COLOR_BLACK = {0, 0, 0, 255};
-const MLPColor MLP_COLOR_WHITE = {255, 255, 255, 255};
-const MLPColor MLP_COLOR_RED = {255, 0, 0, 255};
-const MLPColor MLP_COLOR_GREEN = {0, 255, 0, 255};
-const MLPColor MLP_COLOR_BLUE = {0, 0, 255, 255};
-const MLPColor MLP_COLOR_YELLOW = {255, 255, 0, 255};
-const MLPColor MLP_COLOR_CYAN = {0, 255, 255, 255};
-const MLPColor MLP_COLOR_MAGENTA = {255, 0, 255, 255};
-const MLPColor MLP_COLOR_GRAY = {128, 128, 128, 255};
+static Widget* find_widget(long id) {
+    for (int i = 0; i < widget_count; i++) {
+        if (widgets[i].id == id) {
+            return &widgets[i];
+        }
+    }
+    return NULL;
+}
 
-// ===============================================
+static void render_button(SDL_Renderer* renderer, Widget* btn) {
+    if (!btn->visible) return;
+
+    // Button background color
+    if (btn->is_pressed) {
+        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255); // Dark gray when pressed
+    } else if (btn->is_hovered) {
+        SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255); // Light gray when hovered
+    } else {
+        SDL_SetRenderDrawColor(renderer, 180, 180, 180, 255); // Normal gray
+    }
+    SDL_RenderFillRect(renderer, &btn->rect);
+
+    // Button border
+    SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
+    SDL_RenderDrawRect(renderer, &btn->rect);
+
+    // TODO: Render text (requires SDL_ttf)
+    // For now, button is just a colored rectangle
+}
+
+static void render_label(SDL_Renderer* renderer, Widget* lbl) {
+    if (!lbl->visible) return;
+
+    // Label background (semi-transparent white)
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+    SDL_RenderFillRect(renderer, &lbl->rect);
+
+    // TODO: Render text (requires SDL_ttf)
+}
+
+static void render_window(WindowInfo* win) {
+    if (!win->visible || win->closed) return;
+
+    SDL_Renderer* renderer = win->renderer;
+
+    // Clear with white background
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+
+    // Render all widgets belonging to this window
+    for (int i = 0; i < widget_count; i++) {
+        Widget* w = &widgets[i];
+        if (w->window_id != win->id) continue;
+
+        switch (w->type) {
+            case WIDGET_BUTTON:
+                render_button(renderer, w);
+                break;
+            case WIDGET_LABEL:
+                render_label(renderer, w);
+                break;
+            case WIDGET_CANVAS:
+                // Canvas renders itself
+                break;
+            default:
+                break;
+        }
+    }
+
+    SDL_RenderPresent(renderer);
+}
+
+// ===========================
 // Window Management
-// ===============================================
+// ===========================
 
-/**
- * Initialize SDL2 subsystems
- */
-bool mlp_gui_init(void) {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
-        fprintf(stderr, "SDL initialization failed: %s\n", SDL_GetError());
-        return false;
-    }
-    return true;
-}
+long gui_window_create(const char* title, long width, long height) {
+    ensure_sdl_init();
 
-/**
- * Create a new window
- */
-MLPWindow* mlp_window_create(const char* title, int width, int height, int fps) {
-    if (!mlp_gui_init()) {
-        return NULL;
+    if (window_count >= MAX_WINDOWS) {
+        fprintf(stderr, "[GUI] Maximum windows reached\n");
+        return -1;
     }
 
-    MLPWindow* window = (MLPWindow*)malloc(sizeof(MLPWindow));
-    if (!window) {
-        fprintf(stderr, "Failed to allocate window structure\n");
-        return NULL;
-    }
+    WindowInfo* win = &windows[window_count];
+    win->id = window_count + 1;
+    strncpy(win->title, title, sizeof(win->title) - 1);
+    win->width = width;
+    win->height = height;
+    win->visible = 0;
+    win->closed = 0;
 
-    window->title = title;
-    window->width = width;
-    window->height = height;
-    window->fps = fps;
-    window->frame_delay = 1000 / fps;
-    window->is_running = true;
-    window->window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
-
-    // Create SDL window
-    window->window = SDL_CreateWindow(
+    win->window = SDL_CreateWindow(
         title,
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        width,
-        height,
-        window->window_flags
+        width, height,
+        SDL_WINDOW_SHOWN
     );
 
-    if (!window->window) {
-        fprintf(stderr, "Window creation failed: %s\n", SDL_GetError());
-        free(window);
-        return NULL;
+    if (!win->window) {
+        fprintf(stderr, "[GUI] SDL_CreateWindow Error: %s\n", SDL_GetError());
+        return -1;
     }
 
-    // Create SDL renderer with VSync
-    window->renderer = SDL_CreateRenderer(
-        window->window,
-        -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
-
-    if (!window->renderer) {
-        fprintf(stderr, "Renderer creation failed: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window->window);
-        free(window);
-        return NULL;
+    win->renderer = SDL_CreateRenderer(win->window, -1, SDL_RENDERER_ACCELERATED);
+    if (!win->renderer) {
+        fprintf(stderr, "[GUI] SDL_CreateRenderer Error: %s\n", SDL_GetError());
+        SDL_DestroyWindow(win->window);
+        return -1;
     }
 
-    // Set blend mode for transparency
-    SDL_SetRenderDrawBlendMode(window->renderer, SDL_BLENDMODE_BLEND);
-
-    g_main_window = window;
-    return window;
+    window_count++;
+    printf("[GUI] Window created: '%s' (%ldx%ld) ID=%ld\n", title, width, height, win->id);
+    return win->id;
 }
 
-/**
- * Destroy window and cleanup
- */
-void mlp_window_destroy(MLPWindow* window) {
-    if (!window) return;
+void gui_window_show(long id) {
+    WindowInfo* win = find_window(id);
+    if (!win) return;
 
-    if (window->renderer) {
-        SDL_DestroyRenderer(window->renderer);
+    win->visible = 1;
+    SDL_ShowWindow(win->window);
+    render_window(win);
+    printf("[GUI] Window shown: ID=%ld\n", id);
+}
+
+void gui_window_hide(long id) {
+    WindowInfo* win = find_window(id);
+    if (!win) return;
+
+    win->visible = 0;
+    SDL_HideWindow(win->window);
+    printf("[GUI] Window hidden: ID=%ld\n", id);
+}
+
+void gui_window_destroy(long id) {
+    WindowInfo* win = find_window(id);
+    if (!win) return;
+
+    SDL_DestroyRenderer(win->renderer);
+    SDL_DestroyWindow(win->window);
+    win->closed = 1;
+    printf("[GUI] Window destroyed: ID=%ld\n", id);
+}
+
+// ===========================
+// Widget Management
+// ===========================
+
+long gui_button_create(long window_id, const char* text, long x, long y, long w, long h) {
+    if (widget_count >= MAX_WIDGETS) {
+        fprintf(stderr, "[GUI] Maximum widgets reached\n");
+        return -1;
     }
 
-    if (window->window) {
-        SDL_DestroyWindow(window->window);
+    Widget* btn = &widgets[widget_count];
+    btn->id = widget_count + 100; // Start button IDs at 100
+    btn->type = WIDGET_BUTTON;
+    btn->window_id = window_id;
+    btn->rect.x = x;
+    btn->rect.y = y;
+    btn->rect.w = w;
+    btn->rect.h = h;
+    strncpy(btn->text, text, sizeof(btn->text) - 1);
+    btn->visible = 1;
+    btn->is_hovered = 0;
+    btn->is_pressed = 0;
+
+    widget_count++;
+    printf("[GUI] Button created: '%s' at (%ld, %ld) size %ldx%ld ID=%ld\n",
+           text, x, y, w, h, btn->id);
+    return btn->id;
+}
+
+long gui_label_create(long window_id, const char* text, long x, long y) {
+    if (widget_count >= MAX_WIDGETS) {
+        fprintf(stderr, "[GUI] Maximum widgets reached\n");
+        return -1;
     }
 
-    free(window);
+    Widget* lbl = &widgets[widget_count];
+    lbl->id = widget_count + 200; // Start label IDs at 200
+    lbl->type = WIDGET_LABEL;
+    lbl->window_id = window_id;
+    lbl->rect.x = x;
+    lbl->rect.y = y;
+    lbl->rect.w = strlen(text) * 8; // Approximate width
+    lbl->rect.h = 20;
+    strncpy(lbl->text, text, sizeof(lbl->text) - 1);
+    lbl->visible = 1;
 
-    if (g_main_window == window) {
-        g_main_window = NULL;
+    widget_count++;
+    printf("[GUI] Label created: '%s' at (%ld, %ld) ID=%ld\n", text, x, y, lbl->id);
+    return lbl->id;
+}
+
+void gui_label_set_text(long label_id, const char* text) {
+    Widget* lbl = find_widget(label_id);
+    if (!lbl || lbl->type != WIDGET_LABEL) return;
+
+    strncpy(lbl->text, text, sizeof(lbl->text) - 1);
+    lbl->rect.w = strlen(text) * 8; // Update width
+    printf("[GUI] Label text updated: ID=%ld text='%s'\n", label_id, text);
+}
+
+// ===========================
+// Canvas Functions
+// ===========================
+
+long gui_canvas_create(long window_id, long x, long y, long w, long h) {
+    if (widget_count >= MAX_WIDGETS) return -1;
+
+    Widget* canvas = &widgets[widget_count];
+    canvas->id = widget_count + 300; // Start canvas IDs at 300
+    canvas->type = WIDGET_CANVAS;
+    canvas->window_id = window_id;
+    canvas->rect.x = x;
+    canvas->rect.y = y;
+    canvas->rect.w = w;
+    canvas->rect.h = h;
+    canvas->visible = 1;
+
+    WindowInfo* win = find_window(window_id);
+    if (win) {
+        canvas->renderer = win->renderer;
+    }
+
+    canvas->draw_color.r = 0;
+    canvas->draw_color.g = 0;
+    canvas->draw_color.b = 0;
+    canvas->draw_color.a = 255;
+
+    widget_count++;
+    printf("[GUI] Canvas created: at (%ld, %ld) size %ldx%ld ID=%ld\n",
+           x, y, w, h, canvas->id);
+    return canvas->id;
+}
+
+void gui_canvas_clear(long canvas_id, long r, long g, long b) {
+    Widget* canvas = find_widget(canvas_id);
+    if (!canvas || canvas->type != WIDGET_CANVAS) return;
+
+    SDL_SetRenderDrawColor(canvas->renderer, r, g, b, 255);
+    SDL_RenderClear(canvas->renderer);
+}
+
+void gui_canvas_set_color(long canvas_id, long r, long g, long b) {
+    Widget* canvas = find_widget(canvas_id);
+    if (!canvas || canvas->type != WIDGET_CANVAS) return;
+
+    canvas->draw_color.r = r;
+    canvas->draw_color.g = g;
+    canvas->draw_color.b = b;
+    SDL_SetRenderDrawColor(canvas->renderer, r, g, b, 255);
+}
+
+void gui_canvas_draw_rect(long canvas_id, long x, long y, long w, long h) {
+    Widget* canvas = find_widget(canvas_id);
+    if (!canvas || canvas->type != WIDGET_CANVAS) return;
+
+    SDL_Rect rect = {x, y, w, h};
+    SDL_RenderFillRect(canvas->renderer, &rect);
+}
+
+void gui_canvas_draw_circle(long canvas_id, long cx, long cy, long radius) {
+    Widget* canvas = find_widget(canvas_id);
+    if (!canvas || canvas->type != WIDGET_CANVAS) return;
+
+    // Simple circle drawing using midpoint algorithm
+    for (int w = 0; w < radius * 2; w++) {
+        for (int h = 0; h < radius * 2; h++) {
+            int dx = radius - w;
+            int dy = radius - h;
+            if ((dx*dx + dy*dy) <= (radius * radius)) {
+                SDL_RenderDrawPoint(canvas->renderer, cx + dx, cy + dy);
+            }
+        }
     }
 }
 
-/**
- * Check if window is running
- */
-bool mlp_window_is_running(MLPWindow* window) {
-    return window && window->is_running;
+void gui_canvas_draw_line(long canvas_id, long x1, long y1, long x2, long y2) {
+    Widget* canvas = find_widget(canvas_id);
+    if (!canvas || canvas->type != WIDGET_CANVAS) return;
+
+    SDL_RenderDrawLine(canvas->renderer, x1, y1, x2, y2);
 }
 
-/**
- * Set window title
- */
-void mlp_window_set_title(MLPWindow* window, const char* title) {
-    if (window && window->window) {
-        SDL_SetWindowTitle(window->window, title);
-        window->title = title;
+void gui_canvas_render(long canvas_id) {
+    Widget* canvas = find_widget(canvas_id);
+    if (!canvas || canvas->type != WIDGET_CANVAS) return;
+
+    WindowInfo* win = find_window(canvas->window_id);
+    if (win) {
+        SDL_RenderPresent(win->renderer);
     }
 }
 
-/**
- * Get window size
- */
-void mlp_window_get_size(MLPWindow* window, int* width, int* height) {
-    if (window && window->window) {
-        SDL_GetWindowSize(window->window, width, height);
-    }
-}
-
-/**
- * Set window size
- */
-void mlp_window_set_size(MLPWindow* window, int width, int height) {
-    if (window && window->window) {
-        SDL_SetWindowSize(window->window, width, height);
-        window->width = width;
-        window->height = height;
-    }
-}
-
-// ===============================================
+// ===========================
 // Event Handling
-// ===============================================
+// ===========================
 
-/**
- * Convert SDL key code to MLP key code
- */
-static int sdl_to_mlp_keycode(SDL_Keycode key) {
-    // Direct mapping for now
-    return (int)key;
-}
+long gui_poll_event() {
+    SDL_Event event;
 
-/**
- * Poll for events
- */
-bool mlp_window_poll_event(MLPWindow* window, MLPEvent* event) {
-    if (!window) return false;
+    // Reset current event
+    current_event = GUI_EVENT_NONE;
+    clicked_button_id = 0;
 
-    SDL_Event sdl_event;
-    if (!SDL_PollEvent(&sdl_event)) {
-        event->type = MLP_EVENT_NONE;
-        return false;
-    }
+    // Process all pending events
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                current_event = GUI_EVENT_QUIT;
+                printf("[GUI] Event: Quit\n");
+                return current_event;
 
-    SDL_Keymod mod = SDL_GetModState();
+            case SDL_MOUSEBUTTONDOWN:
+                mouse_x = event.button.x;
+                mouse_y = event.button.y;
 
-    switch (sdl_event.type) {
-        case SDL_QUIT:
-            event->type = MLP_EVENT_QUIT;
-            window->is_running = false;
-            break;
+                // Check if mouse clicked on any button
+                for (int i = 0; i < widget_count; i++) {
+                    Widget* w = &widgets[i];
+                    if (w->type != WIDGET_BUTTON || !w->visible) continue;
 
-        case SDL_KEYDOWN:
-            event->type = MLP_EVENT_KEY_DOWN;
-            event->data.key.key_code = sdl_to_mlp_keycode(sdl_event.key.keysym.sym);
-            event->data.key.shift = (mod & KMOD_SHIFT) != 0;
-            event->data.key.ctrl = (mod & KMOD_CTRL) != 0;
-            event->data.key.alt = (mod & KMOD_ALT) != 0;
-            break;
+                    SDL_Rect* r = &w->rect;
+                    if (mouse_x >= r->x && mouse_x <= (r->x + r->w) &&
+                        mouse_y >= r->y && mouse_y <= (r->y + r->h)) {
+                        w->is_pressed = 1;
+                        clicked_button_id = w->id;
+                        current_event = GUI_EVENT_BUTTON_CLICK;
+                        printf("[GUI] Event: Button clicked ID=%ld\n", w->id);
 
-        case SDL_KEYUP:
-            event->type = MLP_EVENT_KEY_UP;
-            event->data.key.key_code = sdl_to_mlp_keycode(sdl_event.key.keysym.sym);
-            event->data.key.shift = (mod & KMOD_SHIFT) != 0;
-            event->data.key.ctrl = (mod & KMOD_CTRL) != 0;
-            event->data.key.alt = (mod & KMOD_ALT) != 0;
-            break;
+                        // Re-render window
+                        WindowInfo* win = find_window(w->window_id);
+                        if (win) render_window(win);
 
-        case SDL_MOUSEBUTTONDOWN:
-            event->type = MLP_EVENT_MOUSE_DOWN;
-            event->data.mouse.x = sdl_event.button.x;
-            event->data.mouse.y = sdl_event.button.y;
-            event->data.mouse.button = sdl_event.button.button;
-            break;
+                        return current_event;
+                    }
+                }
+                break;
 
-        case SDL_MOUSEBUTTONUP:
-            event->type = MLP_EVENT_MOUSE_UP;
-            event->data.mouse.x = sdl_event.button.x;
-            event->data.mouse.y = sdl_event.button.y;
-            event->data.mouse.button = sdl_event.button.button;
-            break;
+            case SDL_MOUSEBUTTONUP:
+                // Reset all button states
+                for (int i = 0; i < widget_count; i++) {
+                    if (widgets[i].type == WIDGET_BUTTON) {
+                        widgets[i].is_pressed = 0;
+                    }
+                }
+                // Re-render all windows
+                for (int i = 0; i < window_count; i++) {
+                    render_window(&windows[i]);
+                }
+                break;
 
-        case SDL_MOUSEMOTION:
-            event->type = MLP_EVENT_MOUSE_MOVE;
-            event->data.mouse.x = sdl_event.motion.x;
-            event->data.mouse.y = sdl_event.motion.y;
-            break;
+            case SDL_MOUSEMOTION:
+                mouse_x = event.motion.x;
+                mouse_y = event.motion.y;
 
-        case SDL_WINDOWEVENT:
-            if (sdl_event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                event->type = MLP_EVENT_WINDOW_RESIZE;
-                event->data.window.width = sdl_event.window.data1;
-                event->data.window.height = sdl_event.window.data2;
-                window->width = event->data.window.width;
-                window->height = event->data.window.height;
-            } else {
-                event->type = MLP_EVENT_NONE;
-            }
-            break;
+                // Update hover state
+                int needs_render = 0;
+                for (int i = 0; i < widget_count; i++) {
+                    Widget* w = &widgets[i];
+                    if (w->type != WIDGET_BUTTON || !w->visible) continue;
 
-        default:
-            event->type = MLP_EVENT_NONE;
-            break;
-    }
+                    SDL_Rect* r = &w->rect;
+                    int was_hovered = w->is_hovered;
+                    w->is_hovered = (mouse_x >= r->x && mouse_x <= (r->x + r->w) &&
+                                    mouse_y >= r->y && mouse_y <= (r->y + r->h));
 
-    return event->type != MLP_EVENT_NONE;
-}
+                    if (was_hovered != w->is_hovered) {
+                        needs_render = 1;
+                    }
+                }
 
-// ===============================================
-// Drawing Functions
-// ===============================================
-
-/**
- * Clear screen with color
- */
-void mlp_clear(MLPWindow* window, MLPColor color) {
-    if (!window || !window->renderer) return;
-
-    SDL_SetRenderDrawColor(window->renderer, color.r, color.g, color.b, color.a);
-    SDL_RenderClear(window->renderer);
-}
-
-/**
- * Set draw color
- */
-void mlp_set_draw_color(MLPWindow* window, MLPColor color) {
-    if (!window || !window->renderer) return;
-    SDL_SetRenderDrawColor(window->renderer, color.r, color.g, color.b, color.a);
-}
-
-/**
- * Draw a point
- */
-void mlp_draw_point(MLPWindow* window, int x, int y, MLPColor color) {
-    if (!window || !window->renderer) return;
-
-    mlp_set_draw_color(window, color);
-    SDL_RenderDrawPoint(window->renderer, x, y);
-}
-
-/**
- * Draw a line
- */
-void mlp_draw_line(MLPWindow* window, int x1, int y1, int x2, int y2, MLPColor color) {
-    if (!window || !window->renderer) return;
-
-    mlp_set_draw_color(window, color);
-    SDL_RenderDrawLine(window->renderer, x1, y1, x2, y2);
-}
-
-/**
- * Draw a rectangle outline
- */
-void mlp_draw_rect(MLPWindow* window, MLPRect rect, MLPColor color) {
-    if (!window || !window->renderer) return;
-
-    SDL_Rect sdl_rect = {rect.x, rect.y, rect.width, rect.height};
-    mlp_set_draw_color(window, color);
-    SDL_RenderDrawRect(window->renderer, &sdl_rect);
-}
-
-/**
- * Draw a filled rectangle
- */
-void mlp_fill_rect(MLPWindow* window, MLPRect rect, MLPColor color) {
-    if (!window || !window->renderer) return;
-
-    SDL_Rect sdl_rect = {rect.x, rect.y, rect.width, rect.height};
-    mlp_set_draw_color(window, color);
-    SDL_RenderFillRect(window->renderer, &sdl_rect);
-}
-
-/**
- * Draw a circle outline
- */
-void mlp_draw_circle(MLPWindow* window, int cx, int cy, int radius, MLPColor color) {
-    if (!window || !window->renderer) return;
-
-    mlp_set_draw_color(window, color);
-
-    // Midpoint circle algorithm
-    int x = radius;
-    int y = 0;
-    int err = 0;
-
-    while (x >= y) {
-        SDL_RenderDrawPoint(window->renderer, cx + x, cy + y);
-        SDL_RenderDrawPoint(window->renderer, cx + y, cy + x);
-        SDL_RenderDrawPoint(window->renderer, cx - y, cy + x);
-        SDL_RenderDrawPoint(window->renderer, cx - x, cy + y);
-        SDL_RenderDrawPoint(window->renderer, cx - x, cy - y);
-        SDL_RenderDrawPoint(window->renderer, cx - y, cy - x);
-        SDL_RenderDrawPoint(window->renderer, cx + y, cy - x);
-        SDL_RenderDrawPoint(window->renderer, cx + x, cy - y);
-
-        if (err <= 0) {
-            y += 1;
-            err += 2*y + 1;
-        }
-
-        if (err > 0) {
-            x -= 1;
-            err -= 2*x + 1;
+                if (needs_render) {
+                    for (int i = 0; i < window_count; i++) {
+                        render_window(&windows[i]);
+                    }
+                }
+                break;
         }
     }
+
+    return current_event;
 }
 
-/**
- * Draw a filled circle
- */
-void mlp_fill_circle(MLPWindow* window, int cx, int cy, int radius, MLPColor color) {
-    if (!window || !window->renderer) return;
-
-    mlp_set_draw_color(window, color);
-
-    for (int y = -radius; y <= radius; y++) {
-        for (int x = -radius; x <= radius; x++) {
-            if (x*x + y*y <= radius*radius) {
-                SDL_RenderDrawPoint(window->renderer, cx + x, cy + y);
-            }
-        }
-    }
+long gui_get_clicked_button() {
+    return clicked_button_id;
 }
 
-/**
- * Present the rendered frame
- */
-void mlp_present(MLPWindow* window) {
-    if (!window || !window->renderer) return;
-    SDL_RenderPresent(window->renderer);
-}
-
-/**
- * Frame timing - delay to maintain target FPS
- */
-void mlp_frame_delay(MLPWindow* window, Uint32 frame_start) {
-    if (!window) return;
-
-    Uint32 frame_time = SDL_GetTicks() - frame_start;
-    if (frame_time < window->frame_delay) {
-        SDL_Delay(window->frame_delay - frame_time);
-    }
-}
-
-// ===============================================
+// ===========================
 // Utility Functions
-// ===============================================
+// ===========================
 
-/**
- * Get current time in milliseconds
- */
-Uint32 mlp_get_ticks(void) {
-    return SDL_GetTicks();
+char* int_to_string(long num) {
+    static char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%ld", num);
+    return buffer;
 }
 
-/**
- * Cleanup SDL
- */
-void mlp_gui_quit(void) {
-    if (g_main_window) {
-        mlp_window_destroy(g_main_window);
-    }
-    SDL_Quit();
-}
+// ===========================
+// Cleanup
+// ===========================
 
-// ===============================================
-// High-level Helper Functions
-// ===============================================
-
-/**
- * Simple main loop helper
- */
-void mlp_run_loop(MLPWindow* window,
-                  void (*update)(MLPEvent* event),
-                  void (*render)(MLPWindow* window)) {
-
-    while (mlp_window_is_running(window)) {
-        Uint32 frame_start = mlp_get_ticks();
-
-        // Handle events
-        MLPEvent event;
-        while (mlp_window_poll_event(window, &event)) {
-            if (update) {
-                update(&event);
-            }
-        }
-
-        // Render
-        if (render) {
-            render(window);
-        }
-
-        // Present
-        mlp_present(window);
-
-        // Frame timing
-        mlp_frame_delay(window, frame_start);
-    }
-}
-
-// ===============================================
-// Example Usage (for testing)
-// ===============================================
-
-#ifdef MLP_GUI_SDL_TEST
-
-void test_update(MLPEvent* event) {
-    if (event->type == MLP_EVENT_KEY_DOWN) {
-        if (event->data.key.key_code == SDLK_ESCAPE) {
-            printf("Escape pressed - exiting\n");
+void gui_cleanup() {
+    for (int i = 0; i < window_count; i++) {
+        if (!windows[i].closed) {
+            gui_window_destroy(windows[i].id);
         }
     }
-}
 
-void test_render(MLPWindow* window) {
-    // Clear with dark gray
-    mlp_clear(window, mlp_color_rgb(30, 30, 30));
-
-    // Draw some shapes
-    MLPRect rect = {100, 100, 200, 150};
-    mlp_fill_rect(window, rect, MLP_COLOR_BLUE);
-
-    mlp_draw_circle(window, 400, 300, 50, MLP_COLOR_RED);
-    mlp_fill_circle(window, 600, 300, 40, MLP_COLOR_GREEN);
-
-    mlp_draw_line(window, 50, 50, 750, 550, MLP_COLOR_YELLOW);
-}
-
-int main(void) {
-    MLPWindow* window = mlp_window_create("MLP SDL2 Test", 800, 600, 60);
-
-    if (!window) {
-        fprintf(stderr, "Failed to create window\n");
-        return 1;
+    if (sdl_initialized) {
+        SDL_Quit();
+        printf("[GUI] SDL2 cleanup complete\n");
     }
-
-    printf("MLP SDL2 GUI Test\n");
-    printf("Press ESC or close window to exit\n");
-
-    mlp_run_loop(window, test_update, test_render);
-
-    mlp_window_destroy(window);
-    mlp_gui_quit();
-
-    return 0;
 }
-
-#endif // MLP_GUI_SDL_TEST

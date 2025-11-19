@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "default_language": "en-US",
+  "languages": [
+    {
+      "id": "en-US",
+      "name": "English (United States)",
+      "description": "Standard English programming keywords",
+      "keywords": {
+        "int": ["int"],
+        "string": ["string"],
+        "if": ["if"],
+        "then": ["then"],
+        "else": ["else"],
+        "while": ["while"],
+        "for": ["for"],
+        "break": ["break"],
+        "function": ["function", "func"],
+        "return": ["return"],
+        "print": ["print"],
+        "true": ["true"],
+        "false": ["false"]
+      }
+    },
+    {
+      "id": "tr-TR",
+      "name": "Türkçe (Turkish)",
+      "description": "Turkish programming keywords",
+      "keywords": {
+        "int": ["sayisal", "SAYISAL", "tamsayı", "TAMSAYI"],
+        "string": ["metin", "METIN", "yazi", "YAZI"],
+        "if": ["eğer", "EĞER", "eger", "EGER"],
+        "then": ["ise", "İSE"],
+        "else": ["değilse", "DEĞİLSE", "degilse", "DEGILSE"],
+        "while": ["döngü", "DÖNGÜ", "dongu", "DONGU"],
+        "for": ["için", "İÇİN", "icin", "ICIN"],
+        "break": ["döngü_bitir", "DÖNGÜ_BITIR", "bitir", "BITIR"],
+        "end": ["son", "SON"],
+        "function": ["işleç", "İŞLEÇ", "islec", "ISLEC", "fonksiyon"],
+        "return": ["dönüş", "DÖNÜŞ", "donus", "DONUS"],
+        "print": ["yazdir", "YAZDIR"],
+        "true": ["doğru", "DOĞRU", "dogru", "DOGRU"],
+        "false": ["yanlış", "YANLIŞ", "yanlis", "YANLIS"]
+      }
+    },
+    {
+      "id": "ru-RU",
+      "name": "Русский (Russian)",
+      "description": "Russian programming keywords",
+      "keywords": {
+        "int": ["целое", "ЦЕЛОЕ"],
+        "string": ["строка", "СТРОКА"],
+        "if": ["если", "ЕСЛИ"],
+        "then": ["то", "ТО"],
+        "else": ["иначе", "ИНАЧЕ"],
+        "while": ["пока", "ПОКА"],
+        "for": ["для", "ДЛЯ"],
+        "break": ["прервать", "ПРЕРВАТЬ"],
+        "end": ["конец", "КОНЕЦ"],
+        "function": ["функция", "ФУНКЦИЯ"],
+        "return": ["вернуть", "ВЕРНУТЬ"],
+        "print": ["печать", "ПЕЧАТЬ"],
+        "true": ["истина", "ИСТИНА"],
+        "false": ["ложь", "ЛОЖЬ"]
+      }
+    },
+    {
+      "id": "zh-CN",
+      "name": "中文 (Chinese Simplified)",
+      "description": "Chinese programming keywords",
+      "keywords": {
+        "int": ["整数"],
+        "string": ["字符串"],
+        "if": ["如果"],
+        "then": ["那么"],
+        "else": ["否则"],
+        "while": ["当"],
+        "for": ["对于"],
+        "break": ["中断"],
+        "end": ["结束"],
+        "function": ["函数"],
+        "return": ["返回"],
+        "print": ["打印"],
+        "true": ["真"],
+        "false": ["假"]
+      }
+    },
+    {
+      "id": "hi-IN",
+      "name": "हिन्दी (Hindi)",
+      "description": "Hindi programming keywords",
+      "keywords": {
+        "int": ["संख्या", "sankhya"],
+        "string": ["पाठ", "paath"],
+        "if": ["अगर", "agar"],
+        "then": ["तो", "to"],
+        "else": ["नहीं_तो", "nahin_to"],
+        "while": ["जब_तक", "jab_tak"],
+        "for": ["प्रत्येक", "pratyék"],
+        "break": ["तोड़ो", "todo"],
+        "end": ["समाप्त", "samaapt"],
+        "function": ["फलन", "falan"],
+        "return": ["वापसी", "vaapsi"],
+        "print": ["लिखो", "likho"],
+        "true": ["सत्य", "satya"],
+        "false": ["झूठ", "jhooth"]
+      }
+    },
+    {
+      "id": "custom-mehmet",
+      "name": "Mehmet's Custom Dialect",
+      "description": "User-defined custom keywords",
+      "keywords": {
+        "int": ["sayi"],
+        "string": ["kelime"],
+        "if": ["olursa", "OLURSA"],
+        "then": ["ozaman", "OZAMAN"],
+        "else": ["yoksa", "YOKSA"],
+        "while": ["surekli"],
+        "for": ["her"],
+        "break": ["dur"],
+        "function": ["yap"],
+        "return": ["geri"],
+        "print": ["goster"],
+        "true": ["evet"],
+        "false": ["hayir"]
+      }
+    }
+  ]
+}

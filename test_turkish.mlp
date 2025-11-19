@@ -1,0 +1,26 @@
+-- lang: tr-TR
+-- Test programı: Türkçe'den İngilizce'ye çeviri testi
+
+SAYISAL sayi = 10;
+METIN mesaj = "Merhaba EĞER bu değişmez!";
+
+YAZDIR "=== Test Başladı ==="
+YAZDIR mesaj
+
+EĞER sayi > 5 İSE
+    YAZDIR "Sayı büyük"
+DEĞİLSE
+    YAZDIR "Sayı küçük"
+SON
+
+SAYISAL i = 0;
+DÖNGÜ
+    EĞER i >= 3 İSE
+        DÖNGÜ_BITIR
+    SON
+
+    YAZDIR i
+    i = i + 1
+SON
+
+YAZDIR "=== Test Bitti ==="

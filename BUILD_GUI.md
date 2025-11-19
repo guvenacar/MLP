@@ -1,497 +1,293 @@
-# MLP SDL2 GUI Backend - Build Guide
+# Building MLP with SDL2 GUI Support
 
-Bu rehber, MLP projelerinde SDL2 tabanlı GUI backend'in nasıl kullanılacağını açıklar.
+## Quick Start
 
-## İçindekiler
+### 1. Install SDL2
 
-1. [Gereksinimler](#gereksinimler)
-2. [Kurulum](#kurulum)
-3. [Derleme](#derleme)
-4. [Kullanım](#kullanım)
-5. [API Referansı](#api-referansı)
-6. [Örnekler](#örnekler)
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install libsdl2-dev libsdl2-ttf-dev
+```
 
-## Gereksinimler
+**macOS:**
+```bash
+brew install sdl2 sdl2_ttf
+```
 
-### Ubuntu/Debian
+**Arch Linux:**
+```bash
+sudo pacman -S sdl2 sdl2_ttf
+```
+
+**Verify Installation:**
+```bash
+pkg-config --modversion sdl2
+# Should output: 2.x.x
+```
+
+### 2. Compile SDL2 Runtime
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y libsdl2-dev
+cd MLP/runtime
+
+# Compile SDL2 GUI runtime
+gcc -c gui_sdl.c -o gui_sdl.o $(pkg-config --cflags sdl2)
+
+# Verify
+ls -lh gui_sdl.o
 ```
 
-### macOS
+### 3. Build GUI Application
+
+**Option A: Using mlpc wrapper (recommended)**
+```bash
+cd MLP
+
+# Compile with SDL2 backend
+./mlpc example_gui_button.mlp -o my_gui_app --gui=sdl2
+
+# Run
+./my_gui_app
+```
+
+**Option B: Manual compilation**
+```bash
+cd MLP
+
+# Step 1: Preprocess (if multi-language)
+python3 dil_cevirici.py example_gui_button.mlp example_gui_button.preprocessed.mlp
+
+# Step 2: Compile to assembly
+./c_compiler/compiler_test example_gui_button.mlp gui_app.asm
+
+# Step 3: Assemble
+nasm -f elf64 gui_app.asm -o gui_app.o
+
+# Step 4: Link with SDL2 runtime
+gcc gui_app.o runtime/runtime.o runtime/gui_sdl.o \
+    -o my_gui_app $(pkg-config --libs sdl2) -no-pie
+
+# Step 5: Run
+./my_gui_app
+```
+
+## Example: Button Counter (Real GUI)
+
+**Create `button_counter.mlp`:**
+```mlp
+-- lang: en-US
+-- Real GUI Button Counter with SDL2
+
+print "Starting GUI application..."
+
+int window = gui_window_create("Button Counter", 400, 300);
+int label = gui_label_create(window, "Count: 0", 150, 100);
+int button = gui_button_create(window, "Click Me!", 150, 150, 100, 40);
+
+int count = 0;
+gui_window_show(window)
+
+print "GUI window opened. Click the button!"
+print "Close the window to exit."
+
+while
+    int event = gui_poll_event();
+
+    if event == 1 then
+        -- Quit event
+        print "Window closed by user"
+        break
+    end
+
+    if event == 2 then
+        -- Button click
+        int clicked = gui_get_clicked_button();
+        if clicked == button then
+            count = count + 1
+            print "Button clicked! Count:"
+            print count
+            -- Note: Label text update requires SDL_ttf
+            -- For now, we see visual button press
+        end
+    end
+end
+
+gui_window_destroy(window)
+print "Application closed"
+```
+
+**Compile and run:**
+```bash
+./mlpc button_counter.mlp -o counter --gui=sdl2
+./counter
+```
+
+**Expected behavior:**
+- Real window opens (400x300 pixels)
+- Gray button visible at coordinates (150, 150)
+- Button turns darker when hovered
+- Button turns dark gray when clicked
+- Console shows click count
+- Close window to exit
+
+## Example: Canvas Drawing (Real GUI)
+
+**Create `canvas_draw.mlp`:**
+```mlp
+-- lang: en-US
+-- Drawing shapes with SDL2
+
+int window = gui_window_create("Canvas Drawing", 800, 600);
+int canvas = gui_canvas_create(window, 0, 0, 800, 600);
+
+-- Clear with white background
+gui_canvas_clear(canvas, 255, 255, 255)
+
+-- Draw red rectangle
+gui_canvas_set_color(canvas, 255, 0, 0)
+gui_canvas_draw_rect(canvas, 100, 100, 200, 150)
+
+-- Draw green circle
+gui_canvas_set_color(canvas, 0, 255, 0)
+gui_canvas_draw_circle(canvas, 400, 300, 80)
+
+-- Draw blue line
+gui_canvas_set_color(canvas, 0, 0, 255)
+gui_canvas_draw_line(canvas, 50, 50, 750, 550)
+
+-- Render to screen
+gui_canvas_render(canvas)
+gui_window_show(window)
+
+print "Canvas window opened with shapes!"
+print "Close window to exit."
+
+-- Event loop
+while
+    int event = gui_poll_event();
+    if event == 1 then
+        break
+    end
+end
+
+gui_window_destroy(window)
+```
+
+**Compile and run:**
+```bash
+./mlpc canvas_draw.mlp -o canvas --gui=sdl2
+./canvas
+```
+
+**Expected behavior:**
+- Window opens with shapes drawn
+- Red rectangle at (100, 100)
+- Green circle at center (400, 300)
+- Blue diagonal line
+- Smooth rendering with SDL2
+
+## Switching Between Backends
+
+### Mock Backend (No SDL2 needed)
+```bash
+# Uses console simulation
+./mlpc example_gui_button.mlp -o test_mock
+./test_mock
+# Output: Console messages only, no real window
+```
+
+### SDL2 Backend (Real GUI)
+```bash
+# Uses SDL2 for real windows
+./mlpc example_gui_button.mlp -o test_sdl --gui=sdl2
+./test_sdl
+# Output: Real GUI window opens!
+```
+
+## Updating mlpc Wrapper
+
+Edit `mlpc` script to support `--gui=sdl2` flag:
 
 ```bash
-brew install sdl2
+#!/bin/bash
+
+# ... existing code ...
+
+# Detect GUI backend
+GUI_BACKEND="mock"
+if [[ "$@" == *"--gui=sdl2"* ]]; then
+    GUI_BACKEND="sdl2"
+fi
+
+# Link step
+if [ "$GUI_BACKEND" == "sdl2" ]; then
+    gcc "$OBJ_FILE" runtime/runtime.o runtime/gui_sdl.o \
+        -o "$OUTPUT_NAME" $(pkg-config --libs sdl2) -no-pie
+else
+    gcc "$OBJ_FILE" runtime/runtime.o runtime/gui_mock.o \
+        -o "$OUTPUT_NAME" -no-pie
+fi
 ```
 
-### Windows (MSYS2/MinGW)
+## Troubleshooting
+
+### SDL2 not found
+```
+Error: Package sdl2 was not found in the pkg-config search path
+```
+
+**Solution:** Install SDL2 development libraries:
+```bash
+sudo apt install libsdl2-dev
+```
+
+### Window doesn't open
+**Check:**
+1. SDL2 compiled correctly: `ls runtime/gui_sdl.o`
+2. Linked with SDL2: `ldd my_gui_app | grep SDL2`
+3. X11/Wayland display available
+
+### Button not visible
+- SDL2 backend shows buttons as colored rectangles
+- Text rendering requires SDL_ttf (future enhancement)
+- Button hover and click visual feedback works
+
+### Performance issues
+- SDL2 uses hardware acceleration
+- Should be smooth for simple UIs
+- For complex UIs, optimize rendering
+
+## Advanced: Adding SDL_ttf for Text
+
+To display actual text on buttons and labels:
 
 ```bash
-pacman -S mingw-w64-x86_64-SDL2
+# Install SDL_ttf
+sudo apt install libsdl2-ttf-dev
+
+# Modify gui_sdl.c to include:
+#include <SDL2/SDL_ttf.h>
+
+# Initialize in ensure_sdl_init():
+TTF_Init();
+
+# Render text in render_button():
+TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16);
+SDL_Surface* surface = TTF_RenderText_Solid(font, btn->text, (SDL_Color){0, 0, 0, 255});
+SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+SDL_RenderCopy(renderer, texture, NULL, &text_rect);
 ```
 
-### Versiyon Gereksinimleri
-
-- SDL2 >= 2.0.5
-- GCC >= 4.9 veya Clang >= 3.5
-- Make >= 3.81
-
-## Kurulum
-
-SDL2 kütüphanesinin kurulu olduğunu doğrulayın:
-
-```bash
-sdl2-config --version
-```
-
-Eğer `sdl2-config` komutu bulunamazsa, SDL2'yi yukarıdaki komutlarla kurun.
-
-## Derleme
-
-### 1. Basit Test Programı
-
-SDL2 GUI backend'in çalıştığını test etmek için:
-
-```bash
-cd runtime
-gcc -DMLP_GUI_SDL_TEST gui_sdl.c -o gui_test $(sdl2-config --cflags --libs) -lm
-./gui_test
-```
-
-Bu komut bir test penceresi açacak ve çeşitli şekiller çizecektir.
-
-### 2. MLP Projesi ile Kullanım
-
-MLP seed compiler'ı GUI desteği ile kullanmak için:
-
-```bash
-python3 stage0/seed-compiler.py your-program.mlp --gui=sdl2 -o output
-```
-
-veya
-
-```bash
-./mlpc your-program.mlp --gui=sdl2
-```
-
-### 3. Manuel Derleme
-
-Kendi C kodunuzla entegre etmek için:
-
-```bash
-# SDL2 ile derleme
-gcc -c runtime/gui_sdl.c -o build/gui_sdl.o $(sdl2-config --cflags)
-
-# Runtime ile birlikte link etme
-gcc your-program.c build/runtime.o build/gui_sdl.o \
-    -o your-program \
-    $(sdl2-config --libs) -lm
-```
-
-## Kullanım
-
-### Basit Pencere Örneği
-
-```c
-#include "runtime/gui_sdl.c"
-
-int main(void) {
-    // Pencere oluştur (800x600, 60 FPS)
-    MLPWindow* window = mlp_window_create("Merhaba MLP", 800, 600, 60);
-
-    if (!window) {
-        return 1;
-    }
-
-    // Ana döngü
-    while (mlp_window_is_running(window)) {
-        MLPEvent event;
-
-        // Olayları işle
-        while (mlp_window_poll_event(window, &event)) {
-            if (event.type == MLP_EVENT_KEY_DOWN) {
-                printf("Key pressed: %d\n", event.data.key.key_code);
-            }
-        }
-
-        // Ekranı temizle (siyah)
-        mlp_clear(window, MLP_COLOR_BLACK);
-
-        // Mavi bir dikdörtgen çiz
-        MLPRect rect = {100, 100, 200, 150};
-        mlp_fill_rect(window, rect, MLP_COLOR_BLUE);
-
-        // Ekranı güncelle
-        mlp_present(window);
-    }
-
-    // Temizlik
-    mlp_window_destroy(window);
-    mlp_gui_quit();
-
-    return 0;
-}
-```
-
-### Yüksek Seviyeli Loop Helper
-
-Daha basit kullanım için `mlp_run_loop` helper fonksiyonunu kullanabilirsiniz:
-
-```c
-#include "runtime/gui_sdl.c"
-
-void my_update(MLPEvent* event) {
-    if (event->type == MLP_EVENT_MOUSE_DOWN) {
-        printf("Mouse clicked at: %d, %d\n",
-               event->data.mouse.x,
-               event->data.mouse.y);
-    }
-}
-
-void my_render(MLPWindow* window) {
-    mlp_clear(window, mlp_color_rgb(30, 30, 40));
-
-    // Yeşil bir daire çiz
-    mlp_fill_circle(window, 400, 300, 50, MLP_COLOR_GREEN);
-
-    // Sarı bir çizgi çiz
-    mlp_draw_line(window, 0, 0, 800, 600, MLP_COLOR_YELLOW);
-}
-
-int main(void) {
-    MLPWindow* window = mlp_window_create("GUI Demo", 800, 600, 60);
-
-    if (!window) return 1;
-
-    // Helper loop kullan
-    mlp_run_loop(window, my_update, my_render);
-
-    mlp_window_destroy(window);
-    mlp_gui_quit();
-
-    return 0;
-}
-```
-
-## API Referansı
-
-### Pencere Yönetimi
-
-#### `mlp_gui_init()`
-SDL2'yi başlatır. Otomatik olarak `mlp_window_create` tarafından çağrılır.
-
-```c
-bool mlp_gui_init(void);
-```
-
-#### `mlp_window_create()`
-Yeni bir pencere oluşturur.
-
-```c
-MLPWindow* mlp_window_create(const char* title, int width, int height, int fps);
-```
-
-**Parametreler:**
-- `title`: Pencere başlığı
-- `width`: Pencere genişliği (piksel)
-- `height`: Pencere yüksekliği (piksel)
-- `fps`: Hedef FPS (örn: 60)
-
-**Dönüş:** Pencere pointer'ı veya NULL (hata durumunda)
-
-#### `mlp_window_destroy()`
-Pencereyi yok eder ve kaynakları temizler.
-
-```c
-void mlp_window_destroy(MLPWindow* window);
-```
-
-#### `mlp_window_is_running()`
-Pencerenin çalışıp çalışmadığını kontrol eder.
-
-```c
-bool mlp_window_is_running(MLPWindow* window);
-```
-
-#### `mlp_window_set_title()`
-Pencere başlığını değiştirir.
-
-```c
-void mlp_window_set_title(MLPWindow* window, const char* title);
-```
-
-#### `mlp_window_get_size()` / `mlp_window_set_size()`
-Pencere boyutunu alır/ayarlar.
-
-```c
-void mlp_window_get_size(MLPWindow* window, int* width, int* height);
-void mlp_window_set_size(MLPWindow* window, int width, int height);
-```
-
-### Olay İşleme
-
-#### `mlp_window_poll_event()`
-Sonraki olayı alır.
-
-```c
-bool mlp_window_poll_event(MLPWindow* window, MLPEvent* event);
-```
-
-**Olay Tipleri:**
-- `MLP_EVENT_NONE`: Olay yok
-- `MLP_EVENT_QUIT`: Pencere kapatma
-- `MLP_EVENT_KEY_DOWN`: Tuş basıldı
-- `MLP_EVENT_KEY_UP`: Tuş bırakıldı
-- `MLP_EVENT_MOUSE_DOWN`: Fare tıklandı
-- `MLP_EVENT_MOUSE_UP`: Fare bırakıldı
-- `MLP_EVENT_MOUSE_MOVE`: Fare hareket etti
-- `MLP_EVENT_WINDOW_RESIZE`: Pencere boyutu değişti
-
-### Çizim Fonksiyonları
-
-#### `mlp_clear()`
-Ekranı belirtilen renkle temizler.
-
-```c
-void mlp_clear(MLPWindow* window, MLPColor color);
-```
-
-#### `mlp_draw_point()`
-Tek bir nokta çizer.
-
-```c
-void mlp_draw_point(MLPWindow* window, int x, int y, MLPColor color);
-```
-
-#### `mlp_draw_line()`
-Çizgi çizer.
-
-```c
-void mlp_draw_line(MLPWindow* window, int x1, int y1, int x2, int y2, MLPColor color);
-```
-
-#### `mlp_draw_rect()` / `mlp_fill_rect()`
-Dikdörtgen çizer (çerçeve veya dolu).
-
-```c
-void mlp_draw_rect(MLPWindow* window, MLPRect rect, MLPColor color);
-void mlp_fill_rect(MLPWindow* window, MLPRect rect, MLPColor color);
-```
-
-#### `mlp_draw_circle()` / `mlp_fill_circle()`
-Daire çizer (çerçeve veya dolu).
-
-```c
-void mlp_draw_circle(MLPWindow* window, int cx, int cy, int radius, MLPColor color);
-void mlp_fill_circle(MLPWindow* window, int cx, int cy, int radius, MLPColor color);
-```
-
-#### `mlp_present()`
-Render edilen frame'i ekrana sunar.
-
-```c
-void mlp_present(MLPWindow* window);
-```
-
-### Renk Yönetimi
-
-#### `mlp_color_create()` / `mlp_color_rgb()`
-Renk oluşturur.
-
-```c
-MLPColor mlp_color_create(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
-MLPColor mlp_color_rgb(Uint8 r, Uint8 g, Uint8 b);  // Alpha = 255
-```
-
-**Hazır Renkler:**
-- `MLP_COLOR_BLACK`
-- `MLP_COLOR_WHITE`
-- `MLP_COLOR_RED`
-- `MLP_COLOR_GREEN`
-- `MLP_COLOR_BLUE`
-- `MLP_COLOR_YELLOW`
-- `MLP_COLOR_CYAN`
-- `MLP_COLOR_MAGENTA`
-- `MLP_COLOR_GRAY`
-
-### Yardımcı Fonksiyonlar
-
-#### `mlp_run_loop()`
-Basitleştirilmiş ana döngü helper'ı.
-
-```c
-void mlp_run_loop(MLPWindow* window,
-                  void (*update)(MLPEvent* event),
-                  void (*render)(MLPWindow* window));
-```
-
-#### `mlp_get_ticks()`
-SDL başlangıcından bu yana geçen milisaniyeyi döndürür.
-
-```c
-Uint32 mlp_get_ticks(void);
-```
-
-#### `mlp_gui_quit()`
-SDL'i temizler ve kapatır.
-
-```c
-void mlp_gui_quit(void);
-```
-
-## Örnekler
-
-### Örnek 1: Basit Animasyon
-
-```c
-#include "runtime/gui_sdl.c"
-
-int circle_x = 100;
-int circle_y = 300;
-int velocity_x = 5;
-
-void update(MLPEvent* event) {
-    // Animasyon mantığı
-    circle_x += velocity_x;
-
-    // Sınır kontrolü
-    if (circle_x > 750 || circle_x < 50) {
-        velocity_x = -velocity_x;
-    }
-}
-
-void render(MLPWindow* window) {
-    mlp_clear(window, MLP_COLOR_BLACK);
-    mlp_fill_circle(window, circle_x, circle_y, 30, MLP_COLOR_CYAN);
-}
-
-int main(void) {
-    MLPWindow* window = mlp_window_create("Bouncing Ball", 800, 600, 60);
-    if (!window) return 1;
-
-    mlp_run_loop(window, update, render);
-
-    mlp_window_destroy(window);
-    mlp_gui_quit();
-    return 0;
-}
-```
-
-### Örnek 2: Fare ile Çizim
-
-```c
-#include "runtime/gui_sdl.c"
-
-bool is_drawing = false;
-int last_x = 0, last_y = 0;
-
-void update(MLPEvent* event) {
-    if (event->type == MLP_EVENT_MOUSE_DOWN) {
-        is_drawing = true;
-        last_x = event->data.mouse.x;
-        last_y = event->data.mouse.y;
-    }
-    else if (event->type == MLP_EVENT_MOUSE_UP) {
-        is_drawing = false;
-    }
-}
-
-void render(MLPWindow* window) {
-    // Ekranı temizleme - sadece başlangıçta
-    static bool first = true;
-    if (first) {
-        mlp_clear(window, MLP_COLOR_WHITE);
-        first = false;
-    }
-
-    // Çizim
-    MLPEvent event;
-    if (is_drawing && mlp_window_poll_event(window, &event)) {
-        if (event.type == MLP_EVENT_MOUSE_MOVE) {
-            mlp_draw_line(window, last_x, last_y,
-                         event.data.mouse.x, event.data.mouse.y,
-                         MLP_COLOR_BLACK);
-            last_x = event.data.mouse.x;
-            last_y = event.data.mouse.y;
-        }
-    }
-}
-
-int main(void) {
-    MLPWindow* window = mlp_window_create("Paint App", 800, 600, 60);
-    if (!window) return 1;
-
-    mlp_run_loop(window, update, render);
-
-    mlp_window_destroy(window);
-    mlp_gui_quit();
-    return 0;
-}
-```
-
-## Sorun Giderme
-
-### SDL2 bulunamadı
-
-**Hata:** `SDL.h: No such file or directory`
-
-**Çözüm:**
-```bash
-# SDL2'nin kurulu olduğunu doğrulayın
-sdl2-config --cflags
-
-# Yoksa kurun
-sudo apt-get install libsdl2-dev
-```
-
-### Link hatası
-
-**Hata:** `undefined reference to SDL_*`
-
-**Çözüm:** SDL2 kütüphanesini link edin:
-```bash
-gcc program.c -o program $(sdl2-config --libs)
-```
-
-### Pencere açılmıyor
-
-**Kontroller:**
-1. Display server çalışıyor mu? (X11/Wayland)
-2. SDL2 doğru yüklendi mi?
-3. `mlp_gui_init()` başarılı döndü mü?
-
-### Düşük FPS
-
-**Çözümler:**
-1. VSync devre dışı bırakın: Renderer oluşturulurken `SDL_RENDERER_PRESENTVSYNC` flag'ini kaldırın
-2. Çizim sayısını azaltın
-3. Hardware acceleration kontrol edin
-
-## Gelecek Özellikler
-
-- [ ] SDL2_ttf entegrasyonu (text rendering)
-- [ ] SDL2_image entegrasyonu (resim yükleme)
-- [ ] SDL2_mixer entegrasyonu (ses)
-- [ ] Texture desteği
-- [ ] Sprite rendering
-- [ ] Gelişmiş input handling (gamepad)
-- [ ] Multi-window desteği
-
-## Katkıda Bulunma
-
-GUI backend'e katkıda bulunmak için:
-
-1. `runtime/gui_sdl.c` dosyasını düzenleyin
-2. Değişikliklerinizi test edin
-3. Pull request gönderin
-
-## Lisans
-
-MLP projesi ile aynı lisans altındadır. Detaylar için `LICENSE` dosyasına bakın.
-
----
-
-**Son güncelleme:** 2025-01-18
-**Versiyon:** 1.0.0
+## Next Steps
+
+1. ✅ Compile SDL2 runtime
+2. ✅ Test basic window example
+3. ✅ Test button click example
+4. ✅ Test canvas drawing
+5. 📋 Add SDL_ttf for text rendering
+6. 📋 Add more widgets (textbox, checkbox, slider)
+7. 📋 Add layout manager
+8. 📋 Create visual GUI designer
+
+**Your MLP applications now run with real native GUI!** 🚀

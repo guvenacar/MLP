@@ -70,3 +70,33 @@ stage3/output/
 /mlp-v*.c
 /mlp-v[0-9]
 /mlp-v[0-9][0-9]
+
+# Binary executables
+compiler_test
+mlpdc
+mlpdc_demo
+*.o
+*.asm
+
+# Compiler executables
+tydc_unified
+test_hello
+test_hello.o
+test_hello.asm
+
+# Preprocessor outputs
+*.preprocessed.mlp
+*.preprocessed.tyd
+
+# Test binaries
+test_direct_turkish
+test_english_only
+test_russian
+test_chinese
+test_hindi
+
+# Benchmark binaries
+bench_*
+
+# GUI demo binaries
+gui_demo*
