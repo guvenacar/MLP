@@ -1,0 +1,23 @@
+
+
+
+-- Test: Russian keywords + Python-style syntax
+int x = 10
+
+if x > 0 then
+    print "положительный"
+else
+    print "отрицательный"
+
+end if
+for i в диапазоне(0, 5)
+    print i
+
+while x > 0
+    x = x - 1
+    if x == 5 then
+        break
+
+    end if
+end while
+print "Готово!"

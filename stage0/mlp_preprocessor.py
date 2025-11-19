@@ -166,7 +166,8 @@ class MLPPreprocessor:
                 continue
             
             # CODE state: check for word boundaries
-            if c in ' \t\n;(){}[]<>=!+-*/,.':
+            # IMPORTANT: Include ':' for Python-style syntax (if x:, else:, while x:)
+            if c in ' \t\n;(){}[]<>=!+-*/,.:' :
                 if current_word:
                     word = ''.join(current_word)
                     # Translate if it's a keyword
@@ -270,18 +271,24 @@ class MLPPreprocessor:
             
             # Calculate indentation level
             indent_level = len(line) - len(line.lstrip())
-            
+
             # Remove trailing colons (Python style)
             if stripped.endswith(':'):
                 stripped = stripped[:-1].rstrip()
                 line = line[:len(line) - len(line.lstrip())] + stripped
-            
+
+            # CRITICAL: Check for else/else if BEFORE dedent control
+            # These keywords continue the if block, don't close it!
+            is_else_clause = (stripped == 'else' or stripped.startswith('else if'))
+
             # Check if we need to close blocks due to dedent
-            while block_stack and block_stack[-1][1] >= indent_level:
-                block_type, block_indent = block_stack.pop()
-                # Add end statement with proper indentation
-                result_lines.append(' ' * block_indent + f'end {block_type}')
-            
+            # EXCEPT when we're at an else clause (which continues the if block)
+            if not is_else_clause:
+                while block_stack and block_stack[-1][1] >= indent_level:
+                    block_type, block_indent = block_stack.pop()
+                    # Add end statement with proper indentation
+                    result_lines.append(' ' * block_indent + f'end {block_type}')
+
             # Detect block openings
             if re.match(r'\bif\b.*\bthen\b', stripped):
                 result_lines.append(line)
@@ -297,7 +304,7 @@ class MLPPreprocessor:
                 result_lines.append(line)
                 # No stack change - else if is part of the same if block
             elif stripped == 'else':
-                # else: DON'T close previous if, it continues  
+                # else: DON'T close previous if, it continues
                 result_lines.append(line)
                 # No stack change - else is part of the same if block
             elif stripped == '}' or stripped == 'end':
