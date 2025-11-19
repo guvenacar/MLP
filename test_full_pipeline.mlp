@@ -1,0 +1,15 @@
+-- lang: tr-TR
+-- syntax: c
+
+-- Tam pipeline testi: Turkish + C-style → Base IR → Compile
+
+TAMSAYI x = 5;
+TAMSAYI y = 10;
+
+eğer (x < y) {
+    YAZDIR "x küçük";
+} değilse {
+    YAZDIR "x büyük veya eşit";
+}
+
+YAZDIR "Test tamamlandı!";

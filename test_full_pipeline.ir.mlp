@@ -1,0 +1,14 @@
+
+
+
+-- Tam pipeline testi: Turkish + C-style → Base IR → Compile
+
+int x = 5
+int y = 10
+if x < y then
+    print "x küçük"
+end if
+else
+    print "x büyük veya eşit"
+end
+print "Test tamamlandı!"

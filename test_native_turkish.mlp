@@ -1,0 +1,12 @@
+-- Direct Turkish MLP code (no preprocessing needed)
+
+SAYISAL x;
+x = 42;
+
+EĞER (x > 40) İSE
+    YAZDIR "x büyük";
+DEĞİLSE
+    YAZDIR "x küçük";
+SON
+
+YAZDIR "Bitti!";
