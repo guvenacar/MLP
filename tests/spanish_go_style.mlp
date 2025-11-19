@@ -1,0 +1,34 @@
+-- lang: es-ES
+-- syntax: go
+-- Test: Go-style syntax with Spanish keywords
+
+entero x := 30
+cadena mensaje := "Hola Go-Style!"
+
+si x > 25 {
+    imprimir("X es grande")
+    imprimir(x)
+} sino {
+    imprimir("X es pequeño")
+}
+
+funcion sumar(entero a, entero b) entero {
+    retornar a + b
+}
+
+para i := 1; i <= 5; i++ {
+    entero resultado := sumar(i, 10)
+    imprimir("Suma de")
+    imprimir(i)
+    imprimir("y 10 es")
+    imprimir(resultado)
+}
+
+entero contador := 0
+mientras contador < 3 {
+    imprimir("Contador:")
+    imprimir(contador)
+    contador = contador + 1
+}
+
+imprimir("¡Prueba completa!")
