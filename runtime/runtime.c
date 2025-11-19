@@ -6,6 +6,7 @@
 #include <unistd.h>  // readlink için
 #include <libgen.h>  // dirname için
 #include <errno.h>   // errno için
+#include "json_parser.h"  // MLP Language definitions parser
 
 // Forward declarations
 char* runtime_dizin_al();

@@ -13,10 +13,10 @@ TYD (Türkçe Yazılım Dili) artık **tam anlamıyla self-hosting** bir program
 
 | Bileşen | Dosya | TYD Satırları | Assembly Satırları | Fonksiyon Sayısı |
 |---------|-------|---------------|-------------------|------------------|
-| **Lexer** | `tyd_compiler/tyd_lexer.tyd` | 548 | 1,806 | 17 |
-| **Parser** | `tyd_compiler/tyd_parser.tyd` | 189 | - | 7 |
-| **Generator** | `tyd_compiler/tyd_generator.tyd` | 190 | 671 | 9 |
-| **Test** | `test_self_hosting.tyd` | 176 | 865 | - |
+| **Lexer** | `tyd_compiler/tyd_lexer.mlp` | 548 | 1,806 | 17 |
+| **Parser** | `tyd_compiler/tyd_parser.mlp` | 189 | - | 7 |
+| **Generator** | `tyd_compiler/tyd_generator.mlp` | 190 | 671 | 9 |
+| **Test** | `test_self_hosting.mlp` | 176 | 865 | - |
 | **TOPLAM** | - | **1,103** | **3,342** | **33** |
 
 ### Bootstrap Derleyici (C)
@@ -72,14 +72,14 @@ TYD-MLP/
 │   └── main.c              # Entry point
 │
 ├── tyd_compiler/            # Self-Hosting Compiler (TYD)
-│   ├── tyd_lexer.tyd       # ✅ 548 satır - Lexer
-│   ├── tyd_parser.tyd      # ✅ 189 satır - Parser
-│   └── tyd_generator.tyd   # ✅ 190 satır - Generator
+│   ├── tyd_lexer.mlp       # ✅ 548 satır - Lexer
+│   ├── tyd_parser.mlp      # ✅ 189 satır - Parser
+│   └── tyd_generator.mlp   # ✅ 190 satır - Generator
 │
 ├── runtime/
 │   └── runtime.c           # Runtime library (printf wrappers)
 │
-├── test_self_hosting.tyd   # Self-hosting pipeline test
+├── test_self_hosting.mlp   # Self-hosting pipeline test
 ├── SPECS.md                # TYD Language Specification
 └── README.md
 ```
@@ -167,9 +167,9 @@ SON
 ## 📈 Performans Metrikleri
 
 ### Derleme Süreleri (Yaklaşık)
-- `tyd_lexer.tyd`: ~0.1s (548 satır → 1,806 assembly)
-- `tyd_parser.tyd`: ~0.05s (189 satır → assembly)
-- `tyd_generator.tyd`: ~0.05s (190 satır → 671 assembly)
+- `tyd_lexer.mlp`: ~0.1s (548 satır → 1,806 assembly)
+- `tyd_parser.mlp`: ~0.05s (189 satır → assembly)
+- `tyd_generator.mlp`: ~0.05s (190 satır → 671 assembly)
 
 ### Kod Büyüme Oranı
 - Lexer: 1 TYD satırı → 3.3 assembly satırı
