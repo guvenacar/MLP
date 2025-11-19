@@ -113,9 +113,21 @@ echo "Input:  $INPUT_FILE"
 echo "Output: $OUTPUT_NAME"
 echo ""
 
-# STAGE 1: Preprocessor
+# STAGE 1A: Syntax Normalization
+echo -e "${YELLOW}[1/5] Normalizing syntax...${NC}"
+SYNTAX_FILE="${BASENAME}.syntax-normalized.mlp"
+
+if [[ "$VERBOSE" == true ]]; then
+    python3 "$SCRIPT_DIR/stage0/syntax_preprocessor.py" "$INPUT_FILE" "$SYNTAX_FILE"
+else
+    python3 "$SCRIPT_DIR/stage0/syntax_preprocessor.py" "$INPUT_FILE" "$SYNTAX_FILE" 2>&1 | grep -v "Detected syntax" || true
+fi
+echo -e "${GREEN}      ✓ Syntax normalized${NC}"
+echo ""
+
+# STAGE 1B: Language Translation
 if [[ "$NO_PREP" == false ]]; then
-    echo -e "${YELLOW}[1/4] Preprocessing...${NC}"
+    echo -e "${YELLOW}[2/5] Translating language...${NC}"
 
     LANG_ARG=""
     if [[ -n "$LANGUAGE" ]]; then
@@ -124,28 +136,28 @@ if [[ "$NO_PREP" == false ]]; then
 
     if [[ "$VERBOSE" == true ]]; then
         if [[ -n "$LANG_ARG" ]]; then
-            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$LANG_ARG" "$PREP_FILE"
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$SYNTAX_FILE" "$LANG_ARG" "$PREP_FILE"
         else
-            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$PREP_FILE"
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$SYNTAX_FILE" "$PREP_FILE"
         fi
     else
         if [[ -n "$LANG_ARG" ]]; then
-            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$LANG_ARG" "$PREP_FILE" > /dev/null
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$SYNTAX_FILE" "$LANG_ARG" "$PREP_FILE" > /dev/null
         else
-            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$PREP_FILE" > /dev/null
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$SYNTAX_FILE" "$PREP_FILE" > /dev/null
         fi
     fi
 
     COMPILE_INPUT="$PREP_FILE"
-    echo -e "${GREEN}      ✓ Preprocessed${NC}"
+    echo -e "${GREEN}      ✓ Language translated${NC}"
 else
-    echo -e "${YELLOW}[1/4] Skipping preprocessor (--no-prep)${NC}"
-    COMPILE_INPUT="$INPUT_FILE"
+    echo -e "${YELLOW}[2/5] Skipping language translation (--no-prep)${NC}"
+    COMPILE_INPUT="$SYNTAX_FILE"
 fi
 echo ""
 
 # STAGE 2: Compile to Assembly
-echo -e "${YELLOW}[2/4] Compiling to assembly...${NC}"
+echo -e "${YELLOW}[3/5] Compiling to assembly...${NC}"
 if [[ "$VERBOSE" == true ]]; then
     "$SCRIPT_DIR/c_compiler/compiler_test" "$COMPILE_INPUT" "$ASM_FILE"
 else
@@ -155,13 +167,13 @@ echo -e "${GREEN}      ✓ Assembly generated${NC}"
 echo ""
 
 # STAGE 3: Assemble to Object
-echo -e "${YELLOW}[3/4] Assembling...${NC}"
+echo -e "${YELLOW}[4/5] Assembling...${NC}"
 nasm -f elf64 "$ASM_FILE" -o "$OBJ_FILE"
 echo -e "${GREEN}      ✓ Object file created${NC}"
 echo ""
 
 # STAGE 4: Link
-echo -e "${YELLOW}[4/4] Linking...${NC}"
+echo -e "${YELLOW}[5/5] Linking...${NC}"
 
 # Choose GUI backend
 if [[ "$GUI_BACKEND" == "sdl2" ]]; then
@@ -194,6 +206,8 @@ echo -e "${GREEN}      ✓ Executable created${NC}"
 echo ""
 
 # Cleanup
+rm -f "$SYNTAX_FILE"
+
 if [[ "$KEEP_PREP" == false && "$NO_PREP" == false ]]; then
     rm -f "$PREP_FILE"
 fi

@@ -1,0 +1,16 @@
+// lang: tr-TR
+
+sayisal x = 42;
+sayisal y = 10;
+
+eğer x > y İSE
+    yazdir("x büyük")
+    yazdir(x)
+SON
+
+döngü y < 15 İSE
+    yazdir(y)
+    y = y + 1
+SON
+
+yazdir("Bitti!")

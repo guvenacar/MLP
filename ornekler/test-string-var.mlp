@@ -1,4 +1,0 @@
-METIN isim = "Ahmet";
-YAZDIR isim;
-METIN mesaj = "Hoş geldin!";
-YAZDIR mesaj;

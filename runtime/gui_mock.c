@@ -7,6 +7,35 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+
+// --- New Simple GUI API ---
+void gui_window_open(long width, long height, const char* title) {
+    printf("[GUI] Opening window: '%s' (%ldx%ld)\n", title, width, height);
+}
+
+void gui_set_color(long r, long g, long b) {
+    printf("[GUI] Setting color to RGB(%ld, %ld, %ld)\n", r, g, b);
+}
+
+void gui_draw_rect(long x, long y, long w, long h) {
+    printf("[GUI] Drawing rectangle at (%ld, %ld) size %ldx%ld\n", x, y, w, h);
+}
+
+void gui_update() {
+    printf("[GUI] Updating screen\n");
+}
+
+void gui_wait(long milliseconds) {
+    printf("[GUI] Waiting %ld milliseconds\n", milliseconds);
+    usleep(milliseconds * 1000); // Convert ms to microseconds
+}
+
+void gui_close() {
+    printf("[GUI] Closing window\n");
+}
+
+// --- Legacy Widget-based GUI API ---
 
 // Window management
 long gui_window_create(const char* title, long width, long height) {

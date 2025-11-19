@@ -78,6 +78,11 @@ static int mouse_y = 0;
 
 static int sdl_initialized = 0;
 
+// Simple API state
+static SDL_Window* simple_window = NULL;
+static SDL_Renderer* simple_renderer = NULL;
+static SDL_Color current_color = {255, 255, 255, 255};
+
 // ===========================
 // Helper Functions
 // ===========================
@@ -92,6 +97,120 @@ static void ensure_sdl_init() {
         printf("[GUI] SDL2 initialized\n");
     }
 }
+
+// ===========================
+// Simple GUI API (New)
+// ===========================
+
+void gui_window_open(long width, long height, const char* title) {
+    ensure_sdl_init();
+    
+    if (simple_window) {
+        printf("[GUI] Warning: Window already open, closing previous\n");
+        gui_close();
+    }
+    
+    simple_window = SDL_CreateWindow(
+        title,
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        width, height,
+        SDL_WINDOW_SHOWN
+    );
+    
+    if (!simple_window) {
+        fprintf(stderr, "[GUI] SDL_CreateWindow Error: %s\n", SDL_GetError());
+        return;
+    }
+    
+    simple_renderer = SDL_CreateRenderer(simple_window, -1, SDL_RENDERER_ACCELERATED);
+    if (!simple_renderer) {
+        fprintf(stderr, "[GUI] SDL_CreateRenderer Error: %s\n", SDL_GetError());
+        SDL_DestroyWindow(simple_window);
+        simple_window = NULL;
+        return;
+    }
+    
+    // Clear to white
+    SDL_SetRenderDrawColor(simple_renderer, 255, 255, 255, 255);
+    SDL_RenderClear(simple_renderer);
+    SDL_RenderPresent(simple_renderer);
+    
+    printf("[GUI] Window opened: '%s' (%ldx%ld)\n", title, width, height);
+}
+
+void gui_set_color(long r, long g, long b) {
+    if (!simple_renderer) return;
+    
+    current_color.r = r;
+    current_color.g = g;
+    current_color.b = b;
+    SDL_SetRenderDrawColor(simple_renderer, r, g, b, 255);
+    
+    printf("[GUI] Color set to RGB(%ld, %ld, %ld)\n", r, g, b);
+}
+
+void gui_draw_rect(long x, long y, long w, long h) {
+    if (!simple_renderer) return;
+    
+    SDL_Rect rect = {x, y, w, h};
+    SDL_RenderFillRect(simple_renderer, &rect);
+    
+    printf("[GUI] Rectangle drawn at (%ld, %ld) size %ldx%ld\n", x, y, w, h);
+}
+
+void gui_update() {
+    if (!simple_renderer) return;
+    
+    SDL_RenderPresent(simple_renderer);
+    
+    // Process events to keep window responsive
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+        if (e.type == SDL_QUIT) {
+            gui_close();
+        }
+    }
+    
+    printf("[GUI] Screen updated\n");
+}
+
+void gui_wait(long milliseconds) {
+    SDL_Delay(milliseconds);
+    
+    // Keep processing events during wait
+    SDL_Event e;
+    Uint32 start = SDL_GetTicks();
+    while (SDL_GetTicks() - start < milliseconds) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                gui_close();
+                return;
+            }
+        }
+        SDL_Delay(10);
+    }
+    
+    printf("[GUI] Waited %ld milliseconds\n", milliseconds);
+}
+
+void gui_close() {
+    if (simple_renderer) {
+        SDL_DestroyRenderer(simple_renderer);
+        simple_renderer = NULL;
+    }
+    
+    if (simple_window) {
+        SDL_DestroyWindow(simple_window);
+        simple_window = NULL;
+    }
+    
+    printf("[GUI] Window closed\n");
+}
+
+// ===========================
+// Legacy Widget-based API
+// ===========================
 
 static WindowInfo* find_window(long id) {
     for (int i = 0; i < window_count; i++) {

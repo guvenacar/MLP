@@ -1,0 +1,6 @@
+int y = 0;
+
+while y < 3 then
+    print(y)
+    y = y + 1
+endwhile

@@ -1,0 +1,15 @@
+// syntax: python-style
+// dil: tr-TR
+
+PROGRAM test_python_style:
+    SAYISAL x = 42
+    SAYISAL y = 10
+    
+    İSE x > y:
+        YAZDIR("x büyük")
+    DEĞİLSE:
+        YAZDIR("y büyük")
+    
+    DÖNGÜ y < 15:
+        YAZDIR(y)
+        y = y + 1

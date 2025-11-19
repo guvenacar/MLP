@@ -1,0 +1,26 @@
+-- lang: tr-TR
+-- Test: Block-Specific Terminators (Context-aware syntax)
+-- Türkçe block sonlandırma jetonları
+
+SAYISAL x = 10;
+
+EĞER x > 5 İSE
+    YAZDIR x
+EĞER_SON
+
+SAYISAL sayac = 0;
+
+DÖNGÜ
+    EĞER sayac >= 3 İSE
+        DÖNGÜ_BITIR
+    EĞER_SON
+    YAZDIR sayac
+    sayac = sayac + 1
+DÖNGÜ_SON
+
+İŞLEÇ topla(a, b) İSE
+    DÖNÜŞ a + b
+İŞLEÇ_SON
+
+SAYISAL sonuc = topla(5, 7);
+YAZDIR sonuc

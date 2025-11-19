@@ -27,11 +27,12 @@ class LanguagePreprocessor:
     def detect_language(self, source_code):
         """Detect language from header comment
 
-        Looks for: -- lang: tr-TR
+        Looks for: -- lang: tr-TR or // dil: tr-TR
         """
-        match = re.search(r'--\s*lang:\s*(\S+)', source_code)
+        # Try both formats
+        match = re.search(r'(--|//)\s*(lang|dil):\s*(\S+)', source_code, re.IGNORECASE)
         if match:
-            return match.group(1)
+            return match.group(3)
         return self.default_lang
 
     def build_translation_map(self, lang_id):
@@ -65,6 +66,12 @@ class LanguagePreprocessor:
         # Auto-detect language if not specified
         if lang_id is None:
             lang_id = self.detect_language(source_code)
+
+        # Remove header comments (// lang:, // dil:, // syntax:)
+        source_code = re.sub(r'^\s*(--|//)\s*(lang|dil|syntax):.*$', '', source_code, flags=re.MULTILINE)
+
+        # Convert // comments to -- (MLP standard)
+        source_code = source_code.replace('//', '--')
 
         # Build translation map
         translation_map = self.build_translation_map(lang_id)

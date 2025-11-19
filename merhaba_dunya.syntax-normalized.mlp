@@ -1,0 +1,7 @@
+-- lang: tr-TR
+YAZDIR "Merhaba Dünya!"
+YAZDIR "MLP ile Türkçe programlama"
+
+SAYISAL yil = 2025;
+YAZDIR "Yıl:"
+YAZDIR yil

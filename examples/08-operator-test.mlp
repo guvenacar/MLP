@@ -1,0 +1,23 @@
+// syntax: c-style
+// lang: tr-TR
+
+sayisal x = 42;
+sayisal y = 10;
+
+// Test operator transformation
+eğer (x == y) {
+    yazdir("eşit");
+}
+
+// Test && operator
+eğer (x > 5 && y < 20) {
+    yazdir("koşul doğru");
+}
+
+// Test || operator  
+döngü (y < 15 || x > 100) {
+    yazdir(y);
+    y = y + 1;
+}
+
+yazdir("Bitti!");

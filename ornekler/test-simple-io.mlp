@@ -1,4 +1,0 @@
-METIN dosya_yolu = "test.txt";
-METIN mod = "w";
-SAYISAL dosya = DOSYA_AC(dosya_yolu, mod);
-YAZDIR dosya;

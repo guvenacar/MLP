@@ -1,0 +1,17 @@
+
+
+
+int x = 42;
+int y = 10;
+
+if (x > y) {
+    print("x büyük");
+    print(x);
+}
+
+while (y < 15) {
+    print(y);
+    y = y + 1;
+}
+
+print("Bitti!");

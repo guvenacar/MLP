@@ -1,0 +1,17 @@
+// syntax: c-style
+// lang: tr-TR
+
+sayisal x = 42;
+sayisal y = 10;
+
+eğer (x > y) {
+    yazdir("x büyük");
+    yazdir(x);
+}
+
+döngü (y < 15) {
+    yazdir(y);
+    y = y + 1;
+}
+
+yazdir("Bitti!");
