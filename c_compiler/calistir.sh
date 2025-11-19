@@ -5,12 +5,13 @@ set -e
 
 TYD_DOSYA=$1
 
-if [ -z "$TYD_DOSYA" ]; then
-    echo "Kullanım: ./calistir.sh <dosya.tyd>"
+if [ "$#" -ne 1 ]; then
+    echo "Kullanım: ./calistir.sh <dosya.mlp>"
     exit 1
 fi
 
-TEMEL_AD=$(basename -s .tyd "$TYD_DOSYA")
+TYD_DOSYA="$1"
+TEMEL_AD=$(basename -s .mlp "$TYD_DOSYA")
 ASM_DOSYA="${TEMEL_AD}.asm"
 
 echo "=== TYD -> Assembly ==="

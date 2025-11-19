@@ -12,7 +12,7 @@ YAZDIR ana_dizin
 
 -- Adım 2: Okunacak kaynak dosyanın yolunu oluştur
 YAZDIR "Kaynak kod yolu olusturuluyor..."
-METIN kaynak_yol_eki = "/../ornekler/01-merhaba.tyd";
+METIN kaynak_yol_eki = "/../ornekler/01-merhaba.mlp";
 METIN kaynak_dosya = STRING_BIRLESTIR(ana_dizin, kaynak_yol_eki);
 YAZDIR kaynak_dosya
 

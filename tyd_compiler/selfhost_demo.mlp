@@ -1,6 +1,6 @@
 -- ===================================================
 -- Self-Hosting Demo: TYD Compiler (TYD'de!)
--- Kaynak: hello.tyd (YAZDIR "...")
+-- Kaynak: hello.mlp (YAZDIR "...")
 -- Çıktı: hello_compiled.asm
 -- ===================================================
 
@@ -8,7 +8,7 @@ YAZDIR "=== TYD Self-Hosting Compiler Demo ==="
 
 -- Kaynak dosyayı oku
 METIN dizin = DIZIN_AL();
-METIN kaynak_eki = "/../tyd_compiler/hello.tyd";
+METIN kaynak_eki = "/../tyd_compiler/hello.mlp";
 METIN kaynak_yolu = STRING_BIRLESTIR(dizin, kaynak_eki);
 
 YAZDIR "Kaynak dosya:"

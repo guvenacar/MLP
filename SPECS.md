@@ -723,7 +723,7 @@ fin
 
 ### Migrating from Turkish-Native to English-Native
 
-If you have old `.tyd` files with Turkish keywords but no language header:
+If you have old `.mlp` files with Turkish keywords but no language header:
 
 **Option 1: Add Language Header**
 
@@ -738,7 +738,7 @@ YAZDIR "Merhaba"
 **Option 2: Use Migration Tool**
 
 ```bash
-python3 migrate.py old_program.tyd
+python3 migrate.py old_program.mlp
 ```
 
 This will:

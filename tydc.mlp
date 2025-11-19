@@ -1,4 +1,4 @@
--- tydc.tyd - TYD Compiler Driver (Stage 3)
+-- tydc.mlp - TYD Compiler Driver (Stage 3)
 -- Basit pipeline: Source → Lexer → Parser → Generator → Assembly
 
 YAZDIR "TYD Compiler Driver v1.0"

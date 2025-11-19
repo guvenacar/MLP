@@ -7,7 +7,7 @@ YAZDIR "=== Working Mini Compiler ==="
 
 -- Kaynak dosyayı oku
 METIN dizin = DIZIN_AL();
-METIN kaynak_eki = "/../tyd_compiler/hello.tyd";
+METIN kaynak_eki = "/../tyd_compiler/hello.mlp";
 METIN kaynak_yolu = STRING_BIRLESTIR(dizin, kaynak_eki);
 
 YAZDIR "Kaynak:"
@@ -22,7 +22,7 @@ YAZDIR "Kaynak okundu:"
 YAZDIR kaynak_kod
 
 -- Basit pattern matching: İlk YAZDIR satırını bul
--- hello.tyd'deki ilk satır: YAZDIR "Merhaba TYD Dunyasi!"
+-- hello.mlp'deki ilk satır: YAZDIR "Merhaba TYD Dunyasi!"
 
 -- Hardcoded assembly üret (şimdilik)
 METIN asm_line1 = "extern printf\n";

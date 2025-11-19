@@ -5,7 +5,7 @@ YAZDIR "----------------------------------------"
 YAZDIR "Stage: Reading source file..."
 
 -- Kaynak dosyayı oku
-METIN kaynak_dosya = "ornekler/hello.tyd"
+METIN kaynak_dosya = "ornekler/hello.mlp"
 METIN mod_oku = "r"
 SAYISAL dosya_girdi = DOSYA_AC(kaynak_dosya, mod_oku)
 METIN kaynak = DOSYA_OKU(dosya_girdi)

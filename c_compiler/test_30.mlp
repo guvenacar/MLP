@@ -2,7 +2,7 @@ YAZDIR "=== TYD Self-Hosting Demo v1 ===";
 
 YAZDIR "Kaynak kod okunuyor...";
 
-METIN kaynak_dosya = "ornekler/hello.tyd";
+METIN kaynak_dosya = "ornekler/hello.mlp";
 METIN mod = "r";
 SAYISAL dosya = DOSYA_AC(kaynak_dosya, mod);
 
@@ -28,6 +28,3 @@ SAYISAL n2 = DOSYA_YAZ(cikti, asm2);
 SAYISAL n3 = DOSYA_YAZ(cikti, asm3);
 SAYISAL n4 = DOSYA_YAZ(cikti, asm4);
 
-SAYISAL kapat2 = DOSYA_KAPAT(cikti);
-
-YAZDIR "Olusturuldu!";

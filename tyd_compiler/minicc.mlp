@@ -8,7 +8,7 @@ YAZDIR "=== MiniCC: Minimal TYD Compiler ==="
 
 -- Kaynak dosyayı oku
 METIN dizin = DIZIN_AL();
-METIN kaynak_eki = "/../tyd_compiler/hello.tyd";
+METIN kaynak_eki = "/../tyd_compiler/hello.mlp";
 METIN kaynak_yolu = STRING_BIRLESTIR(dizin, kaynak_eki);
 
 YAZDIR "Kaynak:"

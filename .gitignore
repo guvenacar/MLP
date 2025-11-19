@@ -86,7 +86,6 @@ test_hello.asm
 
 # Preprocessor outputs
 *.preprocessed.mlp
-*.preprocessed.tyd
 
 # Test binaries
 test_direct_turkish
@@ -100,3 +99,11 @@ bench_*
 
 # GUI demo binaries
 gui_demo*
+
+# JSON parser tests
+test_json
+test_json_parser
+runtime/test_json.c
+
+# MLP Preprocessor
+mlp_preprocessor

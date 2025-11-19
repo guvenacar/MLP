@@ -1,13 +1,13 @@
 -- ===================================================
--- Pattern Matching Compiler v2
--- Newline: KODU_KARAKTERE(10) kullanarak
+-- Final Self-Hosting: TYD Compiler (Escape-free)
+-- En basit çalışan versiyonu!
 -- ===================================================
 
-YAZDIR "=== Pattern v2: Newline Fix ==="
+YAZDIR "=== Final TYD Self-Hosting Compiler ==="
 
 -- Kaynak dosyayı oku
 METIN dizin = DIZIN_AL();
-METIN kaynak_eki = "/../tyd_compiler/hello.tyd";
+METIN kaynak_eki = "/../tyd_compiler/hello.mlp";
 METIN kaynak_yolu = STRING_BIRLESTIR(dizin, kaynak_eki);
 
 YAZDIR "Kaynak:"
@@ -18,7 +18,8 @@ SAYISAL kaynak_dosya = DOSYA_AC(kaynak_yolu, mod_oku);
 METIN kaynak_kod = DOSYA_OKU(kaynak_dosya);
 SAYISAL kapat1 = DOSYA_KAPAT(kaynak_dosya);
 
-YAZDIR "Kaynak okundu"
+YAZDIR "Kaynak kod:"
+YAZDIR kaynak_kod
 
 -- İlk satırı al
 SAYISAL kaynak_len = STRING_UZUNLUK(kaynak_kod);
@@ -89,66 +90,67 @@ METIN mesaj = STRING_ALT(ilk_satir, str_start, msg_len);
 YAZDIR "Mesaj çıkarıldı:"
 YAZDIR mesaj
 
--- Newline karakteri oluştur
-METIN nl = KODU_KARAKTERE(10);
+-- Assembly oluştur (newline ve özel karakterler olmadan)
+METIN nl = "
+";
 
--- Assembly satırları (basit, escape yok)
-METIN line1 = "extern printf";
-METIN line2 = "section .data";
-METIN line3 = "    fmt db 37, 115, 44, 32, 49, 48, 44, 32, 48";
-METIN line4 = "    msg db 34";
-METIN temp1 = STRING_BIRLESTIR(line4, mesaj);
-METIN line5 = STRING_BIRLESTIR(temp1, "34, 44, 32, 48");
-METIN line6 = "section .text";
-METIN line7 = "global main";
-METIN line8 = "main:";
-METIN line9 = "    push rbp";
-METIN line10 = "    mov rbp, rsp";
-METIN line11 = "    mov rdi, fmt";
-METIN line12 = "    mov rsi, msg";
-METIN line13 = "    mov rax, 0";
-METIN line14 = "    call printf";
-METIN line15 = "    mov rax, 0";
-METIN line16 = "    pop rbp";
-METIN line17 = "    ret";
+METIN asm1 = "extern printf";
+METIN asm2 = "section .data";
+METIN asm3 = "    fmt db 37, 115, 44, 32, 49, 48, 44, 32, 48";
+METIN asm4 = "    msg db 34";
+METIN asm5 = "34, 44, 32, 48";
+METIN asm6 = "section .text";
+METIN asm7 = "global main";
+METIN asm8 = "main:";
+METIN asm9 = "    push rbp";
+METIN asm10 = "    mov rbp, rsp";
+METIN asm11 = "    mov rdi, fmt";
+METIN asm12 = "    mov rsi, msg";
+METIN asm13 = "    mov rax, 0";
+METIN asm14 = "    call printf";
+METIN asm15 = "    mov rax, 0";
+METIN asm16 = "    pop rbp";
+METIN asm17 = "    ret";
 
 -- Birleştir
-METIN result = STRING_BIRLESTIR(line1, nl);
-result = STRING_BIRLESTIR(result, line2)
+METIN result = STRING_BIRLESTIR(asm1, nl);
+result = STRING_BIRLESTIR(result, asm2)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line3)
+result = STRING_BIRLESTIR(result, asm3)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line5)
+result = STRING_BIRLESTIR(result, asm4)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line6)
+result = STRING_BIRLESTIR(result, asm5)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line7)
+result = STRING_BIRLESTIR(result, asm6)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line8)
+result = STRING_BIRLESTIR(result, asm7)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line9)
+result = STRING_BIRLESTIR(result, asm8)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line10)
+result = STRING_BIRLESTIR(result, asm9)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line11)
+result = STRING_BIRLESTIR(result, asm10)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line12)
+result = STRING_BIRLESTIR(result, asm11)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line13)
+result = STRING_BIRLESTIR(result, asm12)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line14)
+result = STRING_BIRLESTIR(result, asm13)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line15)
+result = STRING_BIRLESTIR(result, asm14)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line16)
+result = STRING_BIRLESTIR(result, asm15)
 result = STRING_BIRLESTIR(result, nl)
-result = STRING_BIRLESTIR(result, line17)
+result = STRING_BIRLESTIR(result, asm16)
+result = STRING_BIRLESTIR(result, nl)
+result = STRING_BIRLESTIR(result, asm17)
 
 YAZDIR "=== Assembly Oluşturuldu ==="
 YAZDIR result
 
 -- Dosyaya yaz
-METIN cikti_eki = "/../tyd_compiler/pattern_v2_output.asm";
+METIN cikti_eki = "/../tyd_compiler/final_output.asm";
 METIN cikti_yolu = STRING_BIRLESTIR(dizin, cikti_eki);
 
 METIN mod_yaz = "w";
@@ -156,5 +158,5 @@ SAYISAL cikti_dosya = DOSYA_AC(cikti_yolu, mod_yaz);
 SAYISAL yazilan = DOSYA_YAZ(cikti_dosya, result);
 SAYISAL kapat2 = DOSYA_KAPAT(cikti_dosya);
 
-YAZDIR "=== BAŞARILI! ==="
+YAZDIR "=== SELF-HOSTING BAŞARILI! ==="
 YAZDIR cikti_yolu

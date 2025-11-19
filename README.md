@@ -530,9 +530,9 @@ MLP/
 ├── migrate.py              # Migration tool
 │
 ├── tyd_compiler/           # Self-hosting compiler (MLP)
-│   ├── tyd_lexer.tyd       # Lexer in MLP
-│   ├── tyd_parser.tyd      # Parser in MLP
-│   └── tyd_generator.tyd   # Generator in MLP
+│   ├── tyd_lexer.mlp       # Lexer in MLP
+│   ├── tyd_parser.mlp      # Parser in MLP
+│   └── tyd_generator.mlp   # Generator in MLP
 │
 ├── test_*.mlp              # Multi-language test cases
 ├── SPECS.md                # Language specification
