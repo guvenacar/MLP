@@ -123,9 +123,17 @@ if [[ "$NO_PREP" == false ]]; then
     fi
 
     if [[ "$VERBOSE" == true ]]; then
-        "$SCRIPT_DIR/mlp_preprocessor" "$INPUT_FILE" $LANG_ARG "$PREP_FILE"
+        if [[ -n "$LANG_ARG" ]]; then
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$LANG_ARG" "$PREP_FILE"
+        else
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$PREP_FILE"
+        fi
     else
-        "$SCRIPT_DIR/mlp_preprocessor" "$INPUT_FILE" $LANG_ARG "$PREP_FILE" > /dev/null
+        if [[ -n "$LANG_ARG" ]]; then
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$LANG_ARG" "$PREP_FILE" > /dev/null
+        else
+            python3 "$SCRIPT_DIR/archive_python/dil_cevirici.py" "$INPUT_FILE" "$PREP_FILE" > /dev/null
+        fi
     fi
 
     COMPILE_INPUT="$PREP_FILE"
