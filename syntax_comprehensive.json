@@ -55,15 +55,21 @@
           },
           {
             "name": "for_loop",
-            "pattern": "\\bfor\\s*\\(\\s*\\w+\\s*=\\s*(\\d+)\\s*;\\s*\\w+\\s*<\\s*(\\d+)\\s*;\\s*\\w+\\+\\+\\s*\\)\\s*\\{",
-            "replacement": "for i = \\1 to \\2",
-            "description": "for (i=0; i<10; i++) { → for i = 0 to 10"
+            "pattern": "\\bfor\\s*\\(\\s*(?:\\w+\\s+)?(\\w+)\\s*=\\s*(\\d+)\\s*;\\s*\\w+\\s*<=?\\s*(\\d+)\\s*;\\s*\\w+\\+\\+\\s*\\)\\s*\\{",
+            "replacement": "for \\1 = \\2 to \\3",
+            "description": "for ([type] i=0; i<=10; i++) { → for i = 0 to 10"
           },
           {
             "name": "while_loop",
             "pattern": "\\bwhile\\s*\\(([^)]+)\\)\\s*\\{",
             "replacement": "while",
             "description": "while (condition) { → while [condition moved to if inside]"
+          },
+          {
+            "name": "while_infinite",
+            "pattern": "\\bwhile\\s*\\{",
+            "replacement": "while",
+            "description": "while { → while [infinite loop]"
           },
           {
             "name": "function",
@@ -73,9 +79,9 @@
           },
           {
             "name": "print",
-            "pattern": "\\b(printf|println|cout)\\s*\\(([^)]+)\\)",
+            "pattern": "\\b(printf|println|cout|print)\\s*\\(([^)]+)\\)",
             "replacement": "print \\2",
-            "description": "printf(...) → print ..."
+            "description": "printf(...) / print(...) → print ..."
           },
           {
             "name": "semicolon",

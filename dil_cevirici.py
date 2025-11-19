@@ -20,7 +20,7 @@ from pathlib import Path
 class SyntaxTransformer:
     """Transforms various programming syntax styles to MLP base syntax"""
 
-    def __init__(self, syntax_file="syntax.json"):
+    def __init__(self, syntax_file="syntax_comprehensive.json"):
         """Initialize syntax transformer"""
         with open(syntax_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -97,15 +97,40 @@ class SyntaxTransformer:
 
         result = source_code
 
-        # Apply transformations
-        if syntax_id == 'c':
-            result = self._transform_c_style(result, transformations)
-        elif syntax_id == 'python':
-            result = self._transform_python_style(result, transformations)
-        elif syntax_id == 'javascript':
-            result = self._transform_javascript_style(result, transformations)
-        elif syntax_id == 'ruby':
-            result = self._transform_ruby_style(result, transformations)
+        # Apply transformations using rules array from comprehensive JSON
+        rules = transformations.get('rules', [])
+        result = self._apply_transformation_rules(result, rules, syntax_id)
+
+        return result
+
+    def _apply_transformation_rules(self, code, rules, syntax_id):
+        """Apply transformation rules from comprehensive JSON
+
+        Args:
+            code: Source code string
+            rules: List of transformation rules from JSON
+            syntax_id: Syntax style ID for special handling
+
+        Returns:
+            Transformed code
+        """
+        result = code
+
+        # Apply each rule in order
+        for rule in rules:
+            pattern = rule.get('pattern', '')
+            replacement = rule.get('replacement', '')
+            name = rule.get('name', '')
+
+            if not pattern:
+                continue
+
+            # Apply regex replacement
+            result = re.sub(pattern, replacement, result, flags=re.MULTILINE)
+
+        # Special handling for Python - add 'end' keywords at dedent
+        if syntax_id == 'python':
+            result = self._add_end_keywords_python(result)
 
         return result
 
@@ -276,7 +301,7 @@ class SyntaxTransformer:
 class LanguagePreprocessor:
     """Translates keywords from native language to English"""
 
-    def __init__(self, languages_file="diller.json"):
+    def __init__(self, languages_file="diller_comprehensive.json"):
         """Initialize preprocessor with language definitions"""
         with open(languages_file, 'r', encoding='utf-8') as f:
             data = json.load(f)

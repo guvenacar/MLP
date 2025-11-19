@@ -15,7 +15,7 @@ döngü {
     yazdir(i);
     i = i + 1;
     eğer (i >= 3) {
-        bitir;
+        dur;
     }
 }
 
