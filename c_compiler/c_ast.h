@@ -16,8 +16,10 @@ typedef enum {
     AST_ATAMA_KOMUTU,
     AST_YAZDIR_KOMUTU,
     AST_KOSUL_KOMUTU, // <-- YENİ (EĞER)
-    AST_DONGU_KOMUTU, // <-- YENİ (DÖNGÜ)
-    AST_DONGU_BITIR_KOMUTU, // <-- YENİ (DÖNGÜ_BITIR)
+    AST_DONGU_KOMUTU, // <-- YENİ (DÖNGÜ - while)
+    AST_FOR_KOMUTU, // <-- YENİ (FOR - for loop)
+    AST_DONGU_BITIR_KOMUTU, // <-- YENİ (DÖNGÜ_BITIR - break)
+    AST_DONGU_DEVAM_KOMUTU, // <-- YENİ (continue)
     AST_ISLEC_TANIMLAMA,
     AST_DONUS_KOMUTU,
     AST_ISLEC_CAGIRMA,
@@ -87,10 +89,20 @@ struct ASTNode {
             ASTNode* degilse_blok; // (Opsiyonel) EĞER yanlışsa çalışacak blok
         } kosul_data;
         
-        // YENİ: Döngü Komutu (DÖNGÜ blok SON)
+        // YENİ: Döngü Komutu (DÖNGÜ blok SON - while loop)
         struct {
-            ASTNode* govde; // Döngü gövdesi
+            ASTNode* kosul;     // While condition (NULL = infinite loop)
+            ASTNode* govde;     // Döngü gövdesi
         } dongu_data;
+
+        // YENİ: For Döngüsü (for i = 0 to 10 [step 2])
+        struct {
+            Token* degisken;    // Loop variable (i)
+            ASTNode* baslangic; // Start value (0)
+            ASTNode* bitis;     // End value (10)
+            ASTNode* adim;      // Step value (optional, default 1)
+            ASTNode* govde;     // Loop body
+        } for_data;
 
         // İşleç Tanımlama (Fonksiyon)
         struct {

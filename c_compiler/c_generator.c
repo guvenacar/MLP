@@ -225,6 +225,7 @@ void visit_Degisken(ASTNode* node); // İleri bildirim
 void visit_AtamaKomutu(ASTNode* node); // İleri bildirim
 void visit_KosulKomutu(ASTNode* node); // İleri bildirim
 void visit_DonguKomutu(ASTNode* node); // İleri bildirim
+void visit_ForKomutu(ASTNode* node); // İleri bildirim
 void visit_DonguBitirKomutu(ASTNode* node); // İleri bildirim
 void visit_IslecTanimlama(ASTNode* node); // İleri bildirim
 void visit_IslecCagirma(ASTNode* node); // İleri bildirim
@@ -475,20 +476,99 @@ void visit_DonguKomutu(ASTNode* node) {
     // 2. Döngü Başlangıç Etiketi
     sprintf(buffer, ".L%d:", etiket_basla); // .L_BASLA
     asm_append(&text_section, buffer);
-    asm_append(&text_section, "    ; --- Dongu Komutu (DÖNGÜ) ---");
+    asm_append(&text_section, "    ; --- While Loop ---");
 
-    // 3. Döngü Gövdesi
+    // 3. If there's a condition, evaluate it
+    if (node->dongu_data.kosul != NULL) {
+        visit(node->dongu_data.kosul);  // Condition result in rax
+        asm_append(&text_section, "    test rax, rax");
+        sprintf(buffer, "    jz .L%d", etiket_son);  // Jump to end if false
+        asm_append(&text_section, buffer);
+    }
+
+    // 4. Döngü Gövdesi
     visit(node->dongu_data.govde);
     
-    // 4. Gövde bittikten sonra başa atla
+    // 5. Gövde bittikten sonra başa atla
     sprintf(buffer, "    jmp .L%d", etiket_basla); // jmp .L_BASLA
     asm_append(&text_section, buffer);
 
-    // 5. Döngü Bitiş Etiketi
+    // 6. Döngü Bitiş Etiketi
     sprintf(buffer, ".L%d:", etiket_son); // .L_SON
     asm_append(&text_section, buffer);
 
-    // 6. Döngü bitti, eski etiketi geri yükle (iç içe döngüler için)
+    // 7. Döngü bitti, eski etiketi geri yükle (iç içe döngüler için)
+    aktif_dongu_son_etiketi = onceki_aktif_dongu_son_etiketi;
+}
+
+void visit_ForKomutu(ASTNode* node) {
+    // for i = 0 to 10 [step 2]
+    
+    // 1. Loop variable initialization
+    char* var_name = node->for_data.degisken->value;
+    
+    // Allocate variable in scope
+    char* var_addr = kapsam_degisken_yer_ayir(var_name, "SAYISAL");
+    
+    // Initialize: i = start
+    visit(node->for_data.baslangic);  // Start value in rax
+    char buffer[256];
+    sprintf(buffer, "    mov %s, rax", var_addr);
+    asm_append(&text_section, buffer);
+    
+    // 2. Labels
+    int etiket_basla = etiket_sayaci++;
+    int etiket_son = etiket_sayaci++;
+    
+    int onceki_aktif_dongu_son_etiketi = aktif_dongu_son_etiketi;
+    aktif_dongu_son_etiketi = etiket_son;
+    
+    // 3. Loop start
+    sprintf(buffer, ".L%d:", etiket_basla);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- For Loop ---");
+    
+    // 4. Check condition: i <= end
+    sprintf(buffer, "    mov rax, %s", var_addr);  // Load i
+    asm_append(&text_section, buffer);
+    
+    visit(node->for_data.bitis);  // End value in rax (saved to stack)
+    asm_append(&text_section, "    mov rbx, rax");  // End in rbx
+    sprintf(buffer, "    mov rax, %s", var_addr);  // i back in rax
+    asm_append(&text_section, buffer);
+    
+    asm_append(&text_section, "    cmp rax, rbx");  // Compare i with end
+    sprintf(buffer, "    jg .L%d", etiket_son);  // Jump if i > end
+    asm_append(&text_section, buffer);
+    
+    // 5. Loop body
+    visit(node->for_data.govde);
+    
+    // 6. Increment: i = i + step (default 1)
+    if (node->for_data.adim != NULL) {
+        visit(node->for_data.adim);  // Step in rax
+        asm_append(&text_section, "    mov rcx, rax");  // Save step
+        sprintf(buffer, "    mov rax, %s", var_addr);
+        asm_append(&text_section, buffer);
+        asm_append(&text_section, "    add rax, rcx");
+        sprintf(buffer, "    mov %s, rax", var_addr);
+        asm_append(&text_section, buffer);
+    } else {
+        sprintf(buffer, "    mov rax, %s", var_addr);
+        asm_append(&text_section, buffer);
+        asm_append(&text_section, "    inc rax");
+        sprintf(buffer, "    mov %s, rax", var_addr);
+        asm_append(&text_section, buffer);
+    }
+    
+    // 7. Jump back to start
+    sprintf(buffer, "    jmp .L%d", etiket_basla);
+    asm_append(&text_section, buffer);
+    
+    // 8. Loop end
+    sprintf(buffer, ".L%d:", etiket_son);
+    asm_append(&text_section, buffer);
+    
     aktif_dongu_son_etiketi = onceki_aktif_dongu_son_etiketi;
 }
 
@@ -1085,14 +1165,24 @@ void visit(ASTNode* node) {
             visit_KosulKomutu(node);
             break;
             
-        // YENİ: Döngü Komutu
+        // YENİ: Döngü Komutu (while)
         case AST_DONGU_KOMUTU:
             visit_DonguKomutu(node);
             break;
             
-        // YENİ: Döngü Bitir Komutu
+        // YENİ: For Komutu
+        case AST_FOR_KOMUTU:
+            visit_ForKomutu(node);
+            break;
+            
+        // YENİ: Döngü Bitir Komutu (break)
         case AST_DONGU_BITIR_KOMUTU:
             visit_DonguBitirKomutu(node);
+            break;
+
+        // YENİ: Continue Komutu
+        case AST_DONGU_DEVAM_KOMUTU:
+            // TODO: Implement continue (jump to loop start)
             break;
 
         // YENİ: İşleç Tanımlama

@@ -26,7 +26,11 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_YAPI_ISLEC: return "İŞLEÇ";
         case TOKEN_YAPI_DONUS: return "DÖNÜŞ";
         case TOKEN_YAPI_DONGU: return "DÖNGÜ";
+        case TOKEN_YAPI_FOR: return "FOR";
+        case TOKEN_YAPI_TO: return "TO";
+        case TOKEN_YAPI_STEP: return "STEP";
         case TOKEN_YAPI_DONGU_BITIR: return "DÖNGÜ_BITIR";
+        case TOKEN_YAPI_DONGU_DEVAM: return "continue";
         case TOKEN_YAPI_SON: return "SON";
         case TOKEN_LEFT_PAREN: return "(";
         case TOKEN_RIGHT_PAREN: return ")";
@@ -296,6 +300,7 @@ ASTNode* komut();
 ASTNode* blok();
 ASTNode* kosul_komutu();
 ASTNode* dongu_komutu();
+ASTNode* for_komutu();
 ASTNode* islec_tanimlama();
 ASTNode* donus_komutu();
 
@@ -556,12 +561,17 @@ ASTNode* komut() {
         return kosul_komutu(); // Kendi içinde 'SON'u yönetir
     }
 
-    // 4. DÖNGÜ (Noktalı virgülsüz)
+    // 4. FOR Loop (Noktalı virgülsüz)
+    if (current_token->type == TOKEN_YAPI_FOR) {
+        return for_komutu(); // Kendi içinde 'end for'u yönetir
+    }
+
+    // 5. DÖNGÜ/WHILE (Noktalı virgülsüz)
     if (current_token->type == TOKEN_YAPI_DONGU) {
-        return dongu_komutu(); // Kendi içinde 'SON'u yönetir
+        return dongu_komutu(); // Kendi içinde 'end while'ı yönetir
     }
     
-    // 5. DÖNGÜ_BITIR (Noktalı virgülsüz)
+    // 6. DÖNGÜ_BITIR/break (Noktalı virgülsüz)
     if (current_token->type == TOKEN_YAPI_DONGU_BITIR) {
         consume(TOKEN_YAPI_DONGU_BITIR);
         specs_check_no_semicolon("DÖNGÜ_BITIR");
@@ -569,8 +579,17 @@ ASTNode* komut() {
         node->type = AST_DONGU_BITIR_KOMUTU;
         return node;
     }
+
+    // 7. continue (Noktalı virgülsüz)
+    if (current_token->type == TOKEN_YAPI_DONGU_DEVAM) {
+        consume(TOKEN_YAPI_DONGU_DEVAM);
+        specs_check_no_semicolon("continue");
+        ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+        node->type = AST_DONGU_DEVAM_KOMUTU;
+        return node;
+    }
     
-    // 6. DÖNÜŞ (Noktalı virgülsüz)
+    // 8. DÖNÜŞ (Noktalı virgülsüz)
     if (current_token->type == TOKEN_YAPI_DONUS) {
         return donus_komutu(); // Kendi içinde yönetir
     }
@@ -673,12 +692,80 @@ ASTNode* kosul_komutu() {
 
 ASTNode* dongu_komutu() {
     consume(TOKEN_YAPI_DONGU);
+    
+    // Check if there's a condition or it's an infinite loop
+    ASTNode* kosul_ifadesi = NULL;
+    
+    // If next token is not a block start, it's a conditioned while
+    // while condition \n body... end while
+    if (current_token->type != TOKEN_YAPI_SON && 
+        current_token->type != TOKEN_TANIMLA_SAYI &&
+        current_token->type != TOKEN_TANIMLA_METIN &&
+        current_token->type != TOKEN_IDENTIFIER &&
+        current_token->type != TOKEN_YAPI_YAZDIR &&
+        current_token->type != TOKEN_YAPI_KOSUL_EGER &&
+        current_token->type != TOKEN_YAPI_DONGU &&
+        current_token->type != TOKEN_YAPI_FOR) {
+        // Parse condition
+        kosul_ifadesi = ifade();
+    }
+    
     ASTNode* govde_blogu = blok(); 
     consume(TOKEN_YAPI_SON);
+    
+    // Optional: check for "end while" or just "end"
+    // For now, we accept just "end"
+    
     specs_check_no_semicolon("DÖNGÜ SON");
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     node->type = AST_DONGU_KOMUTU;
+    node->dongu_data.kosul = kosul_ifadesi;  // NULL = infinite loop
     node->dongu_data.govde = govde_blogu;
+    return node;
+}
+
+ASTNode* for_komutu() {
+    consume(TOKEN_YAPI_FOR);
+    
+    // for i = 0 to 10 [step 2]
+    if (current_token->type != TOKEN_IDENTIFIER) {
+        parseError("Loop variable name", "IDENTIFIER");
+    }
+    Token degisken_token;
+    degisken_token.type = current_token->type;
+    degisken_token.value = strdup(current_token->value);
+    consume(TOKEN_IDENTIFIER);
+    
+    consume(TOKEN_ASSIGN);
+    ASTNode* baslangic_ifade = ifade();
+    
+    consume(TOKEN_YAPI_TO);
+    ASTNode* bitis_ifade = ifade();
+    
+    // Optional: step
+    ASTNode* adim_ifade = NULL;
+    if (current_token->type == TOKEN_YAPI_STEP) {
+        consume(TOKEN_YAPI_STEP);
+        adim_ifade = ifade();
+    }
+    
+    // Parse body
+    ASTNode* govde_blogu = blok();
+    consume(TOKEN_YAPI_SON);
+    
+    specs_check_no_semicolon("FOR SON");
+    
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    node->type = AST_FOR_KOMUTU;
+    node->for_data.degisken = (Token*)malloc(sizeof(Token));
+    node->for_data.degisken->type = degisken_token.type;
+    node->for_data.degisken->value = strdup(degisken_token.value);
+    node->for_data.baslangic = baslangic_ifade;
+    node->for_data.bitis = bitis_ifade;
+    node->for_data.adim = adim_ifade;
+    node->for_data.govde = govde_blogu;
+    
+    free(degisken_token.value);
     return node;
 }
 
