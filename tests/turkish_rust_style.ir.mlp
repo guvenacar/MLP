@@ -1,0 +1,35 @@
+
+
+-- Test: Rust-style syntax with Turkish keywords
+
+int x = 45;
+string mesaj = "Merhaba Rust-Style!";
+
+if x > 40 {
+    print("X büyük");
+    print(x);
+} else {
+    print("X küçük");
+}
+
+function çarp(a: int, b: int) -> int {
+    return a * b;
+}
+
+for i for 1..6 {
+    int sonuç = çarp(i, 5);
+    print("Çarpım");
+    print(i);
+    print("ve 5 =");
+    print(sonuç);
+}
+
+int sayaç = 0;
+while sayaç < 3 {
+    print("Sayaç:");
+    print(sayaç);
+    sayaç = sayaç + 1;
+end while
+}
+
+print("Test tamamlandı!");

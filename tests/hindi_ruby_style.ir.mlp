@@ -1,0 +1,37 @@
+
+
+-- Test: Ruby-style syntax with Hindi keywords
+
+int x = 25
+string संदेश = "नमस्ते Ruby-Style!"
+
+if x > 20 then
+    print("X बड़ा है")
+    print(x)
+else
+    print("X छोटा है")
+end if
+end
+
+function गुणा(int a, int b)
+    return a * b
+end
+
+for i to 1 to 5
+    int परिणाम = गुणा(i, 3)
+    print("Product of")
+    print(i)
+    print("and 3 is")
+    print(परिणाम)
+end for
+end
+
+int गिनती = 0
+while गिनती < 4
+    print("Count:")
+    print(गिनती)
+    गिनती = गिनती + 1
+end while
+end
+
+print("परीक्षण पूर्ण!")

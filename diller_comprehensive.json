@@ -160,7 +160,7 @@
         "return": ["إرجاع", "return"],
         "struct": ["بنية", "هيكل"],
         "print": ["اطبع", "print"],
-        "true": ["صحيح", "true"],
+        "true": ["صواب", "true"],
         "false": ["خطأ", "false"],
         "and": ["و", "and"],
         "or": ["أو", "or"],

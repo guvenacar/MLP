@@ -1,0 +1,26 @@
+
+
+-- Test: Python-style syntax with Russian keywords
+
+x = 10
+сообщение = "Привет Python-Style!"
+
+if x > 5 then
+    print "X большое"
+    print x
+
+end if
+function факториал(n)
+    if n <= 1 then
+        return 1
+    end if
+    return n * факториал(n - 1)
+
+for i в range(6)
+    результат = факториал(i)
+    print "Факториал"
+    print i
+    print "="
+    print результат
+
+print "Тест завершён!"

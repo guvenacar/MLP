@@ -210,16 +210,22 @@ class MLPPreprocessor:
         # Get transformation rules
         transformations = style.get('transformations', {})
         rules = transformations.get('rules', [])
-        
+
         # Apply transformations with block type tracking
-        result = self._apply_transformations_with_tracking(source_code, rules)
-        
+        # VB.NET already has explicit terminators, skip block tracking for it
+        result = self._apply_transformations_with_tracking(source_code, rules, syntax_id)
+
         return result
-    
-    def _apply_transformations_with_tracking(self, code: str, rules: List[dict]) -> str:
+
+    def _apply_transformations_with_tracking(self, code: str, rules: List[dict], syntax_id: str) -> str:
         """Apply syntax transformations with block type tracking
-        
+
         This ensures explicit block terminators: end if, end while, end for
+
+        Args:
+            code: Source code
+            rules: Transformation rules
+            syntax_id: Syntax style ID (needed to skip block tracking for VB.NET)
         """
         result = code
         
@@ -243,10 +249,12 @@ class MLPPreprocessor:
             
             # Apply the transformation
             result = re.sub(pattern, replacement, result, flags=re.MULTILINE)
-        
-        # Now add explicit block terminators
-        result = self._add_explicit_terminators(result)
-        
+
+        # Add explicit block terminators
+        # SKIP for VB.NET, Pascal, BASIC - they already have explicit terminators
+        if syntax_id not in ['vbnet', 'pascal', 'basic']:
+            result = self._add_explicit_terminators(result)
+
         return result
     
     def _add_explicit_terminators(self, code: str) -> str:

@@ -1,0 +1,34 @@
+
+
+-- Test: C/Java-style syntax with Chinese keywords
+
+int x = 20
+string 消息 = "你好 Java-Style!"
+if x > 10 then
+    print "X 很大"
+    print x
+else
+    print "X 很小"
+end if
+end
+function 计算和(int a, int b) then
+    return a + b
+end
+for i = 1 to 5
+    int 结果 = 计算和(i, i * 2)
+    print "Sum of"
+    print i
+    print "and"
+    print i * 2
+    print "="
+    print 结果
+end for
+end
+int 计数 = 0
+while 计数 < 3
+    print "计数:"
+    print 计数
+    计数 = 计数 + 1
+end while
+end
+print "测试完成!"

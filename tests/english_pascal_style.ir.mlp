@@ -1,0 +1,41 @@
+
+
+-- Test: Pascal-style syntax with English keywords
+
+var
+    x: int = 40;
+    message: string = "Hello Pascal-Style!";
+
+
+if x > 35 then
+    print("X is large");
+    print(x);
+end
+else
+
+    print("X is small");
+end
+
+function multiply(a: int; b: int) then: int;
+
+    return a * b;
+end
+
+for i = 1 to 5
+    var result: int = multiply(i, 4);
+    print("Product of");
+    print(i);
+    print("and 4 is");
+    print(result);
+end
+
+var counter: int = 0;
+while counter < 3 do
+
+    print("Counter:");
+    print(counter);
+    counter := counter + 1;
+end
+
+print("Test complete!");
+end.

@@ -1,0 +1,35 @@
+
+
+-- Test: Kotlin-style syntax with German keywords
+
+int x = 35
+string nachricht = "Hallo Kotlin-Style!"
+
+if (x > 30) {
+    print("X ist groß")
+    print(x)
+} else {
+    print("X ist klein")
+}
+
+function addieren(int a, int b): int {
+    return a + b
+}
+
+for (i = 1; i <= 5; i++) {
+    int ergebnis = addieren(i, 20)
+    print("Summe von")
+    print(i)
+    print("und 20 ist")
+    print(ergebnis)
+}
+
+int zähler = 0
+while (zähler < 3) {
+    print("Zähler:")
+    print(zähler)
+    zähler = zähler + 1
+end while
+}
+
+print("Test abgeschlossen!")

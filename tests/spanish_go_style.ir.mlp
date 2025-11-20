@@ -1,0 +1,35 @@
+
+
+-- Test: Go-style syntax with Spanish keywords
+
+int x := 30
+string mensaje := "Hola Go-Style!"
+
+if x > 25 {
+    print("X es grande")
+    print(x)
+} else {
+    print("X es pequeño")
+}
+
+function sumar(int to, int b) int {
+    return to + b
+}
+
+for i := 1; i <= 5; i++ {
+    int resultado := sumar(i, 10)
+    print("Suma de")
+    print(i)
+    print("y 10 es")
+    print(resultado)
+}
+
+int contador := 0
+while contador < 3 {
+    print("Contador:")
+    print(contador)
+    contador = contador + 1
+end while
+}
+
+print("¡Prueba completa!")

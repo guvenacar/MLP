@@ -1,0 +1,34 @@
+
+
+-- Test: VB.NET-style syntax with Arabic keywords
+
+int x = 15
+string رسالة = "مرحبا VB.NET-Style!"
+
+if x > 10 then
+    print("X كبير")
+    print(x)
+else
+    print("X صغير")
+end if
+
+function مضاعفة(int int) then
+    return int * 2
+end function
+
+for i = 1 to 5
+    int نتيجة = مضاعفة(i)
+    print("Double of")
+    print(i)
+    print("is")
+    print(نتيجة)
+end for
+
+int عداد = 0
+while عداد < 3
+    print("Counter:")
+    print(عداد)
+    عداد = عداد + 1
+end while
+
+print("الاختبار مكتمل!")
