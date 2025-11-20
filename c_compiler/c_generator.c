@@ -1515,6 +1515,11 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_MATH_MIN: func_name = "math_min"; break;
         case TOKEN_BUILTIN_MATH_MAX: func_name = "math_max"; break;
         case TOKEN_BUILTIN_MATH_POW: func_name = "math_pow"; break;
+        // Phase 5.1: Enhanced String Operations
+        case TOKEN_BUILTIN_STRING_LENGTH: func_name = "string_length"; break;
+        case TOKEN_BUILTIN_STRING_SUBSTRING: func_name = "string_substring"; break;
+        case TOKEN_BUILTIN_STRING_INDEX_OF: func_name = "string_index_of"; break;
+        case TOKEN_BUILTIN_STRING_LAST_INDEX_OF: func_name = "string_last_index_of"; break;
         default: func_name = "unknown"; break;
     }
 
