@@ -34,6 +34,7 @@ for test in "${TESTS[@]}"; do
         "$TEST_DIR/${test}.c" \
         "$RUNTIME_DIR/runtime.c" \
         -I"$RUNTIME_DIR" \
+        -lm \
         -g -Wall 2>/dev/null; then
         echo -e "${GREEN}OK${NC}"
     else
