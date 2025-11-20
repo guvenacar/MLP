@@ -154,6 +154,7 @@ select {
 .var-block { background: #95E1D3; }
 .io-block { background: #A8E6CF; }
 .func-block { background: #C7CEEA; }
+.gui-block { background: #FFB6C1; } /* Pink for GUI */
 
 /* Canvas */
 .canvas-container {

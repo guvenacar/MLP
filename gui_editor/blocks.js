@@ -81,6 +81,74 @@ const blockTemplates = {
             { name: 'value', label: 'Value:', value: 'result' }
         ],
         generate: (fields) => `return ${fields.value}`
+    },
+    // GUI Components
+    'window': {
+        name: 'Window',
+        color: 'gui-block',
+        fields: [
+            { name: 'title', label: 'Title:', value: 'My Window' },
+            { name: 'width', label: 'Width:', value: '800' },
+            { name: 'height', label: 'Height:', value: '600' }
+        ],
+        generate: (fields) => `window = gui_window_create("${fields.title}", ${fields.width}, ${fields.height})`
+    },
+    'button': {
+        name: 'Button',
+        color: 'gui-block',
+        fields: [
+            { name: 'text', label: 'Text:', value: 'Click Me' },
+            { name: 'x', label: 'X:', value: '10' },
+            { name: 'y', label: 'Y:', value: '10' },
+            { name: 'width', label: 'Width:', value: '100' },
+            { name: 'height', label: 'Height:', value: '30' }
+        ],
+        generate: (fields) => `button = gui_button_create(window, "${fields.text}", ${fields.x}, ${fields.y}, ${fields.width}, ${fields.height})`
+    },
+    'label': {
+        name: 'Label',
+        color: 'gui-block',
+        fields: [
+            { name: 'text', label: 'Text:', value: 'Label' },
+            { name: 'x', label: 'X:', value: '10' },
+            { name: 'y', label: 'Y:', value: '50' }
+        ],
+        generate: (fields) => `label = gui_label_create(window, "${fields.text}", ${fields.x}, ${fields.y})`
+    },
+    'textbox': {
+        name: 'TextBox',
+        color: 'gui-block',
+        fields: [
+            { name: 'variable', label: 'Variable:', value: 'textbox1' },
+            { name: 'x', label: 'X:', value: '10' },
+            { name: 'y', label: 'Y:', value: '90' },
+            { name: 'width', label: 'Width:', value: '200' }
+        ],
+        generate: (fields) => `${fields.variable} = gui_textbox_create(window, ${fields.x}, ${fields.y}, ${fields.width})`
+    },
+    'panel': {
+        name: 'Panel',
+        color: 'gui-block',
+        fields: [
+            { name: 'x', label: 'X:', value: '10' },
+            { name: 'y', label: 'Y:', value: '10' },
+            { name: 'width', label: 'Width:', value: '300' },
+            { name: 'height', label: 'Height:', value: '200' }
+        ],
+        generate: (fields) => `panel = gui_panel_create(window, ${fields.x}, ${fields.y}, ${fields.width}, ${fields.height})`
+    },
+    'show_window': {
+        name: 'Show Window',
+        color: 'gui-block',
+        fields: [],
+        generate: () => `gui_window_show(window)`
+    },
+    'event_loop': {
+        name: 'Event Loop',
+        color: 'gui-block',
+        fields: [],
+        hasBody: true,
+        generate: () => `while gui_poll_event()`
     }
 };
 
@@ -107,7 +175,7 @@ class Block {
                     <span>${template.name}</span>
                     <button class="delete-btn" onclick="deleteBlock('${this.id}')">✕</button>
                 </div>
-                <div class="block-body">
+                <div class="block-body" style="padding: 12px;">
         `;
 
         // Generate input fields
@@ -115,22 +183,28 @@ class Block {
             if (field.options) {
                 // Dropdown
                 html += `
-                    <label>${field.label}</label>
-                    <select data-field="${field.name}" onchange="updateBlockField('${this.id}', '${field.name}', this.value)">
-                        ${field.options.map(opt => 
-                            `<option value="${opt}" ${opt === this.fields[field.name] ? 'selected' : ''}>${opt}</option>`
-                        ).join('')}
-                    </select>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 11px; font-weight: 600; color: #555; margin-bottom: 4px;">${field.label}</label>
+                        <select data-field="${field.name}" onchange="updateBlockField('${this.id}', '${field.name}', this.value)" 
+                                style="width: 100%; padding: 6px; border: 2px solid #ddd; border-radius: 4px; font-size: 12px;">
+                            ${field.options.map(opt => 
+                                `<option value="${opt}" ${opt === this.fields[field.name] ? 'selected' : ''}>${opt}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
                 `;
             } else {
                 // Text input
                 html += `
-                    <label>${field.label}</label>
-                    <input type="text" 
-                           value="${this.fields[field.name]}" 
-                           placeholder="${field.placeholder || ''}"
-                           data-field="${field.name}"
-                           oninput="updateBlockField('${this.id}', '${field.name}', this.value)">
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 11px; font-weight: 600; color: #555; margin-bottom: 4px;">${field.label}</label>
+                        <input type="text" 
+                               value="${this.fields[field.name]}" 
+                               placeholder="${field.placeholder || ''}"
+                               data-field="${field.name}"
+                               oninput="updateBlockField('${this.id}', '${field.name}', this.value)"
+                               style="width: 100%; padding: 6px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px;">
+                    </div>
                 `;
             }
         });
