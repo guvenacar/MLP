@@ -1,0 +1,148 @@
+-- String Operations Integration Tests - Phase 3
+-- Tests verify string manipulation functions work correctly in MLP
+
+-- Test 1: String upper/lower case
+function test_case_conversion() then
+    string lower = string_lower("HELLO");
+    string upper = string_upper("world");
+    
+    if string_esit_mi(lower, "hello") then
+        if string_esit_mi(upper, "WORLD") then
+            print "✅ Test 1: Case conversion passed"
+            return 1
+        end
+    end
+    
+    print "❌ Test 1 failed"
+    return 0
+end
+
+-- Test 2: String trim
+function test_trim() then
+    string trimmed = string_trim("  hello  ");
+    
+    if string_esit_mi(trimmed, "hello") then
+        print "✅ Test 2: Trim passed"
+        return 1
+    end
+    
+    print "❌ Test 2 failed"
+    return 0
+end
+
+-- Test 3: String find
+function test_find() then
+    int pos = string_find("hello world", "world");
+    
+    if pos == 6 then
+        print "✅ Test 3: Find passed"
+        return 1
+    end
+    
+    print "❌ Test 3 failed"
+    return 0
+end
+
+-- Test 4: Starts/ends with
+function test_starts_ends() then
+    int starts = string_starts_with("hello world", "hello");
+    int ends = string_ends_with("hello world", "world");
+    int not_starts = string_starts_with("hello world", "bye");
+    
+    if starts == 1 then
+        if ends == 1 then
+            if not_starts == 0 then
+                print "✅ Test 4: Starts/Ends with passed"
+                return 1
+            end
+        end
+    end
+    
+    print "❌ Test 4 failed"
+    return 0
+end
+
+-- Test 5: String concatenation (existing runtime function)
+function test_concatenation() then
+    string str1 = "Hello, ";
+    string str2 = "MLP!";
+    string result = string_birlestir(str1, str2);
+    
+    if string_esit_mi(result, "Hello, MLP!") then
+        print "✅ Test 5: Concatenation passed"
+        return 1
+    end
+    
+    print "❌ Test 5 failed"
+    return 0
+end
+
+-- Test 6: String length
+function test_length() then
+    string text = "MLP Phase 3";
+    int len = string_uzunluk(text);
+    
+    if len == 11 then
+        print "✅ Test 6: Length passed"
+        return 1
+    end
+    
+    print "❌ Test 6 failed"
+    return 0
+end
+
+-- Test 7: Character access (existing runtime function)
+function test_char_access() then
+    string text = "MLP";
+    string first = string_karakter_al(text, 0);
+    
+    if string_esit_mi(first, "M") then
+        print "✅ Test 7: Character access passed"
+        return 1
+    end
+    
+    print "❌ Test 7 failed"
+    return 0
+end
+
+-- Run all tests
+print "╔══════════════════════════════════════╗"
+print "║  String Ops MLP Integration Tests   ║"
+print "╚══════════════════════════════════════╝"
+print ""
+
+int total = 0;
+int passed = 0;
+
+total = total + 1;
+passed = passed + test_case_conversion();
+
+total = total + 1;
+passed = passed + test_trim();
+
+total = total + 1;
+passed = passed + test_find();
+
+total = total + 1;
+passed = passed + test_starts_ends();
+
+total = total + 1;
+passed = passed + test_concatenation();
+
+total = total + 1;
+passed = passed + test_length();
+
+total = total + 1;
+passed = passed + test_char_access();
+
+print ""
+print "╔══════════════════════════════════════╗"
+print "║          Test Results                ║"
+print "╠══════════════════════════════════════╣"
+print "║ Passed: ";
+yazdir_sayi(passed)
+print "║ Failed: ";
+yazdir_sayi(total - passed)
+print "║ Total:  ";
+yazdir_sayi(total)
+print "╚══════════════════════════════════════╝"

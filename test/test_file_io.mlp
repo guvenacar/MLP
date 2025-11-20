@@ -1,0 +1,153 @@
+-- File I/O Integration Tests - Phase 3
+-- These tests verify File I/O operations work correctly in MLP
+
+-- Test 1: Basic write and read
+function test_basic_io() then
+    string content = "Hello from MLP!";
+    int result = write_file("/tmp/mlp_test1.txt", content);
+    
+    string read_back = read_file("/tmp/mlp_test1.txt");
+    
+    if string_esit_mi(read_back, content) then
+        print "✅ Test 1: Basic I/O passed"
+        return 1
+    end
+
+    print "❌ Test 1 failed"
+    return 0
+end
+
+-- Test 2: Multiple operations
+function test_multiple_ops() then
+    write_file("/tmp/mlp_test2.txt", "First");
+    append_file("/tmp/mlp_test2.txt", "\nSecond");
+    append_file("/tmp/mlp_test2.txt", "\nThird");
+
+    string result = read_file("/tmp/mlp_test2.txt");
+    
+    -- Check if all parts present (basic check)
+    int len = string_uzunluk(result);
+    if len > 0 then
+        print "✅ Test 2: Multiple operations passed"
+        return 1
+    end
+    
+    return 0
+end
+
+-- Test 3: File existence check
+function test_file_exists() then
+    write_file("/tmp/mlp_test3.txt", "Test");
+
+    int exists = file_exists("/tmp/mlp_test3.txt");
+    int not_exists = file_exists("/tmp/nonexistent_mlp_xyz.txt");
+    
+    if exists == 1 then
+        if not_exists == 0 then
+            print "✅ Test 3: File exists check passed"
+            return 1
+        end
+    end
+
+    print "❌ Test 3 failed"
+    return 0
+end
+
+-- Test 4: File size check
+function test_file_size_check() then
+    string content = "MLP Phase 3!";
+    write_file("/tmp/mlp_test4.txt", content);
+    
+    int size = file_size("/tmp/mlp_test4.txt");
+    int expected = string_uzunluk(content);
+    
+    if size == expected then
+        print "✅ Test 4: File size check passed"
+        return 1
+    end
+    
+    print "❌ Test 4 failed"
+    return 0
+end
+
+-- Test 5: Empty file handling
+function test_empty_file() then
+    write_file("/tmp/mlp_test5.txt", "");
+    
+    string empty_content = read_file("/tmp/mlp_test5.txt");
+    int len = string_uzunluk(empty_content);
+    
+    if len == 0 then
+        print "✅ Test 5: Empty file handling passed"
+        return 1
+    end
+    
+    print "❌ Test 5 failed"
+    return 0
+end
+
+-- Test 6: Large content write/read
+function test_large_content() then
+    -- Build a 1KB string
+    string large = "A";
+    int i = 0;
+    
+    while
+        if i >= 1023 then
+            break
+        end
+        large = string_birlestir(large, "B");
+        i = i + 1
+    end
+    
+    write_file("/tmp/mlp_test6.txt", large);
+    string read_back = read_file("/tmp/mlp_test6.txt");
+    
+    int len = string_uzunluk(read_back);
+    if len == 1024 then
+        print "✅ Test 6: Large content passed"
+        return 1
+    end
+    
+    print "❌ Test 6 failed"
+    return 0
+end
+
+-- Run all tests
+print "╔══════════════════════════════════════╗"
+print "║  File I/O MLP Integration Tests     ║"
+print "╚══════════════════════════════════════╝"
+print ""
+
+int total = 0;
+int passed = 0;
+
+total = total + 1;
+passed = passed + test_basic_io();
+
+total = total + 1;
+passed = passed + test_multiple_ops();
+
+total = total + 1;
+passed = passed + test_file_exists();
+
+total = total + 1;
+passed = passed + test_file_size_check();
+
+total = total + 1;
+passed = passed + test_empty_file();
+
+total = total + 1;
+passed = passed + test_large_content();
+
+print ""
+print "╔══════════════════════════════════════╗"
+print "║          Test Results                ║"
+print "╠══════════════════════════════════════╣"
+print "║ Passed: ";
+yazdir_sayi(passed)
+print "║ Failed: ";
+yazdir_sayi(total - passed)
+print "║ Total:  ";
+yazdir_sayi(total)
+print "╚══════════════════════════════════════╝"

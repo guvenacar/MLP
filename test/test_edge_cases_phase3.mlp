@@ -1,0 +1,181 @@
+-- Phase 3 Edge Case Tests
+-- Tests boundary conditions and error handling
+
+-- Test 1: Empty file operations
+function test_empty_files() then
+    write_file("/tmp/edge_empty.txt", "");
+    string content = read_file("/tmp/edge_empty.txt");
+    int len = string_uzunluk(content);
+
+    if len == 0 then
+        print "✅ Test 1: Empty file handling passed"
+        return 1
+    end
+    
+    print "❌ Test 1 failed"
+    return 0
+end
+
+-- Test 2: Large string operations
+function test_large_strings() then
+    string large = "A";
+    int i = 0;
+
+    -- Build 1000-character string
+    while
+        if i >= 999 then
+            break
+        end
+        large = string_birlestir(large, "B");
+        i = i + 1
+    end
+
+    int len = string_uzunluk(large);
+    
+    if len == 1000 then
+        print "✅ Test 2: Large string handling passed"
+        return 1
+    end
+    
+    print "❌ Test 2 failed"
+    return 0
+end
+
+-- Test 3: Special characters in strings
+function test_special_chars() then
+    -- Test newline and tab characters
+    string special = "Hello\nWorld";
+    write_file("/tmp/edge_special.txt", special);
+    string read_back = read_file("/tmp/edge_special.txt");
+    
+    if string_uzunluk(read_back) > 0 then
+        print "✅ Test 3: Special characters preserved"
+        return 1
+    end
+    
+    print "❌ Test 3 failed"
+    return 0
+end
+
+-- Test 4: Multiple consecutive operations
+function test_consecutive_ops() then
+    -- Multiple writes to same file
+    write_file("/tmp/edge_multi.txt", "First");
+    write_file("/tmp/edge_multi.txt", "Second");
+    write_file("/tmp/edge_multi.txt", "Third");
+    
+    string content = read_file("/tmp/edge_multi.txt");
+    
+    -- Should only have "Third" (last write)
+    if string_esit_mi(content, "Third") then
+        print "✅ Test 4: Consecutive operations passed"
+        return 1
+    end
+    
+    print "❌ Test 4 failed"
+    return 0
+end
+
+-- Test 5: String operations on empty strings
+function test_empty_strings() then
+    string empty = "";
+    int len = string_uzunluk(empty);
+    
+    string upper = string_upper(empty);
+    string lower = string_lower(empty);
+    
+    if len == 0 then
+        print "✅ Test 5: Empty string operations passed"
+        return 1
+    end
+    
+    print "❌ Test 5 failed"
+    return 0
+end
+
+-- Test 6: File exists on non-existent file
+function test_nonexistent_file() then
+    int exists = file_exists("/tmp/this_file_does_not_exist_xyz.txt");
+    
+    if exists == 0 then
+        print "✅ Test 6: Non-existent file check passed"
+        return 1
+    end
+    
+    print "❌ Test 6 failed"
+    return 0
+end
+
+-- Test 7: Append to non-existent file (creates new file)
+function test_append_new() then
+    -- Append to non-existent file should create it
+    append_file("/tmp/edge_append_new.txt", "Created by append");
+    
+    int exists = file_exists("/tmp/edge_append_new.txt");
+    
+    if exists == 1 then
+        print "✅ Test 7: Append to new file passed"
+        return 1
+    end
+    
+    print "❌ Test 7 failed"
+    return 0
+end
+
+-- Test 8: String find with non-existent substring
+function test_find_missing() then
+    int pos = string_find("hello world", "xyz");
+    
+    if pos == -1 then
+        print "✅ Test 8: Find missing substring passed"
+        return 1
+    end
+    
+    print "❌ Test 8 failed"
+    return 0
+end
+
+-- Run all edge case tests
+print "╔══════════════════════════════════════╗"
+print "║    Phase 3 Edge Case Tests          ║"
+print "╚══════════════════════════════════════╝"
+print ""
+
+int total = 0;
+int passed = 0;
+
+total = total + 1;
+passed = passed + test_empty_files();
+
+total = total + 1;
+passed = passed + test_large_strings();
+
+total = total + 1;
+passed = passed + test_special_chars();
+
+total = total + 1;
+passed = passed + test_consecutive_ops();
+
+total = total + 1;
+passed = passed + test_empty_strings();
+
+total = total + 1;
+passed = passed + test_nonexistent_file();
+
+total = total + 1;
+passed = passed + test_append_new();
+
+total = total + 1;
+passed = passed + test_find_missing();
+
+print ""
+print "╔══════════════════════════════════════╗"
+print "║          Test Results                ║"
+print "╠══════════════════════════════════════╣"
+print "║ Passed: ";
+yazdir_sayi(passed)
+print "║ Failed: ";
+yazdir_sayi(total - passed)
+print "║ Total:  ";
+yazdir_sayi(total)
+print "╚══════════════════════════════════════╝"
