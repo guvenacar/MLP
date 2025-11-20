@@ -86,6 +86,26 @@ KeywordMap keywords[] = {
     {"struct",   TOKEN_YAPI_STRUCT},
     {"list",     TOKEN_YAPI_LIST},      // Phase 2: Dynamic lists
 
+    // Phase 3: Built-in Functions
+    // File I/O
+    {"read_file",    TOKEN_BUILTIN_READ_FILE},
+    {"write_file",   TOKEN_BUILTIN_WRITE_FILE},
+    {"append_file",  TOKEN_BUILTIN_APPEND_FILE},
+    {"file_exists",  TOKEN_BUILTIN_FILE_EXISTS},
+    {"file_size",    TOKEN_BUILTIN_FILE_SIZE},
+    {"read_lines",   TOKEN_BUILTIN_READ_LINES},
+
+    // String Operations
+    {"string_split",       TOKEN_BUILTIN_STRING_SPLIT},
+    {"string_join",        TOKEN_BUILTIN_STRING_JOIN},
+    {"string_replace",     TOKEN_BUILTIN_STRING_REPLACE},
+    {"string_trim",        TOKEN_BUILTIN_STRING_TRIM},
+    {"string_upper",       TOKEN_BUILTIN_STRING_UPPER},
+    {"string_lower",       TOKEN_BUILTIN_STRING_LOWER},
+    {"string_find",        TOKEN_BUILTIN_STRING_FIND},
+    {"string_starts_with", TOKEN_BUILTIN_STRING_STARTS_WITH},
+    {"string_ends_with",   TOKEN_BUILTIN_STRING_ENDS_WITH},
+
     // Boolean literals
     {"true",     TOKEN_IDENTIFIER},  // Will be handled as identifier
     {"false",    TOKEN_IDENTIFIER},  // Will be handled as identifier
