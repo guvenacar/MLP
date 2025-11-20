@@ -5,7 +5,7 @@ struct Person then
     int age;
 end
 
-Person p;
+struct Person p = Person();
 
 p.name = "Alice"
 p.age = 25
