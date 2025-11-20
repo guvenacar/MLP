@@ -1520,6 +1520,23 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_STRING_SUBSTRING: func_name = "string_substring"; break;
         case TOKEN_BUILTIN_STRING_INDEX_OF: func_name = "string_index_of"; break;
         case TOKEN_BUILTIN_STRING_LAST_INDEX_OF: func_name = "string_last_index_of"; break;
+        // Phase 5.2: Error Handling
+        case TOKEN_BUILTIN_EXIT_WITH_CODE: func_name = "exit_with_code"; break;
+        case TOKEN_BUILTIN_PANIC: func_name = "panic"; break;
+        case TOKEN_BUILTIN_ASSERT: func_name = "mlp_assert"; break;
+        case TOKEN_BUILTIN_GET_ERROR_CODE: func_name = "get_error_code"; break;
+        case TOKEN_BUILTIN_SET_ERROR_CODE: func_name = "set_error_code"; break;
+        // Phase 5.2: Memory Management
+        case TOKEN_BUILTIN_MLP_MALLOC: func_name = "mlp_malloc"; break;
+        case TOKEN_BUILTIN_MLP_FREE: func_name = "mlp_free"; break;
+        case TOKEN_BUILTIN_MLP_REALLOC: func_name = "mlp_realloc"; break;
+        case TOKEN_BUILTIN_MLP_CALLOC: func_name = "mlp_calloc"; break;
+        case TOKEN_BUILTIN_GET_ALLOCATED_BYTES: func_name = "get_allocated_bytes"; break;
+        case TOKEN_BUILTIN_CHECK_MEMORY_LEAKS: func_name = "check_memory_leaks"; break;
+        // Phase 5.2: System Utilities
+        case TOKEN_BUILTIN_GET_ENV: func_name = "get_env"; break;
+        case TOKEN_BUILTIN_CURRENT_TIMESTAMP: func_name = "current_timestamp"; break;
+        case TOKEN_BUILTIN_SLEEP_MS: func_name = "sleep_ms"; break;
         default: func_name = "unknown"; break;
     }
 
