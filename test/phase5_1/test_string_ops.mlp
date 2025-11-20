@@ -1,0 +1,278 @@
+--
+-- Phase 5.1 MLP Integration Test - String Operations
+-- Tests: string_length, string_substring, string_index_of, string_last_index_of
+--
+-- Expected: 12 tests
+--
+
+-- Test 1: String length basic
+function test_string_length_basic() then
+    PRINT "=== Test 1: String length basic ===";
+    
+    int len1 = string_length("Hello");
+    PRINT "Length of 'Hello': ";
+    YAZDIR_SAYI len1;
+    
+    EĞER len1 != 5 İSE
+        PRINT "FAIL: Expected 5";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    int len2 = string_length("");
+    EĞER len2 != 0 İSE
+        PRINT "FAIL: Empty string should have length 0";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_string_length_basic";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 2: String length with spaces
+function test_string_length_spaces() then
+    PRINT "=== Test 2: String length with spaces ===";
+    
+    int len = string_length("Hello World");
+    PRINT "Length of 'Hello World': ";
+    YAZDIR_SAYI len;
+    
+    EĞER len != 11 İSE
+        PRINT "FAIL: Expected 11";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_string_length_spaces";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 3: Substring basic
+function test_substring_basic() then
+    PRINT "=== Test 3: Substring basic ===";
+    
+    string result = string_substring("Hello World", 0, 5);
+    PRINT "Substring(0, 5): ";
+    YAZDIR_METIN result;
+    
+    int cmp = STRING_KARSILASTIR(result, "Hello");
+    EĞER cmp != 0 İSE
+        PRINT "FAIL: Expected 'Hello'";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_substring_basic";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 4: Substring middle
+function test_substring_middle() then
+    PRINT "=== Test 4: Substring middle ===";
+    
+    string result = string_substring("Hello World", 6, 5);
+    PRINT "Substring(6, 5): ";
+    YAZDIR_METIN result;
+    
+    int cmp = STRING_KARSILASTIR(result, "World");
+    EĞER cmp != 0 İSE
+        PRINT "FAIL: Expected 'World'";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_substring_middle";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 5: Substring empty
+function test_substring_empty() then
+    PRINT "=== Test 5: Substring empty ===";
+    
+    string result = string_substring("Hello", 0, 0);
+    int len = string_length(result);
+    
+    EĞER len != 0 İSE
+        PRINT "FAIL: Expected empty string";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_substring_empty";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 6: Index of basic
+function test_index_of_basic() then
+    PRINT "=== Test 6: Index of basic ===";
+    
+    int pos = string_index_of("Hello World", "World");
+    PRINT "Index of 'World': ";
+    YAZDIR_SAYI pos;
+    
+    EĞER pos != 6 İSE
+        PRINT "FAIL: Expected 6";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_index_of_basic";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 7: Index of first occurrence
+function test_index_of_first() then
+    PRINT "=== Test 7: Index of first occurrence ===";
+    
+    int pos = string_index_of("Hello World", "o");
+    PRINT "Index of 'o': ";
+    YAZDIR_SAYI pos;
+    
+    EĞER pos != 4 İSE
+        PRINT "FAIL: Expected 4 (first 'o')";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_index_of_first";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 8: Index of not found
+function test_index_of_not_found() then
+    PRINT "=== Test 8: Index of not found ===";
+    
+    int pos = string_index_of("Hello World", "xyz");
+    PRINT "Index of 'xyz': ";
+    YAZDIR_SAYI pos;
+    
+    EĞER pos != -1 İSE
+        PRINT "FAIL: Expected -1 (not found)";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_index_of_not_found";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 9: Last index of basic
+function test_last_index_of_basic() then
+    PRINT "=== Test 9: Last index of basic ===";
+    
+    int pos = string_last_index_of("Hello World", "o");
+    PRINT "Last index of 'o': ";
+    YAZDIR_SAYI pos;
+    
+    EĞER pos != 7 İSE
+        PRINT "FAIL: Expected 7 (last 'o')";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_last_index_of_basic";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 10: Last index of repeated
+function test_last_index_of_repeated() then
+    PRINT "=== Test 10: Last index of repeated ===";
+    
+    int pos = string_last_index_of("abcabcabc", "abc");
+    PRINT "Last index of 'abc': ";
+    YAZDIR_SAYI pos;
+    
+    EĞER pos != 6 İSE
+        PRINT "FAIL: Expected 6";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_last_index_of_repeated";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 11: Last index of not found
+function test_last_index_of_not_found() then
+    PRINT "=== Test 11: Last index of not found ===";
+    
+    int pos = string_last_index_of("Hello World", "xyz");
+    PRINT "Last index of 'xyz': ";
+    YAZDIR_SAYI pos;
+    
+    EĞER pos != -1 İSE
+        PRINT "FAIL: Expected -1 (not found)";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_last_index_of_not_found";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 12: Combined operations
+function test_combined_operations() then
+    PRINT "=== Test 12: Combined operations ===";
+    
+    string text = "Hello World";
+    int len = string_length(text);
+    int pos = string_index_of(text, "World");
+    string part = string_substring(text, pos, 5);
+    
+    PRINT "Original: ";
+    YAZDIR_METIN text;
+    PRINT "Length: ";
+    YAZDIR_SAYI len;
+    PRINT "Position of 'World': ";
+    YAZDIR_SAYI pos;
+    PRINT "Extracted: ";
+    YAZDIR_METIN part;
+    
+    int cmp = STRING_KARSILASTIR(part, "World");
+    EĞER cmp != 0 İSE
+        PRINT "FAIL: Extracted part should be 'World'";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_combined_operations";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Main entry
+function main() then
+    PRINT "========================================";
+    PRINT "Phase 5.1 - String Operations";
+    PRINT "========================================";
+    PRINT "";
+    
+    test_string_length_basic();
+    PRINT "";
+    
+    test_string_length_spaces();
+    PRINT "";
+    
+    test_substring_basic();
+    PRINT "";
+    
+    test_substring_middle();
+    PRINT "";
+    
+    test_substring_empty();
+    PRINT "";
+    
+    test_index_of_basic();
+    PRINT "";
+    
+    test_index_of_first();
+    PRINT "";
+    
+    test_index_of_not_found();
+    PRINT "";
+    
+    test_last_index_of_basic();
+    PRINT "";
+    
+    test_last_index_of_repeated();
+    PRINT "";
+    
+    test_last_index_of_not_found();
+    PRINT "";
+    
+    test_combined_operations();
+    PRINT "";
+    
+    PRINT "========================================";
+    PRINT "All string operation tests completed!";
+    PRINT "========================================";
+    
+    DÖNÜŞ 0
+SİHİRBİTİR
