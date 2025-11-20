@@ -8,7 +8,7 @@ eğer x > y İSE
     yazdir(x)
 SON
 
-döngü y < 15 İSE
+döngü y < 15 
     yazdir(y)
     y = y + 1
 SON

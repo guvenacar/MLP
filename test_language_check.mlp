@@ -1,0 +1,57 @@
+-- lang: tr-TR
+-- MLP Dil Özellikleri Test Programı
+
+-- 1. Değişkenler ve Tipler
+SAYISAL x = 42
+SAYISAL y = 10
+METIN mesaj = "MLP Çalışıyor!"
+
+-- 2. Aritmetik İşlemler
+SAYISAL toplam = x + y
+SAYISAL fark = x - y
+SAYISAL carpim = x * y
+SAYISAL bolum = x / y
+SAYISAL mod = x % y
+
+-- 3. Koşullar (İç içe)
+EĞER x > y İSE
+    YAZDIR "x büyük"
+    EĞER toplam > 50 İSE
+        YAZDIR "Toplam 50'den büyük"
+    EĞER_SON
+DEĞİLSE
+    YAZDIR "y büyük veya eşit"
+EĞER_SON
+
+-- 4. Döngüler
+SAYISAL sayac = 0
+DÖNGÜ
+    EĞER sayac >= 5 İSE
+        DÖNGÜ_BITIR
+    EĞER_SON
+    YAZDIR sayac
+    sayac = sayac + 1
+DÖNGÜ_SON
+
+-- 5. Fonksiyonlar
+İŞLEÇ kare(n) İSE
+    DÖNÜŞ n * n
+İŞLEÇ_SON
+
+SAYISAL sonuc = kare(7)
+YAZDIR sonuc
+
+-- 6. String İşlemleri
+METIN test = "Hello"
+SAYISAL uzunluk = string_length(test)
+YAZDIR uzunluk
+
+-- 7. Liste İşlemleri
+liste[SAYISAL] nums = liste()
+nums.ekle(10)
+nums.ekle(20)
+nums.ekle(30)
+SAYISAL boyut = nums.boyut()
+YAZDIR boyut
+
+YAZDIR "MLP Test Tamamlandı!"

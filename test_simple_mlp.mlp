@@ -1,0 +1,14 @@
+-- lang: tr-TR
+SAYISAL x = 42
+SAYISAL y = 10
+
+EĞER x > y İSE
+    YAZDIR "x büyük"
+EĞER_SON
+
+İŞLEÇ topla(a, b) İSE
+    DÖNÜŞ a + b
+İŞLEÇ_SON
+
+SAYISAL sonuc = topla(x, y)
+YAZDIR sonuc
