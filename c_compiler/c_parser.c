@@ -538,7 +538,24 @@ ASTNode* birincil() {
         current_token->type == TOKEN_BUILTIN_STRING_LENGTH ||
         current_token->type == TOKEN_BUILTIN_STRING_SUBSTRING ||
         current_token->type == TOKEN_BUILTIN_STRING_INDEX_OF ||
-        current_token->type == TOKEN_BUILTIN_STRING_LAST_INDEX_OF) {
+        current_token->type == TOKEN_BUILTIN_STRING_LAST_INDEX_OF ||
+        // Phase 5.2: Error Handling
+        current_token->type == TOKEN_BUILTIN_EXIT_WITH_CODE ||
+        current_token->type == TOKEN_BUILTIN_PANIC ||
+        current_token->type == TOKEN_BUILTIN_ASSERT ||
+        current_token->type == TOKEN_BUILTIN_GET_ERROR_CODE ||
+        current_token->type == TOKEN_BUILTIN_SET_ERROR_CODE ||
+        // Phase 5.2: Memory Management
+        current_token->type == TOKEN_BUILTIN_MLP_MALLOC ||
+        current_token->type == TOKEN_BUILTIN_MLP_FREE ||
+        current_token->type == TOKEN_BUILTIN_MLP_REALLOC ||
+        current_token->type == TOKEN_BUILTIN_MLP_CALLOC ||
+        current_token->type == TOKEN_BUILTIN_GET_ALLOCATED_BYTES ||
+        current_token->type == TOKEN_BUILTIN_CHECK_MEMORY_LEAKS ||
+        // Phase 5.2: System Utilities
+        current_token->type == TOKEN_BUILTIN_GET_ENV ||
+        current_token->type == TOKEN_BUILTIN_CURRENT_TIMESTAMP ||
+        current_token->type == TOKEN_BUILTIN_SLEEP_MS) {
 
         TokenType func_type = current_token->type;
         consume(current_token->type);
