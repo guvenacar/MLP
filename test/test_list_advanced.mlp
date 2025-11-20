@@ -1,0 +1,287 @@
+# lang: en-US
+# syntax: mlp
+
+# MLP Dynamic List - Advanced Tests
+# Tests multiple lists and iteration patterns
+
+print("=== MLP List Advanced Tests ===")
+print("")
+
+# Test 1: Multiple lists of different types
+print("Test 1: Multiple lists simultaneously")
+
+list[int] numbers = list()
+list[string] names = list()
+
+# Add to numbers
+numbers.add(10)
+numbers.add(20)
+numbers.add(30)
+
+# Add to names
+names.add("Alice")
+names.add("Bob")
+names.add("Charlie")
+
+int num_size = numbers.size()
+int name_size = names.size()
+
+print("Numbers list size: ")
+print(num_size)
+print("Names list size: ")
+print(name_size)
+
+if num_size == 3 then
+    if name_size == 3 then
+        print("✅ Multiple lists work")
+    else
+        print("❌ Names list size wrong")
+    end if
+else
+    print("❌ Numbers list size wrong")
+end if
+
+print("")
+
+# Test 2: Iterate numbers with while loop
+print("Test 2: Iterate through numbers")
+int i = 0
+while i < numbers.size()
+    int val = numbers.get(i)
+    print("Number at index ")
+    print(i)
+    print(" = ")
+    print(val)
+    i = i + 1
+end while
+
+print("✅ Number iteration complete")
+print("")
+
+# Test 3: Iterate names with while loop
+print("Test 3: Iterate through names")
+int j = 0
+while j < names.size()
+    string name = names.get(j)
+    print("Name at index ")
+    print(j)
+    print(" = ")
+    print(name)
+    j = j + 1
+end while
+
+print("✅ Name iteration complete")
+print("")
+
+# Test 4: Find element in list (linear search pattern)
+print("Test 4: Search for number 20")
+int target = 20
+int found_index = -1
+int k = 0
+
+while k < numbers.size()
+    int current = numbers.get(k)
+    if current == target then
+        found_index = k
+    end if
+    k = k + 1
+end while
+
+print("Found 20 at index: ")
+print(found_index)
+
+if found_index == 1 then
+    print("✅ Search found correct index")
+else
+    print("❌ Search failed")
+end if
+
+print("")
+
+# Test 5: Compute sum of list
+print("Test 5: Calculate sum of numbers")
+int sum = 0
+int m = 0
+
+while m < numbers.size()
+    int val = numbers.get(m)
+    sum = sum + val
+    m = m + 1
+end while
+
+print("Sum of numbers: ")
+print(sum)
+
+if sum == 60 then
+    print("✅ Sum correct (10+20+30=60)")
+else
+    print("❌ Sum wrong")
+end if
+
+print("")
+
+# Test 6: Reverse iteration
+print("Test 6: Reverse iteration")
+int size = numbers.size()
+int idx = size - 1
+
+while idx >= 0
+    int val = numbers.get(idx)
+    print("Reverse index ")
+    print(idx)
+    print(" = ")
+    print(val)
+    idx = idx - 1
+end while
+
+print("✅ Reverse iteration complete")
+print("")
+
+# Test 7: Build list incrementally with loop
+print("Test 7: Build list with for loop")
+list[int] squares = list()
+
+int n = 1
+while n <= 5
+    int square = n * n
+    squares.add(square)
+    n = n + 1
+end while
+
+int squares_size = squares.size()
+print("Squares list size: ")
+print(squares_size)
+
+if squares_size == 5 then
+    print("✅ Built 5 squares")
+else
+    print("❌ Squares count wrong")
+end if
+
+# Print squares
+int p = 0
+while p < squares.size()
+    int sq = squares.get(p)
+    print("Square ")
+    print(p)
+    print(" = ")
+    print(sq)
+    p = p + 1
+end while
+
+print("")
+
+# Test 8: Remove elements while iterating (reverse)
+print("Test 8: Remove odd numbers from list")
+list[int] evens = list()
+evens.add(1)
+evens.add(2)
+evens.add(3)
+evens.add(4)
+evens.add(5)
+
+print("Before removal: ")
+print(evens.size())
+
+# Remove from end to avoid index shifting issues
+int rem_idx = evens.size() - 1
+while rem_idx >= 0
+    int val = evens.get(rem_idx)
+    int remainder = val % 2
+    if remainder == 1 then
+        evens.remove(rem_idx)
+    end if
+    rem_idx = rem_idx - 1
+end while
+
+print("After removing odds: ")
+print(evens.size())
+
+if evens.size() == 2 then
+    print("✅ Removed 3 odd numbers")
+else
+    print("❌ Removal count wrong")
+end if
+
+# Verify remaining are even
+int q = 0
+while q < evens.size()
+    int even_val = evens.get(q)
+    print("Remaining: ")
+    print(even_val)
+    q = q + 1
+end while
+
+print("")
+
+# Test 9: Nested list operations
+print("Test 9: Parallel list operations")
+list[int] ids = list()
+list[string] users = list()
+
+# Add synchronized data
+ids.add(101)
+users.add("Alice")
+
+ids.add(102)
+users.add("Bob")
+
+ids.add(103)
+users.add("Charlie")
+
+print("User database:")
+int r = 0
+while r < ids.size()
+    int id = ids.get(r)
+    string user = users.get(r)
+    print("ID: ")
+    print(id)
+    print(" User: ")
+    print(user)
+    r = r + 1
+end while
+
+print("✅ Parallel lists work")
+print("")
+
+# Test 10: List capacity stress test (smaller scale)
+print("Test 10: Add many elements")
+list[int] large = list()
+
+int count = 0
+while count < 50
+    large.add(count)
+    count = count + 1
+end while
+
+int large_size = large.size()
+print("Large list size: ")
+print(large_size)
+
+if large_size == 50 then
+    print("✅ Added 50 elements")
+else
+    print("❌ Large list size wrong")
+end if
+
+# Verify first and last
+int first_large = large.get(0)
+int last_large = large.get(49)
+
+print("First element: ")
+print(first_large)
+print("Last element: ")
+print(last_large)
+
+if first_large == 0 then
+    if last_large == 49 then
+        print("✅ Large list elements correct")
+    else
+        print("❌ Last element wrong")
+    end if
+else
+    print("❌ First element wrong")
+end if
+
+print("")
+print("=== Advanced Tests Complete ===")

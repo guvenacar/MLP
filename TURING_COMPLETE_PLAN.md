@@ -134,36 +134,73 @@ d.speak()  -- "Woof!"
 
 **Deliverable:** Full struct support working
 
-### Phase 2: Dynamic Lists (1 week)
+### Phase 2: Dynamic Lists ✅ COMPLETE
 **Priority:** 🟡 HIGH
+**Status:** ✅ COMPLETE (November 20, 2025)
 
-**Tasks:**
-1. Design list API (add, get, remove, size, etc.)
-2. Implement AST nodes for list operations
-3. Add list runtime functions (C code)
-4. Implement parser support
-5. Implement code generator
-6. Write comprehensive tests
-7. Document list usage
+**Completed Tasks:**
+1. ✅ Designed list API (add, get, remove, size, clear)
+2. ✅ Implemented AST nodes for list operations
+3. ✅ Added list runtime functions (196 lines C code)
+4. ✅ Implemented parser support (121 lines)
+5. ✅ Implemented code generator (120 lines)
+6. ✅ Wrote comprehensive tests (2 test files)
+7. ✅ Documented list usage (LIST_DESIGN.md)
 
-**Deliverable:** Dynamic, resizable lists working
+**Metrics:**
+- Runtime: 196 lines
+- Parser: 121 lines
+- Code Generator: 120 lines
+- Tests: 2 files passing
+- Total: 555+ lines
 
-### Phase 3: Dictionaries (1-2 weeks)
-**Priority:** 🟡 HIGH
+**Deliverable:** ✅ Dynamic, resizable lists working and tested
 
-**Tasks:**
-1. Design hash table implementation
-2. Implement AST nodes for dict operations
-3. Add hash table runtime (C code)
-4. Support string keys (primary use case)
-5. Support generic key/value types
-6. Implement parser support
-7. Implement code generator
-8. Collision handling (chaining or open addressing)
-9. Write comprehensive tests
-10. Document dict usage
+### Phase 3: File I/O & Self-Hosting 🔄 IN PROGRESS
+**Priority:** 🔴 CRITICAL
+**Status:** 🔄 Implementation ongoing (November 20, 2025)
 
-**Deliverable:** Hash maps working for keyword translation
+**Goals:**
+- File operations (read/write) for source code processing
+- String manipulation (split/join/replace) for text processing
+- Hash maps for symbol tables and keyword translation
+- Full MLP compiler capability
+
+**Components:**
+
+**3.1 File I/O** 📋 Designed
+- `read_file(path)` - Read source files
+- `write_file(path, content)` - Write assembly output
+- `read_lines(path)` - Line-by-line processing
+- `append_file(path, content)` - Logging
+- `file_exists(path)` - Pre-flight checks
+- `file_size(path)` - Size validation
+- Documentation: FILE_IO_DESIGN.md
+
+**3.2 String Operations** 📋 Designed
+- `string_split(str, delim)` - Tokenization
+- `string_join(parts, delim)` - Code assembly
+- `string_replace(str, old, new)` - Keyword translation
+- `string_trim(str)` - Whitespace cleanup
+- `string_upper(str)` / `string_lower(str)` - Case normalization
+- `string_find(haystack, needle)` - Pattern matching
+- `string_starts_with(str, prefix)` - Token classification
+- `string_ends_with(str, suffix)` - Extension checking
+- Documentation: STRING_OPS_DESIGN.md
+
+**3.3 Hash Maps/Dictionaries** 📋 Designed
+- `map()` - Create hash map
+- `map.set(key, value)` - Insert/update
+- `map.get(key)` - Retrieve
+- `map.has(key)` - Check existence
+- `map.remove(key)` - Delete entry
+- `map.size()` - Get count
+- `map.clear()` - Empty map
+- Implementation: DJB2 hash + chaining
+- Documentation: HASHMAP_DESIGN.md
+
+**Timeline:** 2-3 weeks
+**Deliverable:** Self-hosting compiler can read `.mlp` and write `.asm`
 
 ### Phase 4: Classes (2-3 weeks)
 **Priority:** 🟢 MEDIUM

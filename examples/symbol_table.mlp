@@ -1,0 +1,378 @@
+-- Symbol Table Example
+-- Demonstrates Phase 3 Hash Map usage for compiler symbol tables
+-- Author: MLP Documentation Team
+-- Date: November 20, 2025
+
+-- Symbol information structure
+struct SymbolInfo then
+    string name;       -- Variable name
+    string type;       -- Type: "int", "string", "struct Person", etc.
+    int scope_level;   -- Scope depth (0 = global)
+    int defined;       -- 1 if defined, 0 if forward reference
+end
+
+-- Global symbol tables (hash maps)
+map[string:SymbolInfo] global_symbols = map();
+map[string:SymbolInfo] local_symbols = map();
+
+-- Current scope level
+int current_scope = 0;
+
+-- ==================== SYMBOL TABLE OPERATIONS ====================
+
+-- Define a new variable
+function define_variable(name, type) then
+    -- Check if already defined in current scope
+    if current_scope == 0 then
+        if global_symbols.has(name) == 1 then
+            print "Error: Variable already defined: ";
+            print name;
+            return -1
+        end
+
+        -- Add to global symbols
+        SymbolInfo info;
+        info.name = name;
+        info.type = type;
+        info.scope_level = 0;
+        info.defined = 1;
+        global_symbols.set(name, info);
+
+    else
+        if local_symbols.has(name) == 1 then
+            print "Error: Variable already defined: ";
+            print name;
+            return -1
+        end
+
+        -- Add to local symbols
+        SymbolInfo info;
+        info.name = name;
+        info.type = type;
+        info.scope_level = current_scope;
+        info.defined = 1;
+        local_symbols.set(name, info);
+    end
+
+    print "Defined: ";
+    print name;
+    print " : ";
+    print type;
+
+    return 0
+end
+
+-- Look up variable type
+function lookup_variable(name) then
+    -- Check local scope first
+    if local_symbols.has(name) == 1 then
+        SymbolInfo info = local_symbols.get(name);
+        return info.type
+    end
+
+    -- Check global scope
+    if global_symbols.has(name) == 1 then
+        SymbolInfo info = global_symbols.get(name);
+        return info.type
+    end
+
+    -- Not found
+    print "Error: Undefined variable: ";
+    print name;
+    return ""
+end
+
+-- Check if variable exists
+function variable_exists(name) then
+    if local_symbols.has(name) == 1 then
+        return 1
+    end
+
+    if global_symbols.has(name) == 1 then
+        return 1
+    end
+
+    return 0
+end
+
+-- Enter new scope
+function enter_scope() then
+    current_scope = current_scope + 1;
+    print "Entering scope level: ";
+    print current_scope;
+    return 0
+end
+
+-- Exit scope (cleanup local symbols)
+function exit_scope() then
+    if current_scope == 0 then
+        print "Error: Cannot exit global scope";
+        return -1
+    end
+
+    print "Exiting scope level: ";
+    print current_scope;
+
+    -- Clear local symbols
+    local_symbols.clear();
+
+    current_scope = current_scope - 1;
+    return 0
+end
+
+-- ==================== KEYWORD TRANSLATION ====================
+
+-- Create keyword translation map
+map[string:string] keywords_tr_to_en = map();
+map[string:string] keywords_en_to_tr = map();
+
+function init_keyword_maps() then
+    -- Turkish → English
+    keywords_tr_to_en.set("EĞER", "if");
+    keywords_tr_to_en.set("İSE", "then");
+    keywords_tr_to_en.set("DEĞİLSE", "else");
+    keywords_tr_to_en.set("DÖNGÜ", "while");
+    keywords_tr_to_en.set("İŞLEÇ", "function");
+    keywords_tr_to_en.set("DÖNÜŞ", "return");
+    keywords_tr_to_en.set("YAZDIR", "print");
+    keywords_tr_to_en.set("SON", "end");
+    keywords_tr_to_en.set("SAYISAL", "int");
+    keywords_tr_to_en.set("METİN", "string");
+
+    -- English → Turkish (for reverse translation)
+    keywords_en_to_tr.set("if", "EĞER");
+    keywords_en_to_tr.set("then", "İSE");
+    keywords_en_to_tr.set("else", "DEĞİLSE");
+    keywords_en_to_tr.set("while", "DÖNGÜ");
+    keywords_en_to_tr.set("function", "İŞLEÇ");
+    keywords_en_to_tr.set("return", "DÖNÜŞ");
+    keywords_en_to_tr.set("print", "YAZDIR");
+    keywords_en_to_tr.set("end", "SON");
+    keywords_en_to_tr.set("int", "SAYISAL");
+    keywords_en_to_tr.set("string", "METİN");
+
+    print "Keyword maps initialized";
+    print "Turkish keywords: ";
+    print keywords_tr_to_en.size();
+
+    return 0
+end
+
+-- Translate Turkish keyword to English
+function translate_keyword(turkish) then
+    if keywords_tr_to_en.has(turkish) == 1 then
+        return keywords_tr_to_en.get(turkish)
+    end
+
+    -- Not a keyword, return as-is
+    return turkish
+end
+
+-- Check if word is a keyword
+function is_keyword(word) then
+    if keywords_tr_to_en.has(word) == 1 then
+        return 1
+    end
+
+    if keywords_en_to_tr.has(word) == 1 then
+        return 1
+    end
+
+    return 0
+end
+
+-- ==================== STRING INTERNING ====================
+
+-- String interning for memory efficiency
+map[string:int] intern_map = map();
+list[string] intern_pool = list();
+int next_intern_id = 0;
+
+function intern_string(str) then
+    -- Check if already interned
+    if intern_map.has(str) == 1 then
+        return intern_map.get(str)
+    end
+
+    -- Intern new string
+    int id = next_intern_id;
+    next_intern_id = next_intern_id + 1;
+
+    intern_map.set(str, id);
+    intern_pool.add(str);
+
+    return id
+end
+
+function get_interned_string(id) then
+    if id >= 0 then
+        if id < intern_pool.size() then
+            return intern_pool.get(id)
+        end
+    end
+
+    return ""
+end
+
+-- ==================== CONFIGURATION STORAGE ====================
+
+-- Configuration map
+map[string:string] config = map();
+
+function set_config(key, value) then
+    config.set(key, value);
+    return 0
+end
+
+function get_config(key, default_value) then
+    if config.has(key) == 1 then
+        return config.get(key)
+    end
+
+    return default_value
+end
+
+function load_config_from_string(config_text) then
+    -- Split into lines
+    list[string] lines = string_split(config_text, "\n");
+
+    int i = 0;
+    while i < lines.size()
+        string line = lines.get(i);
+        line = string_trim(line);
+
+        -- Skip empty lines and comments
+        if string_length(line) > 0 then
+            if string_starts_with(line, "#") == 0 then
+                -- Parse "key=value"
+                list[string] parts = string_split(line, "=");
+
+                if parts.size() == 2 then
+                    string key = string_trim(parts.get(0));
+                    string value = string_trim(parts.get(1));
+                    config.set(key, value);
+
+                    print "Config: ";
+                    print key;
+                    print " = ";
+                    print value;
+                end
+            end
+        end
+
+        i = i + 1
+    end
+
+    return 0
+end
+
+-- ==================== DEMO ====================
+
+print "=== Symbol Table & Hash Map Demo ===";
+print "";
+
+-- Demo 1: Symbol Table Operations
+print "--- Demo 1: Symbol Table ---";
+enter_scope();  -- Enter main function scope
+
+define_variable("x", "int");
+define_variable("name", "string");
+define_variable("count", "int");
+
+string x_type = lookup_variable("x");
+print "Type of x: ";
+print x_type;
+
+string name_type = lookup_variable("name");
+print "Type of name: ";
+print name_type;
+
+-- Try to define duplicate
+define_variable("x", "int");  -- Should error
+
+exit_scope();
+print "";
+
+-- Demo 2: Keyword Translation
+print "--- Demo 2: Keyword Translation ---";
+init_keyword_maps();
+
+string translated1 = translate_keyword("EĞER");
+print "EĞER → ";
+print translated1;
+
+string translated2 = translate_keyword("DÖNGÜ");
+print "DÖNGÜ → ";
+print translated2;
+
+string not_keyword = translate_keyword("variable");
+print "variable → ";
+print not_keyword;
+
+int is_kw1 = is_keyword("EĞER");
+print "Is 'EĞER' a keyword? ";
+print is_kw1;
+
+int is_kw2 = is_keyword("foobar");
+print "Is 'foobar' a keyword? ";
+print is_kw2;
+print "";
+
+-- Demo 3: String Interning
+print "--- Demo 3: String Interning ---";
+
+int id1 = intern_string("Hello");
+int id2 = intern_string("World");
+int id3 = intern_string("Hello");  -- Same as id1
+
+print "Interned 'Hello' → ID: ";
+print id1;
+
+print "Interned 'World' → ID: ";
+print id2;
+
+print "Interned 'Hello' again → ID: ";
+print id3;
+
+print "ID1 == ID3? ";
+if id1 == id3 then
+    print "Yes (deduplicated!)";
+else
+    print "No";
+end
+
+string retrieved = get_interned_string(id1);
+print "Retrieved ID ";
+print id1;
+print " → ";
+print retrieved;
+print "";
+
+-- Demo 4: Configuration Storage
+print "--- Demo 4: Configuration ---";
+
+string config_text = "debug_mode=true\nopt_level=2\ntarget=x86_64\n# Comment line\noutput_dir=/tmp/build";
+
+load_config_from_string(config_text);
+
+string debug = get_config("debug_mode", "false");
+print "debug_mode: ";
+print debug;
+
+string opt = get_config("opt_level", "0");
+print "opt_level: ";
+print opt;
+
+string missing = get_config("nonexistent", "default");
+print "nonexistent key: ";
+print missing;
+print "";
+
+print "=== Demo Complete ===";
+print "";
+print "This example demonstrates:";
+print "- Symbol tables with scoping";
+print "- Keyword translation maps";
+print "- String interning for efficiency";
+print "- Configuration key-value storage";
+print "- All using hash maps (Phase 3)";

@@ -23,9 +23,18 @@ class MLPPreprocessor:
     """Two-stage preprocessor with block type tracking"""
     
     def __init__(self, 
-                 languages_file="diller_comprehensive.json",
-                 syntax_file="syntax_comprehensive.json"):
+                 languages_file=None,
+                 syntax_file=None):
         """Initialize preprocessor with language and syntax definitions"""
+        
+        # Determine file paths relative to this script
+        script_dir = Path(__file__).parent
+        root_dir = script_dir.parent
+        
+        if languages_file is None:
+            languages_file = root_dir / "diller_comprehensive.json"
+        if syntax_file is None:
+            syntax_file = root_dir / "syntax_comprehensive.json"
         
         # Load language definitions
         with open(languages_file, 'r', encoding='utf-8') as f:

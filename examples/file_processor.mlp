@@ -1,0 +1,185 @@
+-- File Processor Example
+-- Demonstrates Phase 3 File I/O operations
+-- Author: MLP Documentation Team
+-- Date: November 20, 2025
+
+-- Function: Count lines in a file
+function count_lines(filename) then
+    list[string] lines = read_lines(filename);
+    int count = lines.size();
+
+    print "File: ";
+    print filename;
+    print "Lines: ";
+    print count;
+
+    return count
+end
+
+-- Function: Process file content (example: convert to uppercase)
+function process_file(input_path, output_path) then
+    -- Check if input file exists
+    if file_exists(input_path) == 0 then
+        print "Error: Input file not found";
+        return -1
+    end
+
+    -- Read entire file
+    string content = read_file(input_path);
+
+    if string_length(content) == 0 then
+        print "Error: Could not read file or file is empty";
+        return -1
+    end
+
+    -- Transform content (uppercase example)
+    string result = string_upper(content);
+
+    -- Write to output file
+    int write_result = write_file(output_path, result);
+
+    if write_result != 0 then
+        print "Error: Could not write output file";
+        return -1
+    end
+
+    print "Successfully processed: ";
+    print input_path;
+    print " -> ";
+    print output_path;
+
+    return 0
+end
+
+-- Function: Find and replace in file
+function replace_in_file(filename, old_text, new_text) then
+    -- Read file
+    string content = read_file(filename);
+
+    if string_length(content) == 0 then
+        print "Error: Could not read file";
+        return -1
+    end
+
+    -- Replace all occurrences
+    string modified = string_replace(content, old_text, new_text);
+
+    -- Write back
+    int result = write_file(filename, modified);
+
+    if result == 0 then
+        print "Replacement successful in: ";
+        print filename;
+    else
+        print "Error: Could not write file";
+    end
+
+    return result
+end
+
+-- Function: Filter lines by prefix
+function filter_lines_by_prefix(input_file, output_file, prefix) then
+    -- Read all lines
+    list[string] lines = read_lines(input_file);
+    list[string] filtered = list();
+
+    -- Filter lines starting with prefix
+    int i = 0;
+    while i < lines.size()
+        string line = lines.get(i);
+
+        if string_starts_with(line, prefix) == 1 then
+            filtered.add(line);
+        end
+
+        i = i + 1
+    end
+
+    -- Join filtered lines
+    string result = string_join(filtered, "\n");
+
+    -- Write to output
+    int write_result = write_file(output_file, result);
+
+    if write_result == 0 then
+        print "Filtered ";
+        print filtered.size();
+        print " lines to: ";
+        print output_file;
+    end
+
+    return write_result
+end
+
+-- Function: Append log entry
+function log_message(log_file, level, message) then
+    -- Create timestamp (simplified - in real implementation would use system time)
+    string entry = "[";
+    entry = string_concat(entry, level);
+    entry = string_concat(entry, "] ");
+    entry = string_concat(entry, message);
+    entry = string_concat(entry, "\n");
+
+    -- Append to log file
+    int result = append_file(log_file, entry);
+
+    if result == 0 then
+        print "Logged: ";
+        print message;
+    end
+
+    return result
+end
+
+-- Function: Get file info
+function print_file_info(filename) then
+    if file_exists(filename) == 0 then
+        print "File does not exist: ";
+        print filename;
+        return -1
+    end
+
+    int size = file_size(filename);
+    int lines = count_lines(filename);
+
+    print "=== File Info ===";
+    print "Name: ";
+    print filename;
+    print "Size: ";
+    print size;
+    print " bytes";
+    print "Lines: ";
+    print lines;
+
+    return 0
+end
+
+-- Main demonstration
+print "=== MLP File Processor Demo ===";
+print "";
+
+-- Demo 1: Count lines
+print "--- Demo 1: Count Lines ---";
+count_lines("examples/file_processor.mlp");
+print "";
+
+-- Demo 2: Process file (uppercase)
+print "--- Demo 2: Process File ---";
+-- Note: These would work if Phase 3 is implemented
+-- process_file("input.txt", "output.txt");
+print "Example: process_file(\"input.txt\", \"output.txt\")";
+print "";
+
+-- Demo 3: Logging
+print "--- Demo 3: Logging ---";
+log_message("app.log", "INFO", "Application started");
+log_message("app.log", "WARN", "Low memory detected");
+log_message("app.log", "ERROR", "Connection failed");
+print "";
+
+-- Demo 4: File info
+print "--- Demo 4: File Info ---";
+print_file_info("examples/file_processor.mlp");
+print "";
+
+print "=== Demo Complete ===";

@@ -25,6 +25,10 @@ RUNTIME = os.path.join(MLP_ROOT, 'runtime', 'runtime.c')
 def index():
     return send_from_directory(BASE_DIR, 'index.html')
 
+@app.route('/designer')
+def designer():
+    return send_from_directory(BASE_DIR, 'designer.html')
+
 @app.route('/<path:path>')
 def static_files(path):
     return send_from_directory(BASE_DIR, path)
@@ -154,4 +158,4 @@ if __name__ == '__main__':
     print(f'   Compiler: {COMPILER}')
     print(f'   Runtime: {RUNTIME}')
     print('\n📖 Open: http://localhost:5000\n')
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
