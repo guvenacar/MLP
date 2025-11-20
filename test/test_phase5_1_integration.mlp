@@ -1,0 +1,86 @@
+-- Phase 5.1 Integration Test
+
+function test_string_length() then
+    string text = "Hello World";
+    int len = 0;
+
+    print "=== String Length Test ==="
+
+    len = string_length(text)
+    print "Length of 'Hello World': "
+    print len
+
+    len = string_length("")
+    print "Length of empty string: "
+    print len
+
+    return 0
+end
+
+function test_string_substring() then
+    string text = "Hello World";
+    string sub = "";
+
+    print "=== Substring Test ==="
+
+    sub = string_substring(text, 0, 5)
+    print "Substring(0, 5): "
+    print sub
+
+    sub = string_substring(text, 6, 5)
+    print "Substring(6, 5): "
+    print sub
+
+    return 0
+end
+
+function test_string_index_of() then
+    string text = "Hello World Hello";
+    int pos = 0;
+
+    print "=== Index Of Test ==="
+
+    pos = string_index_of(text, "World")
+    print "First 'World' at: "
+    print pos
+
+    pos = string_index_of(text, "xyz")
+    print "Not found: "
+    print pos
+
+    return 0
+end
+
+function test_string_last_index_of() then
+    string text = "Hello World Hello";
+    int pos = 0;
+
+    print "=== Last Index Of Test ==="
+
+    pos = string_last_index_of(text, "Hello")
+    print "Last 'Hello' at: "
+    print pos
+
+    return 0
+end
+
+print "==================================="
+print "Phase 5.1 Integration Tests"
+print "==================================="
+print ""
+
+test_string_length()
+print ""
+
+test_string_substring()
+print ""
+
+test_string_index_of()
+print ""
+
+test_string_last_index_of()
+print ""
+
+print "==================================="
+print "All Tests Complete!"
+print "==================================="

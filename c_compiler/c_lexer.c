@@ -118,6 +118,12 @@ KeywordMap keywords[] = {
     {"math_max", TOKEN_BUILTIN_MATH_MAX},
     {"math_pow", TOKEN_BUILTIN_MATH_POW},
 
+    // Phase 5.1: Enhanced String Operations
+    {"string_length",        TOKEN_BUILTIN_STRING_LENGTH},
+    {"string_substring",     TOKEN_BUILTIN_STRING_SUBSTRING},
+    {"string_index_of",      TOKEN_BUILTIN_STRING_INDEX_OF},
+    {"string_last_index_of", TOKEN_BUILTIN_STRING_LAST_INDEX_OF},
+
     // Phase 4: Hash Map
     {"map", TOKEN_YAPI_MAP},
 

@@ -67,6 +67,12 @@ typedef enum {
     TOKEN_BUILTIN_MATH_MAX,
     TOKEN_BUILTIN_MATH_POW,
 
+    // Enhanced String Operations (Phase 5.1)
+    TOKEN_BUILTIN_STRING_LENGTH,
+    TOKEN_BUILTIN_STRING_SUBSTRING,
+    TOKEN_BUILTIN_STRING_INDEX_OF,
+    TOKEN_BUILTIN_STRING_LAST_INDEX_OF,
+
     // Hash Map (Phase 4)
     TOKEN_YAPI_MAP,  // "map" keyword
     TOKEN_COLON,     // : for key:value syntax

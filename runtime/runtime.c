@@ -1378,3 +1378,134 @@ double math_tan(double angle) {
     return tan(angle);
 }
 
+// ============================================
+// Phase 5.1: Command-Line Arguments
+// ============================================
+
+// Global argc/argv storage
+static int mlp_argc = 0;
+static char** mlp_argv = NULL;
+
+/**
+ * mlp_set_args - Store command-line arguments
+ * Called by main() before executing MLP code
+ * @param argc: Number of arguments
+ * @param argv: Array of argument strings
+ */
+void mlp_set_args(int argc, char** argv) {
+    mlp_argc = argc;
+    mlp_argv = argv;
+}
+
+/**
+ * mlp_get_argc - Get argument count
+ * @return: Number of command-line arguments
+ *
+ * MLP Usage: int count = argc;
+ */
+long mlp_get_argc(void) {
+    return mlp_argc;
+}
+
+/**
+ * mlp_get_argv - Get argument at index
+ * @param index: Argument index (0 = program name)
+ * @return: Argument string, or empty string if out of bounds
+ *
+ * MLP Usage: string arg = argv.get(0);
+ */
+char* mlp_get_argv(long index) {
+    if (index < 0 || index >= mlp_argc) {
+        return strdup("");
+    }
+    return strdup(mlp_argv[index]);
+}
+
+// ============================================
+// Phase 5.1: Enhanced String Operations
+// ============================================
+
+/**
+ * string_length - Get string length
+ * @param str: Input string
+ * @return: Length of string
+ *
+ * MLP Usage: int len = string_length("hello");
+ */
+long string_length(const char* str) {
+    if (!str) return 0;
+    return strlen(str);
+}
+
+/**
+ * string_substring - Extract substring
+ * @param str: Input string
+ * @param start: Start index (0-based)
+ * @param length: Number of characters
+ * @return: Substring (caller must free)
+ *
+ * MLP Usage: string sub = string_substring("hello", 1, 3); // "ell"
+ */
+char* string_substring(const char* str, long start, long length) {
+    if (!str) return strdup("");
+
+    long str_len = strlen(str);
+    if (start < 0 || start >= str_len) return strdup("");
+    if (length < 0) length = 0;
+
+    // Adjust length if it exceeds string
+    if (start + length > str_len) {
+        length = str_len - start;
+    }
+
+    char* result = (char*)malloc(length + 1);
+    if (!result) {
+        fprintf(stderr, "Memory allocation failed in string_substring\n");
+        exit(1);
+    }
+
+    strncpy(result, str + start, length);
+    result[length] = '\0';
+    return result;
+}
+
+/**
+ * string_index_of - Find first occurrence of substring
+ * @param str: String to search in
+ * @param needle: Substring to find
+ * @return: Index of first occurrence, or -1 if not found
+ *
+ * MLP Usage: int pos = string_index_of("hello world", "world"); // 6
+ */
+long string_index_of(const char* str, const char* needle) {
+    if (!str || !needle) return -1;
+
+    char* found = strstr(str, needle);
+    if (!found) return -1;
+
+    return found - str;
+}
+
+/**
+ * string_last_index_of - Find last occurrence of substring
+ * @param str: String to search in
+ * @param needle: Substring to find
+ * @return: Index of last occurrence, or -1 if not found
+ *
+ * MLP Usage: int pos = string_last_index_of("hello hello", "hello"); // 6
+ */
+long string_last_index_of(const char* str, const char* needle) {
+    if (!str || !needle) return -1;
+
+    char* last_found = NULL;
+    char* current = (char*)str;
+
+    while ((current = strstr(current, needle)) != NULL) {
+        last_found = current;
+        current++;
+    }
+
+    if (!last_found) return -1;
+    return last_found - str;
+}
+
