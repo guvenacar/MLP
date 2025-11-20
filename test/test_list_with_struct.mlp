@@ -1,0 +1,206 @@
+# lang: en-US
+# syntax: mlp
+
+# MLP Dynamic List + Struct Integration Test
+# Tests list functionality with custom struct types
+
+print("=== MLP List + Struct Integration Test ===")
+print("")
+
+# Define Person struct
+struct Person then
+    string name
+    int age
+end struct
+
+print("Test 1: Create list of structs")
+list[Person] people = list()
+print("Empty people list created")
+print("Size: ")
+print(people.size())
+print("")
+
+# Test 2: Add first person
+print("Test 2: Add first person (Alice, 25)")
+Person p1
+p1.name = "Alice"
+p1.age = 25
+people.add(p1)
+
+int size1 = people.size()
+print("Size after adding Alice: ")
+print(size1)
+
+if size1 == 1 then
+    print("✅ Size correct")
+else
+    print("❌ Size wrong")
+end if
+
+print("")
+
+# Test 3: Add second person
+print("Test 3: Add second person (Bob, 30)")
+Person p2
+p2.name = "Bob"
+p2.age = 30
+people.add(p2)
+
+int size2 = people.size()
+print("Size after adding Bob: ")
+print(size2)
+
+if size2 == 2 then
+    print("✅ Size correct")
+else
+    print("❌ Size wrong")
+end if
+
+print("")
+
+# Test 4: Add third person
+print("Test 4: Add third person (Charlie, 35)")
+Person p3
+p3.name = "Charlie"
+p3.age = 35
+people.add(p3)
+
+int size3 = people.size()
+print("Total people: ")
+print(size3)
+
+if size3 == 3 then
+    print("✅ Three people added")
+else
+    print("❌ Count wrong")
+end if
+
+print("")
+
+# Test 5: Retrieve and verify first person
+print("Test 5: Retrieve Alice")
+Person retrieved1 = people.get(0)
+print("Person 0 name: ")
+print(retrieved1.name)
+print("Person 0 age: ")
+print(retrieved1.age)
+
+if retrieved1.age == 25 then
+    print("✅ Alice's age correct")
+else
+    print("❌ Alice's age wrong")
+end if
+
+print("")
+
+# Test 6: Retrieve and verify second person
+print("Test 6: Retrieve Bob")
+Person retrieved2 = people.get(1)
+print("Person 1 name: ")
+print(retrieved2.name)
+print("Person 1 age: ")
+print(retrieved2.age)
+
+if retrieved2.age == 30 then
+    print("✅ Bob's age correct")
+else
+    print("❌ Bob's age wrong")
+end if
+
+print("")
+
+# Test 7: Retrieve and verify third person
+print("Test 7: Retrieve Charlie")
+Person retrieved3 = people.get(2)
+print("Person 2 name: ")
+print(retrieved3.name)
+print("Person 2 age: ")
+print(retrieved3.age)
+
+if retrieved3.age == 35 then
+    print("✅ Charlie's age correct")
+else
+    print("❌ Charlie's age wrong")
+end if
+
+print("")
+
+# Test 8: Remove middle person (Bob)
+print("Test 8: Remove Bob (index 1)")
+people.remove(1)
+int size_after_remove = people.size()
+print("Size after removing Bob: ")
+print(size_after_remove)
+
+if size_after_remove == 2 then
+    print("✅ Size correct after remove")
+else
+    print("❌ Size wrong after remove")
+end if
+
+# Verify remaining people
+Person remaining1 = people.get(0)
+Person remaining2 = people.get(1)
+
+print("Remaining person 0: ")
+print(remaining1.name)
+print("Remaining person 1: ")
+print(remaining2.name)
+
+if remaining1.age == 25 then
+    if remaining2.age == 35 then
+        print("✅ Remaining people correct")
+    else
+        print("❌ Second person wrong")
+    end if
+else
+    print("❌ First person wrong")
+end if
+
+print("")
+
+# Test 9: Add new person after removal
+print("Test 9: Add new person (David, 40)")
+Person p4
+p4.name = "David"
+p4.age = 40
+people.add(p4)
+
+int final_size = people.size()
+print("Final size: ")
+print(final_size)
+
+if final_size == 3 then
+    print("✅ Final size correct")
+else
+    print("❌ Final size wrong")
+end if
+
+# Verify new person
+Person david = people.get(2)
+print("New person age: ")
+print(david.age)
+
+if david.age == 40 then
+    print("✅ David added correctly")
+else
+    print("❌ David's age wrong")
+end if
+
+print("")
+
+# Test 10: Clear all people
+print("Test 10: Clear all people")
+people.clear()
+int cleared_size = people.size()
+print("Size after clear: ")
+print(cleared_size)
+
+if cleared_size == 0 then
+    print("✅ Clear works on struct list")
+else
+    print("❌ Clear failed")
+end if
+
+print("")
+print("=== Integration Test Complete ===")

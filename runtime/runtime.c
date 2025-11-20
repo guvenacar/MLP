@@ -539,3 +539,187 @@ char* kodu_karaktere(int64_t kod) {
     return sonuc;
 }
 
+/**
+ * =============================================================================
+ * DYNAMIC LIST SUPPORT (Phase 2)
+ * =============================================================================
+ * Generic dynamic list implementation for MLP language
+ * Supports: int, string, and struct types
+ */
+
+// Dynamic list structure
+typedef struct {
+    void** data;           // Array of pointers to elements
+    int size;              // Current number of elements
+    int capacity;          // Allocated capacity
+    size_t element_size;   // Size of each element (for value types)
+    int is_pointer_type;   // 1 if storing pointers (strings, structs), 0 for values (ints)
+} DynamicList;
+
+/**
+ * LIST_CREATE - Create new empty list
+ * @param element_size: Size of each element in bytes
+ * @param is_pointer_type: 1 for pointer types, 0 for value types
+ * @return: Pointer to new DynamicList
+ */
+DynamicList* list_create(size_t element_size, int is_pointer_type) {
+    DynamicList* list = (DynamicList*)malloc(sizeof(DynamicList));
+    if (!list) {
+        fprintf(stderr, "HATA [LIST_CREATE]: Hafıza ayırma hatası\n");
+        exit(1);
+    }
+    
+    list->capacity = 8;  // Initial capacity
+    list->size = 0;
+    list->element_size = element_size;
+    list->is_pointer_type = is_pointer_type;
+    
+    list->data = (void**)calloc(list->capacity, sizeof(void*));
+    if (!list->data) {
+        fprintf(stderr, "HATA [LIST_CREATE]: Veri dizisi hafıza hatası\n");
+        free(list);
+        exit(1);
+    }
+    
+    return list;
+}
+
+/**
+ * LIST_ADD - Add element to end of list
+ * @param list: Target list
+ * @param element: Pointer to element to add
+ */
+void list_add(DynamicList* list, void* element) {
+    if (!list) {
+        fprintf(stderr, "HATA [LIST_ADD]: NULL liste\n");
+        return;
+    }
+    
+    // Expand capacity if needed
+    if (list->size >= list->capacity) {
+        int new_capacity = list->capacity * 2;
+        void** new_data = (void**)realloc(list->data, new_capacity * sizeof(void*));
+        if (!new_data) {
+            fprintf(stderr, "HATA [LIST_ADD]: Kapasite genişletme hatası\n");
+            return;
+        }
+        list->data = new_data;
+        list->capacity = new_capacity;
+    }
+    
+    // Store element
+    if (list->is_pointer_type) {
+        // For pointers (strings, structs), store directly
+        list->data[list->size] = element;
+    } else {
+        // For values (ints), allocate and copy
+        void* copy = malloc(list->element_size);
+        if (!copy) {
+            fprintf(stderr, "HATA [LIST_ADD]: Eleman kopyalama hatası\n");
+            return;
+        }
+        memcpy(copy, element, list->element_size);
+        list->data[list->size] = copy;
+    }
+    
+    list->size++;
+}
+
+/**
+ * LIST_GET - Get element at index
+ * @param list: Source list
+ * @param index: Index to retrieve (0-based)
+ * @return: Pointer to element, or NULL if out of bounds
+ */
+void* list_get(DynamicList* list, int index) {
+    if (!list) {
+        fprintf(stderr, "HATA [LIST_GET]: NULL liste\n");
+        return NULL;
+    }
+    
+    if (index < 0 || index >= list->size) {
+        fprintf(stderr, "HATA [LIST_GET]: İndeks sınır dışı: %d (boyut: %d)\n", index, list->size);
+        return NULL;
+    }
+    
+    return list->data[index];
+}
+
+/**
+ * LIST_SIZE - Get number of elements in list
+ * @param list: Target list
+ * @return: Number of elements
+ */
+int list_size(DynamicList* list) {
+    if (!list) {
+        fprintf(stderr, "HATA [LIST_SIZE]: NULL liste\n");
+        return 0;
+    }
+    return list->size;
+}
+
+/**
+ * LIST_REMOVE - Remove element at index
+ * @param list: Target list
+ * @param index: Index to remove (0-based)
+ */
+void list_remove(DynamicList* list, int index) {
+    if (!list) {
+        fprintf(stderr, "HATA [LIST_REMOVE]: NULL liste\n");
+        return;
+    }
+    
+    if (index < 0 || index >= list->size) {
+        fprintf(stderr, "HATA [LIST_REMOVE]: İndeks sınır dışı: %d\n", index);
+        return;
+    }
+    
+    // Free element if value type
+    if (!list->is_pointer_type && list->data[index]) {
+        free(list->data[index]);
+    }
+    
+    // Shift elements left
+    for (int i = index; i < list->size - 1; i++) {
+        list->data[i] = list->data[i + 1];
+    }
+    
+    list->size--;
+    list->data[list->size] = NULL;
+}
+
+/**
+ * LIST_CLEAR - Remove all elements from list
+ * @param list: Target list
+ */
+void list_clear(DynamicList* list) {
+    if (!list) {
+        fprintf(stderr, "HATA [LIST_CLEAR]: NULL liste\n");
+        return;
+    }
+    
+    // Free all value-type elements
+    if (!list->is_pointer_type) {
+        for (int i = 0; i < list->size; i++) {
+            if (list->data[i]) {
+                free(list->data[i]);
+            }
+        }
+    }
+    
+    list->size = 0;
+    memset(list->data, 0, list->capacity * sizeof(void*));
+}
+
+/**
+ * LIST_DESTROY - Free entire list and all elements
+ * @param list: List to destroy
+ */
+void list_destroy(DynamicList* list) {
+    if (!list) return;
+    
+    list_clear(list);
+    free(list->data);
+    free(list);
+}
+
