@@ -324,6 +324,13 @@ void visit_StructFieldAccess(ASTNode* node); // İleri bildirim
 void visit_StructFieldAtama(ASTNode* node); // İleri bildirim
 void visit_StructDegisken(ASTNode* node); // İleri bildirim
 
+// Phase 2: List visitor forward declarations
+void visit_ListTanimlama(ASTNode* node);
+void visit_ListAdd(ASTNode* node);
+void visit_ListGet(ASTNode* node);
+void visit_ListSize(ASTNode* node);
+void visit_ListClear(ASTNode* node);
+
 void visit_Blok(ASTNode* node) {
     // Blok içindeki her komutu ziyaret et
     for (int i = 0; i < node->blok_data.sayisi; i++) {
@@ -1234,6 +1241,98 @@ void visit_StructDegisken(ASTNode* node) {
     free(adres);
 }
 
+// ===== Phase 2: List Visitor Functions =====
+
+void visit_ListTanimlama(ASTNode* node) {
+    char* element_tip = node->list_tanimlama_data.element_tipi->value;
+    char* degisken_adi = node->list_tanimlama_data.degisken_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Tanımlama: list[%s] %s ---", element_tip, degisken_adi);
+    asm_append(&text_section, buffer);
+
+    // Call list_create()
+    asm_append(&text_section, "    call list_create");
+    asm_append(&text_section, "    ; RAX now contains List pointer");
+
+    // Store List pointer in variable
+    char* adres = kapsam_degisken_yer_ayir(degisken_adi, "List");
+    sprintf(buffer, "    mov %s, rax  ; Store List* in %s", adres, degisken_adi);
+    asm_append(&text_section, buffer);
+}
+
+void visit_ListAdd(ASTNode* node) {
+    char* list_adi = node->list_add_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Add: %s.add(value) ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate value expression (result in RAX)
+    visit(node->list_add_data.deger);
+    asm_append(&text_section, "    push rax  ; Save value for list_add");
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load value to rsi");
+    asm_append(&text_section, "    call list_add");
+}
+
+void visit_ListGet(ASTNode* node) {
+    char* list_adi = node->list_get_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Get: %s.get(index) ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate index expression (result in RAX)
+    visit(node->list_get_data.indeks);
+    asm_append(&text_section, "    push rax  ; Save index");
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load index to rsi (as int)");
+    asm_append(&text_section, "    call list_get");
+    asm_append(&text_section, "    ; RAX now contains element value");
+}
+
+void visit_ListSize(ASTNode* node) {
+    char* list_adi = node->list_size_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Size: %s.size() ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    call list_size");
+    asm_append(&text_section, "    ; RAX now contains size");
+}
+
+void visit_ListClear(ASTNode* node) {
+    char* list_adi = node->list_clear_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Clear: %s.clear() ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    call list_clear");
+}
+
 void visit_DonusKomutu(ASTNode* node) {
     asm_append(&text_section, "    ; --- Donus Komutu ---");
 
@@ -1427,6 +1526,27 @@ void visit(ASTNode* node) {
         // Struct Değişken
         case AST_STRUCT_DEGISKEN:
             visit_StructDegisken(node);
+            break;
+
+        // Phase 2: Dynamic Lists
+        case AST_LIST_TANIMLAMA:
+            visit_ListTanimlama(node);
+            break;
+
+        case AST_LIST_ADD:
+            visit_ListAdd(node);
+            break;
+
+        case AST_LIST_GET:
+            visit_ListGet(node);
+            break;
+
+        case AST_LIST_SIZE:
+            visit_ListSize(node);
+            break;
+
+        case AST_LIST_CLEAR:
+            visit_ListClear(node);
             break;
 
         default:

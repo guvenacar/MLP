@@ -445,20 +445,64 @@ ASTNode* birincil() {
             free(ad_token_kopya.value);
             return array_erisim;
         }
-        // Struct field access mi? (p.x)
+        // Struct field access or List method call? (p.x or list.add())
         else if (current_token->type == TOKEN_DOT) {
             consume(TOKEN_DOT);
             if (current_token->type != TOKEN_IDENTIFIER) {
-                parseError("Field adı", "IDENTIFIER");
+                parseError("Field/method name", "IDENTIFIER");
             }
-            Token field_ad;
-            field_ad.type = current_token->type;
-            field_ad.value = strdup(current_token->value);
+            Token field_or_method;
+            field_or_method.type = current_token->type;
+            field_or_method.value = strdup(current_token->value);
             consume(TOKEN_IDENTIFIER);
-            ASTNode* field_access = createAST_StructFieldAccess(&ad_token_kopya, &field_ad);
-            free(ad_token_kopya.value);
-            free(field_ad.value);
-            return field_access;
+
+            // Check if this is a list method call (has parentheses)
+            if (current_token->type == TOKEN_LEFT_PAREN) {
+                consume(TOKEN_LEFT_PAREN);
+
+                // List method: add, get, size, clear
+                if (strcmp(field_or_method.value, "add") == 0) {
+                    ASTNode* deger = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    ASTNode* add_node = createAST_ListAdd(&ad_token_kopya, deger);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return add_node;
+                }
+                else if (strcmp(field_or_method.value, "get") == 0) {
+                    ASTNode* indeks = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    ASTNode* get_node = createAST_ListGet(&ad_token_kopya, indeks);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return get_node;
+                }
+                else if (strcmp(field_or_method.value, "size") == 0) {
+                    consume(TOKEN_RIGHT_PAREN);
+                    ASTNode* size_node = createAST_ListSize(&ad_token_kopya);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return size_node;
+                }
+                else if (strcmp(field_or_method.value, "clear") == 0) {
+                    consume(TOKEN_RIGHT_PAREN);
+                    ASTNode* clear_node = createAST_ListClear(&ad_token_kopya);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return clear_node;
+                }
+                else {
+                    fprintf(stderr, "Unknown list method: %s\n", field_or_method.value);
+                    parseError("List method", "add/get/size/clear");
+                }
+            }
+            else {
+                // Regular struct field access (no parentheses)
+                ASTNode* field_access = createAST_StructFieldAccess(&ad_token_kopya, &field_or_method);
+                free(ad_token_kopya.value);
+                free(field_or_method.value);
+                return field_access;
+            }
         }
         // Normal değişken
         else {
@@ -582,6 +626,58 @@ ASTNode* komut() {
             free(ad.value);
             return struct_var_node;
         }
+    }
+
+    // ===== Phase 2: List Tanımlama (list[Type] var = list();) =====
+    if (current_token->type == TOKEN_YAPI_LIST) {
+        consume(TOKEN_YAPI_LIST);
+
+        // Expect [
+        consume(TOKEN_LEFT_BRACKET);
+
+        // Element type (int, string, or custom type name)
+        Token element_tip;
+        if (current_token->type == TOKEN_TANIMLA_SAYI ||
+            current_token->type == TOKEN_TANIMLA_METIN ||
+            current_token->type == TOKEN_TANIMLA_BOOL ||
+            current_token->type == TOKEN_IDENTIFIER) {
+            element_tip.type = current_token->type;
+            element_tip.value = strdup(current_token->value);
+            consume(current_token->type);
+        } else {
+            parseError("List element type", "int/string/bool/StructName");
+        }
+
+        // Expect ]
+        consume(TOKEN_RIGHT_BRACKET);
+
+        // Variable name
+        if (current_token->type != TOKEN_IDENTIFIER) {
+            parseError("List variable name", "IDENTIFIER");
+        }
+        Token degisken_adi;
+        degisken_adi.type = current_token->type;
+        degisken_adi.value = strdup(current_token->value);
+        consume(TOKEN_IDENTIFIER);
+
+        // Expect =
+        consume(TOKEN_ASSIGN);
+
+        // Expect list()
+        if (current_token->type != TOKEN_YAPI_LIST) {
+            parseError("list()", "list");
+        }
+        consume(TOKEN_YAPI_LIST);
+        consume(TOKEN_LEFT_PAREN);
+        consume(TOKEN_RIGHT_PAREN);
+
+        // Expect ;
+        consume(TOKEN_SEMICOLON);
+
+        ASTNode* list_node = createAST_ListTanimlama(&element_tip, &degisken_adi);
+        free(element_tip.value);
+        free(degisken_adi.value);
+        return list_node;
     }
 
     // 1. YAZDIR (Noktalı virgülsüz)
@@ -744,6 +840,13 @@ ASTNode* komut() {
         if (sol_node->type == AST_ISLEC_CAGIRMA) {
             specs_check_no_semicolon("İfade komutu (fonksiyon çağrısı)");
             return sol_node; // 'test()' çağrısını komut olarak döndür
+        }
+
+        // DURUM 7.3: LIST METHOD CALLS (list.add(), list.clear())
+        // Phase 2: List method calls as statements
+        if (sol_node->type == AST_LIST_ADD || sol_node->type == AST_LIST_CLEAR) {
+            specs_check_no_semicolon("List method call");
+            return sol_node; // List method call as statement
         }
 
         // Hata: 'x' (tek başına) veya 'x + 5' (ifade) bir komut değildir.
