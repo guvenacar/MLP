@@ -1,0 +1,111 @@
+-- Example: Command-Line Arguments
+-- Demonstrates argc/argv support in Phase 5.1
+-- Author: MLP Documentation Team
+-- Date: November 21, 2025
+
+function print_usage(string program_name) then
+    print "Usage:"
+    print program_name
+    print " [options] <input_file>"
+    print ""
+    print "Options:"
+    print "  -v, --verbose    Enable verbose output"
+    print "  -h, --help       Show this help message"
+    return 0
+end
+
+function main(argc, argv) then
+    int verbose = 0;
+    string input_file = "";
+    int i = 0;
+
+    -- Get program name
+    string program_name = argv.get(0);
+
+    -- Check if we have arguments
+    if argc < 2 then
+        print "Error: No arguments provided"
+        print ""
+        print_usage(program_name)
+        return 1
+    end
+
+    -- Parse arguments
+    i = 1
+    while i < argc then
+        string arg = argv.get(i);
+
+        if string_equals(arg, "-v") then
+            verbose = 1
+            if verbose == 1 then
+                print "Verbose mode enabled"
+            end
+        end
+
+        if string_equals(arg, "--verbose") then
+            verbose = 1
+            if verbose == 1 then
+                print "Verbose mode enabled"
+            end
+        end
+
+        if string_equals(arg, "-h") then
+            print_usage(program_name)
+            return 0
+        end
+
+        if string_equals(arg, "--help") then
+            print_usage(program_name)
+            return 0
+        end
+
+        -- Check if it's a file (doesn't start with -)
+        string first_char = string_substring(arg, 0, 1);
+        if string_equals(first_char, "-") == 0 then
+            input_file = arg
+        end
+
+        i = i + 1
+    end
+
+    -- Validate we got an input file
+    if string_length(input_file) == 0 then
+        print "Error: No input file specified"
+        print ""
+        print_usage(program_name)
+        return 1
+    end
+
+    -- Process the file
+    print "Processing file:"
+    print input_file
+
+    if verbose == 1 then
+        print "Verbose: Opening file..."
+        print "Verbose: Reading contents..."
+        print "Verbose: Processing data..."
+    end
+
+    -- Check if file exists
+    int exists = file_exists(input_file);
+    if exists == 0 then
+        print "Error: File not found:"
+        print input_file
+        return 1
+    end
+
+    -- Read and process file
+    string content = read_file(input_file);
+    int len = string_length(content);
+
+    print "File size:"
+    print len
+    print "bytes"
+
+    if verbose == 1 then
+        print "Verbose: Processing complete!"
+    end
+
+    print "Done!"
+    return 0
+end

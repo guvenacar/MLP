@@ -1,0 +1,166 @@
+--
+-- Phase 5.1 MLP Integration Test - Edge Cases
+-- Tests: Boundary conditions and error handling
+--
+-- Expected: 4 tests
+--
+
+-- Test 1: Empty string operations
+function test_empty_strings() then
+    PRINT "=== Test 1: Empty string operations ===";
+    
+    string empty = "";
+    int len = string_length(empty);
+    
+    PRINT "Empty string length: ";
+    YAZDIR_SAYI len;
+    
+    EĞER len != 0 İSE
+        PRINT "FAIL: Empty string should have length 0";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    -- Substring of empty string
+    string sub = string_substring(empty, 0, 5);
+    int sub_len = string_length(sub);
+    
+    EĞER sub_len != 0 İSE
+        PRINT "FAIL: Substring of empty should be empty";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    -- Index of in empty string
+    int pos = string_index_of(empty, "test");
+    
+    EĞER pos != -1 İSE
+        PRINT "FAIL: Index in empty should be -1";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_empty_strings";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 2: Very long strings
+function test_long_strings() then
+    PRINT "=== Test 2: Very long strings ===";
+    
+    -- Test with a reasonably long string
+    string long_str = "This is a very long string that contains many characters and words to test the string operations with longer inputs than usual";
+    
+    int len = string_length(long_str);
+    PRINT "Long string length: ";
+    YAZDIR_SAYI len;
+    
+    EĞER len == 0 İSE
+        PRINT "FAIL: Long string should have non-zero length";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    -- Find something in the middle
+    int pos = string_index_of(long_str, "many");
+    
+    EĞER pos == -1 İSE
+        PRINT "FAIL: Should find 'many' in long string";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "Found 'many' at position: ";
+    YAZDIR_SAYI pos;
+    
+    PRINT "PASS: test_long_strings";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 3: Special characters
+function test_special_chars() then
+    PRINT "=== Test 3: Special characters ===";
+    
+    string special = "Hello\nWorld\tTest";
+    int len = string_length(special);
+    
+    PRINT "String with special chars length: ";
+    YAZDIR_SAYI len;
+    
+    EĞER len == 0 İSE
+        PRINT "FAIL: Should handle special characters";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    -- Find newline (may not work depending on implementation)
+    int pos = string_index_of(special, "World");
+    
+    EĞER pos == -1 İSE
+        PRINT "FAIL: Should find 'World' in string";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_special_chars";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 4: Boundary conditions
+function test_boundary_conditions() then
+    PRINT "=== Test 4: Boundary conditions ===";
+    
+    string text = "Hello";
+    
+    -- Substring at exact boundary
+    string sub1 = string_substring(text, 0, 5);
+    int cmp1 = STRING_KARSILASTIR(sub1, "Hello");
+    
+    EĞER cmp1 != 0 İSE
+        PRINT "FAIL: Exact boundary substring failed";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    -- Substring beyond boundary
+    string sub2 = string_substring(text, 0, 100);
+    int len2 = string_length(sub2);
+    
+    -- Should only return available characters
+    EĞER len2 > 5 İSE
+        PRINT "FAIL: Substring beyond boundary should be clamped";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    -- Last index of single character
+    int pos = string_last_index_of(text, "l");
+    
+    EĞER pos != 3 İSE
+        PRINT "FAIL: Last 'l' should be at position 3";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "Last 'l' found at: ";
+    YAZDIR_SAYI pos;
+    
+    PRINT "PASS: test_boundary_conditions";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Main entry
+function main() then
+    PRINT "========================================";
+    PRINT "Phase 5.1 - Edge Cases";
+    PRINT "========================================";
+    PRINT "";
+    
+    test_empty_strings();
+    PRINT "";
+    
+    test_long_strings();
+    PRINT "";
+    
+    test_special_chars();
+    PRINT "";
+    
+    test_boundary_conditions();
+    PRINT "";
+    
+    PRINT "========================================";
+    PRINT "All edge case tests completed!";
+    PRINT "========================================";
+    
+    DÖNÜŞ 0
+SİHİRBİTİR

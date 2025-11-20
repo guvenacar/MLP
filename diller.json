@@ -35,7 +35,7 @@
         "while": ["döngü", "DÖNGÜ", "dongu", "DONGU"],
         "for": ["için", "İÇİN", "icin", "ICIN"],
         "break": ["döngü_bitir", "DÖNGÜ_BITIR", "bitir", "BITIR"],
-        "end": ["son", "SON"],
+        "end": ["son", "SON", "eğer_son", "EĞER_SON", "eger_son", "EGER_SON", "döngü_son", "DÖNGÜ_SON", "dongu_son", "DONGU_SON", "işleç_son", "İŞLEÇ_SON", "islec_son", "ISLEC_SON", "için_son", "İÇİN_SON", "icin_son", "ICIN_SON"],
         "function": ["işleç", "İŞLEÇ", "islec", "ISLEC", "fonksiyon"],
         "return": ["dönüş", "DÖNÜŞ", "donus", "DONUS"],
         "print": ["yazdir", "YAZDIR"],

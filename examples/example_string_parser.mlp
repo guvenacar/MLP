@@ -1,0 +1,254 @@
+-- Example: String Parser
+-- Demonstrates enhanced string operations from Phase 5.1
+-- Author: MLP Documentation Team
+-- Date: November 21, 2025
+
+-- Parse a CSV line into fields
+function parse_csv_line(string line) then
+    list[string] fields = list();
+    int pos = 0;
+    int field_start = 0;
+    int len = string_length(line);
+
+    print "Parsing CSV line..."
+    print line
+    print ""
+
+    while pos < len then
+        -- Find next comma
+        string remaining = string_substring(line, pos, len - pos);
+        int comma_pos = string_index_of(remaining, ",");
+
+        if comma_pos == -1 then
+            -- Last field
+            string field = string_substring(line, field_start, len - field_start);
+            fields.add(field)
+            pos = len  -- Exit loop
+        end
+
+        if comma_pos >= 0 then
+            -- Extract field
+            int field_len = (pos + comma_pos) - field_start;
+            string field = string_substring(line, field_start, field_len);
+            fields.add(field)
+
+            -- Move to next field
+            pos = pos + comma_pos + 1
+            field_start = pos
+        end
+    end
+
+    -- Print fields
+    int count = fields.size();
+    print "Found fields:"
+    print count
+    print ""
+
+    int i = 0;
+    while i < count then
+        string field = fields.get(i);
+        print "Field "
+        print i
+        print ": "
+        print field
+        i = i + 1
+    end
+
+    return 0
+end
+
+-- Extract file extension from path
+function get_file_extension(string path) then
+    print "Getting extension from:"
+    print path
+
+    -- Find last dot
+    int dot_pos = string_last_index_of(path, ".");
+
+    if dot_pos == -1 then
+        print "No extension found"
+        return ""
+    end
+
+    -- Extract extension
+    int len = string_length(path);
+    int ext_len = len - dot_pos - 1;
+    string ext = string_substring(path, dot_pos + 1, ext_len);
+
+    print "Extension: "
+    print ext
+    print ""
+
+    return ext
+end
+
+-- Parse URL into components
+function parse_url(string url) then
+    print "Parsing URL:"
+    print url
+    print ""
+
+    -- Find protocol
+    int protocol_end = string_index_of(url, "://");
+
+    if protocol_end == -1 then
+        print "Invalid URL: no protocol"
+        return 0
+    end
+
+    string protocol = string_substring(url, 0, protocol_end);
+    print "Protocol: "
+    print protocol
+
+    -- Find hostname end (first / after ://)
+    int hostname_start = protocol_end + 3;
+    int len = string_length(url);
+    string after_protocol = string_substring(url, hostname_start, len - hostname_start);
+    int path_start = string_index_of(after_protocol, "/");
+
+    if path_start == -1 then
+        -- No path, just hostname
+        string hostname = after_protocol;
+        print "Hostname: "
+        print hostname
+        print "Path: /"
+    end
+
+    if path_start >= 0 then
+        string hostname = string_substring(after_protocol, 0, path_start);
+        print "Hostname: "
+        print hostname
+
+        string path = string_substring(after_protocol, path_start, len);
+        print "Path: "
+        print path
+    end
+
+    print ""
+    return 0
+end
+
+-- Count word occurrences in text
+function count_word(string text, string word) then
+    int count = 0;
+    int pos = 0;
+    int text_len = string_length(text);
+    int word_len = string_length(word);
+
+    print "Counting occurrences of '"
+    print word
+    print "' in text..."
+    print ""
+
+    while pos < text_len then
+        -- Search for word starting at pos
+        string remaining = string_substring(text, pos, text_len - pos);
+        int found_pos = string_index_of(remaining, word);
+
+        if found_pos == -1 then
+            pos = text_len  -- Exit loop
+        end
+
+        if found_pos >= 0 then
+            count = count + 1
+            pos = pos + found_pos + word_len
+        end
+    end
+
+    print "Found "
+    print count
+    print " occurrence(s)"
+    print ""
+
+    return count
+end
+
+-- Validate email format (basic)
+function validate_email(string email) then
+    print "Validating email:"
+    print email
+
+    int len = string_length(email);
+
+    -- Check minimum length
+    if len < 5 then
+        print "Invalid: too short"
+        return 0
+    end
+
+    -- Must contain @
+    int at_pos = string_index_of(email, "@");
+    if at_pos == -1 then
+        print "Invalid: no @ symbol"
+        return 0
+    end
+
+    -- @ must not be first or last character
+    if at_pos == 0 then
+        print "Invalid: @ at start"
+        return 0
+    end
+
+    if at_pos == len - 1 then
+        print "Invalid: @ at end"
+        return 0
+    end
+
+    -- Must have only one @
+    string after_at = string_substring(email, at_pos + 1, len - at_pos - 1);
+    int second_at = string_index_of(after_at, "@");
+    if second_at >= 0 then
+        print "Invalid: multiple @ symbols"
+        return 0
+    end
+
+    -- Must have dot after @
+    int dot_pos = string_index_of(after_at, ".");
+    if dot_pos == -1 then
+        print "Invalid: no domain extension"
+        return 0
+    end
+
+    print "Valid email format"
+    print ""
+    return 1
+end
+
+-- Main test program
+print "===================================="
+print "Phase 5.1 String Operations Demo"
+print "===================================="
+print ""
+
+-- Test 1: CSV parsing
+parse_csv_line("Alice,30,Engineer")
+print ""
+
+-- Test 2: File extensions
+get_file_extension("document.txt")
+get_file_extension("archive.tar.gz")
+get_file_extension("README")
+print ""
+
+-- Test 3: URL parsing
+parse_url("https://github.com/user/repo")
+parse_url("http://example.com")
+print ""
+
+-- Test 4: Word counting
+string text = "hello world hello universe hello everyone";
+count_word(text, "hello")
+print ""
+
+-- Test 5: Email validation
+validate_email("user@example.com")
+validate_email("invalid@")
+validate_email("@invalid.com")
+validate_email("no-at.com")
+validate_email("double@@invalid.com")
+validate_email("valid.email@sub.domain.com")
+print ""
+
+print "===================================="
+print "Demo Complete!"
+print "===================================="
