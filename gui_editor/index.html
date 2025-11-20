@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLP Visual Editor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🎨 MLP Visual Block Editor</h1>
+            <div class="toolbar">
+                <button id="runBtn" class="btn-primary">▶ Run</button>
+                <button id="clearBtn" class="btn-secondary">🗑 Clear</button>
+                <button id="exportBtn" class="btn-secondary">💾 Export</button>
+                <select id="languageSelect">
+                    <option value="en-US">English</option>
+                    <option value="tr-TR">Türkçe</option>
+                    <option value="ru-RU">Русский</option>
+                    <option value="ar-SA">العربية</option>
+                    <option value="zh-CN">中文</option>
+                    <option value="es-ES">Español</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                </select>
+                <select id="syntaxSelect">
+                    <option value="mlp">MLP</option>
+                    <option value="python">Python</option>
+                    <option value="c">C-style</option>
+                    <option value="vbnet">VB.NET</option>
+                </select>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Block Palette -->
+            <aside class="palette">
+                <h3>📦 Blocks</h3>
+                
+                <div class="block-category">
+                    <h4>Control Flow</h4>
+                    <div class="block" draggable="true" data-type="for">
+                        <div class="block-header for-block">For Loop</div>
+                        <div class="block-body">for i = 0 to 10</div>
+                    </div>
+                    <div class="block" draggable="true" data-type="while">
+                        <div class="block-header while-block">While Loop</div>
+                        <div class="block-body">while condition</div>
+                    </div>
+                    <div class="block" draggable="true" data-type="if">
+                        <div class="block-header if-block">If Statement</div>
+                        <div class="block-body">if x > 0</div>
+                    </div>
+                </div>
+
+                <div class="block-category">
+                    <h4>Variables</h4>
+                    <div class="block" draggable="true" data-type="variable">
+                        <div class="block-header var-block">Variable</div>
+                        <div class="block-body">SAYISAL x = 0</div>
+                    </div>
+                    <div class="block" draggable="true" data-type="assign">
+                        <div class="block-header var-block">Assign</div>
+                        <div class="block-body">x = x + 1</div>
+                    </div>
+                </div>
+
+                <div class="block-category">
+                    <h4>I/O</h4>
+                    <div class="block" draggable="true" data-type="print">
+                        <div class="block-header io-block">Print</div>
+                        <div class="block-body">print(value)</div>
+                    </div>
+                </div>
+
+                <div class="block-category">
+                    <h4>Functions</h4>
+                    <div class="block" draggable="true" data-type="function">
+                        <div class="block-header func-block">Function</div>
+                        <div class="block-body">işleç name()</div>
+                    </div>
+                    <div class="block" draggable="true" data-type="return">
+                        <div class="block-header func-block">Return</div>
+                        <div class="block-body">return value</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center: Canvas -->
+            <main class="canvas-container">
+                <h3>🎯 Workspace</h3>
+                <div id="canvas" class="canvas">
+                    <div class="empty-state">
+                        Drag blocks here to start coding!
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Panel: Code Preview & Output -->
+            <aside class="preview">
+                <div class="tabs">
+                    <button class="tab active" data-tab="code">Code</button>
+                    <button class="tab" data-tab="output">Output</button>
+                </div>
+                
+                <div class="tab-content" id="codeTab">
+                    <pre><code id="generatedCode"># Drag blocks to generate code</code></pre>
+                </div>
+                
+                <div class="tab-content hidden" id="outputTab">
+                    <pre id="programOutput">Run the program to see output...</pre>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script src="blocks.js"></script>
+    <script src="editor.js"></script>
+</body>
+</html>
