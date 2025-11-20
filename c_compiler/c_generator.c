@@ -1333,6 +1333,60 @@ void visit_ListClear(ASTNode* node) {
     asm_append(&text_section, "    call list_clear");
 }
 
+// Phase 3: Built-in function call
+void visit_BuiltinCall(ASTNode* node) {
+    TokenType func = node->builtin_call_data.function_type;
+    char buffer[512];
+
+    // Generate comment
+    const char* func_name = "";
+    switch (func) {
+        case TOKEN_BUILTIN_READ_FILE: func_name = "read_file"; break;
+        case TOKEN_BUILTIN_WRITE_FILE: func_name = "write_file"; break;
+        case TOKEN_BUILTIN_APPEND_FILE: func_name = "append_file"; break;
+        case TOKEN_BUILTIN_FILE_EXISTS: func_name = "file_exists"; break;
+        case TOKEN_BUILTIN_FILE_SIZE: func_name = "file_size"; break;
+        case TOKEN_BUILTIN_READ_LINES: func_name = "read_lines"; break;
+        case TOKEN_BUILTIN_STRING_SPLIT: func_name = "string_split"; break;
+        case TOKEN_BUILTIN_STRING_JOIN: func_name = "string_join"; break;
+        case TOKEN_BUILTIN_STRING_REPLACE: func_name = "string_replace"; break;
+        case TOKEN_BUILTIN_STRING_TRIM: func_name = "string_trim"; break;
+        case TOKEN_BUILTIN_STRING_UPPER: func_name = "string_upper"; break;
+        case TOKEN_BUILTIN_STRING_LOWER: func_name = "string_lower"; break;
+        case TOKEN_BUILTIN_STRING_FIND: func_name = "string_find"; break;
+        case TOKEN_BUILTIN_STRING_STARTS_WITH: func_name = "string_starts_with"; break;
+        case TOKEN_BUILTIN_STRING_ENDS_WITH: func_name = "string_ends_with"; break;
+        default: func_name = "unknown"; break;
+    }
+
+    sprintf(buffer, "    ; --- Built-in: %s() ---", func_name);
+    asm_append(&text_section, buffer);
+
+    // Evaluate arguments and load into registers (x86-64 calling convention)
+    // rdi = arg1, rsi = arg2, rdx = arg3
+
+    if (node->builtin_call_data.arg1) {
+        visit(node->builtin_call_data.arg1);  // Result in RAX
+        asm_append(&text_section, "    mov rdi, rax  ; arg1");
+    }
+
+    if (node->builtin_call_data.arg2) {
+        visit(node->builtin_call_data.arg2);  // Result in RAX
+        asm_append(&text_section, "    mov rsi, rax  ; arg2");
+    }
+
+    if (node->builtin_call_data.arg3) {
+        visit(node->builtin_call_data.arg3);  // Result in RAX
+        asm_append(&text_section, "    mov rdx, rax  ; arg3");
+    }
+
+    // Call the built-in function
+    sprintf(buffer, "    call %s", func_name);
+    asm_append(&text_section, buffer);
+
+    // Result is in RAX
+}
+
 void visit_DonusKomutu(ASTNode* node) {
     asm_append(&text_section, "    ; --- Donus Komutu ---");
 
@@ -1547,6 +1601,11 @@ void visit(ASTNode* node) {
 
         case AST_LIST_CLEAR:
             visit_ListClear(node);
+            break;
+
+        // Phase 3: Built-in function call
+        case AST_BUILTIN_CALL:
+            visit_BuiltinCall(node);
             break;
 
         default:
