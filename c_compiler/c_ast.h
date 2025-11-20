@@ -30,6 +30,12 @@ typedef enum {
     AST_STRUCT_FIELD_ACCESS,// Struct field erişim: p.x
     AST_STRUCT_FIELD_ATAMA, // Struct field atama: p.x = 10;
     AST_STRUCT_DEGISKEN,    // Struct değişken: Nokta p;
+    // Phase 2: Dynamic Lists
+    AST_LIST_TANIMLAMA,     // List tanımlama: list[int] numbers = list();
+    AST_LIST_ADD,           // List add: numbers.add(10)
+    AST_LIST_GET,           // List get: numbers.get(0)
+    AST_LIST_SIZE,          // List size: numbers.size()
+    AST_LIST_CLEAR,         // List clear: numbers.clear()
     // ... (Diğer tüm AST düğüm tipleri buraya eklenecek)
 } ASTNodeType;
 
@@ -170,6 +176,36 @@ struct ASTNode {
             Token* struct_tip; // Struct tipi (Nokta)
             Token* ad;         // Değişken ismi (p)
         } struct_degisken_data;
+
+        // ===== Phase 2: Dynamic Lists =====
+
+        // List Tanımlama (list[int] numbers = list();)
+        struct {
+            Token* element_tipi;  // Element tipi (int, string, struct name)
+            Token* degisken_adi;  // List değişken ismi (numbers)
+        } list_tanimlama_data;
+
+        // List Add (numbers.add(10))
+        struct {
+            Token* list_adi;      // List ismi (numbers)
+            ASTNode* deger;       // Eklenecek değer
+        } list_add_data;
+
+        // List Get (numbers.get(0))
+        struct {
+            Token* list_adi;      // List ismi (numbers)
+            ASTNode* indeks;      // İndeks ifadesi
+        } list_get_data;
+
+        // List Size (numbers.size())
+        struct {
+            Token* list_adi;      // List ismi (numbers)
+        } list_size_data;
+
+        // List Clear (numbers.clear())
+        struct {
+            Token* list_adi;      // List ismi (numbers)
+        } list_clear_data;
     };
 };
 

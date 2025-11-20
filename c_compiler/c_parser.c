@@ -268,6 +268,63 @@ ASTNode* createAST_StructDegisken(Token* struct_tip, Token* ad) {
     return node;
 }
 
+// ===== Phase 2: List AST Creation Helpers =====
+
+ASTNode* createAST_ListTanimlama(Token* element_tipi, Token* degisken_adi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_TANIMLAMA;
+    node->list_tanimlama_data.element_tipi = (Token*)malloc(sizeof(Token));
+    node->list_tanimlama_data.element_tipi->type = element_tipi->type;
+    node->list_tanimlama_data.element_tipi->value = strdup(element_tipi->value);
+    node->list_tanimlama_data.degisken_adi = (Token*)malloc(sizeof(Token));
+    node->list_tanimlama_data.degisken_adi->type = degisken_adi->type;
+    node->list_tanimlama_data.degisken_adi->value = strdup(degisken_adi->value);
+    return node;
+}
+
+ASTNode* createAST_ListAdd(Token* list_adi, ASTNode* deger) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_ADD;
+    node->list_add_data.list_adi = (Token*)malloc(sizeof(Token));
+    node->list_add_data.list_adi->type = list_adi->type;
+    node->list_add_data.list_adi->value = strdup(list_adi->value);
+    node->list_add_data.deger = deger;
+    return node;
+}
+
+ASTNode* createAST_ListGet(Token* list_adi, ASTNode* indeks) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_GET;
+    node->list_get_data.list_adi = (Token*)malloc(sizeof(Token));
+    node->list_get_data.list_adi->type = list_adi->type;
+    node->list_get_data.list_adi->value = strdup(list_adi->value);
+    node->list_get_data.indeks = indeks;
+    return node;
+}
+
+ASTNode* createAST_ListSize(Token* list_adi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_SIZE;
+    node->list_size_data.list_adi = (Token*)malloc(sizeof(Token));
+    node->list_size_data.list_adi->type = list_adi->type;
+    node->list_size_data.list_adi->value = strdup(list_adi->value);
+    return node;
+}
+
+ASTNode* createAST_ListClear(Token* list_adi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_CLEAR;
+    node->list_clear_data.list_adi = (Token*)malloc(sizeof(Token));
+    node->list_clear_data.list_adi->type = list_adi->type;
+    node->list_clear_data.list_adi->value = strdup(list_adi->value);
+    return node;
+}
+
 ASTNode* createAST_KosulKomutu(ASTNode* kosul, ASTNode* ise_blok, ASTNode* degilse_blok) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
