@@ -7,6 +7,7 @@
 #include <libgen.h>  // dirname için
 #include <errno.h>   // errno için
 #include <ctype.h>   // toupper, tolower için
+#include <time.h>    // time için (Phase 5.2)
 #include "json_parser.h"  // MLP Language definitions parser
 
 // Forward declarations
@@ -1507,5 +1508,291 @@ long string_last_index_of(const char* str, const char* needle) {
 
     if (!last_found) return -1;
     return last_found - str;
+}
+
+// ========================================================================
+// PHASE 5.2: ERROR HANDLING & MEMORY MANAGEMENT
+// ========================================================================
+
+// -------------------- ERROR HANDLING (5 functions) --------------------
+
+// Global error code storage
+static int mlp_last_error_code = 0;
+
+/**
+ * exit_with_code - Exit program with specific return code
+ * @param code: Exit code (0 = success, non-zero = error)
+ *
+ * MLP Usage: exit_with_code(1);
+ */
+void exit_with_code(long code) {
+    exit((int)code);
+}
+
+/**
+ * panic - Print error message to stderr and exit with code 1
+ * @param message: Error message to print
+ *
+ * MLP Usage: panic("Fatal error: division by zero");
+ */
+void panic(const char* message) {
+    if (message) {
+        fprintf(stderr, "PANIC: %s\n", message);
+    } else {
+        fprintf(stderr, "PANIC: Unknown error\n");
+    }
+    exit(1);
+}
+
+/**
+ * mlp_assert - Check condition, panic if false
+ * @param condition: Condition to check (0 = false, non-zero = true)
+ * @param message: Error message if condition fails
+ *
+ * MLP Usage: mlp_assert(x > 0, "x must be positive");
+ */
+void mlp_assert(long condition, const char* message) {
+    if (!condition) {
+        if (message) {
+            fprintf(stderr, "ASSERTION FAILED: %s\n", message);
+        } else {
+            fprintf(stderr, "ASSERTION FAILED\n");
+        }
+        exit(1);
+    }
+}
+
+/**
+ * get_error_code - Get last error code
+ * @return: Last error code set
+ *
+ * MLP Usage: int code = get_error_code();
+ */
+long get_error_code(void) {
+    return mlp_last_error_code;
+}
+
+/**
+ * set_error_code - Set error code
+ * @param code: Error code to set
+ *
+ * MLP Usage: set_error_code(42);
+ */
+void set_error_code(long code) {
+    mlp_last_error_code = code;
+}
+
+// -------------------- MEMORY MANAGEMENT (6 functions) --------------------
+
+// Memory tracking structure
+typedef struct MemoryBlock {
+    void* ptr;
+    size_t size;
+    struct MemoryBlock* next;
+} MemoryBlock;
+
+static MemoryBlock* memory_list_head = NULL;
+static size_t total_allocated = 0;
+static size_t total_freed = 0;
+
+/**
+ * track_allocation - Add allocation to tracking list
+ */
+static void track_allocation(void* ptr, size_t size) {
+    if (!ptr) return;
+
+    MemoryBlock* block = (MemoryBlock*)malloc(sizeof(MemoryBlock));
+    if (!block) return;  // Tracking failure shouldn't crash program
+
+    block->ptr = ptr;
+    block->size = size;
+    block->next = memory_list_head;
+    memory_list_head = block;
+    total_allocated += size;
+}
+
+/**
+ * untrack_allocation - Remove allocation from tracking list
+ */
+static void untrack_allocation(void* ptr) {
+    if (!ptr) return;
+
+    MemoryBlock** current = &memory_list_head;
+    while (*current) {
+        if ((*current)->ptr == ptr) {
+            MemoryBlock* to_free = *current;
+            total_freed += to_free->size;
+            *current = to_free->next;
+            free(to_free);
+            return;
+        }
+        current = &(*current)->next;
+    }
+}
+
+/**
+ * mlp_malloc - Allocate memory with tracking
+ * @param size: Number of bytes to allocate
+ * @return: Pointer to allocated memory, NULL on failure
+ *
+ * MLP Usage: string buffer = mlp_malloc(256);
+ */
+void* mlp_malloc(long size) {
+    if (size <= 0) return NULL;
+
+    void* ptr = malloc((size_t)size);
+    if (ptr) {
+        track_allocation(ptr, (size_t)size);
+    }
+    return ptr;
+}
+
+/**
+ * mlp_free - Free memory with tracking
+ * @param ptr: Pointer to memory to free
+ *
+ * MLP Usage: mlp_free(buffer);
+ */
+void mlp_free(void* ptr) {
+    if (!ptr) return;
+
+    untrack_allocation(ptr);
+    free(ptr);
+}
+
+/**
+ * mlp_realloc - Reallocate memory with tracking
+ * @param ptr: Pointer to existing memory (or NULL)
+ * @param size: New size in bytes
+ * @return: Pointer to reallocated memory
+ *
+ * MLP Usage: buffer = mlp_realloc(buffer, 512);
+ */
+void* mlp_realloc(void* ptr, long size) {
+    if (size <= 0) {
+        mlp_free(ptr);
+        return NULL;
+    }
+
+    if (!ptr) {
+        return mlp_malloc(size);
+    }
+
+    // Find old size for tracking
+    size_t old_size = 0;
+    MemoryBlock* current = memory_list_head;
+    while (current) {
+        if (current->ptr == ptr) {
+            old_size = current->size;
+            break;
+        }
+        current = current->next;
+    }
+
+    void* new_ptr = realloc(ptr, (size_t)size);
+    if (new_ptr) {
+        untrack_allocation(ptr);
+        track_allocation(new_ptr, (size_t)size);
+    }
+    return new_ptr;
+}
+
+/**
+ * mlp_calloc - Allocate zeroed memory with tracking
+ * @param count: Number of elements
+ * @param size: Size of each element
+ * @return: Pointer to allocated zeroed memory
+ *
+ * MLP Usage: int array = mlp_calloc(10, 8);  // 10 x 8 bytes
+ */
+void* mlp_calloc(long count, long size) {
+    if (count <= 0 || size <= 0) return NULL;
+
+    void* ptr = calloc((size_t)count, (size_t)size);
+    if (ptr) {
+        track_allocation(ptr, (size_t)(count * size));
+    }
+    return ptr;
+}
+
+/**
+ * get_allocated_bytes - Get total allocated memory
+ * @return: Total bytes currently allocated
+ *
+ * MLP Usage: int total = get_allocated_bytes();
+ */
+long get_allocated_bytes(void) {
+    return (long)(total_allocated - total_freed);
+}
+
+/**
+ * check_memory_leaks - Check for memory leaks and report
+ * @return: Number of leaked blocks
+ *
+ * MLP Usage: int leaks = check_memory_leaks();
+ */
+long check_memory_leaks(void) {
+    long leak_count = 0;
+    size_t leaked_bytes = 0;
+
+    MemoryBlock* current = memory_list_head;
+    while (current) {
+        leak_count++;
+        leaked_bytes += current->size;
+        fprintf(stderr, "MEMORY LEAK: %zu bytes at %p\n",
+                current->size, current->ptr);
+        current = current->next;
+    }
+
+    if (leak_count > 0) {
+        fprintf(stderr, "TOTAL LEAKS: %ld blocks, %zu bytes\n",
+                leak_count, leaked_bytes);
+    }
+
+    return leak_count;
+}
+
+// -------------------- SYSTEM UTILITIES (3 functions) --------------------
+
+/**
+ * get_env - Get environment variable value
+ * @param name: Environment variable name
+ * @return: Value string, or empty string if not found
+ *
+ * MLP Usage: string path = get_env("PATH");
+ */
+char* get_env(const char* name) {
+    if (!name) return strdup("");
+
+    char* value = getenv(name);
+    if (!value) return strdup("");
+
+    return strdup(value);
+}
+
+/**
+ * current_timestamp - Get current Unix timestamp
+ * @return: Current time in seconds since epoch
+ *
+ * MLP Usage: int now = current_timestamp();
+ */
+long current_timestamp(void) {
+    return (long)time(NULL);
+}
+
+/**
+ * sleep_ms - Sleep for milliseconds
+ * @param milliseconds: Time to sleep in milliseconds
+ *
+ * MLP Usage: sleep_ms(1000);  // Sleep 1 second
+ */
+void sleep_ms(long milliseconds) {
+    if (milliseconds <= 0) return;
+
+    #ifdef _WIN32
+        Sleep((DWORD)milliseconds);
+    #else
+        usleep((useconds_t)(milliseconds * 1000));
+    #endif
 }
 
