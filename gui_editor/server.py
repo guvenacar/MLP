@@ -25,6 +25,10 @@ RUNTIME = os.path.join(MLP_ROOT, 'runtime', 'runtime.c')
 def index():
     return send_from_directory(BASE_DIR, 'index.html')
 
+@app.route('/designer')
+def designer():
+    return send_from_directory(BASE_DIR, 'designer.html')
+
 @app.route('/<path:path>')
 def static_files(path):
     return send_from_directory(BASE_DIR, path)
