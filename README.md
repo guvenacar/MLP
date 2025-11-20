@@ -155,6 +155,7 @@ Native Executable
 ### Data Types
 - `int` - 64-bit integer
 - `string` - String (char*)
+- `list[Type]` - Dynamic lists (Phase 2 ✅)
 
 ### Control Structures
 ```mlp
@@ -190,6 +191,14 @@ print result
 ```
 
 ### Built-in Functions
+
+**Dynamic Lists (Phase 2 ✅):**
+- `list_create()` - Create new list
+- `list.add(value)` - Append element
+- `list.get(index)` - Get element by index
+- `list.size()` - Get element count
+- `list.clear()` - Remove all elements
+- `list_destroy(list)` - Free memory
 
 **String Operations:**
 - `string_concat(a, b)` - Concatenate strings
@@ -547,9 +556,11 @@ MLP/
 Contributions are welcome!
 
 ### Feature Ideas
+- [x] Dynamic lists (Phase 2 ✅)
+- [ ] Dictionaries/hash maps (Phase 3 - Planned)
+- [ ] Structs/custom types (Phase 4 - Planned)
 - [ ] More languages (Arabic, Japanese, Spanish, etc.)
 - [ ] Float/double support
-- [ ] Array/struct support
 - [ ] Module/import system
 - [ ] Standard library expansion
 - [ ] LLVM backend
@@ -568,6 +579,9 @@ Contributions are welcome!
 ## 📖 Documentation
 
 - **[SPECS.md](./SPECS.md)** - Complete language specification
+- **[LIST_DESIGN.md](./LIST_DESIGN.md)** - Dynamic lists implementation (Phase 2 ✅)
+- **[TURING_COMPLETE_PLAN.md](./TURING_COMPLETE_PLAN.md)** - Self-hosting roadmap
+- **[SESSION_SUMMARY_PHASE2.md](./SESSION_SUMMARY_PHASE2.md)** - Phase 2 implementation notes
 - **[PREPROCESSOR_DESIGN.md](./PREPROCESSOR_DESIGN.md)** - Preprocessor architecture
 - **[diller.json](./diller.json)** - Language definitions
 

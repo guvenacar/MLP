@@ -1,0 +1,5 @@
+sayi x = 0
+dongu x < 5
+    yaz(x)
+    x = x + 1
+son
