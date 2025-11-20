@@ -1378,3 +1378,157 @@ double math_tan(double angle) {
     return tan(angle);
 }
 
+// ============================================================================
+// PHASE 5.1: Command-Line Arguments & Enhanced String Operations
+// ============================================================================
+
+// Global argc/argv storage
+static int mlp_argc = 0;
+static char** mlp_argv = NULL;
+
+/**
+ * mlp_set_args - Store command-line arguments
+ * @param argc: Argument count
+ * @param argv: Argument vector
+ *
+ * Called by main() before executing MLP code
+ */
+void mlp_set_args(int argc, char** argv) {
+    mlp_argc = argc;
+    mlp_argv = argv;
+}
+
+/**
+ * mlp_get_argc - Get argument count
+ * @return: Number of command-line arguments
+ *
+ * MLP Usage: int count = argc;
+ */
+int64_t mlp_get_argc(void) {
+    return (int64_t)mlp_argc;
+}
+
+/**
+ * mlp_get_argv - Get argument at index
+ * @param index: Argument index (0 = program name)
+ * @return: Argument string, or empty string if out of bounds
+ *
+ * MLP Usage: string arg = argv.get(0);
+ */
+char* mlp_get_argv(int64_t index) {
+    if (index < 0 || index >= mlp_argc) {
+        return strdup("");
+    }
+    return strdup(mlp_argv[index]);
+}
+
+/**
+ * string_length - Get length of string
+ * @param str: Input string
+ * @return: Length of string (number of characters)
+ *
+ * MLP Usage: int len = string_length("Hello");
+ */
+int64_t string_length(const char* str) {
+    if (str == NULL) {
+        return 0;
+    }
+    return (int64_t)strlen(str);
+}
+
+/**
+ * string_substring - Extract substring
+ * @param str: Input string
+ * @param start: Start index (0-based)
+ * @param length: Number of characters to extract
+ * @return: Substring, or empty string if invalid parameters
+ *
+ * MLP Usage: string sub = string_substring("Hello World", 6, 5);  // "World"
+ */
+char* string_substring(const char* str, int64_t start, int64_t length) {
+    if (str == NULL || start < 0 || length < 0) {
+        return strdup("");
+    }
+    
+    int64_t str_len = strlen(str);
+    
+    // If start is beyond string length
+    if (start >= str_len) {
+        return strdup("");
+    }
+    
+    // Adjust length if it goes beyond string end
+    if (start + length > str_len) {
+        length = str_len - start;
+    }
+    
+    // Allocate memory for substring
+    char* result = (char*)malloc(length + 1);
+    if (result == NULL) {
+        return strdup("");
+    }
+    
+    // Copy substring
+    strncpy(result, str + start, length);
+    result[length] = '\0';
+    
+    return result;
+}
+
+/**
+ * string_index_of - Find first occurrence of substring
+ * @param str: Input string
+ * @param needle: Substring to search for
+ * @return: Index of first occurrence, or -1 if not found
+ *
+ * MLP Usage: int pos = string_index_of("Hello World", "World");  // 6
+ */
+int64_t string_index_of(const char* str, const char* needle) {
+    if (str == NULL || needle == NULL) {
+        return -1;
+    }
+    
+    // Empty needle returns 0 (found at start)
+    if (needle[0] == '\0') {
+        return 0;
+    }
+    
+    char* found = strstr(str, needle);
+    if (found == NULL) {
+        return -1;
+    }
+    
+    return (int64_t)(found - str);
+}
+
+/**
+ * string_last_index_of - Find last occurrence of substring
+ * @param str: Input string
+ * @param needle: Substring to search for
+ * @return: Index of last occurrence, or -1 if not found
+ *
+ * MLP Usage: int pos = string_last_index_of("Hello Hello", "Hello");  // 6
+ */
+int64_t string_last_index_of(const char* str, const char* needle) {
+    if (str == NULL || needle == NULL) {
+        return -1;
+    }
+    
+    // Empty needle returns 0 (found at start)
+    if (needle[0] == '\0') {
+        return 0;
+    }
+    
+    int64_t last_pos = -1;
+    int64_t needle_len = strlen(needle);
+    char* current = (char*)str;
+    
+    // Find all occurrences and keep track of the last one
+    while ((current = strstr(current, needle)) != NULL) {
+        last_pos = (int64_t)(current - str);
+        current += needle_len;  // Move past this occurrence
+    }
+    
+    return last_pos;
+}
+
