@@ -1105,11 +1105,11 @@ ASTNode* komut() {
             }
         }
         
-        // DURUM 7.2: İFADE KOMUTU (örn: test())
-        // 'ifade()' bize bir AST_ISLEC_CAGIRMA (test()) döndürdüyse
-        if (sol_node->type == AST_ISLEC_CAGIRMA) {
+        // DURUM 7.2: İFADE KOMUTU (örn: test(), set_error_code(42), mlp_free(ptr))
+        // 'ifade()' bize bir AST_ISLEC_CAGIRMA (test()) veya AST_BUILTIN_CALL döndürdüyse
+        if (sol_node->type == AST_ISLEC_CAGIRMA || sol_node->type == AST_BUILTIN_CALL) {
             specs_check_no_semicolon("İfade komutu (fonksiyon çağrısı)");
-            return sol_node; // 'test()' çağrısını komut olarak döndür
+            return sol_node; // Fonksiyon çağrısını komut olarak döndür
         }
 
         // DURUM 7.3: LIST METHOD CALLS (list.add(), list.clear())
