@@ -1893,6 +1893,26 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern gui_canvas_render");
     asm_append(&data_section, "extern int_to_string");
 
+    // Phase 5.2: Error Handling
+    asm_append(&data_section, "extern exit_with_code");
+    asm_append(&data_section, "extern panic");
+    asm_append(&data_section, "extern mlp_assert");
+    asm_append(&data_section, "extern get_error_code");
+    asm_append(&data_section, "extern set_error_code");
+
+    // Phase 5.2: Memory Management
+    asm_append(&data_section, "extern mlp_malloc");
+    asm_append(&data_section, "extern mlp_free");
+    asm_append(&data_section, "extern mlp_realloc");
+    asm_append(&data_section, "extern mlp_calloc");
+    asm_append(&data_section, "extern get_allocated_bytes");
+    asm_append(&data_section, "extern check_memory_leaks");
+
+    // Phase 5.2: System Utilities
+    asm_append(&data_section, "extern get_env");
+    asm_append(&data_section, "extern current_timestamp");
+    asm_append(&data_section, "extern sleep_ms");
+
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld
     asm_append(&data_section, "    format_metin db \"%s\", 10, 0");
