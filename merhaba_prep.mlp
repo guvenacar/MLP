@@ -1,0 +1,7 @@
+
+print "Merhaba Dünya!"
+print "MLP ile Türkçe programlama"
+
+int yil = 2025;
+print "Yıl:"
+print yil
