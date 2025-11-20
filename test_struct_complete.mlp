@@ -1,0 +1,15 @@
+-- Test complete struct support: definition, instance, field access
+
+struct Person then
+    int age;
+    string name;
+end
+
+Person p;
+
+p.age = 25
+p.name = "Alice"
+
+print "Person created:"
+print p.name
+print p.age

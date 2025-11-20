@@ -1,0 +1,10 @@
+-- Test struct instance creation and field access
+
+struct Person then
+    int age;
+    string name;
+end
+
+Person p;
+
+print "Struct instance test"

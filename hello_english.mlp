@@ -1,0 +1,8 @@
+-- Simple Hello World in English
+
+print "Hello from MLP!"
+print "Testing compiler..."
+
+int year = 2025;
+print "Year:"
+print year

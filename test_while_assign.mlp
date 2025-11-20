@@ -1,0 +1,13 @@
+int i = 0;
+int x = 0;
+
+while
+    if i >= 5 then
+        break
+    end
+    x = i * 2
+    print x
+    i = i + 1
+end
+
+print "Done"

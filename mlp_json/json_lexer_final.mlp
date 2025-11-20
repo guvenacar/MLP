@@ -1,0 +1,301 @@
+-- MLP JSON Lexer v4.0 - FINAL
+-- Nested if/else structure (no else if in MLP!)
+
+-- Helper: Check if character is whitespace
+function is_whitespace(ch) then
+    int code = char_code(ch);
+
+    if code == 32 then
+        return 1
+    end
+    if code == 9 then
+        return 1
+    end
+    if code == 10 then
+        return 1
+    end
+    if code == 13 then
+        return 1
+    end
+    return 0
+end
+
+-- Helper: Check if character is digit
+function is_digit(ch) then
+    int code = char_code(ch);
+
+    if code >= 48 then
+        if code <= 57 then
+            return 1
+        end
+    end
+    return 0
+end
+
+-- Helper: Skip whitespace and return new position
+function skip_whitespace(text, pos) then
+    int len = string_length(text);
+    string ch = "";
+
+    while
+        if pos >= len then
+            break
+        end
+        ch = substring(text, pos, 1)
+        if is_whitespace(ch) == 0 then
+            return pos
+        end
+        pos = pos + 1
+    end
+
+    return pos
+end
+
+-- Helper: Scan string literal, return end position
+function scan_string(text, start_pos) then
+    int pos = start_pos + 1;
+    int len = string_length(text);
+    string ch = "";
+
+    while
+        if pos >= len then
+            break
+        end
+        ch = substring(text, pos, 1)
+        if ch == "\"" then
+            return pos + 1
+        end
+        pos = pos + 1
+    end
+
+    print "ERROR: Unclosed string at position "
+    print start_pos
+    return pos
+end
+
+-- Helper: Scan number, return end position
+function scan_number(text, start_pos) then
+    int pos = start_pos;
+    int len = string_length(text);
+    string ch = "";
+    int code = 0;
+
+    while
+        if pos >= len then
+            break
+        end
+        ch = substring(text, pos, 1)
+        if is_digit(ch) == 0 then
+            code = char_code(ch)
+            if code == 46 then
+                pos = pos + 1
+            else
+                return pos
+            end
+        else
+            pos = pos + 1
+        end
+    end
+
+    return pos
+end
+
+-- Helper: Match keyword at position
+function match_keyword(text, pos, keyword) then
+    int kw_len = string_length(keyword);
+    int text_len = string_length(text);
+    string substr = "";
+    int sub_len = 0;
+    int i = 0;
+    string ch1 = "";
+    string ch2 = "";
+    int code1 = 0;
+    int code2 = 0;
+
+    if pos + kw_len > text_len then
+        return 0
+    end
+
+    substr = substring(text, pos, kw_len)
+    sub_len = string_length(substr)
+
+    if sub_len == kw_len then
+        i = 0
+        while
+            if i >= kw_len then
+                break
+            end
+            ch1 = substring(keyword, i, 1)
+            ch2 = substring(substr, i, 1)
+            code1 = char_code(ch1)
+            code2 = char_code(ch2)
+            if code1 != code2 then
+                return 0
+            end
+            i = i + 1
+        end
+        return 1
+    end
+
+    return 0
+end
+
+-- Main tokenizer function
+function tokenize_json(text) then
+    int pos = 0;
+    int len = string_length(text);
+    int token_count = 0;
+    string ch = "";
+    int start = 0;
+    int end_pos = 0;
+    int value_len = 0;
+    string value = "";
+
+    print "=== JSON Lexer v4.0 FINAL ==="
+    print ""
+    print "Input length: "
+    print len
+    print ""
+    print "Tokens:"
+    print "--------"
+
+    while
+        if pos >= len then
+            break
+        end
+
+        pos = skip_whitespace(text, pos)
+
+        if pos >= len then
+            break
+        end
+
+        ch = substring(text, pos, 1)
+
+        if ch == "{" then
+            print "LBRACE"
+            token_count = token_count + 1
+            pos = pos + 1
+        else
+            if ch == "}" then
+                print "RBRACE"
+                token_count = token_count + 1
+                pos = pos + 1
+            else
+                if ch == "[" then
+                    print "LBRACKET"
+                    token_count = token_count + 1
+                    pos = pos + 1
+                else
+                    if ch == "]" then
+                        print "RBRACKET"
+                        token_count = token_count + 1
+                        pos = pos + 1
+                    else
+                        if ch == ":" then
+                            print "COLON"
+                            token_count = token_count + 1
+                            pos = pos + 1
+                        else
+                            if ch == "," then
+                                print "COMMA"
+                                token_count = token_count + 1
+                                pos = pos + 1
+                            else
+                                if ch == "\"" then
+                                    start = pos
+                                    end_pos = scan_string(text, pos)
+                                    value_len = end_pos - start - 2
+                                    value = substring(text, start + 1, value_len)
+                                    print "STRING: "
+                                    print value
+                                    token_count = token_count + 1
+                                    pos = end_pos
+                                else
+                                    if is_digit(ch) == 1 then
+                                        start = pos
+                                        end_pos = scan_number(text, pos)
+                                        value_len = end_pos - start
+                                        value = substring(text, start, value_len)
+                                        print "NUMBER: "
+                                        print value
+                                        token_count = token_count + 1
+                                        pos = end_pos
+                                    else
+                                        if ch == "t" then
+                                            if match_keyword(text, pos, "true") == 1 then
+                                                print "TRUE"
+                                                token_count = token_count + 1
+                                                pos = pos + 4
+                                            else
+                                                print "ERROR: Unknown token"
+                                                pos = pos + 1
+                                            end
+                                        else
+                                            if ch == "f" then
+                                                if match_keyword(text, pos, "false") == 1 then
+                                                    print "FALSE"
+                                                    token_count = token_count + 1
+                                                    pos = pos + 5
+                                                else
+                                                    print "ERROR: Unknown token"
+                                                    pos = pos + 1
+                                                end
+                                            else
+                                                if ch == "n" then
+                                                    if match_keyword(text, pos, "null") == 1 then
+                                                        print "NULL"
+                                                        token_count = token_count + 1
+                                                        pos = pos + 4
+                                                    else
+                                                        print "ERROR: Unknown token"
+                                                        pos = pos + 1
+                                                    end
+                                                else
+                                                    print "ERROR: Unexpected character"
+                                                    pos = pos + 1
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    print "--------"
+    print "Total tokens: "
+    print token_count
+    print ""
+
+    return token_count
+end
+
+-- Test 1: Simple object
+print "========================================="
+print "Test 1: Simple object"
+print "========================================="
+string json1 = "{\"name\": \"MLP\", \"version\": 3}";
+int count1 = tokenize_json(json1);
+
+-- Test 2: Array
+print "========================================="
+print "Test 2: Array"
+print "========================================="
+string json2 = "[\"tr\", \"en\", \"ru\"]";
+int count2 = tokenize_json(json2);
+
+-- Test 3: Keywords
+print "========================================="
+print "Test 3: Keywords"
+print "========================================="
+string json3 = "{\"active\": true, \"flag\": false, \"data\": null}";
+int count3 = tokenize_json(json3);
+
+print "========================================="
+print "All tests complete!"
+print "========================================="

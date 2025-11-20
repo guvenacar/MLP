@@ -1,0 +1,322 @@
+-- MLP JSON Lexer v1.0 (MVP)
+-- Pure MLP implementation - no dependencies
+
+-- Token type constants
+int TOKEN_LBRACE = 1
+int TOKEN_RBRACE = 2
+int TOKEN_LBRACKET = 3
+int TOKEN_RBRACKET = 4
+int TOKEN_COLON = 5
+int TOKEN_COMMA = 6
+int TOKEN_STRING = 7
+int TOKEN_NUMBER = 8
+int TOKEN_TRUE = 9
+int TOKEN_FALSE = 10
+int TOKEN_NULL = 11
+int TOKEN_EOF = 12
+
+-- Helper: Check if character is whitespace
+function is_whitespace(ch) then
+    int code = char_code(ch)
+    -- space(32), tab(9), newline(10), carriage return(13)
+    if code = 32 then
+        return 1
+    end if
+    if code = 9 then
+        return 1
+    end if
+    if code = 10 then
+        return 1
+    end if
+    if code = 13 then
+        return 1
+    end if
+    return 0
+end function
+
+-- Helper: Check if character is digit
+function is_digit(ch) then
+    int code = char_code(ch)
+    if code >= 48 then
+        if code <= 57 then
+            return 1
+        end if
+    end if
+    return 0
+end function
+
+-- Helper: Skip whitespace and return new position
+function skip_whitespace(text, pos) then
+    int len = string_length(text)
+
+    while pos < len
+        string ch = substring(text, pos, pos + 1)
+        if is_whitespace(ch) = 0 then
+            return pos
+        end if
+        pos = pos + 1
+    end while
+
+    return pos
+end function
+
+-- Helper: Scan string literal starting from quote
+-- Returns new position after closing quote
+function scan_string(text, start_pos) then
+    int pos = start_pos + 1
+    int len = string_length(text)
+
+    -- Find closing quote
+    while pos < len
+        string ch = substring(text, pos, pos + 1)
+        if ch = "\"" then
+            return pos + 1
+        end if
+        -- TODO: Handle escape sequences
+        pos = pos + 1
+    end while
+
+    -- Error: unclosed string
+    print "ERROR: Unclosed string at position "
+    print start_pos
+    return pos
+end function
+
+-- Helper: Scan number
+function scan_number(text, start_pos) then
+    int pos = start_pos
+    int len = string_length(text)
+
+    while pos < len
+        string ch = substring(text, pos, pos + 1)
+        if is_digit(ch) = 0 then
+            -- Also check for decimal point
+            int code = char_code(ch)
+            if code = 46 then
+                pos = pos + 1
+            else
+                return pos
+            end if
+        else
+            pos = pos + 1
+        end if
+    end while
+
+    return pos
+end function
+
+-- Helper: Check if text starts with keyword at position
+function match_keyword(text, pos, keyword) then
+    int kw_len = string_length(keyword)
+    int text_len = string_length(text)
+
+    if pos + kw_len > text_len then
+        return 0
+    end if
+
+    string substr = substring(text, pos, pos + kw_len)
+
+    -- Simple string comparison (MLP has no ==)
+    int sub_len = string_length(substr)
+    if sub_len = kw_len then
+        -- Compare character by character
+        int i = 0
+        while i < kw_len
+            string ch1 = substring(keyword, i, i + 1)
+            string ch2 = substring(substr, i, i + 1)
+            int code1 = char_code(ch1)
+            int code2 = char_code(ch2)
+            if code1 =/= code2 then
+                return 0
+            end if
+            i = i + 1
+        end while
+        return 1
+    end if
+
+    return 0
+end function
+
+-- Main tokenizer function
+function tokenize_json(text) then
+    int pos = 0
+    int len = string_length(text)
+    int token_count = 0
+
+    print "=== JSON Lexer v1.0 ==="
+    print ""
+    print "Tokenizing..."
+    print ""
+
+    while pos < len
+        -- Skip whitespace
+        pos = skip_whitespace(text, pos)
+
+        if pos >= len then
+            break
+        end if
+
+        string ch = substring(text, pos, pos + 1)
+        int code = char_code(ch)
+
+        -- Single character tokens
+        if ch = "{" then
+            print "Token "
+            print token_count
+            print ": LBRACE at pos "
+            print pos
+            token_count = token_count + 1
+            pos = pos + 1
+
+        else if ch = "}" then
+            print "Token "
+            print token_count
+            print ": RBRACE at pos "
+            print pos
+            token_count = token_count + 1
+            pos = pos + 1
+
+        else if ch = "[" then
+            print "Token "
+            print token_count
+            print ": LBRACKET at pos "
+            print pos
+            token_count = token_count + 1
+            pos = pos + 1
+
+        else if ch = "]" then
+            print "Token "
+            print token_count
+            print ": RBRACKET at pos "
+            print pos
+            token_count = token_count + 1
+            pos = pos + 1
+
+        else if ch = ":" then
+            print "Token "
+            print token_count
+            print ": COLON at pos "
+            print pos
+            token_count = token_count + 1
+            pos = pos + 1
+
+        else if ch = "," then
+            print "Token "
+            print token_count
+            print ": COMMA at pos "
+            print pos
+            token_count = token_count + 1
+            pos = pos + 1
+
+        -- String literal
+        else if ch = "\"" then
+            int start = pos
+            int end_pos = scan_string(text, pos)
+            string value = substring(text, start + 1, end_pos - 1)
+
+            print "Token "
+            print token_count
+            print ": STRING '"
+            print value
+            print "' at pos "
+            print start
+
+            token_count = token_count + 1
+            pos = end_pos
+
+        -- Number
+        else if is_digit(ch) = 1 then
+            int start = pos
+            int end_pos = scan_number(text, pos)
+            string value = substring(text, start, end_pos)
+
+            print "Token "
+            print token_count
+            print ": NUMBER "
+            print value
+            print " at pos "
+            print start
+
+            token_count = token_count + 1
+            pos = end_pos
+
+        -- Keywords: true, false, null
+        else if ch = "t" then
+            if match_keyword(text, pos, "true") = 1 then
+                print "Token "
+                print token_count
+                print ": TRUE at pos "
+                print pos
+                token_count = token_count + 1
+                pos = pos + 4
+            else
+                print "ERROR: Unknown token at pos "
+                print pos
+                pos = pos + 1
+            end if
+
+        else if ch = "f" then
+            if match_keyword(text, pos, "false") = 1 then
+                print "Token "
+                print token_count
+                print ": FALSE at pos "
+                print pos
+                token_count = token_count + 1
+                pos = pos + 5
+            else
+                print "ERROR: Unknown token at pos "
+                print pos
+                pos = pos + 1
+            end if
+
+        else if ch = "n" then
+            if match_keyword(text, pos, "null") = 1 then
+                print "Token "
+                print token_count
+                print ": NULL at pos "
+                print pos
+                token_count = token_count + 1
+                pos = pos + 4
+            else
+                print "ERROR: Unknown token at pos "
+                print pos
+                pos = pos + 1
+            end if
+
+        else
+            print "ERROR: Unexpected character '"
+            print ch
+            print "' at pos "
+            print pos
+            pos = pos + 1
+        end if
+    end while
+
+    print ""
+    print "Tokenization complete!"
+    print "Total tokens: "
+    print token_count
+
+    return token_count
+end function
+
+-- Test with simple JSON
+print "Test 1: Simple object"
+print "====================="
+string json1 = "{\"name\": \"MLP\", \"version\": 3}"
+int count1 = tokenize_json(json1)
+print ""
+
+print "Test 2: Nested structure"
+print "========================"
+string json2 = "{\"languages\": [\"tr\", \"en\", \"ru\"]}"
+int count2 = tokenize_json(json2)
+print ""
+
+print "Test 3: Keywords"
+print "================"
+string json3 = "{\"active\": true, \"count\": null, \"flag\": false}"
+int count3 = tokenize_json(json3)
+print ""
+
+print "All tests complete!"

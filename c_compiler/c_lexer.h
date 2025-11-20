@@ -72,5 +72,6 @@ typedef struct {
 // Lexer Fonksiyon Bildirimleri
 void initLexer(const char* source); // <-- BU SATIRI EKLEYİN (Eksik Prototipti)
 Token* getNextToken();
+Token* peekNextToken(); // Look ahead one token without consuming it
 
 #endif // C_LEXER_H

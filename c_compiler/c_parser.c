@@ -499,9 +499,33 @@ ASTNode* komut() {
         return struct_node;
     }
 
-    // TODO: Struct Değişken Tanımlama (Nokta p;)
-    // Şimdilik struct değişkenleri global olarak veya typedef ile tanımlanabilir
-    // İleride peek_token() eklenip IDENTIFIER IDENTIFIER SEMICOLON pattern'i yakalanabilir
+    // Struct Değişken Tanımlama (Person p;)
+    // Pattern: IDENTIFIER IDENTIFIER SEMICOLON
+    if (current_token->type == TOKEN_IDENTIFIER) {
+        Token* peeked = peekNextToken();
+        if (peeked && peeked->type == TOKEN_IDENTIFIER) {
+            // This is: StructName varName;
+            // Save struct type name
+            Token struct_tip;
+            struct_tip.type = current_token->type;
+            struct_tip.value = strdup(current_token->value);
+            consume(TOKEN_IDENTIFIER);
+
+            // Get variable name
+            Token ad;
+            ad.type = current_token->type;
+            ad.value = strdup(current_token->value);
+            consume(TOKEN_IDENTIFIER);
+
+            // Must be followed by semicolon
+            consume(TOKEN_SEMICOLON);
+
+            ASTNode* struct_var_node = createAST_StructDegisken(&struct_tip, &ad);
+            free(struct_tip.value);
+            free(ad.value);
+            return struct_var_node;
+        }
+    }
 
     // 1. YAZDIR (Noktalı virgülsüz)
     if (current_token->type == TOKEN_YAPI_YAZDIR) {

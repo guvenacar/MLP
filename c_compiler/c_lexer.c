@@ -477,3 +477,23 @@ Token* check_keyword(const char* word) {
     // Bulunamadı, sıradan tanımlayıcı
     return NULL;
 }
+// Peek next token without consuming it
+// Used for lookahead in parser (e.g., struct instance detection)
+Token* peekNextToken() {
+    // Save current lexer state
+    int saved_pos = current_position;
+    int saved_line = current_line;
+    int saved_col = current_column;
+    int saved_eof = eof_reached;
+    
+    // Get next token
+    Token* peeked = getNextToken();
+    
+    // Restore lexer state
+    current_position = saved_pos;
+    current_line = saved_line;
+    current_column = saved_col;
+    eof_reached = saved_eof;
+    
+    return peeked;
+}

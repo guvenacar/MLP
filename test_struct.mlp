@@ -1,0 +1,17 @@
+-- Test struct support in MLP
+
+struct Person then
+    string name;
+    int age;
+end
+
+struct Person p = Person();
+
+p.name = "Alice"
+p.age = 25
+
+print "Person details:"
+print p.name
+print p.age
+
+print "Struct test complete!"

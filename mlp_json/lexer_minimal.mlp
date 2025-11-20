@@ -1,0 +1,10 @@
+-- MLP JSON Lexer - Minimal Test
+
+-- Test JSON
+METIN json = "{\"name\": \"MLP\"}";
+SAYISAL len = STRING_UZUNLUK(json);
+
+YAZDIR "JSON: ";
+YAZDIR json;
+YAZDIR "Length: ";
+YAZDIR len;
