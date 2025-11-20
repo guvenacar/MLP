@@ -49,6 +49,28 @@ static int aktif_dongu_son_etiketi = -1;
 // Argüman register'ları (Linux x86-64 ABI)
 const char* arg_registerleri[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
+// --- Struct Metadata Yönetimi ---
+#define MAX_STRUCT_FIELDS 20
+#define MAX_STRUCTS 50
+
+typedef struct {
+    char* field_ad;
+    char* field_tip;
+    int offset;  // Struct başından itibaren byte offset
+    int size;    // Field boyutu (byte)
+} StructFieldInfo;
+
+typedef struct {
+    char* struct_ad;
+    int field_sayisi;
+    StructFieldInfo fields[MAX_STRUCT_FIELDS];
+    int total_size;  // Toplam struct boyutu (byte)
+} StructMetadata;
+
+// Global struct metadata tablosu
+StructMetadata struct_metadata_table[MAX_STRUCTS];
+int struct_metadata_count = 0;
+
 // Kapsam Yönetim Fonksiyonları
 
 // Kapsam haritasında strdup ile ayrılmış belleği temizler
@@ -105,6 +127,60 @@ void kapsam_cik() {
     kapsam_yigin_ofseti = scope_stack_offsets[current_scope_level];
 }
 
+// --- Struct Metadata Helper Fonksiyonları ---
+
+// Field tipine göre byte cinsinden boyut döndürür
+int get_field_size(const char* tip) {
+    // Basitleştirilmiş: Tüm tipler 8 byte (pointer veya int64)
+    // string -> pointer (8 byte)
+    // int -> int64 (8 byte)
+    // bool -> int64 (8 byte)
+    return 8;
+}
+
+// Struct tanımını metadata tablosuna kaydeder
+void register_struct_metadata(char* struct_ad, Token** field_tipleri, Token** field_adlari, int field_sayisi) {
+    if (struct_metadata_count >= MAX_STRUCTS) {
+        fprintf(stderr, "HATA [Generator]: Maksimum struct sayısı aşıldı!\n");
+        exit(1);
+    }
+
+    StructMetadata* meta = &struct_metadata_table[struct_metadata_count++];
+    meta->struct_ad = strdup(struct_ad);
+    meta->field_sayisi = field_sayisi;
+
+    int current_offset = 0;
+    for (int i = 0; i < field_sayisi; i++) {
+        meta->fields[i].field_ad = strdup(field_adlari[i]->value);
+        meta->fields[i].field_tip = strdup(field_tipleri[i]->value);
+        meta->fields[i].offset = current_offset;
+        meta->fields[i].size = get_field_size(field_tipleri[i]->value);
+        current_offset += meta->fields[i].size;
+    }
+
+    meta->total_size = current_offset;
+}
+
+// Struct adına göre metadata bulur (NULL if not found)
+StructMetadata* find_struct_metadata(const char* struct_ad) {
+    for (int i = 0; i < struct_metadata_count; i++) {
+        if (strcmp(struct_metadata_table[i].struct_ad, struct_ad) == 0) {
+            return &struct_metadata_table[i];
+        }
+    }
+    return NULL;
+}
+
+// Struct içinde field bulur (NULL if not found)
+StructFieldInfo* find_field_in_struct(StructMetadata* meta, const char* field_ad) {
+    for (int i = 0; i < meta->field_sayisi; i++) {
+        if (strcmp(meta->fields[i].field_ad, field_ad) == 0) {
+            return &meta->fields[i];
+        }
+    }
+    return NULL;
+}
+
 // Değişkeni kaydeder ve yığındaki adresini döndürür
 char* kapsam_degisken_yer_ayir(const char* ad, const char* tip) {
     kapsam_yigin_ofseti += 8; // Yığında 8 byte (64-bit) yer aç
@@ -133,6 +209,16 @@ char* kapsam_degisken_adresi_bul(const char* ad) {
 
     fprintf(stderr, "HATA [Generator]: Tanımsız değişken: %s\n", ad);
     exit(1);
+}
+
+// Bir değişkenin tam bilgisini (Degisken pointer) bulur
+Degisken* kapsam_degisken_bul(const char* ad) {
+    for (int i = kapsam_degisken_sayisi - 1; i >= 0; i--) {
+        if (strcmp(kapsam_haritasi[i].ad, ad) == 0) {
+            return &kapsam_haritasi[i];
+        }
+    }
+    return NULL;  // Bulunamadı
 }
 
 // Bir değişkenin tipini bulur
@@ -237,6 +323,13 @@ void visit_StructTanimlama(ASTNode* node); // İleri bildirim
 void visit_StructFieldAccess(ASTNode* node); // İleri bildirim
 void visit_StructFieldAtama(ASTNode* node); // İleri bildirim
 void visit_StructDegisken(ASTNode* node); // İleri bildirim
+
+// Phase 2: List visitor forward declarations
+void visit_ListTanimlama(ASTNode* node);
+void visit_ListAdd(ASTNode* node);
+void visit_ListGet(ASTNode* node);
+void visit_ListSize(ASTNode* node);
+void visit_ListClear(ASTNode* node);
 
 void visit_Blok(ASTNode* node) {
     // Blok içindeki her komutu ziyaret et
@@ -973,20 +1066,28 @@ void visit_ArrayAtama(ASTNode* node) {
 void visit_StructTanimlama(ASTNode* node) {
     char* struct_adi = node->struct_tanimlama_data.ad->value;
     int field_sayisi = node->struct_tanimlama_data.field_sayisi;
+    Token** field_tipleri = node->struct_tanimlama_data.field_tipleri;
+    Token** field_adlari = node->struct_tanimlama_data.field_adlari;
     char buffer[256];
 
     sprintf(buffer, "    ; --- Struct Tanımlama: %s (%d fields) ---", struct_adi, field_sayisi);
     asm_append(&text_section, buffer);
 
-    // Struct layout bilgisi (şimdilik sadece comment olarak)
-    for (int i = 0; i < field_sayisi; i++) {
-        char* field_ad = node->struct_tanimlama_data.field_adlari[i]->value;
-        sprintf(buffer, "    ; Field %d: %s (offset %d)", i, field_ad, i * 8);
+    // Struct metadata'yı kaydet
+    register_struct_metadata(struct_adi, field_tipleri, field_adlari, field_sayisi);
+
+    // Metadata'dan bilgi al ve comment olarak yaz
+    StructMetadata* meta = find_struct_metadata(struct_adi);
+    if (meta) {
+        for (int i = 0; i < field_sayisi; i++) {
+            sprintf(buffer, "    ; Field %d: %s %s (offset %d, size %d)",
+                    i, meta->fields[i].field_tip, meta->fields[i].field_ad,
+                    meta->fields[i].offset, meta->fields[i].size);
+            asm_append(&text_section, buffer);
+        }
+        sprintf(buffer, "    ; Total size: %d bytes", meta->total_size);
         asm_append(&text_section, buffer);
     }
-
-    // TODO: Global struct metadata tablosu oluştur
-    // Şimdilik sadece parse ediyoruz, runtime'da kullanmıyoruz
 }
 
 // Struct Field Access - p.x (değeri RAX'e yükle)
@@ -998,14 +1099,48 @@ void visit_StructFieldAccess(ASTNode* node) {
     sprintf(buffer, "    ; --- Struct Field Access: %s.%s ---", struct_ad, field_ad);
     asm_append(&text_section, buffer);
 
-    // TODO: Gerçek struct layout'dan offset bul
-    // Şimdilik basit: field index'e göre offset hesapla
-    // Bu örnek için: her field 8 byte, offset = index * 8
-    // Gerçek implementasyonda struct metadata tablosundan bakmalı
+    // Struct değişkenin base adresini bul
+    Degisken* var = kapsam_degisken_bul(struct_ad);
+    if (!var) {
+        sprintf(buffer, "    ; ERROR: Değişken '%s' bulunamadı!", struct_ad);
+        asm_append(&text_section, buffer);
+        fprintf(stderr, "HATA [Generator]: Değişken '%s' bulunamadı!\n", struct_ad);
+        asm_append(&text_section, "    mov rax, 0  ; Error placeholder");
+        return;
+    }
 
-    sprintf(buffer, "    ; WARNING: Struct field access henüz tam desteklenmiyor");
+    // Struct tipinin metadata'sını bul
+    StructMetadata* meta = find_struct_metadata(var->tip);
+    if (!meta) {
+        sprintf(buffer, "    ; ERROR: Struct tipi '%s' bulunamadı!", var->tip);
+        asm_append(&text_section, buffer);
+        fprintf(stderr, "HATA [Generator]: Struct tipi '%s' bulunamadı!\n", var->tip);
+        asm_append(&text_section, "    mov rax, 0  ; Error placeholder");
+        return;
+    }
+
+    // Field'ı metadata'da bul
+    StructFieldInfo* field = find_field_in_struct(meta, field_ad);
+    if (!field) {
+        sprintf(buffer, "    ; ERROR: Field '%s' struct '%s' içinde bulunamadı!", field_ad, var->tip);
+        asm_append(&text_section, buffer);
+        fprintf(stderr, "HATA [Generator]: Field '%s' struct '%s' içinde bulunamadı!\n", field_ad, var->tip);
+        asm_append(&text_section, "    mov rax, 0  ; Error placeholder");
+        return;
+    }
+
+    // Base adres + offset hesapla ve değeri RAX'e yükle
+    sprintf(buffer, "    ; Struct base: %s, field offset: %d", var->asm_adresi, field->offset);
     asm_append(&text_section, buffer);
-    asm_append(&text_section, "    mov rax, 0  ; Placeholder");
+
+    // Base adresinden offset kadar ilerideki değeri RAX'e yükle
+    // var->asm_adresi = "[rbp-X]", field offset ekleyerek "[rbp-X+offset]" elde et
+    int base_offset;
+    sscanf(var->asm_adresi, "[rbp-%d]", &base_offset);
+    int actual_offset = base_offset - field->offset;  // Stack aşağı doğru büyür
+
+    sprintf(buffer, "    mov rax, [rbp-%d]  ; Load %s.%s", actual_offset, struct_ad, field_ad);
+    asm_append(&text_section, buffer);
 }
 
 // Struct Field Atama - p.x = 10
@@ -1017,15 +1152,50 @@ void visit_StructFieldAtama(ASTNode* node) {
     sprintf(buffer, "    ; --- Struct Field Atama: %s.%s ---", struct_ad, field_ad);
     asm_append(&text_section, buffer);
 
-    // Değeri hesapla
+    // Struct değişkenin base adresini bul
+    Degisken* var = kapsam_degisken_bul(struct_ad);
+    if (!var) {
+        sprintf(buffer, "    ; ERROR: Değişken '%s' bulunamadı!", struct_ad);
+        asm_append(&text_section, buffer);
+        fprintf(stderr, "HATA [Generator]: Değişken '%s' bulunamadı!\n", struct_ad);
+        return;
+    }
+
+    // Struct tipinin metadata'sını bul
+    StructMetadata* meta = find_struct_metadata(var->tip);
+    if (!meta) {
+        sprintf(buffer, "    ; ERROR: Struct tipi '%s' bulunamadı!", var->tip);
+        asm_append(&text_section, buffer);
+        fprintf(stderr, "HATA [Generator]: Struct tipi '%s' bulunamadı!\n", var->tip);
+        return;
+    }
+
+    // Field'ı metadata'da bul
+    StructFieldInfo* field = find_field_in_struct(meta, field_ad);
+    if (!field) {
+        sprintf(buffer, "    ; ERROR: Field '%s' struct '%s' içinde bulunamadı!", field_ad, var->tip);
+        asm_append(&text_section, buffer);
+        fprintf(stderr, "HATA [Generator]: Field '%s' struct '%s' içinde bulunamadı!\n", field_ad, var->tip);
+        return;
+    }
+
+    // Sağ taraftaki değeri hesapla (sonuç RAX'e gelir)
     visit(node->struct_field_atama_data.deger);
 
-    // TODO: Gerçek struct base + offset hesapla
-    sprintf(buffer, "    ; WARNING: Struct field atama henüz tam desteklenmiyor");
+    // Base adres + offset hesapla ve RAX'teki değeri yaz
+    sprintf(buffer, "    ; Struct base: %s, field offset: %d", var->asm_adresi, field->offset);
+    asm_append(&text_section, buffer);
+
+    // Base adresinden offset kadar ilerideki memory'ye RAX'i yaz
+    int base_offset;
+    sscanf(var->asm_adresi, "[rbp-%d]", &base_offset);
+    int actual_offset = base_offset - field->offset;  // Stack aşağı doğru büyür
+
+    sprintf(buffer, "    mov [rbp-%d], rax  ; Store to %s.%s", actual_offset, struct_ad, field_ad);
     asm_append(&text_section, buffer);
 }
 
-// Struct Değişken - Nokta p;
+// Struct Değişken - Person p;
 void visit_StructDegisken(ASTNode* node) {
     char* struct_tip = node->struct_degisken_data.struct_tip->value;
     char* degisken_ad = node->struct_degisken_data.ad->value;
@@ -1034,10 +1204,133 @@ void visit_StructDegisken(ASTNode* node) {
     sprintf(buffer, "    ; --- Struct Değişken: %s %s ---", struct_tip, degisken_ad);
     asm_append(&text_section, buffer);
 
-    // TODO: Stack'te veya global'de yer ayır
-    // Struct boyutu = field_sayisi * 8
-    sprintf(buffer, "    ; WARNING: Struct değişken tanımlama henüz tam desteklenmiyor");
+    // Struct metadata'yı bul
+    StructMetadata* meta = find_struct_metadata(struct_tip);
+    if (!meta) {
+        sprintf(buffer, "    ; ERROR: Struct '%s' tanımlı değil!", struct_tip);
+        asm_append(&text_section, buffer);
+        fprintf(stderr, "HATA [Generator]: Struct '%s' tanımlı değil!\n", struct_tip);
+        return;
+    }
+
+    // Stack'te struct için yer ayır (total_size kadar)
+    // Her field için offset hesaplanmış, toplamda meta->total_size byte gerekli
+    kapsam_yigin_ofseti += meta->total_size;
+    char* adres = (char*)malloc(32);
+    sprintf(adres, "[rbp-%d]", kapsam_yigin_ofseti);
+
+    // Değişkeni scope'a kaydet (struct tipi ile)
+    Degisken* d = &kapsam_haritasi[kapsam_degisken_sayisi++];
+    d->ad = strdup(degisken_ad);
+    d->asm_adresi = strdup(adres);
+    d->tip = strdup(struct_tip);  // Tip olarak struct adını sakla
+    d->scope_level = current_scope_level;
+    d->is_global = false;
+
+    sprintf(buffer, "    ; Struct boyutu: %d bytes, stack adres: %s", meta->total_size, adres);
     asm_append(&text_section, buffer);
+
+    // Struct'ı sıfırla (opsiyonel, güvenlik için)
+    sprintf(buffer, "    ; Struct memory'yi sıfırla");
+    asm_append(&text_section, buffer);
+    for (int offset = 0; offset < meta->total_size; offset += 8) {
+        sprintf(buffer, "    mov qword [rbp-%d], 0", kapsam_yigin_ofseti - offset);
+        asm_append(&text_section, buffer);
+    }
+
+    free(adres);
+}
+
+// ===== Phase 2: List Visitor Functions =====
+
+void visit_ListTanimlama(ASTNode* node) {
+    char* element_tip = node->list_tanimlama_data.element_tipi->value;
+    char* degisken_adi = node->list_tanimlama_data.degisken_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Tanımlama: list[%s] %s ---", element_tip, degisken_adi);
+    asm_append(&text_section, buffer);
+
+    // Call list_create()
+    asm_append(&text_section, "    call list_create");
+    asm_append(&text_section, "    ; RAX now contains List pointer");
+
+    // Store List pointer in variable
+    char* adres = kapsam_degisken_yer_ayir(degisken_adi, "List");
+    sprintf(buffer, "    mov %s, rax  ; Store List* in %s", adres, degisken_adi);
+    asm_append(&text_section, buffer);
+}
+
+void visit_ListAdd(ASTNode* node) {
+    char* list_adi = node->list_add_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Add: %s.add(value) ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate value expression (result in RAX)
+    visit(node->list_add_data.deger);
+    asm_append(&text_section, "    push rax  ; Save value for list_add");
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load value to rsi");
+    asm_append(&text_section, "    call list_add");
+}
+
+void visit_ListGet(ASTNode* node) {
+    char* list_adi = node->list_get_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Get: %s.get(index) ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate index expression (result in RAX)
+    visit(node->list_get_data.indeks);
+    asm_append(&text_section, "    push rax  ; Save index");
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load index to rsi (as int)");
+    asm_append(&text_section, "    call list_get");
+    asm_append(&text_section, "    ; RAX now contains element value");
+}
+
+void visit_ListSize(ASTNode* node) {
+    char* list_adi = node->list_size_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Size: %s.size() ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    call list_size");
+    asm_append(&text_section, "    ; RAX now contains size");
+}
+
+void visit_ListClear(ASTNode* node) {
+    char* list_adi = node->list_clear_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Clear: %s.clear() ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    call list_clear");
 }
 
 void visit_DonusKomutu(ASTNode* node) {
@@ -1233,6 +1526,27 @@ void visit(ASTNode* node) {
         // Struct Değişken
         case AST_STRUCT_DEGISKEN:
             visit_StructDegisken(node);
+            break;
+
+        // Phase 2: Dynamic Lists
+        case AST_LIST_TANIMLAMA:
+            visit_ListTanimlama(node);
+            break;
+
+        case AST_LIST_ADD:
+            visit_ListAdd(node);
+            break;
+
+        case AST_LIST_GET:
+            visit_ListGet(node);
+            break;
+
+        case AST_LIST_SIZE:
+            visit_ListSize(node);
+            break;
+
+        case AST_LIST_CLEAR:
+            visit_ListClear(node);
             break;
 
         default:

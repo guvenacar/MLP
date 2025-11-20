@@ -539,3 +539,199 @@ char* kodu_karaktere(int64_t kod) {
     return sonuc;
 }
 
+// ============================================================================
+// DYNAMIC LIST IMPLEMENTATION - Phase 2
+// ============================================================================
+
+/**
+ * List - Dynamic, growable array structure
+ *
+ * Memory layout:
+ *   - data: Array of pointers (grows with realloc)
+ *   - size: Current number of elements
+ *   - capacity: Allocated capacity
+ *   - element_size: Size of each element (always 8 bytes for pointers)
+ */
+typedef struct {
+    void** data;        // Generic pointer array
+    int size;           // Current number of elements
+    int capacity;       // Allocated capacity
+    int element_size;   // Size of each element (8 bytes)
+} List;
+
+#define LIST_INITIAL_CAPACITY 8
+#define LIST_GROWTH_FACTOR 2
+
+/**
+ * list_create - Creates a new empty list
+ * @return: Pointer to new List, or NULL on error
+ *
+ * MLP Usage: list[int] numbers = list();
+ */
+List* list_create() {
+    List* list = (List*)malloc(sizeof(List));
+    if (list == NULL) {
+        fprintf(stderr, "HATA [list_create]: Hafıza ayırma hatası\n");
+        return NULL;
+    }
+
+    list->data = (void**)malloc(LIST_INITIAL_CAPACITY * sizeof(void*));
+    if (list->data == NULL) {
+        fprintf(stderr, "HATA [list_create]: Data array hafıza hatası\n");
+        free(list);
+        return NULL;
+    }
+
+    list->size = 0;
+    list->capacity = LIST_INITIAL_CAPACITY;
+    list->element_size = 8;  // 64-bit pointers
+
+    return list;
+}
+
+/**
+ * list_destroy - Frees list memory
+ * @param list: List to destroy
+ *
+ * NOTE: Does NOT free the elements themselves (user's responsibility)
+ */
+void list_destroy(List* list) {
+    if (list == NULL) return;
+
+    if (list->data != NULL) {
+        free(list->data);
+    }
+    free(list);
+}
+
+/**
+ * list_grow - Internal function to grow list capacity
+ * @param list: List to grow
+ * @return: 0 on success, -1 on error
+ */
+static int list_grow(List* list) {
+    int new_capacity = list->capacity * LIST_GROWTH_FACTOR;
+    void** new_data = (void**)realloc(list->data, new_capacity * sizeof(void*));
+
+    if (new_data == NULL) {
+        fprintf(stderr, "HATA [list_grow]: realloc hatası (capacity: %d -> %d)\n",
+                list->capacity, new_capacity);
+        return -1;
+    }
+
+    list->data = new_data;
+    list->capacity = new_capacity;
+    return 0;
+}
+
+/**
+ * list_add - Appends element to end of list
+ * @param list: Target list
+ * @param element: Element to add (pointer/integer as void*)
+ * @return: 0 on success, -1 on error
+ *
+ * MLP Usage: numbers.add(10)
+ */
+int list_add(List* list, void* element) {
+    if (list == NULL) {
+        fprintf(stderr, "HATA [list_add]: NULL list\n");
+        return -1;
+    }
+
+    // Grow if needed
+    if (list->size >= list->capacity) {
+        if (list_grow(list) != 0) {
+            return -1;
+        }
+    }
+
+    list->data[list->size] = element;
+    list->size++;
+    return 0;
+}
+
+/**
+ * list_get - Gets element at index
+ * @param list: Source list
+ * @param index: Index to access
+ * @return: Element at index, or NULL on error
+ *
+ * MLP Usage: int x = numbers.get(0)
+ */
+void* list_get(List* list, int index) {
+    if (list == NULL) {
+        fprintf(stderr, "HATA [list_get]: NULL list\n");
+        return NULL;
+    }
+
+    if (index < 0 || index >= list->size) {
+        fprintf(stderr, "HATA [list_get]: Index out of bounds (index: %d, size: %d)\n",
+                index, list->size);
+        return NULL;
+    }
+
+    return list->data[index];
+}
+
+/**
+ * list_size - Gets number of elements in list
+ * @param list: Source list
+ * @return: Number of elements, or -1 on error
+ *
+ * MLP Usage: int count = numbers.size()
+ */
+int list_size(List* list) {
+    if (list == NULL) {
+        fprintf(stderr, "HATA [list_size]: NULL list\n");
+        return -1;
+    }
+
+    return list->size;
+}
+
+/**
+ * list_clear - Removes all elements from list
+ * @param list: List to clear
+ *
+ * NOTE: Keeps allocated capacity (doesn't shrink)
+ * MLP Usage: numbers.clear()
+ */
+void list_clear(List* list) {
+    if (list == NULL) {
+        fprintf(stderr, "HATA [list_clear]: NULL list\n");
+        return;
+    }
+
+    list->size = 0;
+    // Keep capacity and data array allocated
+}
+
+/**
+ * list_remove - Removes element at index (shifts remaining elements)
+ * @param list: Target list
+ * @param index: Index to remove
+ * @return: 0 on success, -1 on error
+ *
+ * MLP Usage: numbers.remove(2)  // Future feature
+ */
+int list_remove(List* list, int index) {
+    if (list == NULL) {
+        fprintf(stderr, "HATA [list_remove]: NULL list\n");
+        return -1;
+    }
+
+    if (index < 0 || index >= list->size) {
+        fprintf(stderr, "HATA [list_remove]: Index out of bounds (index: %d, size: %d)\n",
+                index, list->size);
+        return -1;
+    }
+
+    // Shift elements left
+    for (int i = index; i < list->size - 1; i++) {
+        list->data[i] = list->data[i + 1];
+    }
+
+    list->size--;
+    return 0;
+}
+
