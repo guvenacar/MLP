@@ -1,0 +1,167 @@
+-- MLP JSON Lexer Demo
+-- Demonstrates that MLP can parse JSON without regex/HPL
+
+-- Token types
+int TOKEN_LBRACE = 1
+int TOKEN_RBRACE = 2
+int TOKEN_LBRACKET = 3
+int TOKEN_RBRACKET = 4
+int TOKEN_COLON = 5
+int TOKEN_COMMA = 6
+int TOKEN_STRING = 7
+int TOKEN_NUMBER = 8
+int TOKEN_TRUE = 9
+int TOKEN_FALSE = 10
+int TOKEN_NULL = 11
+
+function skip_whitespace(text, pos) then
+    int len = string_length(text)
+
+    while pos < len
+        int code = char_code(substring(text, pos, pos + 1))
+        -- space, tab, newline, carriage return
+        if code = 32 then
+            pos = pos + 1
+        else if code = 9 then
+            pos = pos + 1
+        else if code = 10 then
+            pos = pos + 1
+        else if code = 13 then
+            pos = pos + 1
+        else
+            return pos
+        end if
+    end while
+
+    return pos
+end function
+
+function is_digit(char) then
+    int code = char_code(char)
+    if code >= 48 then
+        if code <= 57 then
+            return 1
+        end if
+    end if
+    return 0
+end function
+
+function tokenize_json(text) then
+    int pos = 0
+    int len = string_length(text)
+
+    print "=== JSON Lexer Demo ==="
+    print ""
+    print "Input JSON:"
+    print text
+    print ""
+    print "Tokens:"
+    print "--------"
+
+    while pos < len
+        -- Skip whitespace
+        pos = skip_whitespace(text, pos)
+        if pos >= len then
+            return 0
+        end if
+
+        string char = substring(text, pos, pos + 1)
+        int code = char_code(char)
+
+        -- Single character tokens
+        if char = "{" then
+            print "LBRACE at position " + pos
+            pos = pos + 1
+        else if char = "}" then
+            print "RBRACE at position " + pos
+            pos = pos + 1
+        else if char = "[" then
+            print "LBRACKET at position " + pos
+            pos = pos + 1
+        else if char = "]" then
+            print "RBRACKET at position " + pos
+            pos = pos + 1
+        else if char = ":" then
+            print "COLON at position " + pos
+            pos = pos + 1
+        else if char = "," then
+            print "COMMA at position " + pos
+            pos = pos + 1
+
+        -- String literal
+        else if char = "\"" then
+            int start = pos
+            pos = pos + 1
+
+            -- Find closing quote
+            while pos < len
+                string c = substring(text, pos, pos + 1)
+                if c = "\"" then
+                    pos = pos + 1
+                    string value = substring(text, start + 1, pos - 1)
+                    print "STRING: \"" + value + "\" at position " + start
+                    break
+                end if
+                pos = pos + 1
+            end while
+
+        -- Number
+        else if is_digit(char) = 1 then
+            int start = pos
+            while pos < len
+                string c = substring(text, pos, pos + 1)
+                if is_digit(c) = 0 then
+                    break
+                end if
+                pos = pos + 1
+            end while
+            string value = substring(text, start, pos)
+            print "NUMBER: " + value + " at position " + start
+
+        -- Keywords
+        else if char = "t" then
+            -- Check for "true"
+            if pos + 4 <= len then
+                string word = substring(text, pos, pos + 4)
+                if word = "true" then
+                    print "TRUE at position " + pos
+                    pos = pos + 4
+                end if
+            end if
+
+        else if char = "f" then
+            -- Check for "false"
+            if pos + 5 <= len then
+                string word = substring(text, pos, pos + 5)
+                if word = "false" then
+                    print "FALSE at position " + pos
+                    pos = pos + 5
+                end if
+            end if
+
+        else if char = "n" then
+            -- Check for "null"
+            if pos + 4 <= len then
+                string word = substring(text, pos, pos + 4)
+                if word = "null" then
+                    print "NULL at position " + pos
+                    pos = pos + 4
+                end if
+            end if
+
+        else
+            print "Unknown character: " + char
+            pos = pos + 1
+        end if
+    end while
+
+    print "--------"
+    print "Tokenization complete!"
+
+    return 0
+end function
+
+-- Test with sample JSON
+string json = "{\"name\": \"MLP\", \"version\": 3, \"ready\": true}"
+
+int result = tokenize_json(json)

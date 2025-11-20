@@ -1,0 +1,31 @@
+-- JSON Parsing Concept Demo (Simplified)
+-- Shows that MLP can tokenize without regex
+
+function tokenize_simple() then
+    string input = "name"
+    int pos = 0
+    int len = string_length(input)
+
+    print "=== Simple Tokenizer Demo ==="
+    print "Input: name"
+    print ""
+
+    -- Character by character processing
+    while pos < len
+        string ch = substring(input, pos, pos + 1)
+        int code = char_code(ch)
+
+        print ch
+        print code
+
+        pos = pos + 1
+    end while
+
+    print "Done! This is how JSON parsing works"
+    print "No regex needed"
+    print "Just character by character processing"
+
+    return 0
+end function
+
+int result = tokenize_simple()
