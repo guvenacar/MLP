@@ -124,6 +124,26 @@ KeywordMap keywords[] = {
     {"string_index_of",      TOKEN_BUILTIN_STRING_INDEX_OF},
     {"string_last_index_of", TOKEN_BUILTIN_STRING_LAST_INDEX_OF},
 
+    // Phase 5.2: Error Handling
+    {"exit_with_code",       TOKEN_BUILTIN_EXIT_WITH_CODE},
+    {"panic",                TOKEN_BUILTIN_PANIC},
+    {"assert",               TOKEN_BUILTIN_ASSERT},
+    {"get_error_code",       TOKEN_BUILTIN_GET_ERROR_CODE},
+    {"set_error_code",       TOKEN_BUILTIN_SET_ERROR_CODE},
+
+    // Phase 5.2: Memory Management
+    {"mlp_malloc",           TOKEN_BUILTIN_MLP_MALLOC},
+    {"mlp_free",             TOKEN_BUILTIN_MLP_FREE},
+    {"mlp_realloc",          TOKEN_BUILTIN_MLP_REALLOC},
+    {"mlp_calloc",           TOKEN_BUILTIN_MLP_CALLOC},
+    {"get_allocated_bytes",  TOKEN_BUILTIN_GET_ALLOCATED_BYTES},
+    {"check_memory_leaks",   TOKEN_BUILTIN_CHECK_MEMORY_LEAKS},
+
+    // Phase 5.2: System Utilities
+    {"get_env",              TOKEN_BUILTIN_GET_ENV},
+    {"current_timestamp",    TOKEN_BUILTIN_CURRENT_TIMESTAMP},
+    {"sleep_ms",             TOKEN_BUILTIN_SLEEP_MS},
+
     // Phase 4: Hash Map
     {"map", TOKEN_YAPI_MAP},
 
