@@ -18,8 +18,8 @@ MLP (Multi-Language Programming) is a self-hosting compiler that supports keywor
 | **Phase 1** | Multi-Language | ✅ Complete | 100% |
 | **Phase 2** | Lists | ✅ Complete | 100% |
 | **Phase 3** | File I/O & Strings & Hash Maps | ✅ Complete | 100% |
-| **Phase 4** | Advanced Features | 🔄 In Progress | 90% |
-| **Phase 5** | Self-Hosting Preparation | 📋 Planned | 0% |
+| **Phase 4** | Advanced Features | ✅ Complete | 100% |
+| **Phase 5** | Self-Hosting Preparation | 🔄 In Progress | 0% |
 | **Phase 6** | Self-Hosting Compiler | 📋 Planned | 0% |
 | **Phase 7** | Optimization & Refinement | 📋 Planned | 0% |
 
