@@ -23,50 +23,62 @@ print numbers[0]  -- Works!
 - **Code Generation:** ✅ Full assembly support
 - **Test File:** `test_array.mlp` compiles successfully
 
-**2. Structs - PARTIAL (Definition Only)**
+**2. Structs - WORKING (Instance Creation Implemented!)**
 ```mlp
 struct Person then
     string name;
     int age;
 end
--- Works! But cannot create instances yet
+
+Person p;  -- ✅ Works now!
+p.age = 25  -- ⚠️ Compiles with warnings
+p.name = "Alice"  -- ⚠️ Compiles with warnings
 ```
 
 - **Definition:** ✅ `struct Name then ... end`
 - **Fields:** ✅ Multiple typed fields
-- **Instance Creation:** ❌ **BLOCKED** - Not implemented
-- **Field Access:** ❓ Untested (blocked on instance creation)
-- **Test File:** `test_struct_simple.mlp` compiles
+- **Instance Creation:** ✅ `StructName varName;` - **NOW WORKING!**
+- **Field Access:** ⚠️ Compiles but not fully implemented in codegen
+- **Field Assignment:** ⚠️ Compiles but not fully implemented in codegen
+- **Test Files:** `test_struct_instance.mlp`, `test_struct_complete.mlp`
 
 ---
 
 ## ❌ What's Missing
 
-### 1. Struct Instance Creation (HIGH PRIORITY)
+### 1. Struct Field Operations (HIGH PRIORITY) - **PARTIALLY DONE**
 
-**Problem:**
+**Current Status:**
 ```mlp
 struct Person then
     string name;
     int age;
 end
 
-Person p;  -- ❌ FAILS: Parser doesn't recognize this pattern
-p.name = "Alice"  -- ❌ Cannot test (no instance)
+Person p;  -- ✅ NOW WORKS! (commit c222693)
+p.name = "Alice"  -- ⚠️ Compiles with warnings (codegen incomplete)
+print p.age  -- ⚠️ Compiles with warnings (codegen incomplete)
 ```
 
-**Why it fails:**
-- Parser expects `IDENTIFIER IDENTIFIER SEMICOLON` pattern
-- Needs `peek_token()` function (not implemented)
-- TODO comment in `c_compiler/c_parser.c:504`
+**What's Implemented:**
+- ✅ Added `peekNextToken()` to lexer
+- ✅ Parser detects struct instance pattern
+- ✅ `createAST_StructDegisken()` called successfully
+- ✅ Basic compilation works
+
+**What's Missing:**
+- ❌ Code generator needs proper struct memory layout
+- ❌ Field offset calculations not implemented
+- ❌ Field access generates placeholder code
+- ❌ Field assignment generates placeholder code
 
 **Implementation Needed:**
-1. Add `peek_token()` to parser
-2. Modify `komut()` to detect struct instance pattern
-3. Call `createAST_StructDegisken()` (already exists!)
-4. Test field access and assignment
+1. Calculate struct field offsets in code generator
+2. Implement proper memory allocation for struct instances
+3. Generate correct assembly for field access
+4. Generate correct assembly for field assignment
 
-**Estimated Effort:** 2-3 hours
+**Estimated Effort:** 3-4 hours
 
 ### 2. Dynamic Lists (MEDIUM PRIORITY)
 
@@ -302,22 +314,29 @@ if (current_token->type == TOKEN_IDENTIFIER) {
 
 ## 🚀 Immediate Next Steps
 
-### Today/Tomorrow:
+### Completed (commit c222693):
 1. ✅ Test arrays (DONE - working!)
 2. ✅ Test struct definition (DONE - working!)
-3. ❌ Implement `peek_token()` or token lookahead
-4. ❌ Implement struct instance creation
-5. ❌ Test struct field operations
+3. ✅ Implement `peekNextToken()` for token lookahead
+4. ✅ Implement struct instance creation (DONE!)
+5. ✅ Test struct field operations (compiles with warnings)
+
+### Next (To Complete Structs):
+6. Implement field offset calculations in code generator
+7. Add proper struct memory allocation
+8. Complete field access code generation
+9. Complete field assignment code generation
+10. Test full struct operations end-to-end
 
 ### This Week:
-6. Design list API
-7. Begin list implementation
-8. Update SESSION_SUMMARY.md
+11. Design list API
+12. Begin list implementation
+13. Update SESSION_SUMMARY.md
 
 ### Next Week:
-9. Complete lists
-10. Begin dictionary implementation
-11. Test preprocessor use case
+14. Complete lists
+15. Begin dictionary implementation
+16. Test preprocessor use case
 
 ---
 
@@ -369,20 +388,23 @@ dict[string, int] ages
 ## 📚 References
 
 - **AST Nodes:** `c_compiler/c_ast.h`
-- **Parser:** `c_compiler/c_parser.c`
+- **Lexer:** `c_compiler/c_lexer.c`, `c_compiler/c_lexer.h`
+- **Parser:** `c_compiler/c_parser.c` (struct instance: line 502)
 - **Generator:** `c_compiler/c_generator.c`
-- **Tests:** `test_array.mlp`, `test_struct.mlp`, `test_struct_simple.mlp`
+- **Tests:** `test_array.mlp`, `test_struct_instance.mlp`, `test_struct_complete.mlp`
 - **Session Summary:** `SESSION_SUMMARY.md`
+- **Recent Commits:** `c222693` (struct instance creation)
 
 ---
 
 ## ✅ Success Criteria
 
-### Phase 1 Complete When:
-- [ ] Struct instances can be created
-- [ ] Struct fields can be accessed
-- [ ] Struct fields can be assigned
-- [ ] All tests pass
+### Phase 1 Progress (50% Complete):
+- [x] Struct instances can be created ✅ (commit c222693)
+- [x] Struct definition works ✅
+- [ ] Struct fields can be accessed (⚠️ compiles with warnings)
+- [ ] Struct fields can be assigned (⚠️ compiles with warnings)
+- [ ] All tests pass with proper output
 - [ ] Documentation updated
 
 ### Project Complete When:
@@ -396,5 +418,6 @@ dict[string, int] ages
 
 ---
 
-*Last Updated: November 20, 2025*
-*Status: Phase 1 in progress*
+*Last Updated: November 20, 2025 (Session 2)*
+*Status: Phase 1 - 50% complete (struct instances working!)*
+*Latest Commit: c222693*
