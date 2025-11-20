@@ -1,7 +1,7 @@
 # MLP API Reference
 
-**Version:** Phase 4
-**Last Updated:** November 20, 2025
+**Version:** Phase 5.1
+**Last Updated:** November 21, 2025
 
 ---
 
@@ -9,10 +9,12 @@
 
 | Category | Functions | Status |
 |----------|-----------|--------|
+| **Command-Line Args** | argc, argv | Phase 5.1 🔄 |
+| **Enhanced String Ops** | 4 new functions | Phase 5.1 🔄 |
 | **File I/O** | 6 functions | Phase 3 ✅ |
 | **String Ops** | 15 functions (6 existing + 9 new) | Phase 3 ✅ |
-| **Type Conversions** | 6 functions | Phase 4 🔄 |
-| **Math Operations** | 4 functions | Phase 4 🔄 |
+| **Type Conversions** | 6 functions | Phase 4 ✅ |
+| **Math Operations** | 4 functions | Phase 4 ✅ |
 | **Lists** | 7 functions | Phase 2 ✅ |
 | **Hash Maps** | 8 functions | Phase 3 ✅ |
 | **Structs** | Language feature | Phase 1 ✅ |
@@ -228,6 +230,137 @@ Restrict value to range.
 
 ---
 
+## 🎮 Command-Line Arguments (Phase 5.1) 🔄
+
+### argc / argv
+
+Access command-line arguments in the main function.
+
+**Syntax**:
+```mlp
+function main(argc, argv) then
+    -- argc is int: argument count
+    -- argv provides .get(index) to access arguments
+end
+```
+
+**Parameters**:
+- `argc` (int): Number of arguments (including program name)
+- `argv` (special): Argument vector with `.get(index)` method
+
+**Returns**:
+- `argc`: integer count
+- `argv.get(i)`: string at index i, or empty string if out of bounds
+
+**Example**:
+```mlp
+function main(argc, argv) then
+    int i = 0;
+    while i < argc then
+        string arg = argv.get(i);
+        print arg
+        i = i + 1
+    end
+end
+```
+
+**Notes**:
+- Index 0 is always the program name
+- Out-of-bounds access returns empty string (safe)
+- argc and argv only work as main() parameters
+
+---
+
+## 📝 Enhanced String Operations (Phase 5.1) 🔄
+
+### `string_length(str: string) -> int`
+
+Get the length of a string.
+
+**Parameters**:
+- `str`: Input string
+
+**Returns**: Length of string (number of characters)
+
+**Example**:
+```mlp
+string text = "Hello";
+int len = string_length(text);  -- 5
+```
+
+---
+
+### `string_substring(str: string, start: int, length: int) -> string`
+
+Extract a substring from a string.
+
+**Parameters**:
+- `str`: Input string
+- `start`: Start index (0-based)
+- `length`: Number of characters to extract
+
+**Returns**: New string containing substring
+
+**Example**:
+```mlp
+string text = "Hello World";
+string sub = string_substring(text, 0, 5);  -- "Hello"
+```
+
+**Notes**:
+- Returns empty string if start is out of bounds
+- Automatically truncates if length exceeds string
+- Safe for all input values
+
+---
+
+### `string_index_of(str: string, needle: string) -> int`
+
+Find the first occurrence of a substring.
+
+**Parameters**:
+- `str`: String to search in
+- `needle`: Substring to find
+
+**Returns**: Index of first occurrence, or -1 if not found
+
+**Example**:
+```mlp
+string text = "Hello World";
+int pos = string_index_of(text, "World");  -- 6
+int not_found = string_index_of(text, "xyz");  -- -1
+```
+
+**Notes**:
+- Case-sensitive search
+- Returns -1 if not found
+- 0-based indexing
+
+---
+
+### `string_last_index_of(str: string, needle: string) -> int`
+
+Find the last occurrence of a substring.
+
+**Parameters**:
+- `str`: String to search in
+- `needle`: Substring to find
+
+**Returns**: Index of last occurrence, or -1 if not found
+
+**Example**:
+```mlp
+string text = "Hello World Hello";
+int pos = string_last_index_of(text, "Hello");  -- 12
+```
+
+**Notes**:
+- Useful for finding file extensions, paths
+- Returns -1 if not found
+- 0-based indexing
+
+---
+
 ## 🏗️ Language Features
 
 ### Structs (Phase 1) ✅
@@ -286,6 +419,10 @@ int result = add(5, 3);
 ---
 
 ## 📖 See Also
+
+### Phase 5.1 Documentation
+- [docs/CMD_ARGS_DESIGN.md](docs/CMD_ARGS_DESIGN.md) - Command-line arguments specification
+- [docs/STRING_OPS_ENHANCED_DESIGN.md](docs/STRING_OPS_ENHANCED_DESIGN.md) - Enhanced string operations
 
 ### Phase 3 Documentation
 - [FILE_IO_DESIGN.md](FILE_IO_DESIGN.md) - File I/O specification
