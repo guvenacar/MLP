@@ -135,7 +135,8 @@ class LanguagePreprocessor:
                 continue
 
             # CODE state: check for word boundaries
-            if c in ' \t\n;(){}[]<>=!+-*/,':
+            # Note: '.' is included for method calls (e.g., list.add)
+            if c in ' \t\n;(){}[]<>=!+-*/,.':
                 if current_word:
                     word = ''.join(current_word)
                     # Translate if it's a keyword
