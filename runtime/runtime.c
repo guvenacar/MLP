@@ -6,6 +6,7 @@
 #include <unistd.h>  // readlink için
 #include <libgen.h>  // dirname için
 #include <errno.h>   // errno için
+#include <ctype.h>   // toupper, tolower için
 #include "json_parser.h"  // MLP Language definitions parser
 
 // Forward declarations
@@ -733,5 +734,370 @@ int list_remove(List* list, int index) {
 
     list->size--;
     return 0;
+}
+
+// ============================================
+// Phase 3: File I/O Operations
+// ============================================
+
+/**
+ * read_file - Read entire file into string
+ * @param path: File path
+ * @return: File contents or NULL on error
+ *
+ * MLP Usage: string content = read_file("program.mlp");
+ */
+char* read_file(const char* path) {
+    FILE* file = fopen(path, "r");
+    if (!file) {
+        fprintf(stderr, "HATA [read_file]: Cannot open file: %s\n", path);
+        return NULL;
+    }
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Allocate buffer
+    char* buffer = malloc(size + 1);
+    if (!buffer) {
+        fclose(file);
+        fprintf(stderr, "HATA [read_file]: Memory allocation failed\n");
+        return NULL;
+    }
+
+    // Read content
+    size_t read = fread(buffer, 1, size, file);
+    buffer[read] = '\0';
+
+    fclose(file);
+    return buffer;
+}
+
+/**
+ * write_file - Write string to file
+ * @param path: File path
+ * @param content: Content to write
+ * @return: 0 on success, -1 on error
+ *
+ * MLP Usage: int result = write_file("output.txt", content);
+ */
+int write_file(const char* path, const char* content) {
+    FILE* file = fopen(path, "w");
+    if (!file) {
+        fprintf(stderr, "HATA [write_file]: Cannot open file: %s\n", path);
+        return -1;
+    }
+
+    size_t len = strlen(content);
+    size_t written = fwrite(content, 1, len, file);
+
+    fclose(file);
+    return (written == len) ? 0 : -1;
+}
+
+/**
+ * append_file - Append string to file
+ * @param path: File path
+ * @param content: Content to append
+ * @return: 0 on success, -1 on error
+ *
+ * MLP Usage: int result = append_file("log.txt", "New entry\n");
+ */
+int append_file(const char* path, const char* content) {
+    FILE* file = fopen(path, "a");
+    if (!file) {
+        fprintf(stderr, "HATA [append_file]: Cannot open file: %s\n", path);
+        return -1;
+    }
+
+    size_t len = strlen(content);
+    size_t written = fwrite(content, 1, len, file);
+
+    fclose(file);
+    return (written == len) ? 0 : -1;
+}
+
+/**
+ * file_exists - Check if file exists
+ * @param path: File path
+ * @return: 1 if exists, 0 if not
+ *
+ * MLP Usage: int exists = file_exists("config.txt");
+ */
+int file_exists(const char* path) {
+    FILE* file = fopen(path, "r");
+    if (file) {
+        fclose(file);
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * file_size - Get file size in bytes
+ * @param path: File path
+ * @return: File size or -1 on error
+ *
+ * MLP Usage: int size = file_size("data.bin");
+ */
+long file_size(const char* path) {
+    FILE* file = fopen(path, "r");
+    if (!file) {
+        return -1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fclose(file);
+
+    return size;
+}
+
+/**
+ * read_lines - Read file as array of lines
+ * @param path: File path
+ * @param line_count: Output parameter for line count
+ * @return: Array of strings (lines) or NULL on error
+ *
+ * MLP Usage: list[string] lines = read_lines("file.txt");
+ * Note: This will be integrated with list[string] in future
+ */
+char** read_lines(const char* path, int* line_count) {
+    char* content = read_file(path);
+    if (!content) {
+        *line_count = 0;
+        return NULL;
+    }
+
+    // Count lines
+    int count = 1;
+    for (char* p = content; *p; p++) {
+        if (*p == '\n') count++;
+    }
+
+    // Allocate line array
+    char** lines = malloc(sizeof(char*) * count);
+    int line_idx = 0;
+    char* line_start = content;
+
+    // Split by newlines
+    for (char* p = content; *p; p++) {
+        if (*p == '\n') {
+            *p = '\0';
+            lines[line_idx++] = strdup(line_start);
+            line_start = p + 1;
+        }
+    }
+
+    // Last line (if no trailing newline)
+    if (*line_start) {
+        lines[line_idx++] = strdup(line_start);
+    }
+
+    free(content);
+    *line_count = line_idx;
+    return lines;
+}
+
+// ============================================
+// Phase 3: String Operations
+// ============================================
+
+/**
+ * string_split - Split string by delimiter
+ * @param str: String to split
+ * @param delim: Delimiter
+ * @param count: Output parameter for part count
+ * @return: Array of strings
+ *
+ * MLP Usage: list[string] parts = string_split("a,b,c", ",");
+ */
+char** string_split(const char* str, const char* delim, int* count) {
+    char* copy = strdup(str);
+    int capacity = 10;
+    char** parts = malloc(sizeof(char*) * capacity);
+    *count = 0;
+
+    char* token = strtok(copy, delim);
+    while (token) {
+        if (*count >= capacity) {
+            capacity *= 2;
+            parts = realloc(parts, sizeof(char*) * capacity);
+        }
+        parts[(*count)++] = strdup(token);
+        token = strtok(NULL, delim);
+    }
+
+    free(copy);
+    return parts;
+}
+
+/**
+ * string_join - Join strings with delimiter
+ * @param parts: Array of strings
+ * @param count: Number of strings
+ * @param delim: Delimiter
+ * @return: Joined string
+ *
+ * MLP Usage: string result = string_join(parts, "-");
+ */
+char* string_join(char** parts, int count, const char* delim) {
+    if (count == 0) return strdup("");
+
+    // Calculate total length
+    size_t total_len = 0;
+    size_t delim_len = strlen(delim);
+
+    for (int i = 0; i < count; i++) {
+        total_len += strlen(parts[i]);
+        if (i < count - 1) total_len += delim_len;
+    }
+
+    // Allocate buffer
+    char* result = malloc(total_len + 1);
+    result[0] = '\0';
+
+    // Join parts
+    for (int i = 0; i < count; i++) {
+        strcat(result, parts[i]);
+        if (i < count - 1) strcat(result, delim);
+    }
+
+    return result;
+}
+
+/**
+ * string_replace - Replace all occurrences of substring
+ * @param str: Original string
+ * @param old: Substring to replace
+ * @param new: Replacement string
+ * @return: New string with replacements
+ *
+ * MLP Usage: string result = string_replace("hello world", "world", "MLP");
+ */
+char* string_replace(const char* str, const char* old, const char* new) {
+    char* result;
+    int i, count = 0;
+    size_t new_len = strlen(new);
+    size_t old_len = strlen(old);
+
+    // Count occurrences
+    for (i = 0; str[i] != '\0'; i++) {
+        if (strstr(&str[i], old) == &str[i]) {
+            count++;
+            i += old_len - 1;
+        }
+    }
+
+    // Allocate result
+    result = malloc(i + count * (new_len - old_len) + 1);
+
+    // Replace
+    i = 0;
+    while (*str) {
+        if (strstr(str, old) == str) {
+            strcpy(&result[i], new);
+            i += new_len;
+            str += old_len;
+        } else {
+            result[i++] = *str++;
+        }
+    }
+
+    result[i] = '\0';
+    return result;
+}
+
+/**
+ * string_trim - Remove leading and trailing whitespace
+ * @param str: String to trim
+ * @return: Trimmed string
+ *
+ * MLP Usage: string trimmed = string_trim("  hello  ");
+ */
+char* string_trim(const char* str) {
+    while (isspace(*str)) str++;
+    if (*str == '\0') return strdup("");
+
+    const char* end = str + strlen(str) - 1;
+    while (end > str && isspace(*end)) end--;
+
+    size_t len = end - str + 1;
+    char* result = malloc(len + 1);
+    memcpy(result, str, len);
+    result[len] = '\0';
+    return result;
+}
+
+/**
+ * string_upper - Convert string to uppercase
+ * @param str: String to convert
+ * @return: Uppercase string
+ *
+ * MLP Usage: string upper = string_upper("hello");
+ */
+char* string_upper(const char* str) {
+    char* result = strdup(str);
+    for (char* p = result; *p; p++) {
+        *p = toupper((unsigned char)*p);
+    }
+    return result;
+}
+
+/**
+ * string_lower - Convert string to lowercase
+ * @param str: String to convert
+ * @return: Lowercase string
+ *
+ * MLP Usage: string lower = string_lower("HELLO");
+ */
+char* string_lower(const char* str) {
+    char* result = strdup(str);
+    for (char* p = result; *p; p++) {
+        *p = tolower((unsigned char)*p);
+    }
+    return result;
+}
+
+/**
+ * string_find - Find first occurrence of substring
+ * @param str: String to search in
+ * @param needle: Substring to find
+ * @return: Index of first occurrence, or -1 if not found
+ *
+ * MLP Usage: int pos = string_find("hello world", "world");
+ */
+int string_find(const char* str, const char* needle) {
+    const char* pos = strstr(str, needle);
+    return pos ? (pos - str) : -1;
+}
+
+/**
+ * string_starts_with - Check if string starts with prefix
+ * @param str: String to check
+ * @param prefix: Prefix to look for
+ * @return: 1 if starts with prefix, 0 otherwise
+ *
+ * MLP Usage: int starts = string_starts_with("hello world", "hello");
+ */
+int string_starts_with(const char* str, const char* prefix) {
+    return strncmp(str, prefix, strlen(prefix)) == 0 ? 1 : 0;
+}
+
+/**
+ * string_ends_with - Check if string ends with suffix
+ * @param str: String to check
+ * @param suffix: Suffix to look for
+ * @return: 1 if ends with suffix, 0 otherwise
+ *
+ * MLP Usage: int ends = string_ends_with("hello world", "world");
+ */
+int string_ends_with(const char* str, const char* suffix) {
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
+    if (suffix_len > str_len) return 0;
+    return strcmp(str + str_len - suffix_len, suffix) == 0 ? 1 : 0;
 }
 

@@ -35,6 +35,26 @@ typedef enum {
     TOKEN_YAPI_STRUCT,    // struct
     TOKEN_YAPI_LIST,      // list - Phase 2
 
+    // --- Built-in Functions - Phase 3 ---
+    // File I/O
+    TOKEN_BUILTIN_READ_FILE,
+    TOKEN_BUILTIN_WRITE_FILE,
+    TOKEN_BUILTIN_APPEND_FILE,
+    TOKEN_BUILTIN_FILE_EXISTS,
+    TOKEN_BUILTIN_FILE_SIZE,
+    TOKEN_BUILTIN_READ_LINES,
+
+    // String Operations
+    TOKEN_BUILTIN_STRING_SPLIT,
+    TOKEN_BUILTIN_STRING_JOIN,
+    TOKEN_BUILTIN_STRING_REPLACE,
+    TOKEN_BUILTIN_STRING_TRIM,
+    TOKEN_BUILTIN_STRING_UPPER,
+    TOKEN_BUILTIN_STRING_LOWER,
+    TOKEN_BUILTIN_STRING_FIND,
+    TOKEN_BUILTIN_STRING_STARTS_WITH,
+    TOKEN_BUILTIN_STRING_ENDS_WITH,
+
     // --- Operatörler ve Ayırıcılar ---
     // --- Operatörler ve Ayırıcılar ---
     TOKEN_LEFT_PAREN,   // (

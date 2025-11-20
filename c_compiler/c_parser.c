@@ -325,6 +325,18 @@ ASTNode* createAST_ListClear(Token* list_adi) {
     return node;
 }
 
+// Phase 3: Built-in function call
+ASTNode* createAST_BuiltinCall(TokenType func_type, ASTNode* arg1, ASTNode* arg2, ASTNode* arg3) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_BUILTIN_CALL;
+    node->builtin_call_data.function_type = func_type;
+    node->builtin_call_data.arg1 = arg1;
+    node->builtin_call_data.arg2 = arg2;
+    node->builtin_call_data.arg3 = arg3;
+    return node;
+}
+
 ASTNode* createAST_KosulKomutu(ASTNode* kosul, ASTNode* ise_blok, ASTNode* degilse_blok) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
@@ -411,6 +423,52 @@ ASTNode* birincil() {
         }
         consume(TOKEN_RIGHT_PAREN);
         return node;
+    }
+
+    // Phase 3: Built-in function calls
+    if (current_token->type == TOKEN_BUILTIN_READ_FILE ||
+        current_token->type == TOKEN_BUILTIN_WRITE_FILE ||
+        current_token->type == TOKEN_BUILTIN_APPEND_FILE ||
+        current_token->type == TOKEN_BUILTIN_FILE_EXISTS ||
+        current_token->type == TOKEN_BUILTIN_FILE_SIZE ||
+        current_token->type == TOKEN_BUILTIN_READ_LINES ||
+        current_token->type == TOKEN_BUILTIN_STRING_SPLIT ||
+        current_token->type == TOKEN_BUILTIN_STRING_JOIN ||
+        current_token->type == TOKEN_BUILTIN_STRING_REPLACE ||
+        current_token->type == TOKEN_BUILTIN_STRING_TRIM ||
+        current_token->type == TOKEN_BUILTIN_STRING_UPPER ||
+        current_token->type == TOKEN_BUILTIN_STRING_LOWER ||
+        current_token->type == TOKEN_BUILTIN_STRING_FIND ||
+        current_token->type == TOKEN_BUILTIN_STRING_STARTS_WITH ||
+        current_token->type == TOKEN_BUILTIN_STRING_ENDS_WITH) {
+
+        TokenType func_type = current_token->type;
+        consume(current_token->type);
+
+        consume(TOKEN_LEFT_PAREN);
+
+        // Parse arguments
+        ASTNode* arg1 = NULL;
+        ASTNode* arg2 = NULL;
+        ASTNode* arg3 = NULL;
+
+        if (current_token->type != TOKEN_RIGHT_PAREN) {
+            arg1 = ifade();
+
+            if (current_token->type == TOKEN_COMMA) {
+                consume(TOKEN_COMMA);
+                arg2 = ifade();
+
+                if (current_token->type == TOKEN_COMMA) {
+                    consume(TOKEN_COMMA);
+                    arg3 = ifade();
+                }
+            }
+        }
+
+        consume(TOKEN_RIGHT_PAREN);
+
+        return createAST_BuiltinCall(func_type, arg1, arg2, arg3);
     }
 
     if (current_token->type == TOKEN_IDENTIFIER) {

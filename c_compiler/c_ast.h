@@ -36,7 +36,9 @@ typedef enum {
     AST_LIST_GET,           // List get: numbers.get(0)
     AST_LIST_SIZE,          // List size: numbers.size()
     AST_LIST_CLEAR,         // List clear: numbers.clear()
-    // ... (Diğer tüm AST düğüm tipleri buraya eklenecek)
+
+    // Phase 3: Built-in Functions
+    AST_BUILTIN_CALL,       // Built-in function call: read_file("path")
 } ASTNodeType;
 
 // İleri Bildirimler (C'de iç içe struct'lar için gerekli)
@@ -206,11 +208,22 @@ struct ASTNode {
         struct {
             Token* list_adi;      // List ismi (numbers)
         } list_clear_data;
+
+        // Phase 3: Built-in Function Call
+        struct {
+            TokenType function_type;  // Which built-in function
+            ASTNode* arg1;           // First argument
+            ASTNode* arg2;           // Second argument (optional)
+            ASTNode* arg3;           // Third argument (optional, for join)
+        } builtin_call_data;
     };
 };
 
 // Fonksiyon Prototipleri
 ASTNode* parse(const char* source_code); // Ana ayrıştırma fonksiyonu
 void freeAST(ASTNode* node);             // AST temizleme (Bellek yönetimi)
+
+// Phase 3: Built-in function helper
+ASTNode* createAST_BuiltinCall(TokenType func_type, ASTNode* arg1, ASTNode* arg2, ASTNode* arg3);
 
 #endif // C_AST_H
