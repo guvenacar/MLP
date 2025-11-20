@@ -1,0 +1,428 @@
+-- Simple Expression Compiler
+-- Demonstrates Phase 3 features: File I/O, Strings, Lists, Structs
+-- Compiles simple arithmetic expressions to x86-64 assembly
+-- Author: MLP Documentation Team
+-- Date: November 20, 2025
+
+-- Token structure
+struct Token then
+    string type;     -- "NUMBER", "OPERATOR", "LPAREN", "RPAREN", "EOF"
+    string value;    -- Lexeme value
+    int line;        -- Line number
+end
+
+-- AST Node structure
+struct ASTNode then
+    string type;     -- "NUMBER", "BINARY_OP"
+    string value;    -- Operator or number value
+    int left;        -- Index to left child (or -1)
+    int right;       -- Index to right child (or -1)
+end
+
+-- ==================== LEXER ====================
+
+-- Check if character is digit
+function is_digit(ch) then
+    int code = char_code(ch);
+    if code >= 48 then  -- '0' = 48
+        if code <= 57 then  -- '9' = 57
+            return 1
+        end
+    end
+    return 0
+end
+
+-- Check if character is whitespace
+function is_whitespace(ch) then
+    if ch == " " then return 1 end
+    if ch == "\t" then return 1 end
+    if ch == "\n" then return 1 end
+    if ch == "\r" then return 1 end
+    return 0
+end
+
+-- Lexer: Convert source code to tokens
+function lex(source) then
+    list[Token] tokens = list();
+
+    int pos = 0;
+    int len = string_length(source);
+    int line = 1;
+
+    while pos < len
+        string ch = string_char_at(source, pos);
+
+        -- Skip whitespace
+        if is_whitespace(ch) == 1 then
+            if ch == "\n" then
+                line = line + 1
+            end
+            pos = pos + 1
+
+        -- Number
+        else if is_digit(ch) == 1 then
+            int start = pos;
+            while pos < len
+                string next_ch = string_char_at(source, pos);
+                if is_digit(next_ch) == 0 then
+                    break
+                end
+                pos = pos + 1
+            end
+
+            int num_len = pos - start;
+            string num_str = string_substring(source, start, num_len);
+
+            Token t;
+            t.type = "NUMBER";
+            t.value = num_str;
+            t.line = line;
+            tokens.add(t);
+
+        -- Operators and parentheses
+        else if ch == "+" then
+            Token t;
+            t.type = "OPERATOR";
+            t.value = "+";
+            t.line = line;
+            tokens.add(t);
+            pos = pos + 1
+
+        else if ch == "-" then
+            Token t;
+            t.type = "OPERATOR";
+            t.value = "-";
+            t.line = line;
+            tokens.add(t);
+            pos = pos + 1
+
+        else if ch == "*" then
+            Token t;
+            t.type = "OPERATOR";
+            t.value = "*";
+            t.line = line;
+            tokens.add(t);
+            pos = pos + 1
+
+        else if ch == "/" then
+            Token t;
+            t.type = "OPERATOR";
+            t.value = "/";
+            t.line = line;
+            tokens.add(t);
+            pos = pos + 1
+
+        else if ch == "(" then
+            Token t;
+            t.type = "LPAREN";
+            t.value = "(";
+            t.line = line;
+            tokens.add(t);
+            pos = pos + 1
+
+        else if ch == ")" then
+            Token t;
+            t.type = "RPAREN";
+            t.value = ")";
+            t.line = line;
+            tokens.add(t);
+            pos = pos + 1
+
+        else
+            print "Lexer error: Unknown character: ";
+            print ch;
+            pos = pos + 1
+        end
+    end
+
+    -- EOF token
+    Token eof;
+    eof.type = "EOF";
+    eof.value = "";
+    eof.line = line;
+    tokens.add(eof);
+
+    return tokens
+end
+
+-- ==================== PARSER ====================
+
+-- Global parser state
+list[Token] parser_tokens = list();
+int parser_pos = 0;
+
+-- Get current token
+function current_token() then
+    if parser_pos < parser_tokens.size() then
+        return parser_tokens.get(parser_pos)
+    end
+
+    -- Return EOF token
+    Token eof;
+    eof.type = "EOF";
+    return eof
+end
+
+-- Advance to next token
+function advance() then
+    parser_pos = parser_pos + 1;
+    return 0
+end
+
+-- Parse expression: term (('+' | '-') term)*
+function parse_expression(nodes) then
+    int left_idx = parse_term(nodes);
+
+    Token tok = current_token();
+    while tok.type == "OPERATOR"
+        if tok.value == "+" then
+            advance();
+            int right_idx = parse_term(nodes);
+
+            ASTNode node;
+            node.type = "BINARY_OP";
+            node.value = "+";
+            node.left = left_idx;
+            node.right = right_idx;
+
+            int node_idx = nodes.size();
+            nodes.add(node);
+            left_idx = node_idx;
+
+        else if tok.value == "-" then
+            advance();
+            int right_idx = parse_term(nodes);
+
+            ASTNode node;
+            node.type = "BINARY_OP";
+            node.value = "-";
+            node.left = left_idx;
+            node.right = right_idx;
+
+            int node_idx = nodes.size();
+            nodes.add(node);
+            left_idx = node_idx;
+
+        else
+            break
+        end
+
+        tok = current_token();
+    end
+
+    return left_idx
+end
+
+-- Parse term: factor (('*' | '/') factor)*
+function parse_term(nodes) then
+    int left_idx = parse_factor(nodes);
+
+    Token tok = current_token();
+    while tok.type == "OPERATOR"
+        if tok.value == "*" then
+            advance();
+            int right_idx = parse_factor(nodes);
+
+            ASTNode node;
+            node.type = "BINARY_OP";
+            node.value = "*";
+            node.left = left_idx;
+            node.right = right_idx;
+
+            int node_idx = nodes.size();
+            nodes.add(node);
+            left_idx = node_idx;
+
+        else if tok.value == "/" then
+            advance();
+            int right_idx = parse_factor(nodes);
+
+            ASTNode node;
+            node.type = "BINARY_OP";
+            node.value = "/";
+            node.left = left_idx;
+            node.right = right_idx;
+
+            int node_idx = nodes.size();
+            nodes.add(node);
+            left_idx = node_idx;
+
+        else
+            break
+        end
+
+        tok = current_token();
+    end
+
+    return left_idx
+end
+
+-- Parse factor: NUMBER | '(' expression ')'
+function parse_factor(nodes) then
+    Token tok = current_token();
+
+    if tok.type == "NUMBER" then
+        advance();
+
+        ASTNode node;
+        node.type = "NUMBER";
+        node.value = tok.value;
+        node.left = -1;
+        node.right = -1;
+
+        int idx = nodes.size();
+        nodes.add(node);
+        return idx
+
+    else if tok.type == "LPAREN" then
+        advance();
+        int expr_idx = parse_expression(nodes);
+        advance();  -- Skip RPAREN
+        return expr_idx
+    end
+
+    print "Parse error: Unexpected token";
+    return -1
+end
+
+-- Parse tokens into AST
+function parse(tokens) then
+    parser_tokens = tokens;
+    parser_pos = 0;
+
+    list[ASTNode] nodes = list();
+    int root_idx = parse_expression(nodes);
+
+    return nodes
+end
+
+-- ==================== CODE GENERATOR ====================
+
+-- Generate assembly for AST node
+function generate_node(nodes, idx, output) then
+    ASTNode node = nodes.get(idx);
+
+    if node.type == "NUMBER" then
+        string code = "    mov rax, ";
+        code = string_concat(code, node.value);
+        code = string_concat(code, "\n");
+        code = string_concat(code, "    push rax\n");
+        return code
+
+    else if node.type == "BINARY_OP" then
+        -- Generate left operand
+        string left_code = generate_node(nodes, node.left, output);
+
+        -- Generate right operand
+        string right_code = generate_node(nodes, node.right, output);
+
+        -- Pop operands and perform operation
+        string op_code = "    pop rbx\n";
+        op_code = string_concat(op_code, "    pop rax\n");
+
+        if node.value == "+" then
+            op_code = string_concat(op_code, "    add rax, rbx\n");
+        else if node.value == "-" then
+            op_code = string_concat(op_code, "    sub rax, rbx\n");
+        else if node.value == "*" then
+            op_code = string_concat(op_code, "    imul rax, rbx\n");
+        else if node.value == "/" then
+            op_code = string_concat(op_code, "    xor rdx, rdx\n");
+            op_code = string_concat(op_code, "    idiv rbx\n");
+        end
+
+        op_code = string_concat(op_code, "    push rax\n");
+
+        string result = left_code;
+        result = string_concat(result, right_code);
+        result = string_concat(result, op_code);
+        return result
+    end
+
+    return ""
+end
+
+-- Generate complete assembly program
+function generate(nodes, root_idx) then
+    string asm = "section .text\n";
+    asm = string_concat(asm, "global _start\n\n");
+    asm = string_concat(asm, "_start:\n");
+
+    -- Generate expression code
+    string expr_code = generate_node(nodes, root_idx, asm);
+    asm = string_concat(asm, expr_code);
+
+    -- Pop result and exit
+    asm = string_concat(asm, "    pop rax\n");
+    asm = string_concat(asm, "    mov rdi, rax\n");
+    asm = string_concat(asm, "    mov rax, 60\n");
+    asm = string_concat(asm, "    syscall\n");
+
+    return asm
+end
+
+-- ==================== MAIN COMPILER ====================
+
+function compile_file(input_path, output_path) then
+    print "Compiling: ";
+    print input_path;
+
+    -- Read source file
+    string source = read_file(input_path);
+
+    if string_length(source) == 0 then
+        print "Error: Could not read source file";
+        return -1
+    end
+
+    -- Lexer
+    list[Token] tokens = lex(source);
+    print "Tokens: ";
+    print tokens.size();
+
+    -- Parser
+    list[ASTNode] nodes = parse(tokens);
+    print "AST nodes: ";
+    print nodes.size();
+
+    -- Code generator
+    int root = 0;  -- Assume root is first node
+    string assembly = generate(nodes, root);
+
+    -- Write output
+    int result = write_file(output_path, assembly);
+
+    if result == 0 then
+        print "Successfully compiled to: ";
+        print output_path;
+    else
+        print "Error: Could not write assembly file";
+    end
+
+    return result
+end
+
+-- ==================== DEMO ====================
+
+print "=== Simple Expression Compiler ===";
+print "";
+print "This compiler demonstrates:";
+print "- Lexer (tokenization)";
+print "- Parser (AST construction)";
+print "- Code Generator (x86-64 assembly)";
+print "";
+
+-- Example: Compile expression
+print "Example expression: 2 + 3 * 4";
+print "";
+
+-- Lex example
+list[Token] tokens = lex("2 + 3 * 4");
+print "Lexed tokens: ";
+print tokens.size();
+
+-- Note: Full compilation would require Phase 3 implementation
+print "";
+print "To use: compile_file(\"expr.txt\", \"expr.asm\")";
+print "";
+print "=== Demo Complete ===";
