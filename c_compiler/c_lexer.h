@@ -55,6 +55,22 @@ typedef enum {
     TOKEN_BUILTIN_STRING_STARTS_WITH,
     TOKEN_BUILTIN_STRING_ENDS_WITH,
 
+    // Type Conversions (Phase 4)
+    TOKEN_BUILTIN_INT_TO_STRING,
+    TOKEN_BUILTIN_STRING_TO_INT,
+    TOKEN_BUILTIN_CHAR_TO_STRING,
+    TOKEN_BUILTIN_STRING_CONCAT,
+
+    // Math Operations (Phase 4)
+    TOKEN_BUILTIN_MATH_ABS,
+    TOKEN_BUILTIN_MATH_MIN,
+    TOKEN_BUILTIN_MATH_MAX,
+    TOKEN_BUILTIN_MATH_POW,
+
+    // Hash Map (Phase 4)
+    TOKEN_YAPI_MAP,  // "map" keyword
+    TOKEN_COLON,     // : for key:value syntax
+
     // --- Operatörler ve Ayırıcılar ---
     // --- Operatörler ve Ayırıcılar ---
     TOKEN_LEFT_PAREN,   // (

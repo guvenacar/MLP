@@ -1101,3 +1101,132 @@ int string_ends_with(const char* str, const char* suffix) {
     return strcmp(str + str_len - suffix_len, suffix) == 0 ? 1 : 0;
 }
 
+/**
+ * int_to_string - Convert integer to string
+ * @param num: Integer to convert
+ * @return: String representation (caller must free)
+ *
+ * MLP Usage: string s = int_to_string(42);
+ */
+char* int_to_string(long num) {
+    // Calculate length needed (including sign and null terminator)
+    int length = snprintf(NULL, 0, "%ld", num);
+    char* str = (char*)malloc(length + 1);
+    if (!str) {
+        fprintf(stderr, "Memory allocation failed in int_to_string\n");
+        exit(1);
+    }
+    snprintf(str, length + 1, "%ld", num);
+    return str;
+}
+
+/**
+ * string_to_int - Convert string to integer
+ * @param str: String to convert
+ * @return: Integer value (0 if invalid)
+ *
+ * MLP Usage: int n = string_to_int("42");
+ */
+long string_to_int(const char* str) {
+    if (!str) return 0;
+    return atol(str);
+}
+
+/**
+ * char_to_string - Convert ASCII code to single-character string
+ * @param ch: ASCII/Unicode code point
+ * @return: Single-character string (caller must free)
+ *
+ * MLP Usage: string s = char_to_string(65);  // "A"
+ */
+char* char_to_string(int ch) {
+    char* str = (char*)malloc(2);
+    if (!str) {
+        fprintf(stderr, "Memory allocation failed in char_to_string\n");
+        exit(1);
+    }
+    str[0] = (char)ch;
+    str[1] = '\0';
+    return str;
+}
+
+/**
+ * string_concat - Concatenate two strings
+ * @param s1: First string
+ * @param s2: Second string
+ * @return: Concatenated string (caller must free)
+ *
+ * MLP Usage: string result = string_concat("Hello", " World");
+ */
+char* string_concat(const char* s1, const char* s2) {
+    if (!s1) s1 = "";
+    if (!s2) s2 = "";
+
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
+    char* result = (char*)malloc(len1 + len2 + 1);
+
+    if (!result) {
+        fprintf(stderr, "Memory allocation failed in string_concat\n");
+        exit(1);
+    }
+
+    strcpy(result, s1);
+    strcat(result, s2);
+    return result;
+}
+
+/**
+ * math_abs - Absolute value
+ * @param n: Integer
+ * @return: Absolute value of n
+ *
+ * MLP Usage: int abs_val = math_abs(-42);
+ */
+long math_abs(long n) {
+    return n < 0 ? -n : n;
+}
+
+/**
+ * math_min - Minimum of two integers
+ * @param a: First integer
+ * @param b: Second integer
+ * @return: Smaller value
+ *
+ * MLP Usage: int minimum = math_min(10, 20);
+ */
+long math_min(long a, long b) {
+    return a < b ? a : b;
+}
+
+/**
+ * math_max - Maximum of two integers
+ * @param a: First integer
+ * @param b: Second integer
+ * @return: Larger value
+ *
+ * MLP Usage: int maximum = math_max(10, 20);
+ */
+long math_max(long a, long b) {
+    return a > b ? a : b;
+}
+
+/**
+ * math_pow - Integer power function
+ * @param base: Base number
+ * @param exp: Exponent (must be >= 0)
+ * @return: base^exp
+ *
+ * MLP Usage: int result = math_pow(2, 3);  // 8
+ */
+long math_pow(long base, long exp) {
+    if (exp < 0) return 0;
+    if (exp == 0) return 1;
+
+    long result = 1;
+    for (long i = 0; i < exp; i++) {
+        result *= base;
+    }
+    return result;
+}
+
