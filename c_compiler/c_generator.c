@@ -331,6 +331,15 @@ void visit_ListGet(ASTNode* node);
 void visit_ListSize(ASTNode* node);
 void visit_ListClear(ASTNode* node);
 
+// Phase 4: Hash Map visitor forward declarations
+void visit_MapTanimlama(ASTNode* node);
+void visit_MapSet(ASTNode* node);
+void visit_MapGet(ASTNode* node);
+void visit_MapHas(ASTNode* node);
+void visit_MapRemove(ASTNode* node);
+void visit_MapSize(ASTNode* node);
+void visit_MapClear(ASTNode* node);
+
 void visit_Blok(ASTNode* node) {
     // Blok içindeki her komutu ziyaret et
     for (int i = 0; i < node->blok_data.sayisi; i++) {
@@ -1333,6 +1342,146 @@ void visit_ListClear(ASTNode* node) {
     asm_append(&text_section, "    call list_clear");
 }
 
+// ===== Phase 4: Hash Map Visit Functions =====
+
+void visit_MapTanimlama(ASTNode* node) {
+    char* key_tip = node->map_tanimlama_data.key_tipi->value;
+    char* value_tip = node->map_tanimlama_data.value_tipi->value;
+    char* degisken_adi = node->map_tanimlama_data.degisken_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Map Tanımlama: map[%s:%s] %s ---", key_tip, value_tip, degisken_adi);
+    asm_append(&text_section, buffer);
+
+    // Call hashmap_create(16) - initial capacity
+    asm_append(&text_section, "    mov rdi, 16  ; Initial capacity");
+    asm_append(&text_section, "    call hashmap_create");
+    asm_append(&text_section, "    ; RAX now contains HashMap pointer");
+
+    // Store HashMap pointer in variable
+    char* adres = kapsam_degisken_yer_ayir(degisken_adi, "HashMap");
+    sprintf(buffer, "    mov %s, rax  ; Store HashMap* in %s", adres, degisken_adi);
+    asm_append(&text_section, buffer);
+}
+
+void visit_MapSet(ASTNode* node) {
+    char* map_adi = node->map_set_data.map_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Map Set: %s.set(key, value) ---", map_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate value expression (result in RAX)
+    visit(node->map_set_data.value);
+    asm_append(&text_section, "    push rax  ; Save value");
+
+    // Evaluate key expression (result in RAX)
+    visit(node->map_set_data.key);
+    asm_append(&text_section, "    push rax  ; Save key");
+
+    // Get map pointer
+    char* map_adres = kapsam_degisken_adresi_bul(map_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load HashMap* to rdi", map_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load key to rsi");
+    asm_append(&text_section, "    pop rdx  ; Load value to rdx");
+    asm_append(&text_section, "    call hashmap_put");
+}
+
+void visit_MapGet(ASTNode* node) {
+    char* map_adi = node->map_get_data.map_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Map Get: %s.get(key) ---", map_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate key expression (result in RAX)
+    visit(node->map_get_data.key);
+    asm_append(&text_section, "    push rax  ; Save key");
+
+    // Get map pointer
+    char* map_adres = kapsam_degisken_adresi_bul(map_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load HashMap* to rdi", map_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load key to rsi");
+    asm_append(&text_section, "    call hashmap_get");
+    asm_append(&text_section, "    ; RAX now contains value (or NULL if not found)");
+}
+
+void visit_MapHas(ASTNode* node) {
+    char* map_adi = node->map_has_data.map_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Map Has: %s.has(key) ---", map_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate key expression (result in RAX)
+    visit(node->map_has_data.key);
+    asm_append(&text_section, "    push rax  ; Save key");
+
+    // Get map pointer
+    char* map_adres = kapsam_degisken_adresi_bul(map_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load HashMap* to rdi", map_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load key to rsi");
+    asm_append(&text_section, "    call hashmap_contains");
+    asm_append(&text_section, "    ; RAX now contains 1 or 0");
+}
+
+void visit_MapRemove(ASTNode* node) {
+    char* map_adi = node->map_remove_data.map_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Map Remove: %s.remove(key) ---", map_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate key expression (result in RAX)
+    visit(node->map_remove_data.key);
+    asm_append(&text_section, "    push rax  ; Save key");
+
+    // Get map pointer
+    char* map_adres = kapsam_degisken_adresi_bul(map_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load HashMap* to rdi", map_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    pop rsi  ; Load key to rsi");
+    asm_append(&text_section, "    call hashmap_remove");
+}
+
+void visit_MapSize(ASTNode* node) {
+    char* map_adi = node->map_size_data.map_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Map Size: %s.size() ---", map_adi);
+    asm_append(&text_section, buffer);
+
+    // Get map pointer
+    char* map_adres = kapsam_degisken_adresi_bul(map_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load HashMap* to rdi", map_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    call hashmap_size");
+    asm_append(&text_section, "    ; RAX now contains size");
+}
+
+void visit_MapClear(ASTNode* node) {
+    char* map_adi = node->map_clear_data.map_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Map Clear: %s.clear() ---", map_adi);
+    asm_append(&text_section, buffer);
+
+    // Get map pointer
+    char* map_adres = kapsam_degisken_adresi_bul(map_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load HashMap* to rdi", map_adres);
+    asm_append(&text_section, buffer);
+
+    asm_append(&text_section, "    call hashmap_clear");
+}
+
 // Phase 3: Built-in function call
 void visit_BuiltinCall(ASTNode* node) {
     TokenType func = node->builtin_call_data.function_type;
@@ -1356,6 +1505,16 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_STRING_FIND: func_name = "string_find"; break;
         case TOKEN_BUILTIN_STRING_STARTS_WITH: func_name = "string_starts_with"; break;
         case TOKEN_BUILTIN_STRING_ENDS_WITH: func_name = "string_ends_with"; break;
+        // Phase 4: Type Conversions
+        case TOKEN_BUILTIN_INT_TO_STRING: func_name = "int_to_string"; break;
+        case TOKEN_BUILTIN_STRING_TO_INT: func_name = "string_to_int"; break;
+        case TOKEN_BUILTIN_CHAR_TO_STRING: func_name = "char_to_string"; break;
+        case TOKEN_BUILTIN_STRING_CONCAT: func_name = "string_concat"; break;
+        // Phase 4: Math Operations
+        case TOKEN_BUILTIN_MATH_ABS: func_name = "math_abs"; break;
+        case TOKEN_BUILTIN_MATH_MIN: func_name = "math_min"; break;
+        case TOKEN_BUILTIN_MATH_MAX: func_name = "math_max"; break;
+        case TOKEN_BUILTIN_MATH_POW: func_name = "math_pow"; break;
         default: func_name = "unknown"; break;
     }
 
@@ -1601,6 +1760,35 @@ void visit(ASTNode* node) {
 
         case AST_LIST_CLEAR:
             visit_ListClear(node);
+            break;
+
+        // Phase 4: Hash Map operations
+        case AST_MAP_TANIMLAMA:
+            visit_MapTanimlama(node);
+            break;
+
+        case AST_MAP_SET:
+            visit_MapSet(node);
+            break;
+
+        case AST_MAP_GET:
+            visit_MapGet(node);
+            break;
+
+        case AST_MAP_HAS:
+            visit_MapHas(node);
+            break;
+
+        case AST_MAP_REMOVE:
+            visit_MapRemove(node);
+            break;
+
+        case AST_MAP_SIZE:
+            visit_MapSize(node);
+            break;
+
+        case AST_MAP_CLEAR:
+            visit_MapClear(node);
             break;
 
         // Phase 3: Built-in function call
