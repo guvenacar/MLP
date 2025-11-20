@@ -337,6 +337,89 @@ ASTNode* createAST_BuiltinCall(TokenType func_type, ASTNode* arg1, ASTNode* arg2
     return node;
 }
 
+// ===== Phase 4: Hash Map Helper Functions =====
+
+ASTNode* createAST_MapTanimlama(Token* key_tipi, Token* value_tipi, Token* degisken_adi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_MAP_TANIMLAMA;
+    node->map_tanimlama_data.key_tipi = (Token*)malloc(sizeof(Token));
+    node->map_tanimlama_data.key_tipi->type = key_tipi->type;
+    node->map_tanimlama_data.key_tipi->value = strdup(key_tipi->value);
+    node->map_tanimlama_data.value_tipi = (Token*)malloc(sizeof(Token));
+    node->map_tanimlama_data.value_tipi->type = value_tipi->type;
+    node->map_tanimlama_data.value_tipi->value = strdup(value_tipi->value);
+    node->map_tanimlama_data.degisken_adi = (Token*)malloc(sizeof(Token));
+    node->map_tanimlama_data.degisken_adi->type = degisken_adi->type;
+    node->map_tanimlama_data.degisken_adi->value = strdup(degisken_adi->value);
+    return node;
+}
+
+ASTNode* createAST_MapSet(Token* map_adi, ASTNode* key, ASTNode* value) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_MAP_SET;
+    node->map_set_data.map_adi = (Token*)malloc(sizeof(Token));
+    node->map_set_data.map_adi->type = map_adi->type;
+    node->map_set_data.map_adi->value = strdup(map_adi->value);
+    node->map_set_data.key = key;
+    node->map_set_data.value = value;
+    return node;
+}
+
+ASTNode* createAST_MapGet(Token* map_adi, ASTNode* key) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_MAP_GET;
+    node->map_get_data.map_adi = (Token*)malloc(sizeof(Token));
+    node->map_get_data.map_adi->type = map_adi->type;
+    node->map_get_data.map_adi->value = strdup(map_adi->value);
+    node->map_get_data.key = key;
+    return node;
+}
+
+ASTNode* createAST_MapHas(Token* map_adi, ASTNode* key) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_MAP_HAS;
+    node->map_has_data.map_adi = (Token*)malloc(sizeof(Token));
+    node->map_has_data.map_adi->type = map_adi->type;
+    node->map_has_data.map_adi->value = strdup(map_adi->value);
+    node->map_has_data.key = key;
+    return node;
+}
+
+ASTNode* createAST_MapRemove(Token* map_adi, ASTNode* key) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_MAP_REMOVE;
+    node->map_remove_data.map_adi = (Token*)malloc(sizeof(Token));
+    node->map_remove_data.map_adi->type = map_adi->type;
+    node->map_remove_data.map_adi->value = strdup(map_adi->value);
+    node->map_remove_data.key = key;
+    return node;
+}
+
+ASTNode* createAST_MapSize(Token* map_adi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_MAP_SIZE;
+    node->map_size_data.map_adi = (Token*)malloc(sizeof(Token));
+    node->map_size_data.map_adi->type = map_adi->type;
+    node->map_size_data.map_adi->value = strdup(map_adi->value);
+    return node;
+}
+
+ASTNode* createAST_MapClear(Token* map_adi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_MAP_CLEAR;
+    node->map_clear_data.map_adi = (Token*)malloc(sizeof(Token));
+    node->map_clear_data.map_adi->type = map_adi->type;
+    node->map_clear_data.map_adi->value = strdup(map_adi->value);
+    return node;
+}
+
 ASTNode* createAST_KosulKomutu(ASTNode* kosul, ASTNode* ise_blok, ASTNode* degilse_blok) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
@@ -440,7 +523,17 @@ ASTNode* birincil() {
         current_token->type == TOKEN_BUILTIN_STRING_LOWER ||
         current_token->type == TOKEN_BUILTIN_STRING_FIND ||
         current_token->type == TOKEN_BUILTIN_STRING_STARTS_WITH ||
-        current_token->type == TOKEN_BUILTIN_STRING_ENDS_WITH) {
+        current_token->type == TOKEN_BUILTIN_STRING_ENDS_WITH ||
+        // Phase 4: Type Conversions
+        current_token->type == TOKEN_BUILTIN_INT_TO_STRING ||
+        current_token->type == TOKEN_BUILTIN_STRING_TO_INT ||
+        current_token->type == TOKEN_BUILTIN_CHAR_TO_STRING ||
+        current_token->type == TOKEN_BUILTIN_STRING_CONCAT ||
+        // Phase 4: Math Operations
+        current_token->type == TOKEN_BUILTIN_MATH_ABS ||
+        current_token->type == TOKEN_BUILTIN_MATH_MIN ||
+        current_token->type == TOKEN_BUILTIN_MATH_MAX ||
+        current_token->type == TOKEN_BUILTIN_MATH_POW) {
 
         TokenType func_type = current_token->type;
         consume(current_token->type);
@@ -549,9 +642,39 @@ ASTNode* birincil() {
                     free(field_or_method.value);
                     return clear_node;
                 }
+                // ===== Phase 4: Map Methods =====
+                else if (strcmp(field_or_method.value, "set") == 0) {
+                    // map.set(key, value)
+                    ASTNode* key = ifade();
+                    consume(TOKEN_COMMA);
+                    ASTNode* value = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    ASTNode* set_node = createAST_MapSet(&ad_token_kopya, key, value);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return set_node;
+                }
+                else if (strcmp(field_or_method.value, "has") == 0) {
+                    // map.has(key)
+                    ASTNode* key = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    ASTNode* has_node = createAST_MapHas(&ad_token_kopya, key);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return has_node;
+                }
+                else if (strcmp(field_or_method.value, "remove") == 0) {
+                    // map.remove(key)
+                    ASTNode* key = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    ASTNode* remove_node = createAST_MapRemove(&ad_token_kopya, key);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return remove_node;
+                }
                 else {
-                    fprintf(stderr, "Unknown list method: %s\n", field_or_method.value);
-                    parseError("List method", "add/get/size/clear");
+                    fprintf(stderr, "Unknown list/map method: %s\n", field_or_method.value);
+                    parseError("List/Map method", "add/get/size/clear/set/has/remove");
                 }
             }
             else {
@@ -736,6 +859,73 @@ ASTNode* komut() {
         free(element_tip.value);
         free(degisken_adi.value);
         return list_node;
+    }
+
+    // ===== Phase 4: Map Tanımlama (map[KeyType:ValueType] var = map();) =====
+    if (current_token->type == TOKEN_YAPI_MAP) {
+        consume(TOKEN_YAPI_MAP);
+
+        // Expect [
+        consume(TOKEN_LEFT_BRACKET);
+
+        // Key type
+        Token key_tip;
+        if (current_token->type == TOKEN_TANIMLA_SAYI ||
+            current_token->type == TOKEN_TANIMLA_METIN ||
+            current_token->type == TOKEN_IDENTIFIER) {
+            key_tip.type = current_token->type;
+            key_tip.value = strdup(current_token->value);
+            consume(current_token->type);
+        } else {
+            parseError("Map key type", "int/string");
+        }
+
+        // Expect :
+        consume(TOKEN_COLON);
+
+        // Value type
+        Token value_tip;
+        if (current_token->type == TOKEN_TANIMLA_SAYI ||
+            current_token->type == TOKEN_TANIMLA_METIN ||
+            current_token->type == TOKEN_IDENTIFIER) {
+            value_tip.type = current_token->type;
+            value_tip.value = strdup(current_token->value);
+            consume(current_token->type);
+        } else {
+            parseError("Map value type", "int/string");
+        }
+
+        // Expect ]
+        consume(TOKEN_RIGHT_BRACKET);
+
+        // Variable name
+        if (current_token->type != TOKEN_IDENTIFIER) {
+            parseError("Map variable name", "IDENTIFIER");
+        }
+        Token degisken_adi;
+        degisken_adi.type = current_token->type;
+        degisken_adi.value = strdup(current_token->value);
+        consume(TOKEN_IDENTIFIER);
+
+        // Expect =
+        consume(TOKEN_ASSIGN);
+
+        // Expect map()
+        if (current_token->type != TOKEN_YAPI_MAP) {
+            parseError("map()", "map");
+        }
+        consume(TOKEN_YAPI_MAP);
+        consume(TOKEN_LEFT_PAREN);
+        consume(TOKEN_RIGHT_PAREN);
+
+        // Expect ;
+        consume(TOKEN_SEMICOLON);
+
+        ASTNode* map_node = createAST_MapTanimlama(&key_tip, &value_tip, &degisken_adi);
+        free(key_tip.value);
+        free(value_tip.value);
+        free(degisken_adi.value);
+        return map_node;
     }
 
     // 1. YAZDIR (Noktalı virgülsüz)

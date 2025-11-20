@@ -106,6 +106,21 @@ KeywordMap keywords[] = {
     {"string_starts_with", TOKEN_BUILTIN_STRING_STARTS_WITH},
     {"string_ends_with",   TOKEN_BUILTIN_STRING_ENDS_WITH},
 
+    // Phase 4: Type Conversions
+    {"int_to_string",   TOKEN_BUILTIN_INT_TO_STRING},
+    {"string_to_int",   TOKEN_BUILTIN_STRING_TO_INT},
+    {"char_to_string",  TOKEN_BUILTIN_CHAR_TO_STRING},
+    {"string_concat",   TOKEN_BUILTIN_STRING_CONCAT},
+
+    // Phase 4: Math Operations
+    {"math_abs", TOKEN_BUILTIN_MATH_ABS},
+    {"math_min", TOKEN_BUILTIN_MATH_MIN},
+    {"math_max", TOKEN_BUILTIN_MATH_MAX},
+    {"math_pow", TOKEN_BUILTIN_MATH_POW},
+
+    // Phase 4: Hash Map
+    {"map", TOKEN_YAPI_MAP},
+
     // Boolean literals
     {"true",     TOKEN_IDENTIFIER},  // Will be handled as identifier
     {"false",    TOKEN_IDENTIFIER},  // Will be handled as identifier
@@ -461,6 +476,10 @@ Token* getNextToken() {
     if (current_char == '.') {
         current_position++;
         return createToken(TOKEN_DOT, ".");
+    }
+    if (current_char == ':') {
+        current_position++;
+        return createToken(TOKEN_COLON, ":");
     }
 
     // 4. Tanınmayan Karakter (HATA YÖNETİMİ DÜZELTİLDİ)
