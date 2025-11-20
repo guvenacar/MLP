@@ -533,7 +533,12 @@ ASTNode* birincil() {
         current_token->type == TOKEN_BUILTIN_MATH_ABS ||
         current_token->type == TOKEN_BUILTIN_MATH_MIN ||
         current_token->type == TOKEN_BUILTIN_MATH_MAX ||
-        current_token->type == TOKEN_BUILTIN_MATH_POW) {
+        current_token->type == TOKEN_BUILTIN_MATH_POW ||
+        // Phase 5.1: Enhanced String Operations
+        current_token->type == TOKEN_BUILTIN_STRING_LENGTH ||
+        current_token->type == TOKEN_BUILTIN_STRING_SUBSTRING ||
+        current_token->type == TOKEN_BUILTIN_STRING_INDEX_OF ||
+        current_token->type == TOKEN_BUILTIN_STRING_LAST_INDEX_OF) {
 
         TokenType func_type = current_token->type;
         consume(current_token->type);
