@@ -62,8 +62,8 @@
           {
             "name": "while_loop",
             "pattern": "\\bwhile\\s*\\(([^)]+)\\)\\s*\\{",
-            "replacement": "while",
-            "description": "while (condition) { → while [condition moved to if inside]"
+            "replacement": "while \\1",
+            "description": "while (condition) { → while condition"
           },
           {
             "name": "while_infinite",
@@ -88,12 +88,6 @@
             "pattern": ";\\s*$",
             "replacement": "",
             "description": "Remove semicolons at line end"
-          },
-          {
-            "name": "closing_brace",
-            "pattern": "^\\s*\\}\\s*$",
-            "replacement": "end",
-            "description": "} → end [will be made specific: end if, end for]"
           }
         ]
       }

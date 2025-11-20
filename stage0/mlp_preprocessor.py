@@ -319,11 +319,9 @@ class MLPPreprocessor:
                 # Generic closing - replace with explicit terminator
                 if block_stack:
                     block_type, block_indent = block_stack.pop()
-                    indent = line[:len(line) - len(line.lstrip())]
-                    result_lines.append(f"{indent}end {block_type}")
-                else:
-                    # No block to close, keep as is
-                    result_lines.append(line)
+                    # Use block's indentation, not current line's indentation
+                    result_lines.append(' ' * block_indent + f'end {block_type}')
+                # else: skip orphaned } (already handled by previous block ending)
             else:
                 result_lines.append(line)
         
