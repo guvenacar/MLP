@@ -80,9 +80,13 @@ mlpdc_demo
 
 # Compiler executables
 tydc_unified
+mlp_compiler
 test_hello
 test_hello.o
 test_hello.asm
+test_phase5_1
+test_phase5_1.o
+test_phase5_1.asm
 
 # Preprocessor outputs
 *.preprocessed.mlp
