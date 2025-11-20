@@ -33,6 +33,7 @@ typedef enum {
     TOKEN_YAPI_STEP,      // step
     TOKEN_YAPI_SON,       // end
     TOKEN_YAPI_STRUCT,    // struct
+    TOKEN_YAPI_LIST,      // list - Phase 2
 
     // --- Operatörler ve Ayırıcılar ---
     // --- Operatörler ve Ayırıcılar ---

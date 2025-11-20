@@ -84,6 +84,7 @@ KeywordMap keywords[] = {
     {"continue", TOKEN_YAPI_DONGU_DEVAM},
     {"end",      TOKEN_YAPI_SON},
     {"struct",   TOKEN_YAPI_STRUCT},
+    {"list",     TOKEN_YAPI_LIST},      // Phase 2: Dynamic lists
 
     // Boolean literals
     {"true",     TOKEN_IDENTIFIER},  // Will be handled as identifier
