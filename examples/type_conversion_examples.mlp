@@ -1,0 +1,359 @@
+-- Type Conversion Examples
+-- Demonstrates Phase 4 type conversion utilities
+-- Author: MLP Documentation Team
+-- Date: November 20, 2025
+
+-- ==================== EXAMPLE 1: INTEGER TO STRING ====================
+
+print "=== Example 1: Integer to String Conversion ===";
+print "";
+
+-- Basic conversions
+int positive = 42;
+string pos_str = int_to_string(positive);
+print "42 → ";
+print pos_str;
+
+int negative = -100;
+string neg_str = int_to_string(negative);
+print "-100 → ";
+print neg_str;
+
+int zero = 0;
+string zero_str = int_to_string(zero);
+print "0 → ";
+print zero_str;
+print "";
+
+-- Building messages
+int count = 15;
+string message = "You have ";
+message = string_concat(message, int_to_string(count));
+message = string_concat(message, " items");
+print message;
+print "";
+
+-- ==================== EXAMPLE 2: STRING TO INTEGER ====================
+
+print "=== Example 2: String to Integer Conversion ===";
+print "";
+
+-- Valid conversions
+string str1 = "42";
+int val1 = string_to_int(str1);
+print "\"42\" → ";
+print val1;
+
+string str2 = "-100";
+int val2 = string_to_int(str2);
+print "\"-100\" → ";
+print val2;
+
+string str3 = "0";
+int val3 = string_to_int(str3);
+print "\"0\" → ";
+print val3;
+print "";
+
+-- Error handling
+print "Error handling:";
+string invalid = "abc";
+int error1 = string_to_int(invalid);
+print "\"abc\" → ";
+print error1;
+print " (error: returns 0)";
+
+string empty = "";
+int error2 = string_to_int(empty);
+print "\"\" → ";
+print error2;
+print " (empty: returns 0)";
+print "";
+
+-- ==================== EXAMPLE 3: CHARACTER CODES ====================
+
+print "=== Example 3: Character Code Operations ===";
+print "";
+
+-- Get character codes
+string letter_a = "A";
+int code_a = char_code(letter_a);
+print "char_code('A') → ";
+print code_a;
+
+string letter_z = "Z";
+int code_z = char_code(letter_z);
+print "char_code('Z') → ";
+print code_z;
+
+string digit_0 = "0";
+int code_0 = char_code(digit_0);
+print "char_code('0') → ";
+print code_0;
+print "";
+
+-- Create characters from codes
+int code_65 = 65;
+string from_65 = char_from_code(code_65);
+print "char_from_code(65) → ";
+print from_65;
+
+int code_97 = 97;
+string from_97 = char_from_code(code_97);
+print "char_from_code(97) → ";
+print from_97;
+print "";
+
+-- ==================== EXAMPLE 4: CHARACTER CLASSIFICATION ====================
+
+print "=== Example 4: Character Classification ===";
+print "";
+
+function is_digit(ch) then
+    int code = char_code(ch);
+    if code >= 48 then  -- '0' = 48
+        if code <= 57 then  -- '9' = 57
+            return 1;
+        end
+    end
+    return 0;
+end
+
+function is_uppercase(ch) then
+    int code = char_code(ch);
+    if code >= 65 then  -- 'A' = 65
+        if code <= 90 then  -- 'Z' = 90
+            return 1;
+        end
+    end
+    return 0;
+end
+
+function is_lowercase(ch) then
+    int code = char_code(ch);
+    if code >= 97 then  -- 'a' = 97
+        if code <= 122 then  -- 'z' = 122
+            return 1;
+        end
+    end
+    return 0;
+end
+
+-- Test classification
+string test1 = "7";
+if is_digit(test1) == 1 then
+    print "'7' is a digit";
+end
+
+string test2 = "A";
+if is_uppercase(test2) == 1 then
+    print "'A' is uppercase";
+end
+
+string test3 = "m";
+if is_lowercase(test3) == 1 then
+    print "'m' is lowercase";
+end
+print "";
+
+-- ==================== EXAMPLE 5: STRING BUILDING ====================
+
+print "=== Example 5: Dynamic String Building ===";
+print "";
+
+-- Build comma-separated list
+function build_csv_from_numbers(numbers) then
+    string result = "";
+    int i = 0;
+    while i < numbers.size()
+        int num = numbers.get(i);
+        string num_str = int_to_string(num);
+        result = string_concat(result, num_str);
+
+        if i < numbers.size() - 1 then
+            result = string_concat(result, ",");
+        end
+
+        i = i + 1;
+    end
+    return result;
+end
+
+list[int] values = list();
+values.add(10);
+values.add(20);
+values.add(30);
+values.add(40);
+
+string csv = build_csv_from_numbers(values);
+print "CSV: ";
+print csv;
+print "";
+
+-- ==================== EXAMPLE 6: PARSING NUMBERS ====================
+
+print "=== Example 6: Parsing User Input ===";
+print "";
+
+function parse_and_validate(input) then
+    -- Trim whitespace (using string_trim from Phase 3)
+    string trimmed = string_trim(input);
+
+    if string_length(trimmed) == 0 then
+        print "Error: Empty input";
+        return -1;
+    end
+
+    int value = string_to_int(trimmed);
+
+    if value == 0 then
+        -- Could be actual 0 or parse error
+        if trimmed == "0" then
+            print "Valid: Zero";
+            return 0;
+        else
+            print "Error: Invalid number format";
+            return -1;
+        end
+    end
+
+    print "Parsed value: ";
+    print value;
+    return value;
+end
+
+-- Test with valid input
+string input1 = "  42  ";
+parse_and_validate(input1);
+
+-- Test with zero
+string input2 = "0";
+parse_and_validate(input2);
+
+-- Test with invalid
+string input3 = "not a number";
+parse_and_validate(input3);
+print "";
+
+-- ==================== EXAMPLE 7: ALPHABET GENERATION ====================
+
+print "=== Example 7: Generate Alphabet ===";
+print "";
+
+print "Uppercase letters:";
+int code = 65;  -- 'A'
+while code <= 90  -- 'Z'
+    string letter = char_from_code(code);
+    print letter;
+    code = code + 1;
+end
+print "";
+
+print "Lowercase letters:";
+code = 97;  -- 'a'
+while code <= 122  -- 'z'
+    string letter = char_from_code(code);
+    print letter;
+    code = code + 1;
+end
+print "";
+
+-- ==================== EXAMPLE 8: ERROR MESSAGES ====================
+
+print "=== Example 8: Formatted Error Messages ===";
+print "";
+
+function report_error(line, column, message) then
+    string error = "Error at line ";
+    error = string_concat(error, int_to_string(line));
+    error = string_concat(error, ", column ");
+    error = string_concat(error, int_to_string(column));
+    error = string_concat(error, ": ");
+    error = string_concat(error, message);
+    print error;
+    return 0;
+end
+
+report_error(42, 15, "Unexpected token");
+report_error(100, 7, "Undefined variable");
+report_error(200, 1, "Syntax error");
+print "";
+
+-- ==================== EXAMPLE 9: ROUND-TRIP CONVERSIONS ====================
+
+print "=== Example 9: Round-Trip Conversions ===";
+print "";
+
+-- Integer → String → Integer
+int original_num = 12345;
+string num_str = int_to_string(original_num);
+int parsed_num = string_to_int(num_str);
+
+print "Original: ";
+print original_num;
+print "After round-trip: ";
+print parsed_num;
+
+if original_num == parsed_num then
+    print "Round-trip successful!";
+end
+print "";
+
+-- Character → Code → Character
+string original_char = "X";
+int code_val = char_code(original_char);
+string restored_char = char_from_code(code_val);
+
+print "Original char: ";
+print original_char;
+print "After round-trip: ";
+print restored_char;
+
+if original_char == restored_char then
+    print "Character round-trip successful!";
+end
+print "";
+
+-- ==================== EXAMPLE 10: STRING ITERATION ====================
+
+print "=== Example 10: String Character Iteration ===";
+print "";
+
+string text = "Hello";
+
+print "Characters in 'Hello':";
+int i = 0;
+while i < string_length(text)
+    string ch = string_char_at(text, i);
+    int code = char_code(ch);
+
+    print "  [";
+    print i;
+    print "] = '";
+    print ch;
+    print "' (code: ";
+    print code;
+    print ")";
+
+    i = i + 1;
+end
+print "";
+
+-- ==================== SUMMARY ====================
+
+print "=== Type Conversion Examples Complete ===";
+print "";
+print "Demonstrated:";
+print "- int_to_string() for number formatting";
+print "- string_to_int() for parsing user input";
+print "- char_code() for getting ASCII codes";
+print "- char_from_code() for generating characters";
+print "- string_concat() for building strings";
+print "- string_char_at() for character access";
+print "";
+print "Use cases:";
+print "- User input/output";
+print "- Error message formatting";
+print "- Character classification";
+print "- Dynamic string building";
+print "- Data parsing and validation";

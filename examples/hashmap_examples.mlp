@@ -1,0 +1,400 @@
+-- Hash Map Examples
+-- Demonstrates Phase 4 Hash Map compiler integration
+-- Author: MLP Documentation Team
+-- Date: November 20, 2025
+
+-- ==================== EXAMPLE 1: BASIC OPERATIONS ====================
+
+print "=== Example 1: Basic Hash Map Operations ===";
+print "";
+
+-- Create integer-to-string map
+map[int:string] ages = map();
+
+-- Add entries
+ages.set(1, "Alice");
+ages.set(2, "Bob");
+ages.set(3, "Charlie");
+
+print "Added 3 entries";
+print "Map size: ";
+print ages.size();
+print "";
+
+-- Check existence
+if ages.has(2) == 1 then
+    print "Key 2 exists";
+    string name = ages.get(2);
+    print "Value: ";
+    print name;
+end
+print "";
+
+-- Get non-existent key
+if ages.has(99) == 0 then
+    print "Key 99 does not exist";
+end
+print "";
+
+-- Remove entry
+ages.remove(2);
+print "Removed key 2";
+print "New size: ";
+print ages.size();
+print "";
+
+-- ==================== EXAMPLE 2: STRING KEYS ====================
+
+print "=== Example 2: String-to-Integer Map ===";
+print "";
+
+-- Word frequency counter
+map[string:int] word_count = map();
+
+-- Sample text (simplified)
+list[string] words = list();
+words.add("hello");
+words.add("world");
+words.add("hello");
+words.add("MLP");
+words.add("world");
+words.add("hello");
+
+-- Count word frequencies
+int i = 0;
+while i < words.size()
+    string word = words.get(i);
+
+    if word_count.has(word) == 1 then
+        int count = word_count.get(word);
+        word_count.set(word, count + 1);
+    else
+        word_count.set(word, 1);
+    end
+
+    i = i + 1;
+end
+
+print "Word frequencies:";
+print "hello: ";
+print word_count.get("hello");
+print "world: ";
+print word_count.get("world");
+print "MLP: ";
+print word_count.get("MLP");
+print "";
+
+-- ==================== EXAMPLE 3: NESTED STRUCTURES ====================
+
+print "=== Example 3: Hash Map with Struct Values ===";
+print "";
+
+-- Define a student record
+struct Student then
+    string name;
+    int age;
+    int grade;
+end
+
+-- Create map of student IDs to records
+map[int:Student] students = map();
+
+-- Add students
+Student alice;
+alice.name = "Alice";
+alice.age = 20;
+alice.grade = 95;
+students.set(101, alice);
+
+Student bob;
+bob.name = "Bob";
+bob.age = 22;
+bob.grade = 87;
+students.set(102, bob);
+
+Student charlie;
+charlie.name = "Charlie";
+charlie.age = 21;
+charlie.grade = 92;
+students.set(103, charlie);
+
+print "Added 3 students";
+print "";
+
+-- Look up student
+if students.has(102) == 1 then
+    Student s = students.get(102);
+    print "Student 102:";
+    print "  Name: ";
+    print s.name;
+    print "  Age: ";
+    print s.age;
+    print "  Grade: ";
+    print s.grade;
+end
+print "";
+
+-- ==================== EXAMPLE 4: CONFIGURATION MANAGEMENT ====================
+
+print "=== Example 4: Configuration Storage ===";
+print "";
+
+map[string:string] config = map();
+
+-- Load configuration
+function load_config(cfg) then
+    cfg.set("compiler_version", "1.0.0");
+    cfg.set("target_arch", "x86_64");
+    cfg.set("optimization_level", "2");
+    cfg.set("debug_mode", "false");
+    cfg.set("output_format", "elf64");
+    return 0;
+end
+
+load_config(config);
+
+print "Configuration loaded:";
+print "  Version: ";
+print config.get("compiler_version");
+print "  Architecture: ";
+print config.get("target_arch");
+print "  Optimization: ";
+print config.get("optimization_level");
+print "";
+
+-- Get with default
+function get_config_or_default(cfg, key, default_val) then
+    if cfg.has(key) == 1 then
+        return cfg.get(key);
+    end
+    return default_val;
+end
+
+string log_level = get_config_or_default(config, "log_level", "info");
+print "Log level (default): ";
+print log_level;
+print "";
+
+-- ==================== EXAMPLE 5: SYMBOL TABLE ====================
+
+print "=== Example 5: Simple Symbol Table ===";
+print "";
+
+-- Symbol table for variable types
+map[string:string] symbol_table = map();
+
+function define_variable(name, type) then
+    if symbol_table.has(name) == 1 then
+        print "Error: Variable already defined: ";
+        print name;
+        return -1;
+    end
+
+    symbol_table.set(name, type);
+    print "Defined: ";
+    print name;
+    print " : ";
+    print type;
+    return 0;
+end
+
+function lookup_type(name) then
+    if symbol_table.has(name) == 1 then
+        return symbol_table.get(name);
+    end
+
+    print "Error: Undefined variable: ";
+    print name;
+    return "";
+end
+
+-- Define variables
+define_variable("count", "int");
+define_variable("message", "string");
+define_variable("flag", "int");
+
+print "";
+
+-- Lookup types
+string count_type = lookup_type("count");
+print "Type of 'count': ";
+print count_type;
+
+string unknown_type = lookup_type("unknown");
+print "";
+
+-- ==================== EXAMPLE 6: CACHING ====================
+
+print "=== Example 6: Memoization Cache ===";
+print "";
+
+-- Cache for expensive computations (e.g., Fibonacci)
+map[int:int] fib_cache = map();
+
+function fibonacci(n) then
+    if n <= 1 then
+        return n;
+    end
+
+    -- Check cache
+    if fib_cache.has(n) == 1 then
+        print "Cache hit for: ";
+        print n;
+        return fib_cache.get(n);
+    end
+
+    -- Compute and cache
+    int result = fibonacci(n - 1) + fibonacci(n - 2);
+    fib_cache.set(n, result);
+
+    print "Computed and cached: ";
+    print n;
+
+    return result;
+end
+
+print "Computing fibonacci(10):";
+int fib10 = fibonacci(10);
+print "Result: ";
+print fib10;
+print "";
+
+print "Computing fibonacci(10) again (should use cache):";
+int fib10_cached = fibonacci(10);
+print "Result: ";
+print fib10_cached;
+print "";
+
+-- ==================== EXAMPLE 7: MULTI-LANGUAGE KEYWORDS ====================
+
+print "=== Example 7: Keyword Translation ===";
+print "";
+
+map[string:string] tr_to_en = map();
+map[string:string] en_to_tr = map();
+
+function init_keywords() then
+    -- Turkish to English
+    tr_to_en.set("EĞER", "if");
+    tr_to_en.set("İSE", "then");
+    tr_to_en.set("DEĞİLSE", "else");
+    tr_to_en.set("DÖNGÜ", "while");
+    tr_to_en.set("İŞLEÇ", "function");
+    tr_to_en.set("DÖNÜŞ", "return");
+
+    -- English to Turkish
+    en_to_tr.set("if", "EĞER");
+    en_to_tr.set("then", "İSE");
+    en_to_tr.set("else", "DEĞİLSE");
+    en_to_tr.set("while", "DÖNGÜ");
+    en_to_tr.set("function", "İŞLEÇ");
+    en_to_tr.set("return", "DÖNÜŞ");
+
+    return 0;
+end
+
+init_keywords();
+
+print "Keyword translation initialized";
+print "TR → EN mappings: ";
+print tr_to_en.size();
+print "";
+
+-- Translate keywords
+function translate_tr_to_en(keyword) then
+    if tr_to_en.has(keyword) == 1 then
+        return tr_to_en.get(keyword);
+    end
+    return keyword;
+end
+
+string translated = translate_tr_to_en("EĞER");
+print "EĞER → ";
+print translated;
+
+translated = translate_tr_to_en("DÖNGÜ");
+print "DÖNGÜ → ";
+print translated;
+print "";
+
+-- ==================== EXAMPLE 8: COLLISION HANDLING ====================
+
+print "=== Example 8: Hash Collision Demonstration ===";
+print "";
+
+map[int:string] collision_test = map();
+
+-- Insert many entries to trigger collisions
+int j = 0;
+while j < 20
+    string value = "Value_";
+    value = string_concat(value, int_to_string(j));
+    collision_test.set(j, value);
+    j = j + 1;
+end
+
+print "Inserted 20 entries";
+print "Map size: ";
+print collision_test.size();
+print "";
+
+-- Verify all entries are retrievable
+int missing = 0;
+int k = 0;
+while k < 20
+    if collision_test.has(k) == 0 then
+        missing = missing + 1;
+    end
+    k = k + 1;
+end
+
+if missing == 0 then
+    print "All entries retrievable (collision handling works!)";
+else
+    print "Missing entries: ";
+    print missing;
+end
+print "";
+
+-- ==================== EXAMPLE 9: CLEAR OPERATION ====================
+
+print "=== Example 9: Clear Operation ===";
+print "";
+
+map[string:int] temp_map = map();
+temp_map.set("a", 1);
+temp_map.set("b", 2);
+temp_map.set("c", 3);
+
+print "Map size before clear: ";
+print temp_map.size();
+
+temp_map.clear();
+
+print "Map size after clear: ";
+print temp_map.size();
+
+if temp_map.has("a") == 0 then
+    print "Confirmed: Map is empty after clear";
+end
+print "";
+
+-- ==================== SUMMARY ====================
+
+print "=== Hash Map Examples Complete ===";
+print "";
+print "Demonstrated:";
+print "- Basic operations (set, get, has, remove, size, clear)";
+print "- Integer and string keys";
+print "- Struct values";
+print "- Configuration management";
+print "- Symbol tables";
+print "- Memoization caching";
+print "- Keyword translation";
+print "- Collision handling";
+print "";
+print "Hash maps are essential for:";
+print "- Compiler symbol tables";
+print "- Configuration storage";
+print "- Caching and memoization";
+print "- Fast lookups and associations";

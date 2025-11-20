@@ -1,0 +1,391 @@
+-- Math Operations Examples
+-- Demonstrates Phase 4 mathematical utility functions
+-- Author: MLP Documentation Team
+-- Date: November 20, 2025
+
+-- ==================== EXAMPLE 1: ABSOLUTE VALUE ====================
+
+print "=== Example 1: Absolute Value ===";
+print "";
+
+-- Basic abs() usage
+int positive = abs(42);
+print "abs(42) = ";
+print positive;
+
+int negative = abs(-100);
+print "abs(-100) = ";
+print negative;
+
+int zero_val = abs(0);
+print "abs(0) = ";
+print zero_val;
+print "";
+
+-- Use case: Distance calculation
+int point_a = 10;
+int point_b = 25;
+int distance = abs(point_a - point_b);
+print "Distance between 10 and 25: ";
+print distance;
+print "";
+
+-- ==================== EXAMPLE 2: MIN AND MAX ====================
+
+print "=== Example 2: Min and Max ===";
+print "";
+
+-- Basic min/max
+int smaller = min(10, 20);
+print "min(10, 20) = ";
+print smaller;
+
+int larger = max(10, 20);
+print "max(10, 20) = ";
+print larger;
+
+-- With negative numbers
+int min_neg = min(-5, 3);
+print "min(-5, 3) = ";
+print min_neg;
+
+int max_neg = max(-5, 3);
+print "max(-5, 3) = ";
+print max_neg;
+print "";
+
+-- Equal values
+int min_same = min(7, 7);
+print "min(7, 7) = ";
+print min_same;
+print "";
+
+-- ==================== EXAMPLE 3: CLAMPING VALUES ====================
+
+print "=== Example 3: Clamping ===";
+print "";
+
+-- Within range
+int val1 = clamp(50, 0, 100);
+print "clamp(50, 0, 100) = ";
+print val1;
+
+-- Below minimum
+int val2 = clamp(-10, 0, 100);
+print "clamp(-10, 0, 100) = ";
+print val2;
+
+-- Above maximum
+int val3 = clamp(150, 0, 100);
+print "clamp(150, 0, 100) = ";
+print val3;
+print "";
+
+-- Use case: RGB color clamping
+function clamp_rgb(r, g, b) then
+    int red = clamp(r, 0, 255);
+    int green = clamp(g, 0, 255);
+    int blue = clamp(b, 0, 255);
+
+    print "RGB(";
+    print red;
+    print ", ";
+    print green;
+    print ", ";
+    print blue;
+    print ")";
+
+    return 0;
+end
+
+print "Clamped colors:";
+clamp_rgb(100, 200, 300);  -- Blue exceeds 255
+clamp_rgb(-10, 128, 64);   -- Red below 0
+print "";
+
+-- ==================== EXAMPLE 4: FINDING MIN/MAX IN LIST ====================
+
+print "=== Example 4: Find Min/Max in List ===";
+print "";
+
+function find_minimum(numbers) then
+    if numbers.size() == 0 then
+        return 0;
+    end
+
+    int min_val = numbers.get(0);
+    int i = 1;
+    while i < numbers.size()
+        int current = numbers.get(i);
+        min_val = min(min_val, current);
+        i = i + 1;
+    end
+
+    return min_val;
+end
+
+function find_maximum(numbers) then
+    if numbers.size() == 0 then
+        return 0;
+    end
+
+    int max_val = numbers.get(0);
+    int i = 1;
+    while i < numbers.size()
+        int current = numbers.get(i);
+        max_val = max(max_val, current);
+        i = i + 1;
+    end
+
+    return max_val;
+end
+
+list[int] values = list();
+values.add(42);
+values.add(17);
+values.add(99);
+values.add(3);
+values.add(-10);
+
+int minimum = find_minimum(values);
+int maximum = find_maximum(values);
+
+print "Values: 42, 17, 99, 3, -10";
+print "Minimum: ";
+print minimum;
+print "Maximum: ";
+print maximum;
+print "";
+
+-- ==================== EXAMPLE 5: INPUT VALIDATION ====================
+
+print "=== Example 5: Input Validation ===";
+print "";
+
+function validate_age(age) then
+    int valid = clamp(age, 0, 150);
+
+    if valid != age then
+        print "Warning: Age adjusted from ";
+        print age;
+        print " to ";
+        print valid;
+    else
+        print "Age accepted: ";
+        print age;
+    end
+
+    return valid;
+end
+
+print "Validating ages:";
+int age1 = validate_age(25);
+int age2 = validate_age(-5);
+int age3 = validate_age(200);
+print "";
+
+-- ==================== EXAMPLE 6: MANHATTAN DISTANCE ====================
+
+print "=== Example 6: Manhattan Distance ===";
+print "";
+
+function manhattan_distance(x1, y1, x2, y2) then
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    return dx + dy;
+end
+
+int dist1 = manhattan_distance(0, 0, 3, 4);
+print "Distance from (0,0) to (3,4): ";
+print dist1;
+
+int dist2 = manhattan_distance(10, 20, 15, 25);
+print "Distance from (10,20) to (15,25): ";
+print dist2;
+print "";
+
+-- ==================== EXAMPLE 7: SAFE ARRAY INDEXING ====================
+
+print "=== Example 7: Safe Array Access ===";
+print "";
+
+function safe_get(array, index) then
+    int size = array.size();
+    int safe_index = clamp(index, 0, size - 1);
+
+    if safe_index != index then
+        print "Warning: Index ";
+        print index;
+        print " clamped to ";
+        print safe_index;
+    end
+
+    return array.get(safe_index);
+end
+
+list[int] numbers = list();
+numbers.add(10);
+numbers.add(20);
+numbers.add(30);
+
+print "Array: [10, 20, 30]";
+print "safe_get(1): ";
+print safe_get(numbers, 1);
+
+print "safe_get(100): ";
+print safe_get(numbers, 100);
+
+print "safe_get(-5): ";
+print safe_get(numbers, -5);
+print "";
+
+-- ==================== EXAMPLE 8: STATISTICS ====================
+
+print "=== Example 8: Basic Statistics ===";
+print "";
+
+function calculate_range(numbers) then
+    if numbers.size() == 0 then
+        return 0;
+    end
+
+    int min_val = find_minimum(numbers);
+    int max_val = find_maximum(numbers);
+    int range = max_val - min_val;
+
+    print "Min: ";
+    print min_val;
+    print "Max: ";
+    print max_val;
+    print "Range: ";
+    print range;
+
+    return range;
+end
+
+list[int] dataset = list();
+dataset.add(15);
+dataset.add(42);
+dataset.add(8);
+dataset.add(23);
+dataset.add(50);
+
+print "Dataset: [15, 42, 8, 23, 50]";
+calculate_range(dataset);
+print "";
+
+-- ==================== EXAMPLE 9: THRESHOLD DETECTION ====================
+
+print "=== Example 9: Threshold Detection ===";
+print "";
+
+function check_thresholds(value, low, high) then
+    int safe_val = clamp(value, low, high);
+
+    if value < low then
+        print "ALERT: Value ";
+        print value;
+        print " below minimum threshold ";
+        print low;
+    else if value > high then
+        print "ALERT: Value ";
+        print value;
+        print " above maximum threshold ";
+        print high;
+    else
+        print "OK: Value ";
+        print value;
+        print " within acceptable range";
+    end
+
+    return safe_val;
+end
+
+print "Checking sensor readings (range: 20-80):";
+check_thresholds(50, 20, 80);
+check_thresholds(10, 20, 80);
+check_thresholds(95, 20, 80);
+print "";
+
+-- ==================== EXAMPLE 10: SORTING (BUBBLE SORT) ====================
+
+print "=== Example 10: Bubble Sort with Min/Max ===";
+print "";
+
+function bubble_sort(arr) then
+    int n = arr.size();
+    int i = 0;
+
+    while i < n
+        int j = 0;
+        while j < n - i - 1
+            int current = arr.get(j);
+            int next = arr.get(j + 1);
+
+            -- Swap if current > next
+            if current > next then
+                arr.set(j, next);
+                arr.set(j + 1, current);
+            end
+
+            j = j + 1;
+        end
+        i = i + 1;
+    end
+
+    return 0;
+end
+
+list[int] unsorted = list();
+unsorted.add(64);
+unsorted.add(34);
+unsorted.add(25);
+unsorted.add(12);
+unsorted.add(22);
+unsorted.add(11);
+unsorted.add(90);
+
+print "Before sort: 64, 34, 25, 12, 22, 11, 90";
+bubble_sort(unsorted);
+
+print "After sort: ";
+int k = 0;
+while k < unsorted.size()
+    print unsorted.get(k);
+    if k < unsorted.size() - 1 then
+        print ", ";
+    end
+    k = k + 1;
+end
+print "";
+print "";
+
+-- Verify min and max
+int sorted_min = unsorted.get(0);
+int sorted_max = unsorted.get(unsorted.size() - 1);
+print "Sorted min: ";
+print sorted_min;
+print "Sorted max: ";
+print sorted_max;
+print "";
+
+-- ==================== SUMMARY ====================
+
+print "=== Math Operations Examples Complete ===";
+print "";
+print "Demonstrated:";
+print "- abs() for absolute values and distances";
+print "- min() and max() for comparisons";
+print "- clamp() for value constraints";
+print "- Finding min/max in lists";
+print "- Input validation and safety";
+print "- Distance calculations";
+print "- Statistics (range)";
+print "- Threshold detection";
+print "- Sorting algorithms";
+print "";
+print "Math utilities are essential for:";
+print "- Data validation";
+print "- Algorithm implementation";
+print "- Physical simulations";
+print "- Statistical analysis";

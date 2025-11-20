@@ -1,6 +1,6 @@
 # MLP API Reference
 
-**Version:** Phase 3
+**Version:** Phase 4
 **Last Updated:** November 20, 2025
 
 ---
@@ -9,10 +9,12 @@
 
 | Category | Functions | Status |
 |----------|-----------|--------|
-| **File I/O** | 6 functions | Phase 3 🔄 |
-| **String Ops** | 15 functions (6 existing + 9 new) | Phase 3 🔄 |
+| **File I/O** | 6 functions | Phase 3 ✅ |
+| **String Ops** | 15 functions (6 existing + 9 new) | Phase 3 ✅ |
+| **Type Conversions** | 6 functions | Phase 4 🔄 |
+| **Math Operations** | 4 functions | Phase 4 🔄 |
 | **Lists** | 7 functions | Phase 2 ✅ |
-| **Hash Maps** | 8 functions | Phase 3 🔄 |
+| **Hash Maps** | 8 functions | Phase 3 ✅ |
 | **Structs** | Language feature | Phase 1 ✅ |
 | **Arrays** | Language feature | Phase 0 ✅ |
 
@@ -168,6 +170,64 @@ Free memory.
 
 ---
 
+## 🔄 Type Conversions (Phase 4) 🔄
+
+### `int_to_string(num: int) -> string`
+Convert integer to string.
+- **Returns:** String representation (e.g., `42` → `"42"`)
+- **Example:** `string msg = "Count: " + int_to_string(count);`
+
+### `string_to_int(str: string) -> int`
+Parse integer from string.
+- **Returns:** Parsed integer or `0` on error
+- **Example:** `int value = string_to_int("42");`
+
+### `char_code(ch: string) -> int`
+Get ASCII/Unicode code point of first character.
+- **Returns:** Character code or `0` if empty
+- **Example:** `int code = char_code("A"); -- 65`
+
+### `char_from_code(code: int) -> string`
+Create single-character string from code point.
+- **Returns:** Single-character string or `""` if invalid
+- **Example:** `string letter = char_from_code(65); -- "A"`
+
+### `string_concat(s1: string, s2: string) -> string`
+Concatenate two strings (alternative to `+` operator).
+- **Returns:** New concatenated string
+- **Example:** `string result = string_concat("Hello", "World");`
+
+### `string_char_at(str: string, index: int) -> string`
+Get character at index.
+- **Returns:** Single-character string or `""` if out of bounds
+- **Example:** `string ch = string_char_at("Hello", 0); -- "H"`
+
+---
+
+## 🔢 Math Operations (Phase 4) 🔄
+
+### `abs(num: int) -> int`
+Get absolute value.
+- **Returns:** Non-negative integer
+- **Example:** `int distance = abs(a - b);`
+
+### `min(a: int, b: int) -> int`
+Get smaller of two integers.
+- **Returns:** Minimum value
+- **Example:** `int smaller = min(10, 20); -- 10`
+
+### `max(a: int, b: int) -> int`
+Get larger of two integers.
+- **Returns:** Maximum value
+- **Example:** `int larger = max(10, 20); -- 20`
+
+### `clamp(value: int, min_val: int, max_val: int) -> int`
+Restrict value to range.
+- **Returns:** Clamped value
+- **Example:** `int safe = clamp(value, 0, 100);`
+
+---
+
 ## 🏗️ Language Features
 
 ### Structs (Phase 1) ✅
@@ -227,11 +287,20 @@ int result = add(5, 3);
 
 ## 📖 See Also
 
+### Phase 3 Documentation
 - [FILE_IO_DESIGN.md](FILE_IO_DESIGN.md) - File I/O specification
 - [STRING_OPS_DESIGN.md](STRING_OPS_DESIGN.md) - String operations specification
-- [HASHMAP_DESIGN.md](HASHMAP_DESIGN.md) - Hash map specification
+- [HASHMAP_DESIGN.md](HASHMAP_DESIGN.md) - Hash map runtime specification
 - [LIST_DESIGN.md](LIST_DESIGN.md) - List specification
-- [TURING_COMPLETE_PLAN.md](TURING_COMPLETE_PLAN.md) - Roadmap
+
+### Phase 4 Documentation
+- [HASHMAP_COMPILER_DESIGN.md](HASHMAP_COMPILER_DESIGN.md) - Hash map compiler integration
+- [TYPE_CONVERSIONS_DESIGN.md](TYPE_CONVERSIONS_DESIGN.md) - Type conversion utilities
+- [MATH_OPERATIONS_DESIGN.md](MATH_OPERATIONS_DESIGN.md) - Math operation utilities
+
+### Planning & Roadmap
+- [TURING_COMPLETE_PLAN.md](TURING_COMPLETE_PLAN.md) - Development roadmap
+- [ROADMAP.md](ROADMAP.md) - Feature roadmap
 
 ---
 
