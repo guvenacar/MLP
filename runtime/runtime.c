@@ -1189,6 +1189,50 @@ char* bool_to_string(int value) {
     return strdup(value ? "true" : "false");
 }
 
+/**
+ * char_to_string - Convert ASCII code to single-character string
+ * @param ch: ASCII/Unicode code point
+ * @return: Single-character string (caller must free)
+ *
+ * MLP Usage: string s = char_to_string(65);  // "A"
+ */
+char* char_to_string(int ch) {
+    char* str = (char*)malloc(2);
+    if (!str) {
+        fprintf(stderr, "Memory allocation failed in char_to_string\n");
+        exit(1);
+    }
+    str[0] = (char)ch;
+    str[1] = '\0';
+    return str;
+}
+
+/**
+ * string_concat - Concatenate two strings
+ * @param s1: First string
+ * @param s2: Second string
+ * @return: Concatenated string (caller must free)
+ *
+ * MLP Usage: string result = string_concat("Hello", " World");
+ */
+char* string_concat(const char* s1, const char* s2) {
+    if (!s1) s1 = "";
+    if (!s2) s2 = "";
+
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
+    char* result = (char*)malloc(len1 + len2 + 1);
+
+    if (!result) {
+        fprintf(stderr, "Memory allocation failed in string_concat\n");
+        exit(1);
+    }
+
+    strcpy(result, s1);
+    strcat(result, s2);
+    return result;
+}
+
 // ============================================
 // Phase 4: Math Operations
 // ============================================

@@ -39,6 +39,15 @@ typedef enum {
 
     // Phase 3: Built-in Functions
     AST_BUILTIN_CALL,       // Built-in function call: read_file("path")
+
+    // Phase 4: Hash Maps
+    AST_MAP_TANIMLAMA,      // Map declaration: map[string:int] ages = map();
+    AST_MAP_SET,            // Map set: ages.set("Alice", 25)
+    AST_MAP_GET,            // Map get: ages.get("Alice")
+    AST_MAP_HAS,            // Map has: ages.has("Bob")
+    AST_MAP_REMOVE,         // Map remove: ages.remove("Charlie")
+    AST_MAP_SIZE,           // Map size: ages.size()
+    AST_MAP_CLEAR,          // Map clear: ages.clear()
 } ASTNodeType;
 
 // İleri Bildirimler (C'de iç içe struct'lar için gerekli)
@@ -216,6 +225,50 @@ struct ASTNode {
             ASTNode* arg2;           // Second argument (optional)
             ASTNode* arg3;           // Third argument (optional, for join)
         } builtin_call_data;
+
+        // ===== Phase 4: Hash Maps =====
+
+        // Map Tanımlama (map[string:int] ages = map();)
+        struct {
+            Token* key_tipi;      // Key type (string, int)
+            Token* value_tipi;    // Value type (string, int)
+            Token* degisken_adi;  // Map variable name (ages)
+        } map_tanimlama_data;
+
+        // Map Set (ages.set("Alice", 25))
+        struct {
+            Token* map_adi;       // Map name (ages)
+            ASTNode* key;         // Key expression
+            ASTNode* value;       // Value expression
+        } map_set_data;
+
+        // Map Get (ages.get("Alice"))
+        struct {
+            Token* map_adi;       // Map name (ages)
+            ASTNode* key;         // Key expression
+        } map_get_data;
+
+        // Map Has (ages.has("Bob"))
+        struct {
+            Token* map_adi;       // Map name (ages)
+            ASTNode* key;         // Key expression
+        } map_has_data;
+
+        // Map Remove (ages.remove("Charlie"))
+        struct {
+            Token* map_adi;       // Map name (ages)
+            ASTNode* key;         // Key expression
+        } map_remove_data;
+
+        // Map Size (ages.size())
+        struct {
+            Token* map_adi;       // Map name (ages)
+        } map_size_data;
+
+        // Map Clear (ages.clear())
+        struct {
+            Token* map_adi;       // Map name (ages)
+        } map_clear_data;
     };
 };
 
@@ -225,5 +278,14 @@ void freeAST(ASTNode* node);             // AST temizleme (Bellek yönetimi)
 
 // Phase 3: Built-in function helper
 ASTNode* createAST_BuiltinCall(TokenType func_type, ASTNode* arg1, ASTNode* arg2, ASTNode* arg3);
+
+// Phase 4: Hash map helpers
+ASTNode* createAST_MapTanimlama(Token* key_tipi, Token* value_tipi, Token* degisken_adi);
+ASTNode* createAST_MapSet(Token* map_adi, ASTNode* key, ASTNode* value);
+ASTNode* createAST_MapGet(Token* map_adi, ASTNode* key);
+ASTNode* createAST_MapHas(Token* map_adi, ASTNode* key);
+ASTNode* createAST_MapRemove(Token* map_adi, ASTNode* key);
+ASTNode* createAST_MapSize(Token* map_adi);
+ASTNode* createAST_MapClear(Token* map_adi);
 
 #endif // C_AST_H
