@@ -1101,3 +1101,236 @@ int string_ends_with(const char* str, const char* suffix) {
     return strcmp(str + str_len - suffix_len, suffix) == 0 ? 1 : 0;
 }
 
+// ============================================
+// Phase 4: Type Conversion Operations
+// ============================================
+
+/**
+ * string_to_int - Convert string to integer
+ * @param str: String to convert
+ * @return: Integer value, or 0 on error
+ *
+ * MLP Usage: int num = string_to_int("123");
+ */
+int64_t string_to_int(const char* str) {
+    if (str == NULL || *str == '\0') {
+        fprintf(stderr, "HATA [string_to_int]: NULL or empty string\n");
+        return 0;
+    }
+    return (int64_t)atoll(str);
+}
+
+/**
+ * int_to_string - Convert integer to string
+ * @param num: Integer to convert
+ * @return: String representation (dynamically allocated)
+ *
+ * MLP Usage: string text = int_to_string(123);
+ */
+char* int_to_string(int64_t num) {
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%ld", num);
+    return strdup(buffer);
+}
+
+/**
+ * string_to_float - Convert string to float
+ * @param str: String to convert
+ * @return: Float value, or 0.0 on error
+ *
+ * MLP Usage: float num = string_to_float("123.45");
+ */
+double string_to_float(const char* str) {
+    if (str == NULL || *str == '\0') {
+        fprintf(stderr, "HATA [string_to_float]: NULL or empty string\n");
+        return 0.0;
+    }
+    return atof(str);
+}
+
+/**
+ * float_to_string - Convert float to string
+ * @param num: Float to convert
+ * @return: String representation (dynamically allocated)
+ *
+ * MLP Usage: string text = float_to_string(123.45);
+ */
+char* float_to_string(double num) {
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "%.6f", num);
+    return strdup(buffer);
+}
+
+/**
+ * string_to_bool - Convert string to boolean
+ * @param str: String to convert ("true"/"false", "1"/"0", "yes"/"no")
+ * @return: 1 for true, 0 for false
+ *
+ * MLP Usage: int flag = string_to_bool("true");
+ */
+int string_to_bool(const char* str) {
+    if (str == NULL) return 0;
+    
+    if (strcmp(str, "true") == 0 || strcmp(str, "TRUE") == 0 ||
+        strcmp(str, "1") == 0 || strcmp(str, "yes") == 0) {
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * bool_to_string - Convert boolean to string
+ * @param value: Boolean value (0 or 1)
+ * @return: "true" or "false" (dynamically allocated)
+ *
+ * MLP Usage: string text = bool_to_string(1);
+ */
+char* bool_to_string(int value) {
+    return strdup(value ? "true" : "false");
+}
+
+// ============================================
+// Phase 4: Math Operations
+// ============================================
+
+#include <math.h>
+
+/**
+ * math_sqrt - Square root
+ * @param num: Number
+ * @return: Square root
+ *
+ * MLP Usage: float result = math_sqrt(16.0);
+ */
+double math_sqrt(double num) {
+    if (num < 0) {
+        fprintf(stderr, "HATA [math_sqrt]: Negative number\n");
+        return 0.0;
+    }
+    return sqrt(num);
+}
+
+/**
+ * math_pow - Power function
+ * @param base: Base number
+ * @param exponent: Exponent
+ * @return: base^exponent
+ *
+ * MLP Usage: float result = math_pow(2.0, 3.0);
+ */
+double math_pow(double base, double exponent) {
+    return pow(base, exponent);
+}
+
+/**
+ * math_abs - Absolute value (integer)
+ * @param num: Number
+ * @return: Absolute value
+ *
+ * MLP Usage: int result = math_abs(-5);
+ */
+int64_t math_abs(int64_t num) {
+    return num < 0 ? -num : num;
+}
+
+/**
+ * math_fabs - Absolute value (float)
+ * @param num: Number
+ * @return: Absolute value
+ *
+ * MLP Usage: float result = math_fabs(-5.5);
+ */
+double math_fabs(double num) {
+    return fabs(num);
+}
+
+/**
+ * math_min - Minimum of two integers
+ * @param a: First number
+ * @param b: Second number
+ * @return: Minimum value
+ *
+ * MLP Usage: int result = math_min(5, 10);
+ */
+int64_t math_min(int64_t a, int64_t b) {
+    return a < b ? a : b;
+}
+
+/**
+ * math_max - Maximum of two integers
+ * @param a: First number
+ * @param b: Second number
+ * @return: Maximum value
+ *
+ * MLP Usage: int result = math_max(5, 10);
+ */
+int64_t math_max(int64_t a, int64_t b) {
+    return a > b ? a : b;
+}
+
+/**
+ * math_round - Round to nearest integer
+ * @param num: Number to round
+ * @return: Rounded value
+ *
+ * MLP Usage: int result = math_round(5.7);
+ */
+int64_t math_round(double num) {
+    return (int64_t)round(num);
+}
+
+/**
+ * math_floor - Floor function
+ * @param num: Number
+ * @return: Floor value
+ *
+ * MLP Usage: int result = math_floor(5.7);
+ */
+int64_t math_floor(double num) {
+    return (int64_t)floor(num);
+}
+
+/**
+ * math_ceil - Ceiling function
+ * @param num: Number
+ * @return: Ceiling value
+ *
+ * MLP Usage: int result = math_ceil(5.3);
+ */
+int64_t math_ceil(double num) {
+    return (int64_t)ceil(num);
+}
+
+/**
+ * math_sin - Sine function
+ * @param angle: Angle in radians
+ * @return: Sine value
+ *
+ * MLP Usage: float result = math_sin(1.57);
+ */
+double math_sin(double angle) {
+    return sin(angle);
+}
+
+/**
+ * math_cos - Cosine function
+ * @param angle: Angle in radians
+ * @return: Cosine value
+ *
+ * MLP Usage: float result = math_cos(0.0);
+ */
+double math_cos(double angle) {
+    return cos(angle);
+}
+
+/**
+ * math_tan - Tangent function
+ * @param angle: Angle in radians
+ * @return: Tangent value
+ *
+ * MLP Usage: float result = math_tan(0.785);
+ */
+double math_tan(double angle) {
+    return tan(angle);
+}
+

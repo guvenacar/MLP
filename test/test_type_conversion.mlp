@@ -1,0 +1,238 @@
+# Test: Type Conversion Operations - Phase 4
+# Tests string<->int, string<->float, string<->bool conversions
+
+def test_string_to_int():
+    """Test converting strings to integers"""
+    print("\n=== Test 1: String to Int ===")
+    
+    # Positive numbers
+    val1 = string_to_int("42")
+    assert val1 == 42, "Expected 42"
+    
+    # Negative numbers
+    val2 = string_to_int("-123")
+    assert val2 == -123, "Expected -123"
+    
+    # Zero
+    val3 = string_to_int("0")
+    assert val3 == 0, "Expected 0"
+    
+    # Large numbers
+    val4 = string_to_int("999999999")
+    assert val4 == 999999999, "Expected 999999999"
+    
+    print("✅ String to Int conversions work correctly")
+
+def test_int_to_string():
+    """Test converting integers to strings"""
+    print("\n=== Test 2: Int to String ===")
+    
+    # Positive number
+    str1 = int_to_string(42)
+    assert str1 == "42", "Expected '42'"
+    
+    # Negative number
+    str2 = int_to_string(-123)
+    assert str2 == "-123", "Expected '-123'"
+    
+    # Zero
+    str3 = int_to_string(0)
+    assert str3 == "0", "Expected '0'"
+    
+    # Large number
+    str4 = int_to_string(999999999)
+    assert str4 == "999999999", "Expected '999999999'"
+    
+    print("✅ Int to String conversions work correctly")
+
+def test_string_to_float():
+    """Test converting strings to floating point"""
+    print("\n=== Test 3: String to Float ===")
+    
+    # Simple decimal
+    val1 = string_to_float("3.14")
+    assert val1 >= 3.13 and val1 <= 3.15, "Expected ~3.14"
+    
+    # Negative decimal
+    val2 = string_to_float("-2.5")
+    assert val2 >= -2.51 and val2 <= -2.49, "Expected ~-2.5"
+    
+    # Integer as float
+    val3 = string_to_float("42")
+    assert val3 >= 41.9 and val3 <= 42.1, "Expected ~42.0"
+    
+    # Zero
+    val4 = string_to_float("0.0")
+    assert val4 >= -0.01 and val4 <= 0.01, "Expected ~0.0"
+    
+    print("✅ String to Float conversions work correctly")
+
+def test_float_to_string():
+    """Test converting floating point to strings"""
+    print("\n=== Test 4: Float to String ===")
+    
+    # Simple decimal
+    str1 = float_to_string(3.14)
+    print("3.14 -> " + str1)
+    
+    # Negative decimal
+    str2 = float_to_string(-2.5)
+    print("-2.5 -> " + str2)
+    
+    # Integer as float
+    str3 = float_to_string(42.0)
+    print("42.0 -> " + str3)
+    
+    # Very small
+    str4 = float_to_string(0.001)
+    print("0.001 -> " + str4)
+    
+    print("✅ Float to String conversions work correctly")
+
+def test_string_to_bool():
+    """Test converting strings to booleans"""
+    print("\n=== Test 5: String to Bool ===")
+    
+    # True variants
+    val1 = string_to_bool("true")
+    assert val1 == 1, "Expected true -> 1"
+    
+    val2 = string_to_bool("TRUE")
+    assert val2 == 1, "Expected TRUE -> 1"
+    
+    val3 = string_to_bool("1")
+    assert val3 == 1, "Expected '1' -> 1"
+    
+    val4 = string_to_bool("yes")
+    assert val4 == 1, "Expected 'yes' -> 1"
+    
+    # False variants
+    val5 = string_to_bool("false")
+    assert val5 == 0, "Expected false -> 0"
+    
+    val6 = string_to_bool("FALSE")
+    assert val6 == 0, "Expected FALSE -> 0"
+    
+    val7 = string_to_bool("0")
+    assert val7 == 0, "Expected '0' -> 0"
+    
+    val8 = string_to_bool("no")
+    assert val8 == 0, "Expected 'no' -> 0"
+    
+    print("✅ String to Bool conversions work correctly")
+
+def test_bool_to_string():
+    """Test converting booleans to strings"""
+    print("\n=== Test 6: Bool to String ===")
+    
+    # True
+    str1 = bool_to_string(1)
+    assert str1 == "true", "Expected 1 -> 'true'"
+    
+    # False
+    str2 = bool_to_string(0)
+    assert str2 == "false", "Expected 0 -> 'false'"
+    
+    # Non-zero (truthy)
+    str3 = bool_to_string(42)
+    assert str3 == "true", "Expected 42 -> 'true'"
+    
+    print("✅ Bool to String conversions work correctly")
+
+def test_empty_strings():
+    """Test edge case: empty string conversions"""
+    print("\n=== Test 7: Empty String Handling ===")
+    
+    # Empty to int (should default to 0)
+    val1 = string_to_int("")
+    assert val1 == 0, "Expected empty string -> 0"
+    
+    # Empty to float (should default to 0.0)
+    val2 = string_to_float("")
+    assert val2 >= -0.01 and val2 <= 0.01, "Expected empty string -> 0.0"
+    
+    # Empty to bool (should default to false/0)
+    val3 = string_to_bool("")
+    assert val3 == 0, "Expected empty string -> 0"
+    
+    print("✅ Empty string edge cases handled correctly")
+
+def test_invalid_conversions():
+    """Test invalid conversion inputs"""
+    print("\n=== Test 8: Invalid Conversions ===")
+    
+    # Non-numeric string to int (should default to 0)
+    val1 = string_to_int("abc")
+    assert val1 == 0, "Expected 'abc' -> 0"
+    
+    # Non-numeric string to float (should default to 0.0)
+    val2 = string_to_float("xyz")
+    assert val2 >= -0.01 and val2 <= 0.01, "Expected 'xyz' -> 0.0"
+    
+    # Unknown string to bool (should default to false)
+    val3 = string_to_bool("maybe")
+    assert val3 == 0, "Expected 'maybe' -> 0"
+    
+    print("✅ Invalid conversions handled gracefully")
+
+def test_whitespace():
+    """Test whitespace handling in conversions"""
+    print("\n=== Test 9: Whitespace Handling ===")
+    
+    # Leading whitespace in int
+    val1 = string_to_int("  42")
+    assert val1 == 42, "Expected '  42' -> 42"
+    
+    # Leading whitespace in float
+    val2 = string_to_float("  3.14")
+    assert val2 >= 3.13 and val2 <= 3.15, "Expected '  3.14' -> 3.14"
+    
+    print("✅ Whitespace handled correctly")
+
+def test_round_trip():
+    """Test round-trip conversions"""
+    print("\n=== Test 10: Round-Trip Conversions ===")
+    
+    # Int -> String -> Int
+    original1 = 12345
+    str1 = int_to_string(original1)
+    final1 = string_to_int(str1)
+    assert final1 == original1, "Int round-trip failed"
+    
+    # Float -> String -> Float
+    original2 = 3.14159
+    str2 = float_to_string(original2)
+    final2 = string_to_float(str2)
+    assert final2 >= 3.14 and final2 <= 3.15, "Float round-trip failed"
+    
+    # Bool -> String -> Bool
+    original3 = 1
+    str3 = bool_to_string(original3)
+    final3 = string_to_bool(str3)
+    assert final3 == original3, "Bool round-trip failed"
+    
+    print("✅ Round-trip conversions work correctly")
+
+# Main test execution
+def main():
+    print("╔══════════════════════════════════════╗")
+    print("║   Type Conversion Tests - Phase 4   ║")
+    print("╚══════════════════════════════════════╝")
+    
+    test_string_to_int()
+    test_int_to_string()
+    test_string_to_float()
+    test_float_to_string()
+    test_string_to_bool()
+    test_bool_to_string()
+    test_empty_strings()
+    test_invalid_conversions()
+    test_whitespace()
+    test_round_trip()
+    
+    print("\n╔══════════════════════════════════════╗")
+    print("║       All Tests Passed! ✅           ║")
+    print("╚══════════════════════════════════════╝")
+
+# Run tests
+main()

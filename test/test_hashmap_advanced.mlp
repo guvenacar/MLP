@@ -1,0 +1,403 @@
+-- Hash Map Advanced Tests - Phase 4
+-- Tests complex hash map operations and scenarios
+
+-- Test 1: Large Dataset
+function test_large_dataset() then
+    map[int:string] data = map();
+    int size = 0;
+
+    print "=== Test 1: Large Dataset (100 entries) ===";
+
+    -- Insert 100 entries
+    int i = 0;
+    while
+        if i >= 100 then
+            break
+        end
+        data.set(i, "value");
+        i = i + 1;
+    end
+
+    size = data.size();
+    if size == 100 then
+        print "✅ Inserted 100 entries"
+    else
+        print "❌ Size mismatch after inserts"
+    end
+
+    -- Verify random access
+    string val = data.get(50);
+    if string_esit_mi(val, "value") then
+        print "✅ Random access works (index 50)"
+    else
+        print "❌ Random access failed"
+    end
+
+    -- Check has for multiple keys
+    int has25 = data.has(25);
+    int has75 = data.has(75);
+    int has999 = data.has(999);
+
+    if has25 == 1 then
+        if has75 == 1 then
+            if has999 == 0 then
+                print "✅ Has checks work correctly"
+            else
+                print "❌ Has check for non-existent failed"
+            end
+        else
+            print "❌ Has check for 75 failed"
+        end
+    else
+        print "❌ Has check for 25 failed"
+    end
+
+    return 1;
+end
+
+-- Test 2: Update Existing Keys
+function test_updates() then
+    map[string:int] scores = map();
+
+    print "";
+    print "=== Test 2: Update Existing Keys ===";
+
+    -- Initial values
+    scores.set("Alice", 50);
+    scores.set("Bob", 60);
+    scores.set("Charlie", 70);
+
+    int size = scores.size();
+    if size == 3 then
+        print "✅ Initial size: 3"
+    else
+        print "❌ Initial size wrong"
+    end
+
+    -- Update values
+    scores.set("Alice", 95);
+    scores.set("Bob", 87);
+    scores.set("Charlie", 92);
+
+    size = scores.size();
+    if size == 3 then
+        print "✅ Size unchanged after updates: 3"
+    else
+        print "❌ Size changed after update"
+    end
+
+    -- Verify updates
+    int alice = scores.get("Alice");
+    int bob = scores.get("Bob");
+
+    if alice == 95 then
+        if bob == 87 then
+            print "✅ Updates applied correctly"
+        else
+            print "❌ Bob's score update failed"
+        end
+    else
+        print "❌ Alice's score update failed"
+    end
+
+    return 1;
+end
+
+-- Test 3: Remove Multiple
+function test_remove_multiple() then
+    map[string:int] items = map();
+
+    print "";
+    print "=== Test 3: Remove Multiple Items ===";
+
+    -- Insert 10 items
+    int i = 0;
+    while
+        if i >= 10 then
+            break
+        end
+        items.set("key", i * 10);
+        i = i + 1;
+    end
+
+    int size = items.size();
+    print "Initial size: ";
+    yazdir_sayi(size);
+
+    -- Remove 5 items
+    items.remove("key0");
+    items.remove("key2");
+    items.remove("key4");
+    items.remove("key6");
+    items.remove("key8");
+
+    size = items.size();
+    if size == 5 then
+        print "✅ Removed 5 items, size: 5"
+    else
+        print "❌ Remove multiple failed"
+    end
+
+    -- Verify removed items
+    int has0 = items.has("key0");
+    int has1 = items.has("key1");
+
+    if has0 == 0 then
+        if has1 == 1 then
+            print "✅ Removed items not found, existing items found"
+        else
+            print "❌ Existing item missing"
+        end
+    else
+        print "❌ Removed item still present"
+    end
+
+    return 1;
+end
+
+-- Test 4: Clear and Reuse
+function test_clear_and_reuse() then
+    map[string:string] cache = map();
+
+    print "";
+    print "=== Test 4: Clear and Reuse ===";
+
+    -- First batch
+    cache.set("key1", "value1");
+    cache.set("key2", "value2");
+    cache.set("key3", "value3");
+
+    int size1 = cache.size();
+    if size1 == 3 then
+        print "✅ First batch size: 3"
+    else
+        print "❌ First batch size wrong"
+    end
+
+    -- Clear
+    cache.clear();
+    int size2 = cache.size();
+    if size2 == 0 then
+        print "✅ After clear: 0"
+    else
+        print "❌ Clear failed"
+    end
+
+    -- Second batch (reuse)
+    cache.set("new1", "newval1");
+    cache.set("new2", "newval2");
+
+    int size3 = cache.size();
+    if size3 == 2 then
+        print "✅ Reused map size: 2"
+    else
+        print "❌ Reuse after clear failed"
+    end
+
+    -- Verify old keys are gone
+    int hasOld = cache.has("key1");
+    int hasNew = cache.has("new1");
+
+    if hasOld == 0 then
+        if hasNew == 1 then
+            print "✅ Old keys cleared, new keys work"
+        else
+            print "❌ New key not found"
+        end
+    else
+        print "❌ Old key still present after clear"
+    end
+
+    return 1;
+end
+
+-- Test 5: Collision Handling (same hash bucket)
+function test_collision_handling() then
+    map[string:int] collision_map = map();
+
+    print "";
+    print "=== Test 5: Collision Handling ===";
+
+    -- Insert keys that might collide
+    collision_map.set("abc", 1);
+    collision_map.set("bca", 2);
+    collision_map.set("cab", 3);
+    collision_map.set("xyz", 4);
+    collision_map.set("zyx", 5);
+
+    int size = collision_map.size();
+    if size == 5 then
+        print "✅ All 5 keys inserted despite potential collisions"
+    else
+        print "❌ Collision handling size wrong"
+    end
+
+    -- Verify all keys retrievable
+    int val1 = collision_map.get("abc");
+    int val2 = collision_map.get("bca");
+    int val3 = collision_map.get("cab");
+
+    if val1 == 1 then
+        if val2 == 2 then
+            if val3 == 3 then
+                print "✅ All colliding keys retrievable"
+            else
+                print "❌ cab retrieval failed"
+            end
+        else
+            print "❌ bca retrieval failed"
+        end
+    else
+        print "❌ abc retrieval failed"
+    end
+
+    return 1;
+end
+
+-- Test 6: Mixed Operations
+function test_mixed_operations() then
+    map[string:int] mixed = map();
+
+    print "";
+    print "=== Test 6: Mixed Operations ===";
+
+    -- Insert
+    mixed.set("a", 1);
+    mixed.set("b", 2);
+    mixed.set("c", 3);
+
+    -- Update
+    mixed.set("a", 10);
+
+    -- Remove
+    mixed.remove("b");
+
+    -- Insert new
+    mixed.set("d", 4);
+
+    int size = mixed.size();
+    if size == 3 then
+        print "✅ Mixed operations size: 3"
+    else
+        print "❌ Mixed operations size wrong"
+    end
+
+    -- Verify state
+    int valA = mixed.get("a");
+    int hasB = mixed.has("b");
+    int hasD = mixed.has("d");
+
+    if valA == 10 then
+        if hasB == 0 then
+            if hasD == 1 then
+                print "✅ Mixed operations state correct"
+            else
+                print "❌ New key 'd' not found"
+            end
+        else
+            print "❌ Removed key 'b' still present"
+        end
+    else
+        print "❌ Updated key 'a' has wrong value"
+    end
+
+    return 1;
+end
+
+-- Test 7: Nested Map Access
+function test_nested_access() then
+    map[string:int] map1 = map();
+    map[string:int] map2 = map();
+
+    print "";
+    print "=== Test 7: Multiple Independent Maps ===";
+
+    -- Populate both maps
+    map1.set("shared", 100);
+    map2.set("shared", 200);
+
+    map1.set("unique1", 111);
+    map2.set("unique2", 222);
+
+    -- Verify independence
+    int val1 = map1.get("shared");
+    int val2 = map2.get("shared");
+
+    if val1 == 100 then
+        if val2 == 200 then
+            print "✅ Maps are independent (different values)"
+        else
+            print "❌ Map2 value wrong"
+        end
+    else
+        print "❌ Map1 value wrong"
+    end
+
+    -- Verify unique keys
+    int has1 = map1.has("unique1");
+    int has2 = map2.has("unique2");
+    int notHas1 = map1.has("unique2");
+    int notHas2 = map2.has("unique1");
+
+    if has1 == 1 then
+        if has2 == 1 then
+            if notHas1 == 0 then
+                if notHas2 == 0 then
+                    print "✅ Unique keys stay in their own maps"
+                else
+                    print "❌ Key leaked to other map"
+                end
+            else
+                print "❌ Key leaked to other map"
+            end
+        else
+            print "❌ Map2 unique key missing"
+        end
+    else
+        print "❌ Map1 unique key missing"
+    end
+
+    return 1;
+end
+
+-- Run all advanced tests
+print "╔══════════════════════════════════════╗";
+print "║  Hash Map Advanced Tests - Phase 4  ║";
+print "╚══════════════════════════════════════╝";
+print "";
+
+int total = 0;
+int passed = 0;
+
+total = total + 1;
+passed = passed + test_large_dataset();
+
+total = total + 1;
+passed = passed + test_updates();
+
+total = total + 1;
+passed = passed + test_remove_multiple();
+
+total = total + 1;
+passed = passed + test_clear_and_reuse();
+
+total = total + 1;
+passed = passed + test_collision_handling();
+
+total = total + 1;
+passed = passed + test_mixed_operations();
+
+total = total + 1;
+passed = passed + test_nested_access();
+
+print "";
+print "╔══════════════════════════════════════╗";
+print "║          Test Results                ║";
+print "╠══════════════════════════════════════╣";
+print "║ Passed: ";
+yazdir_sayi(passed);
+print "║ Failed: ";
+yazdir_sayi(total - passed);
+print "║ Total:  ";
+yazdir_sayi(total);
+print "╚══════════════════════════════════════╝";

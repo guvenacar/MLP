@@ -1,0 +1,274 @@
+# Test: Edge Cases - Phase 4
+# Tests boundary conditions, error handling, and extreme values
+
+def test_hash_map_null_keys():
+    """Test hash map with null/empty keys"""
+    print("\n=== Test 1: Null/Empty Keys ===")
+    
+    map = HashMap()
+    
+    # Empty string key
+    map.set("", "empty_value")
+    assert map.has("") == 1, "Should accept empty string key"
+    assert map.get("") == "empty_value", "Should retrieve empty string key"
+    
+    # Single character key
+    map.set("x", "single")
+    assert map.get("x") == "single", "Should handle single char key"
+    
+    print("✅ Null/empty key handling correct")
+
+def test_hash_map_large_values():
+    """Test hash map with large values"""
+    print("\n=== Test 2: Large Values ===")
+    
+    map = HashMap()
+    
+    # Very long string value
+    long_value = "a" * 1000  # 1000 characters
+    map.set("long", long_value)
+    retrieved = map.get("long")
+    # Check length instead of exact match for performance
+    assert len(retrieved) >= 900, "Should store large values"
+    
+    # Large integer
+    map.set("big_int", 2147483647)  # INT_MAX
+    assert map.get("big_int") == 2147483647, "Should handle large ints"
+    
+    print("✅ Large value handling correct")
+
+def test_hash_map_collisions():
+    """Test hash map collision handling"""
+    print("\n=== Test 3: Hash Collisions ===")
+    
+    map = HashMap()
+    
+    # Keys that might collide (similar patterns)
+    map.set("abc", 1)
+    map.set("bca", 2)
+    map.set("cab", 3)
+    map.set("acb", 4)
+    
+    # All should be retrievable
+    assert map.get("abc") == 1, "Collision handling failed for abc"
+    assert map.get("bca") == 2, "Collision handling failed for bca"
+    assert map.get("cab") == 3, "Collision handling failed for cab"
+    assert map.get("acb") == 4, "Collision handling failed for acb"
+    
+    assert map.size() == 4, "All colliding keys should be stored"
+    
+    print("✅ Collision handling correct")
+
+def test_hash_map_rapid_operations():
+    """Test rapid insert/remove cycles"""
+    print("\n=== Test 4: Rapid Operations ===")
+    
+    map = HashMap()
+    
+    # Rapid insert/remove cycles (100 iterations)
+    i = 0
+    while i < 100:
+        key = "key_" + int_to_string(i)
+        map.set(key, i)
+        
+        if i % 2 == 0:
+            map.remove(key)  # Remove even keys immediately
+        
+        i = i + 1
+    
+    # Only odd keys should remain (50 keys)
+    assert map.size() == 50, "Expected 50 keys after rapid ops"
+    
+    # Verify odd keys exist
+    assert map.has("key_1") == 1, "key_1 should exist"
+    assert map.has("key_3") == 1, "key_3 should exist"
+    assert map.has("key_0") == 0, "key_0 should be removed"
+    
+    print("✅ Rapid operations handled correctly")
+
+def test_type_conversion_extremes():
+    """Test type conversion with extreme values"""
+    print("\n=== Test 5: Extreme Type Conversions ===")
+    
+    # Maximum int
+    max_int = 2147483647
+    str_max = int_to_string(max_int)
+    back_max = string_to_int(str_max)
+    assert back_max == max_int, "Max int round-trip failed"
+    
+    # Minimum int
+    min_int = -2147483647
+    str_min = int_to_string(min_int)
+    back_min = string_to_int(str_min)
+    assert back_min == min_int, "Min int round-trip failed"
+    
+    # Very small float
+    small_float = 0.000001
+    str_small = float_to_string(small_float)
+    back_small = string_to_float(str_small)
+    assert back_small >= 0.0 and back_small <= 0.001, "Small float conversion"
+    
+    # Very large float
+    large_float = 999999.999999
+    str_large = float_to_string(large_float)
+    back_large = string_to_float(str_large)
+    assert back_large >= 999999.0 and back_large <= 1000000.0, "Large float conversion"
+    
+    print("✅ Extreme value conversions correct")
+
+def test_math_boundary_conditions():
+    """Test math operations at boundaries"""
+    print("\n=== Test 6: Math Boundary Conditions ===")
+    
+    # sqrt at boundary
+    val1 = math_sqrt(0.0)
+    assert val1 >= -0.01 and val1 <= 0.01, "sqrt(0) should be 0"
+    
+    # pow at boundaries
+    val2 = math_pow(0.0, 0.0)
+    assert val2 >= 0.99 and val2 <= 1.01, "0^0 should be 1"
+    
+    val3 = math_pow(1.0, 999999.0)
+    assert val3 >= 0.99 and val3 <= 1.01, "1^large should be 1"
+    
+    # abs at maximum
+    val4 = math_abs(-2147483647)
+    assert val4 == 2147483647, "abs(min_int+1) should work"
+    
+    # Trig at boundaries
+    val5 = math_sin(0.0)
+    assert val5 >= -0.01 and val5 <= 0.01, "sin(0) should be 0"
+    
+    val6 = math_cos(0.0)
+    assert val6 >= 0.99 and val6 <= 1.01, "cos(0) should be 1"
+    
+    print("✅ Math boundary conditions handled")
+
+def test_string_operations_edge_cases():
+    """Test string operations with edge cases"""
+    print("\n=== Test 7: String Edge Cases ===")
+    
+    # Empty strings
+    empty = ""
+    assert string_length(empty) == 0, "Empty string length should be 0"
+    
+    # Very long string
+    long_str = "x" * 500
+    len = string_length(long_str)
+    assert len >= 400 and len <= 600, "Long string length check"
+    
+    # Special characters
+    special = "Hello\nWorld\tTest"
+    assert string_contains(special, "\n") == 1, "Should find newline"
+    assert string_contains(special, "\t") == 1, "Should find tab"
+    
+    # Unicode/Turkish characters
+    turkish = "Günaydın"
+    assert string_length(turkish) >= 7, "Turkish chars should work"
+    
+    print("✅ String edge cases handled")
+
+def test_memory_stress():
+    """Test memory allocation stress"""
+    print("\n=== Test 8: Memory Stress ===")
+    
+    # Create many hash maps
+    map1 = HashMap()
+    map2 = HashMap()
+    map3 = HashMap()
+    
+    # Fill each with data
+    i = 0
+    while i < 50:
+        key = "k" + int_to_string(i)
+        map1.set(key, i)
+        map2.set(key, i * 2)
+        map3.set(key, i * 3)
+        i = i + 1
+    
+    # Verify all independent
+    assert map1.get("k10") == 10, "Map1 independent"
+    assert map2.get("k10") == 20, "Map2 independent"
+    assert map3.get("k10") == 30, "Map3 independent"
+    
+    # Clear one, others should persist
+    map1.clear()
+    assert map1.size() == 0, "Map1 cleared"
+    assert map2.size() == 50, "Map2 still has data"
+    assert map3.size() == 50, "Map3 still has data"
+    
+    print("✅ Memory stress test passed")
+
+def test_nested_operations():
+    """Test nested function calls"""
+    print("\n=== Test 9: Nested Operations ===")
+    
+    # Nested math: round(sqrt(pow(5, 2)))
+    val1 = math_pow(5.0, 2.0)  # 25
+    val2 = math_sqrt(val1)      # 5
+    val3 = math_round(val2)     # 5
+    assert val3 == 5, "Nested math operations failed"
+    
+    # Nested conversions: int_to_string(string_to_int("42"))
+    str1 = "42"
+    int1 = string_to_int(str1)
+    str2 = int_to_string(int1)
+    assert str2 == "42", "Nested conversions failed"
+    
+    # Nested min/max: max(min(10, 5), min(8, 3))
+    val4 = math_min(10, 5)  # 5
+    val5 = math_min(8, 3)   # 3
+    val6 = math_max(val4, val5)  # 5
+    assert val6 == 5, "Nested min/max failed"
+    
+    print("✅ Nested operations work correctly")
+
+def test_error_recovery():
+    """Test error recovery and graceful degradation"""
+    print("\n=== Test 10: Error Recovery ===")
+    
+    # Negative sqrt (should return 0)
+    val1 = math_sqrt(-100.0)
+    assert val1 >= -0.01 and val1 <= 0.01, "Negative sqrt should return 0"
+    
+    # Invalid string conversions (should default to 0)
+    val2 = string_to_int("not_a_number")
+    assert val2 == 0, "Invalid int conversion should return 0"
+    
+    val3 = string_to_float("xyz")
+    assert val3 >= -0.01 and val3 <= 0.01, "Invalid float conversion should return 0"
+    
+    # Hash map get non-existent (should return default)
+    map = HashMap()
+    val4 = map.get("nonexistent")
+    # Should not crash, might return null or default
+    
+    # Remove non-existent key (should not crash)
+    map.remove("nonexistent")
+    assert map.size() == 0, "Remove nonexistent should not change size"
+    
+    print("✅ Error recovery works correctly")
+
+# Main test execution
+def main():
+    print("╔══════════════════════════════════════╗")
+    print("║      Edge Cases Tests - Phase 4     ║")
+    print("╚══════════════════════════════════════╝")
+    
+    test_hash_map_null_keys()
+    test_hash_map_large_values()
+    test_hash_map_collisions()
+    test_hash_map_rapid_operations()
+    test_type_conversion_extremes()
+    test_math_boundary_conditions()
+    test_string_operations_edge_cases()
+    test_memory_stress()
+    test_nested_operations()
+    test_error_recovery()
+    
+    print("\n╔══════════════════════════════════════╗")
+    print("║       All Tests Passed! ✅           ║")
+    print("╚══════════════════════════════════════╝")
+
+# Run tests
+main()

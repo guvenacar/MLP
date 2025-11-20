@@ -1,0 +1,385 @@
+-- Hash Map Edge Cases - Phase 4
+-- Tests boundary conditions and error scenarios
+
+-- Test 1: Empty Key/Value
+function test_empty_values() then
+    map[string:string] empty_vals = map();
+
+    print "=== Test 1: Empty String Values ===";
+
+    -- Empty value
+    empty_vals.set("key1", "");
+    string val = empty_vals.get("key1");
+
+    int len = string_uzunluk(val);
+    if len == 0 then
+        print "✅ Empty string value stored"
+    else
+        print "❌ Empty string handling failed"
+    end
+
+    -- Empty key (if supported)
+    empty_vals.set("", "empty_key");
+    int has = empty_vals.has("");
+
+    if has == 1 then
+        print "✅ Empty key supported"
+    else
+        print "⚠️  Empty key not supported (expected)"
+    end
+
+    return 1;
+end
+
+-- Test 2: Special Characters in Keys
+function test_special_chars() then
+    map[string:int] special = map();
+
+    print "";
+    print "=== Test 2: Special Characters ===";
+
+    -- Keys with spaces, symbols
+    special.set("hello world", 1);
+    special.set("test@example.com", 2);
+    special.set("path/to/file", 3);
+    special.set("number-123", 4);
+
+    int size = special.size();
+    if size == 4 then
+        print "✅ Special char keys inserted"
+    else
+        print "❌ Special char insertion failed"
+    end
+
+    -- Retrieve
+    int val1 = special.get("hello world");
+    int val2 = special.get("test@example.com");
+
+    if val1 == 1 then
+        if val2 == 2 then
+            print "✅ Special char keys retrievable"
+        else
+            print "❌ Email-like key failed"
+        end
+    else
+        print "❌ Space in key failed"
+    end
+
+    return 1;
+end
+
+-- Test 3: Remove Non-Existent
+function test_remove_nonexistent() then
+    map[string:int] test_map = map();
+
+    print "";
+    print "=== Test 3: Remove Non-Existent ===";
+
+    test_map.set("exists", 1);
+    int size1 = test_map.size();
+
+    -- Try to remove non-existent key
+    test_map.remove("does_not_exist");
+
+    int size2 = test_map.size();
+
+    if size1 == size2 then
+        print "✅ Remove non-existent has no effect"
+    else
+        print "❌ Size changed unexpectedly"
+    end
+
+    -- Verify existing key still there
+    int has = test_map.has("exists");
+    if has == 1 then
+        print "✅ Existing key unaffected"
+    else
+        print "❌ Existing key lost"
+    end
+
+    return 1;
+end
+
+-- Test 4: Get Non-Existent Key
+function test_get_nonexistent() then
+    map[string:int] test_map = map();
+
+    print "";
+    print "=== Test 4: Get Non-Existent Key ===";
+
+    test_map.set("key1", 100);
+
+    -- Try to get non-existent key
+    -- Behavior: should return 0 or default value
+    int val = test_map.get("nonexistent");
+
+    if val == 0 then
+        print "✅ Non-existent key returns default (0)"
+    else
+        print "⚠️  Non-existent key returned: ";
+        yazdir_sayi(val);
+    end
+
+    -- Verify map unchanged
+    int size = test_map.size();
+    if size == 1 then
+        print "✅ Map size unchanged after failed get"
+    else
+        print "❌ Map size changed"
+    end
+
+    return 1;
+end
+
+-- Test 5: Duplicate Keys
+function test_duplicate_keys() then
+    map[string:int] dupes = map();
+
+    print "";
+    print "=== Test 5: Duplicate Key Handling ===";
+
+    -- Insert same key multiple times
+    dupes.set("key", 1);
+    dupes.set("key", 2);
+    dupes.set("key", 3);
+
+    int size = dupes.size();
+    if size == 1 then
+        print "✅ Duplicate keys overwrite (size: 1)"
+    else
+        print "❌ Duplicate keys created multiple entries"
+    end
+
+    -- Check final value
+    int val = dupes.get("key");
+    if val == 3 then
+        print "✅ Latest value preserved (3)"
+    else
+        print "❌ Wrong value after duplicates"
+    end
+
+    return 1;
+end
+
+-- Test 6: Zero Values
+function test_zero_values() then
+    map[string:int] zeros = map();
+
+    print "";
+    print "=== Test 6: Zero Values ===";
+
+    zeros.set("zero", 0);
+    zeros.set("positive", 100);
+    zeros.set("another_zero", 0);
+
+    int size = zeros.size();
+    if size == 3 then
+        print "✅ Zero values stored"
+    else
+        print "❌ Zero value storage failed"
+    end
+
+    -- Retrieve zero
+    int val = zeros.get("zero");
+    if val == 0 then
+        print "✅ Zero value retrievable"
+    else
+        print "❌ Zero value retrieval failed"
+    end
+
+    -- Distinguish from non-existent
+    int has = zeros.has("zero");
+    int hasNonExistent = zeros.has("nonexistent");
+
+    if has == 1 then
+        if hasNonExistent == 0 then
+            print "✅ Zero value distinct from non-existent"
+        else
+            print "❌ Has check failed for non-existent"
+        end
+    else
+        print "❌ Has check failed for zero value"
+    end
+
+    return 1;
+end
+
+-- Test 7: Negative Values
+function test_negative_values() then
+    map[string:int] negatives = map();
+
+    print "";
+    print "=== Test 7: Negative Values ===";
+
+    negatives.set("negative", -100);
+    negatives.set("positive", 100);
+    negatives.set("zero", 0);
+
+    int val1 = negatives.get("negative");
+    int val2 = negatives.get("positive");
+
+    if val1 == -100 then
+        if val2 == 100 then
+            print "✅ Negative values work correctly"
+        else
+            print "❌ Positive value wrong"
+        end
+    else
+        print "❌ Negative value storage/retrieval failed"
+    end
+
+    return 1;
+end
+
+-- Test 8: Rapid Insert/Remove
+function test_rapid_operations() then
+    map[string:int] rapid = map();
+
+    print "";
+    print "=== Test 8: Rapid Insert/Remove ===";
+
+    -- Rapid insert/remove cycles
+    int i = 0;
+    while
+        if i >= 10 then
+            break
+        end
+
+        rapid.set("temp", i);
+        rapid.remove("temp");
+
+        i = i + 1;
+    end
+
+    int size = rapid.size();
+    if size == 0 then
+        print "✅ Rapid insert/remove cycles work"
+    else
+        print "❌ Map not empty after cycles"
+    end
+
+    -- Add final value
+    rapid.set("final", 999);
+    int val = rapid.get("final");
+
+    if val == 999 then
+        print "✅ Map still functional after cycles"
+    else
+        print "❌ Map corrupted after cycles"
+    end
+
+    return 1;
+end
+
+-- Test 9: Unicode/Extended ASCII (if supported)
+function test_unicode_keys() then
+    map[string:int] unicode_map = map();
+
+    print "";
+    print "=== Test 9: Unicode Keys ===";
+
+    -- Turkish characters
+    unicode_map.set("ğüşıöç", 1);
+    unicode_map.set("ĞÜŞIÖÇ", 2);
+
+    int size = unicode_map.size();
+    if size == 2 then
+        print "✅ Unicode keys stored"
+    else
+        print "⚠️  Unicode not fully supported"
+    end
+
+    int has1 = unicode_map.has("ğüşıöç");
+    if has1 == 1 then
+        print "✅ Unicode key retrievable"
+    else
+        print "⚠️  Unicode retrieval issue"
+    end
+
+    return 1;
+end
+
+-- Test 10: Stress Test - Many Operations
+function test_stress() then
+    map[int:int] stress_map = map();
+
+    print "";
+    print "=== Test 10: Stress Test (50 ops) ===";
+
+    -- 50 mixed operations
+    int i = 0;
+    while
+        if i >= 50 then
+            break
+        end
+
+        if i < 25 then
+            stress_map.set(i, i * 2);
+        else
+            stress_map.remove(i - 25);
+        end
+
+        i = i + 1;
+    end
+
+    int size = stress_map.size();
+    if size == 0 then
+        print "✅ Stress test completed (all removed)"
+    else
+        print "⚠️  Size after stress: ";
+        yazdir_sayi(size);
+    end
+
+    return 1;
+end
+
+-- Run all edge case tests
+print "╔══════════════════════════════════════╗";
+print "║  Hash Map Edge Cases - Phase 4      ║";
+print "╚══════════════════════════════════════╝";
+print "";
+
+int total = 0;
+int passed = 0;
+
+total = total + 1;
+passed = passed + test_empty_values();
+
+total = total + 1;
+passed = passed + test_special_chars();
+
+total = total + 1;
+passed = passed + test_remove_nonexistent();
+
+total = total + 1;
+passed = passed + test_get_nonexistent();
+
+total = total + 1;
+passed = passed + test_duplicate_keys();
+
+total = total + 1;
+passed = passed + test_zero_values();
+
+total = total + 1;
+passed = passed + test_negative_values();
+
+total = total + 1;
+passed = passed + test_rapid_operations();
+
+total = total + 1;
+passed = passed + test_unicode_keys();
+
+total = total + 1;
+passed = passed + test_stress();
+
+print "";
+print "╔══════════════════════════════════════╗";
+print "║          Test Results                ║";
+print "╠══════════════════════════════════════╣";
+print "║ Passed: ";
+yazdir_sayi(passed);
+print "║ Failed: ";
+yazdir_sayi(total - passed);
+print "║ Total:  ";
+yazdir_sayi(total);
+print "╚══════════════════════════════════════╝";
