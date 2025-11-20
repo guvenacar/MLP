@@ -140,7 +140,7 @@ select {
 }
 
 .block-body {
-    padding: 10px 12px;
+    padding: 12px;
     background: white;
     font-family: 'Courier New', monospace;
     font-size: 12px;
@@ -223,18 +223,46 @@ select {
     background: rgba(255,255,255,0.5);
 }
 
-.canvas-block input, .canvas-block textarea {
+.canvas-block label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin: 8px 0 4px 0;
+}
+
+.canvas-block label:first-child {
+    margin-top: 0;
+}
+
+.canvas-block input, 
+.canvas-block textarea,
+.canvas-block select {
     width: 100%;
     padding: 8px;
-    border: 1px solid #ddd;
+    border: 2px solid #ddd;
     border-radius: 4px;
     font-family: 'Courier New', monospace;
     font-size: 13px;
+    background: white;
+    transition: border-color 0.2s;
+}
+
+.canvas-block input:focus,
+.canvas-block textarea:focus,
+.canvas-block select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .canvas-block textarea {
     min-height: 60px;
     resize: vertical;
+}
+
+.canvas-block select {
+    cursor: pointer;
 }
 
 /* Preview Panel */

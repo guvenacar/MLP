@@ -41,6 +41,7 @@ canvas.addEventListener('drop', (e) => {
 function addBlock(type) {
     const block = new Block(type);
     window.blocks.push(block);
+    console.log('Added block:', type, 'Fields:', block.fields);
     renderCanvas();
     updateCodePreview();
     
@@ -57,6 +58,7 @@ function renderCanvas() {
     
     window.blocks.forEach(block => {
         const blockHTML = block.generateHTML();
+        console.log('Rendering block HTML:', blockHTML.substring(0, 200));
         canvas.insertAdjacentHTML('beforeend', blockHTML);
     });
 }
