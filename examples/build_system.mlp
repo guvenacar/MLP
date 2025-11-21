@@ -1,0 +1,553 @@
+-- Build System Example for MLP
+-- Demonstrates: Process control, file operations, time utilities
+-- Phase 5.3 - Advanced I/O & Network Utilities
+
+print "===================================="
+print "MLP Build System Demo"
+print "===================================="
+print ""
+
+-- ==================== Configuration ====================
+
+string SOURCE_DIR = "src"
+string BUILD_DIR = "build"
+string OBJ_DIR = "build/obj"
+string BIN_DIR = "build/bin"
+
+-- ==================== Logging ====================
+
+function log_info(message) then
+    string timestamp = get_time_string()
+    print "["
+    print timestamp
+    print "] INFO: "
+    print message
+    print ""
+end
+
+function log_error(message) then
+    string timestamp = get_time_string()
+    print "["
+    print timestamp
+    print "] ERROR: "
+    print message
+    print ""
+end
+
+function log_step(step_name) then
+    print ""
+    print ">>> "
+    print step_name
+    print ""
+end
+
+-- ==================== Build Directory Setup ====================
+
+function ensure_directory(path) then
+    if directory_exists(path) == 1 then
+        return 1
+    end
+
+    int result = create_directory(path)
+    if result == 0 then
+        log_info("Created directory: ")
+        print path
+        return 1
+    end
+
+    -- Maybe parent doesn't exist
+    string parent = get_directory(path)
+    if string_length(parent) > 0 then
+        ensure_directory(parent)
+        result = create_directory(path)
+        if result == 0 then
+            return 1
+        end
+    end
+
+    log_error("Failed to create directory")
+    return 0
+end
+
+function setup_build_directories() then
+    log_step("Setting up build directories")
+
+    ensure_directory(BUILD_DIR)
+    ensure_directory(OBJ_DIR)
+    ensure_directory(BIN_DIR)
+
+    log_info("Build directories ready")
+    return 1
+end
+
+-- ==================== Source File Discovery ====================
+
+function find_source_files() then
+    log_step("Finding source files")
+
+    list[string] sources = list()
+
+    if directory_exists(SOURCE_DIR) == 0 then
+        log_error("Source directory not found")
+        return sources
+    end
+
+    list[string] entries = list_directory(SOURCE_DIR)
+
+    int i = 0
+    while i < entries.size()
+        string name = entries.get(i)
+        string ext = get_file_extension(name)
+
+        if ext == ".mlp" then
+            string full_path = join_path_2(SOURCE_DIR, name)
+            sources.add(full_path)
+            log_info("Found: ")
+            print full_path
+        end
+
+        i = i + 1
+    end
+
+    list_destroy(entries)
+
+    print ""
+    log_info("Found ")
+    print sources.size()
+    print " source files"
+
+    return sources
+end
+
+-- ==================== Dependency Checking ====================
+
+function needs_rebuild(source_path, object_path) then
+    -- Object doesn't exist -> rebuild
+    if file_exists(object_path) == 0 then
+        return 1
+    end
+
+    -- Compare modification times
+    int src_info = get_file_info(source_path)
+    int obj_info = get_file_info(object_path)
+
+    if src_info == 0 then
+        mlp_free(obj_info)
+        return 1  -- Source missing is an error, but try rebuild
+    end
+
+    if obj_info == 0 then
+        mlp_free(src_info)
+        return 1
+    end
+
+    int src_mtime = file_info_modified(src_info)
+    int obj_mtime = file_info_modified(obj_info)
+
+    mlp_free(src_info)
+    mlp_free(obj_info)
+
+    -- Source newer than object -> rebuild
+    if src_mtime > obj_mtime then
+        return 1
+    end
+
+    return 0
+end
+
+function get_object_path(source_path) then
+    string name = get_file_name(source_path)
+    string base = get_file_basename(name)
+    string obj_name = string_concat(base, ".o")
+    return join_path_2(OBJ_DIR, obj_name)
+end
+
+function get_asm_path(source_path) then
+    string name = get_file_name(source_path)
+    string base = get_file_basename(name)
+    string asm_name = string_concat(base, ".asm")
+    return join_path_2(OBJ_DIR, asm_name)
+end
+
+-- ==================== Compilation ====================
+
+function compile_source(source_path) then
+    string asm_path = get_asm_path(source_path)
+    string obj_path = get_object_path(source_path)
+
+    -- Check if rebuild needed
+    if needs_rebuild(source_path, obj_path) == 0 then
+        log_info("Skipping (up to date): ")
+        print source_path
+        return 1
+    end
+
+    log_info("Compiling: ")
+    print source_path
+
+    int start_time = get_milliseconds()
+
+    -- Step 1: MLP -> Assembly (simulated)
+    -- In real build: python mlp_preprocessor.py source.mlp > output.asm
+    string cmd = "python3 mlp_preprocessor.py "
+    cmd = string_concat(cmd, source_path)
+    cmd = string_concat(cmd, " > ")
+    cmd = string_concat(cmd, asm_path)
+
+    print "  Running: "
+    print cmd
+    print ""
+
+    int result = execute_command(cmd)
+    if result != 0 then
+        log_error("MLP compilation failed")
+        return 0
+    end
+
+    -- Step 2: Assembly -> Object
+    cmd = "nasm -f elf64 "
+    cmd = string_concat(cmd, asm_path)
+    cmd = string_concat(cmd, " -o ")
+    cmd = string_concat(cmd, obj_path)
+
+    print "  Running: "
+    print cmd
+    print ""
+
+    result = execute_command(cmd)
+    if result != 0 then
+        log_error("Assembly failed")
+        return 0
+    end
+
+    int elapsed = get_milliseconds() - start_time
+    log_info("Compiled in ")
+    print elapsed
+    print " ms"
+
+    return 1
+end
+
+function compile_all_sources(sources) then
+    log_step("Compiling sources")
+
+    int success = 0
+    int failed = 0
+    int skipped = 0
+
+    int total_start = get_milliseconds()
+
+    int i = 0
+    while i < sources.size()
+        string source = sources.get(i)
+        string obj_path = get_object_path(source)
+
+        if needs_rebuild(source, obj_path) == 0 then
+            skipped = skipped + 1
+        else
+            int result = compile_source(source)
+            if result == 1 then
+                success = success + 1
+            else
+                failed = failed + 1
+            end
+        end
+
+        i = i + 1
+    end
+
+    int total_time = get_milliseconds() - total_start
+
+    print ""
+    log_info("Compilation summary:")
+    print "  Compiled: "
+    print success
+    print ""
+    print "  Skipped:  "
+    print skipped
+    print ""
+    print "  Failed:   "
+    print failed
+    print ""
+    print "  Time:     "
+    print total_time
+    print " ms"
+    print ""
+
+    if failed > 0 then
+        return 0
+    end
+    return 1
+end
+
+-- ==================== Linking ====================
+
+function link_executable(sources, output_name) then
+    log_step("Linking executable")
+
+    string output_path = join_path_2(BIN_DIR, output_name)
+
+    -- Build object file list
+    string obj_files = ""
+    int i = 0
+    while i < sources.size()
+        string source = sources.get(i)
+        string obj_path = get_object_path(source)
+
+        if file_exists(obj_path) == 1 then
+            if string_length(obj_files) > 0 then
+                obj_files = string_concat(obj_files, " ")
+            end
+            obj_files = string_concat(obj_files, obj_path)
+        end
+
+        i = i + 1
+    end
+
+    -- Add runtime library
+    obj_files = string_concat(obj_files, " runtime/runtime.o")
+
+    -- Build link command
+    string cmd = "gcc -no-pie "
+    cmd = string_concat(cmd, obj_files)
+    cmd = string_concat(cmd, " -o ")
+    cmd = string_concat(cmd, output_path)
+
+    log_info("Link command:")
+    print cmd
+    print ""
+
+    int start_time = get_milliseconds()
+    int result = execute_command(cmd)
+    int elapsed = get_milliseconds() - start_time
+
+    if result != 0 then
+        log_error("Linking failed")
+        return 0
+    end
+
+    log_info("Linked: ")
+    print output_path
+    print " ("
+    print elapsed
+    print " ms)"
+
+    -- Show executable info
+    int info = get_file_info(output_path)
+    if info != 0 then
+        int size = file_info_size(info)
+        print ""
+        log_info("Executable size: ")
+        print size
+        print " bytes"
+        mlp_free(info)
+    end
+
+    return 1
+end
+
+-- ==================== Clean ====================
+
+function clean_build() then
+    log_step("Cleaning build directory")
+
+    -- Remove object files
+    if directory_exists(OBJ_DIR) == 1 then
+        list[string] files = list_directory(OBJ_DIR)
+
+        int i = 0
+        while i < files.size()
+            string name = files.get(i)
+            string ext = get_file_extension(name)
+
+            if ext == ".o" then
+                log_info("Would delete: ")
+                print join_path_2(OBJ_DIR, name)
+                -- delete_file(join_path_2(OBJ_DIR, name))
+            end
+            if ext == ".asm" then
+                log_info("Would delete: ")
+                print join_path_2(OBJ_DIR, name)
+            end
+
+            i = i + 1
+        end
+
+        list_destroy(files)
+    end
+
+    log_info("Clean complete (dry run - delete not implemented)")
+    return 1
+end
+
+-- ==================== Build Report ====================
+
+function generate_build_report() then
+    log_step("Build Report")
+
+    string timestamp = get_time_string()
+    print "Build completed at: "
+    print timestamp
+    print ""
+
+    int pid = get_process_id()
+    print "Builder PID: "
+    print pid
+    print ""
+
+    print "Directories:"
+    print "  Source: "
+    print SOURCE_DIR
+    print ""
+    print "  Build:  "
+    print BUILD_DIR
+    print ""
+    print "  Object: "
+    print OBJ_DIR
+    print ""
+    print "  Binary: "
+    print BIN_DIR
+    print ""
+
+    -- System info
+    print ""
+    print "System Information:"
+    string hostname = get_command_output("hostname")
+    print "  Hostname: "
+    print string_trim(hostname)
+
+    string kernel = get_command_output("uname -r")
+    print "  Kernel: "
+    print string_trim(kernel)
+end
+
+-- ==================== Main Build Process ====================
+
+function build(target) then
+    print "===================================="
+    print "Build Target: "
+    print target
+    print "===================================="
+
+    int build_start = get_milliseconds()
+
+    -- Setup
+    if setup_build_directories() == 0 then
+        log_error("Failed to setup directories")
+        return 0
+    end
+
+    -- Find sources
+    list[string] sources = find_source_files()
+    if sources.size() == 0 then
+        log_error("No source files found")
+        list_destroy(sources)
+        return 0
+    end
+
+    -- Compile
+    if compile_all_sources(sources) == 0 then
+        log_error("Compilation failed")
+        list_destroy(sources)
+        return 0
+    end
+
+    -- Link
+    if link_executable(sources, target) == 0 then
+        log_error("Linking failed")
+        list_destroy(sources)
+        return 0
+    end
+
+    list_destroy(sources)
+
+    int build_time = get_milliseconds() - build_start
+
+    print ""
+    print "===================================="
+    print "BUILD SUCCESSFUL"
+    print "Total time: "
+    print build_time
+    print " ms"
+    print "===================================="
+
+    generate_build_report()
+
+    return 1
+end
+
+-- ==================== Demo Runner ====================
+
+function run_build_demo() then
+    print "--- Build System Demo ---"
+    print ""
+    print "This demo shows how to use Phase 5.3 features"
+    print "to build a simple build system."
+    print ""
+
+    -- Show what would happen (without actually building)
+    log_step("Demo: Directory Setup")
+    print "Would create:"
+    print "  "
+    print BUILD_DIR
+    print "  "
+    print OBJ_DIR
+    print "  "
+    print BIN_DIR
+    print ""
+
+    log_step("Demo: Source Discovery")
+    string cwd = get_current_dir()
+    print "Would search for .mlp files in: "
+    print cwd
+    print ""
+
+    log_step("Demo: Process Info")
+    int pid = get_process_id()
+    int ppid = get_parent_process_id()
+    print "Current PID: "
+    print pid
+    print ""
+    print "Parent PID: "
+    print ppid
+    print ""
+
+    log_step("Demo: Time Functions")
+    print "Current time: "
+    print get_time_string()
+    print ""
+
+    int ts = current_timestamp()
+    string formatted = format_timestamp(ts, "%A, %B %d, %Y")
+    print "Formatted: "
+    print formatted
+    print ""
+
+    log_step("Demo: Timing")
+    int start = get_milliseconds()
+    -- Simulate some work
+    int x = 0
+    while x < 100000
+        x = x + 1
+    end
+    int elapsed = get_milliseconds() - start
+    print "Loop took: "
+    print elapsed
+    print " ms"
+    print ""
+
+    log_step("Demo: External Commands")
+    string date_output = get_command_output("date")
+    print "System date: "
+    print string_trim(date_output)
+    print ""
+
+    print ""
+    print "===================================="
+    print "Build System Demo Complete!"
+    print "===================================="
+end
+
+-- ==================== Main ====================
+
+run_build_demo()
