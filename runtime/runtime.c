@@ -2605,3 +2605,223 @@ char* get_directory(const char* path) {
     return result;
 }
 
+// ============================================================================
+// Phase 6: Dynamic List Implementation
+// ============================================================================
+
+// List struct - Generic dynamic array
+typedef struct {
+    void* data;           // Generic data pointer
+    int64_t length;       // Current number of elements
+    int64_t capacity;     // Allocated capacity
+    int64_t element_size; // Size of each element in bytes
+} MLP_List;
+
+// Create a new list with given element size
+MLP_List* mlp_list_create(int64_t element_size) {
+    if (element_size <= 0) {
+        fprintf(stderr, "Error: list_create - element_size must be positive\n");
+        return NULL;
+    }
+    
+    MLP_List* list = (MLP_List*)mlp_malloc(sizeof(MLP_List));
+    if (!list) {
+        fprintf(stderr, "Error: list_create - failed to allocate list structure\n");
+        return NULL;
+    }
+    
+    list->element_size = element_size;
+    list->length = 0;
+    list->capacity = 8; // Initial capacity
+    list->data = mlp_malloc(list->capacity * element_size);
+    
+    if (!list->data) {
+        mlp_free(list);
+        fprintf(stderr, "Error: list_create - failed to allocate data array\n");
+        return NULL;
+    }
+    
+    return list;
+}
+
+// Resize list capacity (internal helper)
+static int mlp_list_resize(MLP_List* list, int64_t new_capacity) {
+    if (!list || new_capacity < list->length) {
+        return 0;
+    }
+    
+    void* new_data = mlp_realloc(list->data, new_capacity * list->element_size);
+    if (!new_data) {
+        fprintf(stderr, "Error: list_resize - realloc failed\n");
+        return 0;
+    }
+    
+    list->data = new_data;
+    list->capacity = new_capacity;
+    return 1;
+}
+
+// Add element to end of list
+void mlp_list_add(MLP_List* list, void* element) {
+    if (!list || !element) {
+        fprintf(stderr, "Error: list_add - null pointer\n");
+        return;
+    }
+    
+    // Grow if needed
+    if (list->length >= list->capacity) {
+        int64_t new_capacity = list->capacity * 2;
+        if (!mlp_list_resize(list, new_capacity)) {
+            fprintf(stderr, "Error: list_add - resize failed\n");
+            return;
+        }
+    }
+    
+    // Copy element to end
+    char* dest = (char*)list->data + (list->length * list->element_size);
+    memcpy(dest, element, list->element_size);
+    list->length++;
+}
+
+// Get element at index (returns pointer to element)
+void* mlp_list_get(MLP_List* list, int64_t index) {
+    if (!list) {
+        fprintf(stderr, "Error: list_get - null list\n");
+        return NULL;
+    }
+    
+    if (index < 0 || index >= list->length) {
+        fprintf(stderr, "Error: list_get - index %ld out of bounds (0-%ld)\n", 
+                index, list->length - 1);
+        return NULL;
+    }
+    
+    char* ptr = (char*)list->data + (index * list->element_size);
+    return ptr;
+}
+
+// Set element at index
+void mlp_list_set(MLP_List* list, int64_t index, void* element) {
+    if (!list || !element) {
+        fprintf(stderr, "Error: list_set - null pointer\n");
+        return;
+    }
+    
+    if (index < 0 || index >= list->length) {
+        fprintf(stderr, "Error: list_set - index %ld out of bounds (0-%ld)\n", 
+                index, list->length - 1);
+        return;
+    }
+    
+    char* dest = (char*)list->data + (index * list->element_size);
+    memcpy(dest, element, list->element_size);
+}
+
+// Remove element at index (shifts remaining elements)
+void mlp_list_remove(MLP_List* list, int64_t index) {
+    if (!list) {
+        fprintf(stderr, "Error: list_remove - null list\n");
+        return;
+    }
+    
+    if (index < 0 || index >= list->length) {
+        fprintf(stderr, "Error: list_remove - index %ld out of bounds (0-%ld)\n", 
+                index, list->length - 1);
+        return;
+    }
+    
+    // Shift elements after index
+    if (index < list->length - 1) {
+        char* dest = (char*)list->data + (index * list->element_size);
+        char* src = dest + list->element_size;
+        size_t bytes_to_move = (list->length - index - 1) * list->element_size;
+        memmove(dest, src, bytes_to_move);
+    }
+    
+    list->length--;
+    
+    // Shrink if needed (when usage drops below 25%)
+    if (list->capacity > 8 && list->length < list->capacity / 4) {
+        mlp_list_resize(list, list->capacity / 2);
+    }
+}
+
+// Insert element at index (shifts existing elements right)
+void mlp_list_insert(MLP_List* list, int64_t index, void* element) {
+    if (!list || !element) {
+        fprintf(stderr, "Error: list_insert - null pointer\n");
+        return;
+    }
+    
+    if (index < 0 || index > list->length) {
+        fprintf(stderr, "Error: list_insert - index %ld out of bounds (0-%ld)\n", 
+                index, list->length);
+        return;
+    }
+    
+    // Grow if needed
+    if (list->length >= list->capacity) {
+        if (!mlp_list_resize(list, list->capacity * 2)) {
+            fprintf(stderr, "Error: list_insert - resize failed\n");
+            return;
+        }
+    }
+    
+    // Shift elements from index onwards to the right
+    if (index < list->length) {
+        char* dest = (char*)list->data + ((index + 1) * list->element_size);
+        char* src = (char*)list->data + (index * list->element_size);
+        size_t bytes_to_move = (list->length - index) * list->element_size;
+        memmove(dest, src, bytes_to_move);
+    }
+    
+    // Insert new element
+    char* insert_pos = (char*)list->data + (index * list->element_size);
+    memcpy(insert_pos, element, list->element_size);
+    list->length++;
+}
+
+// Clear all elements (keeps capacity)
+void mlp_list_clear(MLP_List* list) {
+    if (!list) {
+        fprintf(stderr, "Error: list_clear - null list\n");
+        return;
+    }
+    
+    list->length = 0;
+}
+
+// Get current length
+int64_t mlp_list_length(MLP_List* list) {
+    if (!list) return 0;
+    return list->length;
+}
+
+// Get current capacity
+int64_t mlp_list_capacity(MLP_List* list) {
+    if (!list) return 0;
+    return list->capacity;
+}
+
+// Check if list is empty
+int64_t mlp_list_is_empty(MLP_List* list) {
+    if (!list) return 1;
+    return (list->length == 0) ? 1 : 0;
+}
+
+// Free list and its data
+void mlp_list_free(MLP_List* list) {
+    if (!list) return;
+    
+    if (list->data) {
+        mlp_free(list->data);
+    }
+    mlp_free(list);
+}
+
+// Get pointer to underlying array (for direct access)
+void* mlp_list_data(MLP_List* list) {
+    if (!list) return NULL;
+    return list->data;
+}
+
