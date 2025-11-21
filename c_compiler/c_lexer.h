@@ -93,6 +93,12 @@ typedef enum {
     TOKEN_BUILTIN_CURRENT_TIMESTAMP,
     TOKEN_BUILTIN_SLEEP_MS,
 
+    // Binary File I/O (Phase 5.3)
+    TOKEN_BUILTIN_READ_BINARY,
+    TOKEN_BUILTIN_WRITE_BINARY,
+    TOKEN_BUILTIN_GET_FILE_INFO,
+    TOKEN_BUILTIN_COPY_FILE,
+
     // Hash Map (Phase 4)
     TOKEN_YAPI_MAP,  // "map" keyword
     TOKEN_COLON,     // : for key:value syntax

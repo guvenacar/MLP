@@ -144,6 +144,12 @@ KeywordMap keywords[] = {
     {"current_timestamp",    TOKEN_BUILTIN_CURRENT_TIMESTAMP},
     {"sleep_ms",             TOKEN_BUILTIN_SLEEP_MS},
 
+    // Phase 5.3: Binary File I/O
+    {"read_binary",          TOKEN_BUILTIN_READ_BINARY},
+    {"write_binary",         TOKEN_BUILTIN_WRITE_BINARY},
+    {"get_file_info",        TOKEN_BUILTIN_GET_FILE_INFO},
+    {"copy_file",            TOKEN_BUILTIN_COPY_FILE},
+
     // Phase 4: Hash Map
     {"map", TOKEN_YAPI_MAP},
 

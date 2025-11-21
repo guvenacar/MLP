@@ -555,7 +555,12 @@ ASTNode* birincil() {
         // Phase 5.2: System Utilities
         current_token->type == TOKEN_BUILTIN_GET_ENV ||
         current_token->type == TOKEN_BUILTIN_CURRENT_TIMESTAMP ||
-        current_token->type == TOKEN_BUILTIN_SLEEP_MS) {
+        current_token->type == TOKEN_BUILTIN_SLEEP_MS ||
+        // Phase 5.3: Binary File I/O
+        current_token->type == TOKEN_BUILTIN_READ_BINARY ||
+        current_token->type == TOKEN_BUILTIN_WRITE_BINARY ||
+        current_token->type == TOKEN_BUILTIN_GET_FILE_INFO ||
+        current_token->type == TOKEN_BUILTIN_COPY_FILE) {
 
         TokenType func_type = current_token->type;
         consume(current_token->type);
@@ -1054,7 +1059,10 @@ ASTNode* komut() {
         current_token->type == TOKEN_BUILTIN_SET_ERROR_CODE ||
         current_token->type == TOKEN_BUILTIN_MLP_FREE ||
         current_token->type == TOKEN_BUILTIN_CHECK_MEMORY_LEAKS ||
-        current_token->type == TOKEN_BUILTIN_SLEEP_MS) {
+        current_token->type == TOKEN_BUILTIN_SLEEP_MS ||
+        // Phase 5.3: Binary File I/O (write_binary can be used as statement)
+        current_token->type == TOKEN_BUILTIN_WRITE_BINARY ||
+        current_token->type == TOKEN_BUILTIN_COPY_FILE) {
         // Parse built-in call as expression first
         ASTNode* builtin_node = ifade();
         // Return as statement (no semicolon required)

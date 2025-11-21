@@ -8,6 +8,8 @@
 #include <errno.h>   // errno için
 #include <ctype.h>   // toupper, tolower için
 #include <time.h>    // time için (Phase 5.2)
+#include <sys/stat.h>  // stat, mkdir için (Phase 5.3)
+#include <dirent.h>  // opendir, readdir için (Phase 5.3)
 #include "json_parser.h"  // MLP Language definitions parser
 
 // Forward declarations
@@ -1794,5 +1796,203 @@ void sleep_ms(long milliseconds) {
     #else
         usleep((useconds_t)(milliseconds * 1000));
     #endif
+}
+
+// ==================== PHASE 5.3: BINARY FILE I/O (4 functions) ====================
+
+/**
+ * read_binary - Read entire file as binary data
+ * @param path: File path (absolute or relative)
+ * @return: Binary data buffer, or NULL on error
+ *
+ * Error codes:
+ *   ERR_FILE_NOT_FOUND (101): File doesn't exist
+ *   ERR_PERMISSION_DENIED (102): No read permission
+ *   ERR_OUT_OF_MEMORY (104): File too large
+ *   ERR_IO_ERROR (103): Read failed
+ *
+ * MLP Usage: 
+ *   data := read_binary("output.bin")
+ *   if data == null { print "Failed to read file" }
+ */
+void* read_binary(const char* path) {
+    if (!path) {
+        set_error_code(101);  // ERR_FILE_NOT_FOUND
+        return NULL;
+    }
+
+    FILE* file = fopen(path, "rb");
+    if (!file) {
+        set_error_code(101);  // ERR_FILE_NOT_FOUND
+        return NULL;
+    }
+    
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    if (size < 0) {
+        fclose(file);
+        set_error_code(103);  // ERR_IO_ERROR
+        return NULL;
+    }
+    
+    // Allocate buffer
+    void* buffer = mlp_malloc(size + 1);  // +1 for potential null terminator
+    if (!buffer) {
+        fclose(file);
+        set_error_code(104);  // ERR_OUT_OF_MEMORY
+        return NULL;
+    }
+    
+    // Read data
+    size_t bytes_read = fread(buffer, 1, size, file);
+    fclose(file);
+    
+    if (bytes_read != (size_t)size) {
+        mlp_free(buffer);
+        set_error_code(103);  // ERR_IO_ERROR
+        return NULL;
+    }
+    
+    // Null-terminate for safety
+    ((char*)buffer)[size] = '\0';
+    
+    return buffer;
+}
+
+/**
+ * write_binary - Write binary data to file
+ * @param path: File path (absolute or relative)
+ * @param data: Binary data buffer
+ * @param size: Number of bytes to write
+ * @return: 1 on success, 0 on failure
+ *
+ * Error codes:
+ *   ERR_PERMISSION_DENIED (102): Cannot create/write file
+ *   ERR_IO_ERROR (103): Write failed
+ *
+ * MLP Usage:
+ *   success := write_binary("output.bin", data, 1024)
+ *   if !success { print "Write failed" }
+ */
+int write_binary(const char* path, const void* data, size_t size) {
+    if (!path || !data) {
+        set_error_code(102);  // ERR_PERMISSION_DENIED
+        return 0;
+    }
+
+    FILE* file = fopen(path, "wb");
+    if (!file) {
+        set_error_code(102);  // ERR_PERMISSION_DENIED
+        return 0;
+    }
+    
+    size_t bytes_written = fwrite(data, 1, size, file);
+    fclose(file);
+    
+    if (bytes_written != size) {
+        set_error_code(103);  // ERR_IO_ERROR
+        return 0;
+    }
+    
+    return 1;  // Success
+}
+
+/**
+ * get_file_info - Get file metadata
+ * @param path: File path
+ * @return: FileInfo string (format: "size:modified:is_dir:readable:writable"), or NULL on error
+ *
+ * Error codes:
+ *   ERR_FILE_NOT_FOUND (101): File doesn't exist
+ *
+ * MLP Usage:
+ *   info := get_file_info("test.txt")
+ *   if info != null { print info }
+ *
+ * Returns string format: "1024:1700000000:0:1:1"
+ *   - size (bytes)
+ *   - modified_time (Unix timestamp)
+ *   - is_directory (0/1)
+ *   - is_readable (0/1)
+ *   - is_writable (0/1)
+ */
+char* get_file_info(const char* path) {
+    if (!path) {
+        set_error_code(101);  // ERR_FILE_NOT_FOUND
+        return NULL;
+    }
+
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        set_error_code(101);  // ERR_FILE_NOT_FOUND
+        return NULL;
+    }
+    
+    // Format: "size:modified:is_dir:readable:writable"
+    char* info = mlp_malloc(256);
+    snprintf(info, 256, "%ld:%ld:%d:%d:%d",
+        (long)st.st_size,
+        (long)st.st_mtime,
+        S_ISDIR(st.st_mode) ? 1 : 0,
+        (st.st_mode & S_IRUSR) ? 1 : 0,
+        (st.st_mode & S_IWUSR) ? 1 : 0
+    );
+    
+    return info;
+}
+
+/**
+ * copy_file - Copy file from source to destination
+ * @param source: Source file path
+ * @param dest: Destination file path
+ * @return: 1 on success, 0 on failure
+ *
+ * Error codes:
+ *   ERR_FILE_NOT_FOUND (101): Source file doesn't exist
+ *   ERR_PERMISSION_DENIED (102): Cannot read source or write destination
+ *   ERR_IO_ERROR (103): Copy operation failed
+ *
+ * MLP Usage:
+ *   if copy_file("source.txt", "dest.txt") {
+ *       print "Copy successful"
+ *   }
+ */
+int copy_file(const char* source, const char* dest) {
+    if (!source || !dest) {
+        set_error_code(101);  // ERR_FILE_NOT_FOUND
+        return 0;
+    }
+
+    FILE* src = fopen(source, "rb");
+    if (!src) {
+        set_error_code(101);  // ERR_FILE_NOT_FOUND
+        return 0;
+    }
+    
+    FILE* dst = fopen(dest, "wb");
+    if (!dst) {
+        fclose(src);
+        set_error_code(102);  // ERR_PERMISSION_DENIED
+        return 0;
+    }
+    
+    // Copy in 4KB chunks
+    char buffer[4096];
+    size_t bytes;
+    while ((bytes = fread(buffer, 1, sizeof(buffer), src)) > 0) {
+        if (fwrite(buffer, 1, bytes, dst) != bytes) {
+            fclose(src);
+            fclose(dst);
+            set_error_code(103);  // ERR_IO_ERROR
+            return 0;
+        }
+    }
+    
+    fclose(src);
+    fclose(dst);
+    return 1;  // Success
 }
 

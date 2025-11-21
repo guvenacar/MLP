@@ -374,7 +374,9 @@ void visit_Yazdir(ASTNode* node) {
     } else if (node->tek_ifade_data.ifade->type == AST_BUILTIN_CALL) {
         // Built-in call ise, string döndüren fonksiyonları kontrol et
         TokenType func_type = node->tek_ifade_data.ifade->builtin_call_data.function_type;
-        if (func_type == TOKEN_BUILTIN_GET_ENV) {
+        if (func_type == TOKEN_BUILTIN_GET_ENV ||
+            func_type == TOKEN_BUILTIN_READ_BINARY ||
+            func_type == TOKEN_BUILTIN_GET_FILE_INFO) {
             is_string = true;
         }
     }
@@ -1543,6 +1545,11 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_GET_ENV: func_name = "get_env"; break;
         case TOKEN_BUILTIN_CURRENT_TIMESTAMP: func_name = "current_timestamp"; break;
         case TOKEN_BUILTIN_SLEEP_MS: func_name = "sleep_ms"; break;
+        // Phase 5.3: Binary File I/O
+        case TOKEN_BUILTIN_READ_BINARY: func_name = "read_binary"; break;
+        case TOKEN_BUILTIN_WRITE_BINARY: func_name = "write_binary"; break;
+        case TOKEN_BUILTIN_GET_FILE_INFO: func_name = "get_file_info"; break;
+        case TOKEN_BUILTIN_COPY_FILE: func_name = "copy_file"; break;
         default: func_name = "unknown"; break;
     }
 
@@ -1918,6 +1925,12 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern get_env");
     asm_append(&data_section, "extern current_timestamp");
     asm_append(&data_section, "extern sleep_ms");
+
+    // Phase 5.3: Binary File I/O
+    asm_append(&data_section, "extern read_binary");
+    asm_append(&data_section, "extern write_binary");
+    asm_append(&data_section, "extern get_file_info");
+    asm_append(&data_section, "extern copy_file");
 
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld

@@ -1,0 +1,10 @@
+function test_it() then
+    int x = 0;
+    
+    x = set_error_code(42)
+    print x
+    
+    return 0
+end
+
+test_it()
