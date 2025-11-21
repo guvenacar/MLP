@@ -366,10 +366,27 @@ void visit_Yazdir(ASTNode* node) {
             node->tek_ifade_data.ifade->degisken_data.ad->value != NULL) {
             char* degisken_adi = node->tek_ifade_data.ifade->degisken_data.ad->value;
             char* degisken_tipi = kapsam_degisken_tipi_bul(degisken_adi);
-            if (degisken_tipi != NULL && strcmp(degisken_tipi, "METIN") == 0) {
+            // Check for both "string" (token value) and "METIN" (legacy)
+            if (degisken_tipi != NULL &&
+                (strcmp(degisken_tipi, "string") == 0 || strcmp(degisken_tipi, "METIN") == 0)) {
                 is_string = true;
             }
         } else {
+        }
+    } else if (node->tek_ifade_data.ifade->type == AST_BUILTIN_CALL) {
+        // Built-in fonksiyon çağrısı ise, string döndüren fonksiyonları kontrol et
+        TokenType func_type = node->tek_ifade_data.ifade->builtin_call_data.function_type;
+        if (func_type == TOKEN_BUILTIN_STRING_JOIN ||
+            func_type == TOKEN_BUILTIN_STRING_REPLACE ||
+            func_type == TOKEN_BUILTIN_STRING_TRIM ||
+            func_type == TOKEN_BUILTIN_STRING_UPPER ||
+            func_type == TOKEN_BUILTIN_STRING_LOWER ||
+            func_type == TOKEN_BUILTIN_INT_TO_STRING ||
+            func_type == TOKEN_BUILTIN_CHAR_TO_STRING ||
+            func_type == TOKEN_BUILTIN_STRING_CONCAT ||
+            func_type == TOKEN_BUILTIN_STRING_SUBSTRING ||
+            func_type == TOKEN_BUILTIN_GET_ENV) {
+            is_string = true;
         }
     }
 

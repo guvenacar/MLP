@@ -1029,6 +1029,27 @@ ASTNode* komut() {
         return islec_tanimlama(); // Kendi içinde yönetir
     }
 
+    // 7.5. Built-in Function Call Statement (Noktalı virgülsüz)
+    // Phase 5.2 ve diğer built-in fonksiyonlar için doğrudan token kontrolü
+    if (current_token->type == TOKEN_BUILTIN_EXIT_WITH_CODE ||
+        current_token->type == TOKEN_BUILTIN_PANIC ||
+        current_token->type == TOKEN_BUILTIN_ASSERT ||
+        current_token->type == TOKEN_BUILTIN_GET_ERROR_CODE ||
+        current_token->type == TOKEN_BUILTIN_SET_ERROR_CODE ||
+        current_token->type == TOKEN_BUILTIN_MLP_MALLOC ||
+        current_token->type == TOKEN_BUILTIN_MLP_FREE ||
+        current_token->type == TOKEN_BUILTIN_MLP_REALLOC ||
+        current_token->type == TOKEN_BUILTIN_MLP_CALLOC ||
+        current_token->type == TOKEN_BUILTIN_GET_ALLOCATED_BYTES ||
+        current_token->type == TOKEN_BUILTIN_CHECK_MEMORY_LEAKS ||
+        current_token->type == TOKEN_BUILTIN_GET_ENV ||
+        current_token->type == TOKEN_BUILTIN_CURRENT_TIMESTAMP ||
+        current_token->type == TOKEN_BUILTIN_SLEEP_MS) {
+        ASTNode* builtin_node = ifade(); // Parse the built-in call
+        specs_check_no_semicolon("Built-in function call");
+        return builtin_node;
+    }
+
     // 8. Atama veya İfade Komutu (Noktalı virgülsüz)
     if (current_token->type == TOKEN_IDENTIFIER) {
         ASTNode* sol_node = ifade(); // 'birincil()' çağrılır
