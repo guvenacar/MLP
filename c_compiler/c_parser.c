@@ -1392,39 +1392,6 @@ ASTNode* komut() {
 
         ASTNode* sol_node = ifade(); // 'birincil()' çağrılır
 
-        // Phase 5.7: Increment/Decrement (x++, x--)
-        if (sol_node->type == AST_DEGISKEN &&
-            (current_token->type == TOKEN_INCREMENT || current_token->type == TOKEN_DECREMENT)) {
-            TokenType op_type = current_token->type;
-            consume(op_type);
-
-            Token* ad_token = sol_node->degisken_data.ad;
-
-            // Create: x = x + 1 or x = x - 1
-            ASTNode* var_ref = (ASTNode*)malloc(sizeof(ASTNode));
-            var_ref->type = AST_DEGISKEN;
-            Token* var_token = (Token*)malloc(sizeof(Token));
-            var_token->type = TOKEN_IDENTIFIER;
-            var_token->value = strdup(ad_token->value);
-            var_token->line = ad_token->line;
-            var_token->column = ad_token->column;
-            var_ref->degisken_data.ad = var_token;
-
-            ASTNode* one_node = (ASTNode*)malloc(sizeof(ASTNode));
-            one_node->type = AST_SAYI;
-            one_node->sabit_data.deger = strdup("1");
-
-            ASTNode* binary_op = (ASTNode*)malloc(sizeof(ASTNode));
-            binary_op->type = AST_IKILI_ISLEM;
-            binary_op->ikili_islem_data.sol = var_ref;
-            binary_op->ikili_islem_data.sag = one_node;
-            binary_op->ikili_islem_data.operator_type = (op_type == TOKEN_INCREMENT) ? TOKEN_PLUS : TOKEN_MINUS;
-
-            ASTNode* atama_node = createAST_AtamaKomutu(ad_token, binary_op);
-            free(sol_node);
-            return atama_node;
-        }
-
         // Phase 5.7: Compound Assignment (+=, -=, *=, /=)
         if (sol_node->type == AST_DEGISKEN &&
             (current_token->type == TOKEN_PLUS_ASSIGN || current_token->type == TOKEN_MINUS_ASSIGN ||
@@ -1461,6 +1428,7 @@ ASTNode* komut() {
             binary_op->ikili_islem_data.operator_type = binary_op_type;
 
             ASTNode* atama_node = createAST_AtamaKomutu(ad_token, binary_op);
+            specs_check_no_semicolon("Compound assignment");
             free(sol_node);
             return atama_node;
         }

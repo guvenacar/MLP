@@ -1,0 +1,11 @@
+-- Simple increment test
+
+int x = 5;
+print "x = "
+print x
+
+x++
+print "After x++: "
+print x
+
+print "Done"

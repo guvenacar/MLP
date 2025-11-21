@@ -555,32 +555,9 @@ Token* getNextToken() {
             current_position++;
             return createToken(TOKEN_PLUS_ASSIGN, "+=");
         }
-        if (source_code[current_position] == '+') {
-            current_position++;
-            return createToken(TOKEN_INCREMENT, "++");
-        }
         return createToken(TOKEN_PLUS, "+");
     }
     if (current_char == '-') {
-        // '-' karakteri geldiğinde:
-        if (source_code[current_position + 1] == '-') {
-            // Check if it's comment (-- followed by space) or decrement (--)
-            // Comments start with "-- " (with space after)
-            // Decrement is "--" at end of identifier (followed by newline/eof or operator)
-            char after_second = source_code[current_position + 2];
-            if (after_second == ' ' || after_second == '\t') {
-                // Definitely a comment: "-- text"
-                current_position += 2;
-                while (source_code[current_position] != '\n' && source_code[current_position] != '\0') {
-                    current_position++;
-                }
-                if (source_code[current_position] == '\n') current_position++;
-                return getNextToken();
-            }
-            // Otherwise it's decrement operator
-            current_position += 2;
-            return createToken(TOKEN_DECREMENT, "--");
-        }
         current_position++;
         if (source_code[current_position] == '=') {
             current_position++;
