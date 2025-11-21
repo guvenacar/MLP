@@ -1,18 +1,19 @@
-# Phase 5.2 Test Report 🎯
+# Phase 5.2 Test Report 🎉
 
-**Date:** 2025-01-21  
-**Tester:** Claude #3 (VSCode)  
+**Date:** 2025-11-21  
+**Tester:** Claude #3 (VSCode) → Claude #3 (Koordinatör)  
 **Branch:** test-phase5-2-with-parser-fix  
-**Commit:** 8cef6c4
+**Final Commit:** 3941cc3  
+**Status:** ✅ **ALL 14/14 FUNCTIONS PASSING!**
 
 ## 📊 Test Results Summary
 
-**Overall Status:** ✅ 13/14 functions working (92.86%)  
-**Critical Bug:** ❌ `get_env()` returns pointer address instead of string
+**Overall Status:** ✅ **14/14 functions working (100%!)**  
+**Critical Bugs:** ✅ ALL FIXED!
 
 ---
 
-## ✅ Working Functions (13/14)
+## ✅ Working Functions (14/14)
 
 ### Error Handling (3/3) ✓
 
@@ -33,51 +34,23 @@
 | `mlp_realloc(ptr, 200)` | ✅ PASS | Reallocates from 100 to 200 bytes |
 | `check_memory_leaks()` | ✅ PASS | Returns `0` (no leaks detected!) |
 
-### System Utilities (3/3) ✅ *with 1 bug*
+### System Utilities (3/3) ✅ **ALL FIXED!**
 
 | Function | Status | Output |
 |----------|--------|--------|
-| `get_env("HOME")` | ❌ **BUG** | Returns `565811248` (pointer address!) |
-| `current_timestamp()` | ✅ PASS | Returns `1763686358` (valid Unix timestamp) |
+| `get_env("HOME")` | ✅ **FIXED** | Returns `/home/pardus` correctly! |
+| `current_timestamp()` | ✅ PASS | Returns `1763712446` (valid Unix timestamp) |
 | `sleep_ms(100)` | ✅ PASS | Sleeps 100ms successfully |
 
 ---
 
-## 🐛 Critical Bug: get_env() String Return Issue
+## 🐛 Bug Fixes Applied
 
-### Problem
-`get_env("HOME")` returns a pointer address (`565811248`) instead of the actual string value.
+### Bug #1: Parser Statement Support ✅ FIXED
+**Issue:** Parser didn't recognize Phase 5.2 built-ins as statements
 
-### Root Cause
-The codegen treats `get_env()` return value as **integer** instead of **string**. The function returns `char*` but the compiler doesn't handle string-returning built-ins correctly.
-
-### Expected vs Actual
-```mlp
-string home = get_env("HOME");  -- Should print "/home/pardus"
-print home                       -- Actually prints "565811248" (address!)
-```
-
-### Fix Required
-Update `c_generator.c` to detect string-returning built-ins (`get_env`, etc.) and generate proper string printing code instead of integer printing.
-
-**Related:** This is Bug #2 from PHASE5_2_BUG_REPORT.md  
-**Status:** Claude #1 claimed to fix in commit e09879d but fix incomplete
-
----
-
-## 🔧 Parser Fix Applied (Bug #1 Fixed!)
-
-### Issue
-Parser didn't recognize Phase 5.2 built-ins as statements:
-```
-❌ Bulunan: "set_error_code" (UNKNOWN)
-✓ Beklenen: YAZDIR, Tip, Tanımlayıcı, EĞER, DÖNGÜ veya İŞLEÇ
-```
-
-### Solution
-Added statement support in `c_parser.c` (line 1048-1062):
+**Fix:** Added statement support in `c_parser.c` (lines 1048-1062)
 ```c
-// 7.5. Built-in Function Call as Statement (Phase 5.2)
 if (current_token->type == TOKEN_BUILTIN_EXIT_WITH_CODE ||
     current_token->type == TOKEN_BUILTIN_PANIC ||
     current_token->type == TOKEN_BUILTIN_ASSERT ||
@@ -91,7 +64,20 @@ if (current_token->type == TOKEN_BUILTIN_EXIT_WITH_CODE ||
 }
 ```
 
-**Status:** ✅ FIXED - All built-ins now work as statements!
+### Bug #2: get_env() String Return ✅ FIXED
+**Issue:** `get_env("HOME")` returned pointer address (`607029296`) instead of string
+
+**Fix:** Added `AST_BUILTIN_CALL` detection in `visit_Yazdir()` (c_generator.c)
+```c
+else if (node->tek_ifade_data.ifade->type == AST_BUILTIN_CALL) {
+    TokenType func_type = node->tek_ifade_data.ifade->builtin_call_data.function_type;
+    if (func_type == TOKEN_BUILTIN_GET_ENV) {
+        is_string = true;
+    }
+}
+```
+
+**Result:** Now prints `/home/pardus` correctly!
 
 ---
 
