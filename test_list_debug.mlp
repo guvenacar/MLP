@@ -1,0 +1,4 @@
+list<int> numbers = list<int>();
+print "List created"
+numbers.add(10)
+print "Added 10"

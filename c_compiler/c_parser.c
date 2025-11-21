@@ -298,9 +298,10 @@ ASTNode* createAST_ListAdd(Token* list_adi, ASTNode* deger) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_ADD;
+    // AST must own its own copy to avoid dangling pointers
     node->list_add_data.list_adi = (Token*)malloc(sizeof(Token));
     node->list_add_data.list_adi->type = list_adi->type;
-    node->list_add_data.list_adi->value = strdup(list_adi->value);
+    node->list_add_data.list_adi->value = strdup(list_adi->value);  // Own copy
     node->list_add_data.deger = deger;
     return node;
 }
@@ -309,9 +310,10 @@ ASTNode* createAST_ListGet(Token* list_adi, ASTNode* indeks) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_GET;
+    // AST must own its own copy to avoid dangling pointers
     node->list_get_data.list_adi = (Token*)malloc(sizeof(Token));
     node->list_get_data.list_adi->type = list_adi->type;
-    node->list_get_data.list_adi->value = strdup(list_adi->value);
+    node->list_get_data.list_adi->value = strdup(list_adi->value);  // Own copy
     node->list_get_data.indeks = indeks;
     return node;
 }
@@ -320,9 +322,10 @@ ASTNode* createAST_ListSize(Token* list_adi) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_SIZE;
+    // AST must own its own copy to avoid dangling pointers
     node->list_size_data.list_adi = (Token*)malloc(sizeof(Token));
     node->list_size_data.list_adi->type = list_adi->type;
-    node->list_size_data.list_adi->value = strdup(list_adi->value);
+    node->list_size_data.list_adi->value = strdup(list_adi->value);  // Own copy
     return node;
 }
 
@@ -330,9 +333,10 @@ ASTNode* createAST_ListClear(Token* list_adi) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_CLEAR;
+    // AST must own its own copy to avoid dangling pointers
     node->list_clear_data.list_adi = (Token*)malloc(sizeof(Token));
     node->list_clear_data.list_adi->type = list_adi->type;
-    node->list_clear_data.list_adi->value = strdup(list_adi->value);
+    node->list_clear_data.list_adi->value = strdup(list_adi->value);  // Own copy
     return node;
 }
 
@@ -341,9 +345,10 @@ ASTNode* createAST_ListSet(Token* list_adi, ASTNode* indeks, ASTNode* deger) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_SET;
+    // AST must own its own copy to avoid dangling pointers
     node->list_set_data.list_adi = (Token*)malloc(sizeof(Token));
     node->list_set_data.list_adi->type = list_adi->type;
-    node->list_set_data.list_adi->value = strdup(list_adi->value);
+    node->list_set_data.list_adi->value = strdup(list_adi->value);  // Own copy
     node->list_set_data.indeks = indeks;
     node->list_set_data.deger = deger;
     return node;
@@ -353,9 +358,10 @@ ASTNode* createAST_ListRemove(Token* list_adi, ASTNode* indeks) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_REMOVE;
+    // AST must own its own copy to avoid dangling pointers
     node->list_remove_data.list_adi = (Token*)malloc(sizeof(Token));
     node->list_remove_data.list_adi->type = list_adi->type;
-    node->list_remove_data.list_adi->value = strdup(list_adi->value);
+    node->list_remove_data.list_adi->value = strdup(list_adi->value);  // Own copy
     node->list_remove_data.indeks = indeks;
     return node;
 }
@@ -364,9 +370,10 @@ ASTNode* createAST_ListInsert(Token* list_adi, ASTNode* indeks, ASTNode* deger) 
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_INSERT;
+    // AST must own its own copy to avoid dangling pointers
     node->list_insert_data.list_adi = (Token*)malloc(sizeof(Token));
     node->list_insert_data.list_adi->type = list_adi->type;
-    node->list_insert_data.list_adi->value = strdup(list_adi->value);
+    node->list_insert_data.list_adi->value = strdup(list_adi->value);  // Own copy
     node->list_insert_data.indeks = indeks;
     node->list_insert_data.deger = deger;
     return node;
@@ -680,7 +687,7 @@ ASTNode* birincil() {
     if (current_token->type == TOKEN_IDENTIFIER) {
         Token ad_token_kopya;
         ad_token_kopya.type = current_token->type;
-        ad_token_kopya.value = strdup(current_token->value);
+        ad_token_kopya.value = strdup(current_token->value);  // Must strdup - lexer will reuse buffer
         consume(TOKEN_IDENTIFIER);
 
         // Fonksiyon çağrısı mı? (func(args))
@@ -697,7 +704,7 @@ ASTNode* birincil() {
             }
             consume(TOKEN_RIGHT_PAREN);
             ASTNode* call_node = createAST_IslecCagirma(&ad_token_kopya, arguman_listesi, a_sayisi);
-            free(ad_token_kopya.value);
+            free(ad_token_kopya.value);  // Free strdup'd string
             return call_node;
         }
         // Array erişimi mi? (arr[index])
@@ -706,7 +713,7 @@ ASTNode* birincil() {
             ASTNode* indeks = ifade();
             consume(TOKEN_RIGHT_BRACKET);
             ASTNode* array_erisim = createAST_ArrayErisim(&ad_token_kopya, indeks);
-            free(ad_token_kopya.value);
+            free(ad_token_kopya.value);  // Free strdup'd string
             return array_erisim;
         }
         // Struct field access or List method call? (p.x or list.add())
@@ -729,7 +736,7 @@ ASTNode* birincil() {
                     ASTNode* deger = ifade();
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* add_node = createAST_ListAdd(&ad_token_kopya, deger);
-                    // free(ad_token_kopya.value); // AST owns this
+                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
                     free(field_or_method.value);
                     return add_node;
                 }
@@ -737,7 +744,7 @@ ASTNode* birincil() {
                     ASTNode* indeks = ifade();
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* get_node = createAST_ListGet(&ad_token_kopya, indeks);
-                    // free(ad_token_kopya.value); // AST owns this
+                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
                     free(field_or_method.value);
                     return get_node;
                 }
@@ -749,7 +756,7 @@ ASTNode* birincil() {
                     consume(TOKEN_RIGHT_PAREN);
                     
                     ASTNode* set_node = createAST_ListSet(&ad_token_kopya, indeks, value);
-                    // free(ad_token_kopya.value); // AST owns this
+                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
                     free(field_or_method.value);
                     return set_node;
                 }
@@ -759,7 +766,7 @@ ASTNode* birincil() {
                     consume(TOKEN_RIGHT_PAREN);
                     
                     ASTNode* remove_node = createAST_ListRemove(&ad_token_kopya, indeks);
-                    // free(ad_token_kopya.value); // AST owns this
+                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
                     free(field_or_method.value);
                     return remove_node;
                 }
@@ -771,7 +778,7 @@ ASTNode* birincil() {
                     consume(TOKEN_RIGHT_PAREN);
                     
                     ASTNode* insert_node = createAST_ListInsert(&ad_token_kopya, indeks, value);
-                    // free(ad_token_kopya.value); // AST owns this
+                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
                     free(field_or_method.value);
                     return insert_node;
                 }
@@ -779,14 +786,14 @@ ASTNode* birincil() {
                          strcmp(field_or_method.value, "size") == 0) {
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* size_node = createAST_ListSize(&ad_token_kopya);
-                    // free(ad_token_kopya.value); // AST owns this
+                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
                     free(field_or_method.value);
                     return size_node;
                 }
                 else if (strcmp(field_or_method.value, "clear") == 0) {
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* clear_node = createAST_ListClear(&ad_token_kopya);
-                    // free(ad_token_kopya.value); // AST owns this
+                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
                     free(field_or_method.value);
                     return clear_node;
                 }
@@ -796,7 +803,7 @@ ASTNode* birincil() {
                     ASTNode* key = ifade();
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* has_node = createAST_MapHas(&ad_token_kopya, key);
-                    free(ad_token_kopya.value);
+                    free(ad_token_kopya.value);  // Free strdup'd string
                     free(field_or_method.value);
                     return has_node;
                 }
@@ -808,7 +815,7 @@ ASTNode* birincil() {
             else {
                 // Regular struct field access (no parentheses)
                 ASTNode* field_access = createAST_StructFieldAccess(&ad_token_kopya, &field_or_method);
-                free(ad_token_kopya.value);
+                free(ad_token_kopya.value);  // Free strdup'd string
                 free(field_or_method.value);
                 return field_access;
             }
@@ -816,7 +823,7 @@ ASTNode* birincil() {
         // Normal değişken
         else {
             ASTNode* var_node = createAST_Degisken(&ad_token_kopya);
-            free(ad_token_kopya.value);
+            free(ad_token_kopya.value);  // Free strdup'd string
             return var_node;
         }
     }
