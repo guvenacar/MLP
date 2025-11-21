@@ -10,6 +10,7 @@
 #include <time.h>    // time için (Phase 5.2)
 #include <sys/stat.h>  // stat, mkdir için (Phase 5.3)
 #include <dirent.h>  // opendir, readdir için (Phase 5.3)
+#include <sys/wait.h>  // WIFEXITED, WEXITSTATUS için (Phase 5.3)
 #include "json_parser.h"  // MLP Language definitions parser
 
 // Forward declarations
@@ -2210,5 +2211,132 @@ int change_directory(const char* path) {
     }
     
     return 1;
+}
+
+// ==================== PHASE 5.3: PROCESS CONTROL (4 functions) ====================
+
+/**
+ * execute_command - Execute shell command and return exit code
+ * @param cmd: Shell command to execute
+ * @return: Exit code of command, or -1 on error
+ *
+ * Error codes:
+ *   ERR_COMMAND_FAILED (106): Command execution failed
+ *
+ * MLP Usage:
+ *   exit_code := execute_command("ls -la")
+ *   if exit_code == 0 { print "Success" }
+ *
+ * Security Warning: Never pass user input directly to this function!
+ * Validate and sanitize all inputs to prevent command injection.
+ */
+int execute_command(const char* cmd) {
+    if (!cmd) {
+        set_error_code(106);  // ERR_COMMAND_FAILED
+        return -1;
+    }
+
+    int exit_code = system(cmd);
+    if (exit_code == -1) {
+        set_error_code(106);  // ERR_COMMAND_FAILED
+        return -1;
+    }
+    
+    // Extract actual exit code from system() return value
+    #ifdef _WIN32
+        return exit_code;
+    #else
+        if (WIFEXITED(exit_code)) {
+            return WEXITSTATUS(exit_code);
+        }
+        return -1;
+    #endif
+}
+
+/**
+ * get_command_output - Execute command and capture output
+ * @param cmd: Shell command to execute
+ * @return: Command output as string, or NULL on error
+ *
+ * Error codes:
+ *   ERR_COMMAND_FAILED (106): Command execution failed
+ *   ERR_OUT_OF_MEMORY (104): Failed to allocate memory for output
+ *
+ * MLP Usage:
+ *   output := get_command_output("ls src")
+ *   print output
+ *
+ * Security Warning: Never pass user input directly to this function!
+ */
+char* get_command_output(const char* cmd) {
+    if (!cmd) {
+        set_error_code(106);  // ERR_COMMAND_FAILED
+        return NULL;
+    }
+
+    FILE* pipe = popen(cmd, "r");
+    if (!pipe) {
+        set_error_code(106);  // ERR_COMMAND_FAILED
+        return NULL;
+    }
+    
+    // Read output in chunks
+    size_t buffer_size = 1024;
+    size_t output_size = 0;
+    char* output = mlp_malloc(buffer_size);
+    if (!output) {
+        pclose(pipe);
+        set_error_code(104);  // ERR_OUT_OF_MEMORY
+        return NULL;
+    }
+    
+    output[0] = '\0';
+    char chunk[256];
+    while (fgets(chunk, sizeof(chunk), pipe) != NULL) {
+        size_t chunk_len = strlen(chunk);
+        
+        // Resize buffer if needed
+        while (output_size + chunk_len + 1 > buffer_size) {
+            buffer_size *= 2;
+            char* new_output = mlp_realloc(output, buffer_size);
+            if (!new_output) {
+                mlp_free(output);
+                pclose(pipe);
+                set_error_code(104);  // ERR_OUT_OF_MEMORY
+                return NULL;
+            }
+            output = new_output;
+        }
+        
+        strcat(output, chunk);
+        output_size += chunk_len;
+    }
+    
+    pclose(pipe);
+    return output;
+}
+
+/**
+ * get_process_id - Get current process ID
+ * @return: Current process ID (PID)
+ *
+ * MLP Usage:
+ *   pid := get_process_id()
+ *   print "My PID: " + string(pid)
+ */
+int get_process_id(void) {
+    return getpid();
+}
+
+/**
+ * get_parent_process_id - Get parent process ID
+ * @return: Parent process ID (PPID)
+ *
+ * MLP Usage:
+ *   ppid := get_parent_process_id()
+ *   print "Parent PID: " + string(ppid)
+ */
+int get_parent_process_id(void) {
+    return getppid();
 }
 

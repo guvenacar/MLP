@@ -567,7 +567,12 @@ ASTNode* birincil() {
         current_token->type == TOKEN_BUILTIN_REMOVE_DIRECTORY ||
         current_token->type == TOKEN_BUILTIN_DIRECTORY_EXISTS ||
         current_token->type == TOKEN_BUILTIN_GET_CURRENT_DIR ||
-        current_token->type == TOKEN_BUILTIN_CHANGE_DIRECTORY) {
+        current_token->type == TOKEN_BUILTIN_CHANGE_DIRECTORY ||
+        // Phase 5.3: Process Control
+        current_token->type == TOKEN_BUILTIN_EXECUTE_COMMAND ||
+        current_token->type == TOKEN_BUILTIN_GET_COMMAND_OUTPUT ||
+        current_token->type == TOKEN_BUILTIN_GET_PROCESS_ID ||
+        current_token->type == TOKEN_BUILTIN_GET_PARENT_PROCESS_ID) {
 
         TokenType func_type = current_token->type;
         consume(current_token->type);
@@ -1073,7 +1078,9 @@ ASTNode* komut() {
         // Phase 5.3: Directory Operations (can be used as statements)
         current_token->type == TOKEN_BUILTIN_CREATE_DIRECTORY ||
         current_token->type == TOKEN_BUILTIN_REMOVE_DIRECTORY ||
-        current_token->type == TOKEN_BUILTIN_CHANGE_DIRECTORY) {
+        current_token->type == TOKEN_BUILTIN_CHANGE_DIRECTORY ||
+        // Phase 5.3: Process Control (execute_command can be statement)
+        current_token->type == TOKEN_BUILTIN_EXECUTE_COMMAND) {
         // Parse built-in call as expression first
         ASTNode* builtin_node = ifade();
         // Return as statement (no semicolon required)

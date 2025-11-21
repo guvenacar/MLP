@@ -377,7 +377,8 @@ void visit_Yazdir(ASTNode* node) {
         if (func_type == TOKEN_BUILTIN_GET_ENV ||
             func_type == TOKEN_BUILTIN_READ_BINARY ||
             func_type == TOKEN_BUILTIN_GET_FILE_INFO ||
-            func_type == TOKEN_BUILTIN_GET_CURRENT_DIR) {
+            func_type == TOKEN_BUILTIN_GET_CURRENT_DIR ||
+            func_type == TOKEN_BUILTIN_GET_COMMAND_OUTPUT) {
             is_string = true;
         }
     }
@@ -1558,6 +1559,11 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_DIRECTORY_EXISTS: func_name = "directory_exists"; break;
         case TOKEN_BUILTIN_GET_CURRENT_DIR: func_name = "get_current_dir"; break;
         case TOKEN_BUILTIN_CHANGE_DIRECTORY: func_name = "change_directory"; break;
+        // Phase 5.3: Process Control
+        case TOKEN_BUILTIN_EXECUTE_COMMAND: func_name = "execute_command"; break;
+        case TOKEN_BUILTIN_GET_COMMAND_OUTPUT: func_name = "get_command_output"; break;
+        case TOKEN_BUILTIN_GET_PROCESS_ID: func_name = "get_process_id"; break;
+        case TOKEN_BUILTIN_GET_PARENT_PROCESS_ID: func_name = "get_parent_process_id"; break;
         default: func_name = "unknown"; break;
     }
 
@@ -1947,6 +1953,12 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern directory_exists");
     asm_append(&data_section, "extern get_current_dir");
     asm_append(&data_section, "extern change_directory");
+
+    // Phase 5.3: Process Control
+    asm_append(&data_section, "extern execute_command");
+    asm_append(&data_section, "extern get_command_output");
+    asm_append(&data_section, "extern get_process_id");
+    asm_append(&data_section, "extern get_parent_process_id");
 
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld

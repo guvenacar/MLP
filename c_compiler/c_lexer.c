@@ -158,6 +158,12 @@ KeywordMap keywords[] = {
     {"get_current_dir",      TOKEN_BUILTIN_GET_CURRENT_DIR},
     {"change_directory",     TOKEN_BUILTIN_CHANGE_DIRECTORY},
 
+    // Phase 5.3: Process Control
+    {"execute_command",      TOKEN_BUILTIN_EXECUTE_COMMAND},
+    {"get_command_output",   TOKEN_BUILTIN_GET_COMMAND_OUTPUT},
+    {"get_process_id",       TOKEN_BUILTIN_GET_PROCESS_ID},
+    {"get_parent_process_id", TOKEN_BUILTIN_GET_PARENT_PROCESS_ID},
+
     // Phase 4: Hash Map
     {"map", TOKEN_YAPI_MAP},
 

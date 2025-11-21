@@ -107,6 +107,12 @@ typedef enum {
     TOKEN_BUILTIN_GET_CURRENT_DIR,
     TOKEN_BUILTIN_CHANGE_DIRECTORY,
 
+    // Process Control (Phase 5.3)
+    TOKEN_BUILTIN_EXECUTE_COMMAND,
+    TOKEN_BUILTIN_GET_COMMAND_OUTPUT,
+    TOKEN_BUILTIN_GET_PROCESS_ID,
+    TOKEN_BUILTIN_GET_PARENT_PROCESS_ID,
+
     // Hash Map (Phase 4)
     TOKEN_YAPI_MAP,  // "map" keyword
     TOKEN_COLON,     // : for key:value syntax
