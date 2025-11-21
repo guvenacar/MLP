@@ -1,0 +1,56 @@
+print "=== Phase 5.5: Bitwise Operators Test ==="
+
+print "1. Bitwise AND (&)"
+print "12 & 10 (1100 & 1010 = 1000):"
+print 12 & 10
+
+print "15 & 7 (1111 & 0111 = 0111):"
+print 15 & 7
+
+print ""
+print "2. Bitwise OR (|)"
+print "12 | 10 (1100 | 1010 = 1110):"
+print 12 | 10
+
+print "8 | 4 (1000 | 0100 = 1100):"
+print 8 | 4
+
+print ""
+print "3. Bitwise XOR (^)"
+print "12 ^ 10 (1100 ^ 1010 = 0110):"
+print 12 ^ 10
+
+print "15 ^ 15 (should be 0):"
+print 15 ^ 15
+
+print ""
+print "4. Bitwise NOT (~)"
+print "~0 (should be -1):"
+print ~0
+
+print "~-1 (should be 0):"
+print ~-1
+
+print ""
+print "5. Left Shift (<<)"
+print "1 << 3 (shift by 3 = 8):"
+print 1 << 3
+
+print "5 << 2 (5 * 4 = 20):"
+print 5 << 2
+
+print ""
+print "6. Right Shift (>>)"
+print "8 >> 2 (8 / 4 = 2):"
+print 8 >> 2
+
+print "15 >> 1 (15 / 2 = 7):"
+print 15 >> 1
+
+print ""
+print "7. Complex Expression"
+print "(5 & 3) | (2 << 1):"
+print (5 & 3) | (2 << 1)
+
+print ""
+print "=== Phase 5.5: All Bitwise Tests Complete ==="

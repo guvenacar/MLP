@@ -164,6 +164,14 @@ typedef enum {
     TOKEN_AND,            // and keyword
     TOKEN_OR,             // or keyword
     TOKEN_NOT,            // not keyword
+    
+    // Phase 5.5: Bitwise operators
+    TOKEN_BITWISE_AND,    // & bitwise AND
+    TOKEN_BITWISE_OR,     // | bitwise OR
+    TOKEN_BITWISE_XOR,    // ^ bitwise XOR
+    TOKEN_BITWISE_NOT,    // ~ bitwise NOT (unary)
+    TOKEN_LSHIFT,         // << left shift
+    TOKEN_RSHIFT,         // >> right shift
 
 } TokenType;
 

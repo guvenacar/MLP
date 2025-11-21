@@ -554,6 +554,12 @@ void visit_Degisken(ASTNode* node) {
     char* degisken_adi = node->degisken_data.ad->value;
     char buffer[128];
 
+    // Phase 5.6: null keyword = 0
+    if (strcmp(degisken_adi, "null") == 0) {
+        asm_append(&text_section, "    xor rax, rax  ; null = 0");
+        return;
+    }
+
     // Phase 5.4: Önce enum değeri mi kontrol et
     int enum_val = enum_value_bul(degisken_adi);
     if (enum_val >= 0) {
@@ -1842,6 +1848,34 @@ void visit_IkiliIslem(ASTNode* node) {
             asm_append(&text_section, "    test rax, rax"); // Sonuç sıfır mı?
             asm_append(&text_section, "    setne al");      // Sıfır değilse AL = 1
             asm_append(&text_section, "    movzx rax, al"); // Sonuç 0 veya 1
+            break;
+
+        // Phase 5.5: Bitwise operators
+        case TOKEN_BITWISE_AND: // &
+            asm_append(&text_section, "    ; Bitwise AND (&)");
+            asm_append(&text_section, "    and rax, rbx");
+            break;
+        
+        case TOKEN_BITWISE_OR: // |
+            asm_append(&text_section, "    ; Bitwise OR (|)");
+            asm_append(&text_section, "    or rax, rbx");
+            break;
+        
+        case TOKEN_BITWISE_XOR: // ^
+            asm_append(&text_section, "    ; Bitwise XOR (^)");
+            asm_append(&text_section, "    xor rax, rbx");
+            break;
+        
+        case TOKEN_LSHIFT: // <<
+            asm_append(&text_section, "    ; Left Shift (<<)");
+            asm_append(&text_section, "    mov rcx, rbx    ; Shift amount to CL");
+            asm_append(&text_section, "    shl rax, cl     ; Shift left");
+            break;
+        
+        case TOKEN_RSHIFT: // >>
+            asm_append(&text_section, "    ; Right Shift (>>)");
+            asm_append(&text_section, "    mov rcx, rbx    ; Shift amount to CL");
+            asm_append(&text_section, "    shr rax, cl     ; Shift right (unsigned)");
             break;
 
         default:

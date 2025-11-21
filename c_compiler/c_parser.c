@@ -52,6 +52,12 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_AND: return "and";
         case TOKEN_OR: return "or";
         case TOKEN_NOT: return "not";
+        case TOKEN_BITWISE_AND: return "&";
+        case TOKEN_BITWISE_OR: return "|";
+        case TOKEN_BITWISE_XOR: return "^";
+        case TOKEN_BITWISE_NOT: return "~";
+        case TOKEN_LSHIFT: return "<<";
+        case TOKEN_RSHIFT: return ">>";
         default: return "UNKNOWN";
     }
 }
@@ -475,9 +481,18 @@ int get_precedence(TokenType type) {
         case TOKEN_LTE:
         case TOKEN_NOT_ESIT:
             return 5;
+        case TOKEN_BITWISE_OR:
+            return 6;
+        case TOKEN_BITWISE_XOR:
+            return 7;
+        case TOKEN_BITWISE_AND:
+            return 8;
         case TOKEN_PLUS:
         case TOKEN_MINUS:
             return 10;
+        case TOKEN_LSHIFT:
+        case TOKEN_RSHIFT:
+            return 11;
         case TOKEN_MUL:
         case TOKEN_DIV:
         case TOKEN_MOD:
@@ -758,7 +773,7 @@ ASTNode* birincil() {
 
 // Unary expressions (not, unary minus)
 ASTNode* unary_ifade() {
-    // Handle 'not' keyword
+    // Handle 'not' keyword (logical NOT)
     if (current_token->type == TOKEN_NOT) {
         consume(TOKEN_NOT);
         ASTNode* operand = unary_ifade();  // Recursive for multiple nots
@@ -776,6 +791,26 @@ ASTNode* unary_ifade() {
         comparison->ikili_islem_data.operator_type = TOKEN_OP_ESIT_KARSILASTIRMA;
         
         return comparison;
+    }
+    
+    // Phase 5.5: Handle bitwise NOT (~)
+    if (current_token->type == TOKEN_BITWISE_NOT) {
+        consume(TOKEN_BITWISE_NOT);
+        ASTNode* operand = unary_ifade();  // Recursive
+        
+        // Create unary NOT operation
+        // We'll encode it as -1 XOR operand (which is bitwise NOT)
+        ASTNode* minus_one = (ASTNode*)malloc(sizeof(ASTNode));
+        minus_one->type = AST_SAYI;
+        minus_one->sabit_data.deger = strdup("-1");
+        
+        ASTNode* not_node = (ASTNode*)malloc(sizeof(ASTNode));
+        not_node->type = AST_IKILI_ISLEM;
+        not_node->ikili_islem_data.sol = operand;
+        not_node->ikili_islem_data.sag = minus_one;
+        not_node->ikili_islem_data.operator_type = TOKEN_BITWISE_XOR;
+        
+        return not_node;
     }
     
     // Otherwise, parse primary expression

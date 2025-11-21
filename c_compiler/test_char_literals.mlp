@@ -1,0 +1,50 @@
+-- Phase 5.6 Test: Character Literals
+
+print "=== Testing Character Literals ==="
+
+int a = 'A';
+print "ASCII of 'A': "
+print a
+
+int lower_a = 'a';
+print "ASCII of 'a': "
+print lower_a
+
+int zero = '0';
+print "ASCII of '0': "
+print zero
+
+print ""
+print "=== Testing Escape Sequences ==="
+
+int newline = '\n';
+print "ASCII of newline: "
+print newline
+
+int tab = '\t';
+print "ASCII of tab: "
+print tab
+
+int backslash = '\\';
+print "ASCII of backslash: "
+print backslash
+
+int quote = '\'';
+print "ASCII of single quote: "
+print quote
+
+print ""
+print "=== Using char literals in conditions ==="
+
+int ch = 'X';
+if ch == 88 then
+    print "'X' equals 88 - correct!"
+end
+
+-- Compare with char literal
+if ch == 'X' then
+    print "ch == 'X' - character comparison works!"
+end
+
+print ""
+print "=== Phase 5.6 Character Literals Test Complete ==="

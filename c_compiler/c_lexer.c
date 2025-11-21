@@ -189,9 +189,10 @@ KeywordMap keywords[] = {
     // Phase 4: Hash Map
     {"map", TOKEN_YAPI_MAP},
 
-    // Boolean literals
+    // Boolean and null literals
     {"true",     TOKEN_IDENTIFIER},  // Will be handled as identifier
     {"false",    TOKEN_IDENTIFIER},  // Will be handled as identifier
+    // null handled in generator as 0
 
     {NULL, TOKEN_EOF}
 };
@@ -398,7 +399,44 @@ Token* getNextToken() {
 
     char current_char = source_code[current_position]; // Tek baytlık operatörler için hala gerekli
 
-    // YENİ: STRING LITERAL Okuma ("merhaba" veya 'merhaba')
+    // Phase 5.6: CHARACTER LITERAL ('A', '\n', etc.) - Returns integer ASCII value
+    if (current_char == '\'' && source_code[current_position + 1] != '\0') {
+        int start_pos = current_position;
+        current_position++; // Açılış tırnağını atla
+        int char_value;
+        int is_escape = 0;
+
+        if (source_code[current_position] == '\\') {
+            is_escape = 1;
+            current_position++;
+            switch (source_code[current_position]) {
+                case 'n':  char_value = 10; break;
+                case 't':  char_value = 9;  break;
+                case 'r':  char_value = 13; break;
+                case '\\': char_value = 92; break;
+                case '\'': char_value = 39; break;
+                case '"':  char_value = 34; break;
+                case '0':  char_value = 0;  break;
+                default:   char_value = (unsigned char)source_code[current_position]; break;
+            }
+        } else {
+            char_value = (unsigned char)source_code[current_position];
+        }
+        current_position++;
+
+        // Kapanış tırnağını kontrol et - tek karakter ise int döndür
+        if (source_code[current_position] == '\'') {
+            current_position++;
+            char value_str[16];
+            sprintf(value_str, "%d", char_value);
+            return createToken(TOKEN_SAYI, value_str);
+        } else {
+            // Tek karakterli değilse, string olarak işle - geri sar
+            current_position = start_pos;
+        }
+    }
+
+    // STRING LITERAL Okuma ("merhaba" veya 'multi-char string')
     if (current_char == '"' || current_char == '\'') {
         char quote_char = current_char;
         current_position++; // Açılış tırnağını atla
@@ -475,6 +513,19 @@ Token* getNextToken() {
     if (current_char == '<' && next_char == '=') {
         current_position += 2;
         return createToken(TOKEN_LTE, "<=");
+    }
+    
+    // Phase 5.5: Bitwise shift operators
+    // << (Left Shift)
+    if (current_char == '<' && next_char == '<') {
+        current_position += 2;
+        return createToken(TOKEN_LSHIFT, "<<");
+    }
+    
+    // >> (Right Shift)
+    if (current_char == '>' && next_char == '>') {
+        current_position += 2;
+        return createToken(TOKEN_RSHIFT, ">>");
     }
 
     // --- YENİ: Tek Karakterli Operatörler ve Ayırıcılar ---
@@ -553,6 +604,24 @@ Token* getNextToken() {
     if (current_char == ':') {
         current_position++;
         return createToken(TOKEN_COLON, ":");
+    }
+
+    // Phase 5.5: Bitwise operators
+    if (current_char == '&') {
+        current_position++;
+        return createToken(TOKEN_BITWISE_AND, "&");
+    }
+    if (current_char == '|') {
+        current_position++;
+        return createToken(TOKEN_BITWISE_OR, "|");
+    }
+    if (current_char == '^') {
+        current_position++;
+        return createToken(TOKEN_BITWISE_XOR, "^");
+    }
+    if (current_char == '~') {
+        current_position++;
+        return createToken(TOKEN_BITWISE_NOT, "~");
     }
 
     // 4. Tanınmayan Karakter (HATA YÖNETİMİ DÜZELTİLDİ)
