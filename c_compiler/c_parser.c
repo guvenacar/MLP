@@ -289,12 +289,8 @@ ASTNode* createAST_ListTanimlama(Token* element_tipi, Token* degisken_adi) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_TANIMLAMA;
-    node->list_tanimlama_data.element_tipi = (Token*)malloc(sizeof(Token));
-    node->list_tanimlama_data.element_tipi->type = element_tipi->type;
-    node->list_tanimlama_data.element_tipi->value = strdup(element_tipi->value);
-    node->list_tanimlama_data.degisken_adi = (Token*)malloc(sizeof(Token));
-    node->list_tanimlama_data.degisken_adi->type = degisken_adi->type;
-    node->list_tanimlama_data.degisken_adi->value = strdup(degisken_adi->value);
+    node->list_tanimlama_data.element_tipi = element_tipi;  // Direct assignment
+    node->list_tanimlama_data.degisken_adi = degisken_adi;  // Direct assignment
     return node;
 }
 
@@ -506,6 +502,7 @@ ASTNode* dongu_komutu();
 ASTNode* for_komutu();
 ASTNode* islec_tanimlama();
 ASTNode* donus_komutu();
+ASTNode* list_tanimlama_parse();  // Phase 6: List<T> tanımlama parser
 
 
 int get_precedence(TokenType type) {
@@ -732,7 +729,7 @@ ASTNode* birincil() {
                     ASTNode* deger = ifade();
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* add_node = createAST_ListAdd(&ad_token_kopya, deger);
-                    free(ad_token_kopya.value);
+                    // free(ad_token_kopya.value); // AST owns this
                     free(field_or_method.value);
                     return add_node;
                 }
@@ -740,7 +737,7 @@ ASTNode* birincil() {
                     ASTNode* indeks = ifade();
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* get_node = createAST_ListGet(&ad_token_kopya, indeks);
-                    free(ad_token_kopya.value);
+                    // free(ad_token_kopya.value); // AST owns this
                     free(field_or_method.value);
                     return get_node;
                 }
@@ -752,7 +749,7 @@ ASTNode* birincil() {
                     consume(TOKEN_RIGHT_PAREN);
                     
                     ASTNode* set_node = createAST_ListSet(&ad_token_kopya, indeks, value);
-                    free(ad_token_kopya.value);
+                    // free(ad_token_kopya.value); // AST owns this
                     free(field_or_method.value);
                     return set_node;
                 }
@@ -762,7 +759,7 @@ ASTNode* birincil() {
                     consume(TOKEN_RIGHT_PAREN);
                     
                     ASTNode* remove_node = createAST_ListRemove(&ad_token_kopya, indeks);
-                    free(ad_token_kopya.value);
+                    // free(ad_token_kopya.value); // AST owns this
                     free(field_or_method.value);
                     return remove_node;
                 }
@@ -774,7 +771,7 @@ ASTNode* birincil() {
                     consume(TOKEN_RIGHT_PAREN);
                     
                     ASTNode* insert_node = createAST_ListInsert(&ad_token_kopya, indeks, value);
-                    free(ad_token_kopya.value);
+                    // free(ad_token_kopya.value); // AST owns this
                     free(field_or_method.value);
                     return insert_node;
                 }
@@ -782,14 +779,14 @@ ASTNode* birincil() {
                          strcmp(field_or_method.value, "size") == 0) {
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* size_node = createAST_ListSize(&ad_token_kopya);
-                    free(ad_token_kopya.value);
+                    // free(ad_token_kopya.value); // AST owns this
                     free(field_or_method.value);
                     return size_node;
                 }
                 else if (strcmp(field_or_method.value, "clear") == 0) {
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* clear_node = createAST_ListClear(&ad_token_kopya);
-                    free(ad_token_kopya.value);
+                    // free(ad_token_kopya.value); // AST owns this
                     free(field_or_method.value);
                     return clear_node;
                 }
@@ -1157,81 +1154,6 @@ ASTNode* komut() {
         }
     }
 
-    // ===== Phase 6: List Tanımlama (List<Type> var = List<Type>();) =====
-    // Modern syntax: List<int> numbers = List<int>()
-    if (current_token->type == TOKEN_YAPI_LIST) {
-        consume(TOKEN_YAPI_LIST);
-
-        // Expect < for generic type
-        if (current_token->type != TOKEN_LT) {
-            parseError("List<Type>", "<");
-        }
-        consume(TOKEN_LT);
-
-        // Element type (int, string, or custom type name)
-        Token element_tip;
-        if (current_token->type == TOKEN_TANIMLA_SAYI ||
-            current_token->type == TOKEN_TANIMLA_METIN ||
-            current_token->type == TOKEN_TANIMLA_BOOL ||
-            current_token->type == TOKEN_IDENTIFIER) {
-            element_tip.type = current_token->type;
-            element_tip.value = strdup(current_token->value);
-            consume(current_token->type);
-        } else {
-            parseError("List element type", "int/string/bool/StructName");
-        }
-
-        // Expect > to close generic type
-        if (current_token->type != TOKEN_GT) {
-            parseError("List<Type>", ">");
-        }
-        consume(TOKEN_GT);
-
-        // Variable name
-        if (current_token->type != TOKEN_IDENTIFIER) {
-            parseError("List variable name", "IDENTIFIER");
-        }
-        Token degisken_adi;
-        degisken_adi.type = current_token->type;
-        degisken_adi.value = strdup(current_token->value);
-        consume(TOKEN_IDENTIFIER);
-
-        // Expect =
-        consume(TOKEN_ASSIGN);
-
-        // Expect List<Type>()
-        if (current_token->type != TOKEN_YAPI_LIST) {
-            parseError("List<Type>()", "List");
-        }
-        consume(TOKEN_YAPI_LIST);
-        
-        // Expect < again for constructor
-        consume(TOKEN_LT);
-        
-        // Skip element type (already have it)
-        if (current_token->type == TOKEN_TANIMLA_SAYI ||
-            current_token->type == TOKEN_TANIMLA_METIN ||
-            current_token->type == TOKEN_TANIMLA_BOOL ||
-            current_token->type == TOKEN_IDENTIFIER) {
-            consume(current_token->type);
-        }
-        
-        // Expect >
-        consume(TOKEN_GT);
-        
-        // Expect ()
-        consume(TOKEN_LEFT_PAREN);
-        consume(TOKEN_RIGHT_PAREN);
-
-        // Expect ;
-        consume(TOKEN_SEMICOLON);
-
-        ASTNode* list_node = createAST_ListTanimlama(&element_tip, &degisken_adi);
-        free(element_tip.value);
-        free(degisken_adi.value);
-        return list_node;
-    }
-
     // ===== Phase 4: Map Tanımlama (map[KeyType:ValueType] var = map();) =====
     if (current_token->type == TOKEN_YAPI_MAP) {
         consume(TOKEN_YAPI_MAP);
@@ -1345,8 +1267,14 @@ ASTNode* komut() {
     // 4. Değişken Tanımlama (Noktalı virgüllü)
     if (current_token->type == TOKEN_TANIMLA_SAYI ||
         current_token->type == TOKEN_TANIMLA_METIN ||
-        current_token->type == TOKEN_TANIMLA_BOOL)
+        current_token->type == TOKEN_TANIMLA_BOOL ||
+        current_token->type == TOKEN_YAPI_LIST)  // Phase 6: List tanımlama
     {
+        // Phase 6: List tanımlama
+        if (current_token->type == TOKEN_YAPI_LIST) {
+            return list_tanimlama_parse();  // Call list_tanimlama_parse() which handles List<T> syntax
+        }
+        
         Token tip_token;
         tip_token.type = current_token->type;
         tip_token.value = strdup(current_token->value);
@@ -1602,9 +1530,13 @@ ASTNode* komut() {
             return sol_node; // Fonksiyon çağrısını komut olarak döndür
         }
 
-        // DURUM 7.3: LIST METHOD CALLS (list.add(), list.clear())
-        // Phase 2: List method calls as statements
-        if (sol_node->type == AST_LIST_ADD || sol_node->type == AST_LIST_CLEAR) {
+        // DURUM 7.3: LIST METHOD CALLS (list.add(), list.clear(), list.set(), etc.)
+        // Phase 6: List method calls as statements
+        if (sol_node->type == AST_LIST_ADD || 
+            sol_node->type == AST_LIST_CLEAR ||
+            sol_node->type == AST_LIST_SET ||
+            sol_node->type == AST_LIST_REMOVE ||
+            sol_node->type == AST_LIST_INSERT) {
             specs_check_no_semicolon("List method call");
             return sol_node; // List method call as statement
         }
@@ -1796,6 +1728,80 @@ ASTNode* blok() {
         }
     }
     return node;
+}
+
+// Phase 6: List<T> Tanımlama Parser
+// Modern syntax: List<int> numbers = List<int>()
+ASTNode* list_tanimlama_parse() {
+    consume(TOKEN_YAPI_LIST);
+
+    // Expect < for generic type
+    if (current_token->type != TOKEN_LT) {
+        parseError("List<Type>", "<");
+    }
+    consume(TOKEN_LT);
+
+    // Element type (int, string, or custom type name)
+    Token* element_tip = (Token*)malloc(sizeof(Token));
+    if (current_token->type == TOKEN_TANIMLA_SAYI ||
+        current_token->type == TOKEN_TANIMLA_METIN ||
+        current_token->type == TOKEN_TANIMLA_BOOL ||
+        current_token->type == TOKEN_IDENTIFIER) {
+        element_tip->type = current_token->type;
+        element_tip->value = strdup(current_token->value);
+        consume(current_token->type);
+    } else {
+        parseError("List element type", "int/string/bool/StructName");
+    }
+
+    // Expect > to close generic type
+    if (current_token->type != TOKEN_GT) {
+        parseError("List<Type>", ">");
+    }
+    consume(TOKEN_GT);
+
+    // Variable name
+    if (current_token->type != TOKEN_IDENTIFIER) {
+        parseError("List variable name", "IDENTIFIER");
+    }
+    Token* degisken_adi = (Token*)malloc(sizeof(Token));
+    degisken_adi->type = current_token->type;
+    degisken_adi->value = strdup(current_token->value);
+    consume(TOKEN_IDENTIFIER);
+
+    // Expect =
+    consume(TOKEN_ASSIGN);
+
+    // Expect List<Type>()
+    if (current_token->type != TOKEN_YAPI_LIST) {
+        parseError("List<Type>()", "List");
+    }
+    consume(TOKEN_YAPI_LIST);
+    
+    // Expect < again for constructor
+    consume(TOKEN_LT);
+    
+    // Skip element type (already have it)
+    if (current_token->type == TOKEN_TANIMLA_SAYI ||
+        current_token->type == TOKEN_TANIMLA_METIN ||
+        current_token->type == TOKEN_TANIMLA_BOOL ||
+        current_token->type == TOKEN_IDENTIFIER) {
+        consume(current_token->type);
+    }
+    
+    // Expect >
+    consume(TOKEN_GT);
+    
+    // Expect ()
+    consume(TOKEN_LEFT_PAREN);
+    consume(TOKEN_RIGHT_PAREN);
+
+    // Expect ;
+    consume(TOKEN_SEMICOLON);
+
+    ASTNode* list_node = createAST_ListTanimlama(element_tip, degisken_adi);
+    // Tokens are now owned by AST
+    return list_node;
 }
 
 // --- Ana Ayrıştırma Fonksiyonu ---

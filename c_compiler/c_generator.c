@@ -379,6 +379,9 @@ void visit_Label(ASTNode* node);
 void visit_ListTanimlama(ASTNode* node);
 void visit_ListAdd(ASTNode* node);
 void visit_ListGet(ASTNode* node);
+void visit_ListSet(ASTNode* node);
+void visit_ListRemove(ASTNode* node);
+void visit_ListInsert(ASTNode* node);
 void visit_ListSize(ASTNode* node);
 void visit_ListClear(ASTNode* node);
 
@@ -1433,17 +1436,36 @@ void visit_ListTanimlama(ASTNode* node) {
     char* degisken_adi = node->list_tanimlama_data.degisken_adi->value;
     char buffer[256];
 
-    sprintf(buffer, "    ; --- List Tanımlama: list[%s] %s ---", element_tip, degisken_adi);
+    sprintf(buffer, "    ; --- List Tanımlama: List<%s> %s ---", element_tip, degisken_adi);
     asm_append(&text_section, buffer);
 
-    // Call list_create()
-    asm_append(&text_section, "    call list_create");
-    asm_append(&text_section, "    ; RAX now contains List pointer");
+    // Determine element size based on type
+    int element_size = 8; // Default: 8 bytes (pointer or int64)
+    
+    // Map MLP types to sizes
+    if (strcmp(element_tip, "int") == 0 || strcmp(element_tip, "SAYISAL") == 0) {
+        element_size = 8; // int64
+    } else if (strcmp(element_tip, "string") == 0 || strcmp(element_tip, "METIN") == 0) {
+        element_size = 8; // char* pointer
+    } else if (strcmp(element_tip, "bool") == 0 || strcmp(element_tip, "BOOL") == 0) {
+        element_size = 8; // Treat as int64
+    } else {
+        // Custom struct type - for now use 8 bytes (pointer)
+        // TODO: Look up actual struct size from symbol table
+        element_size = 8;
+    }
+
+    // Call mlp_list_create(element_size)
+    sprintf(buffer, "    mov rdi, %d  ; element_size", element_size);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    call mlp_list_create");
+    asm_append(&text_section, "    ; RAX now contains MLP_List* pointer");
 
     // Store List pointer in variable
     char* adres = kapsam_degisken_yer_ayir(degisken_adi, "List");
     sprintf(buffer, "    mov %s, rax  ; Store List* in %s", adres, degisken_adi);
     asm_append(&text_section, buffer);
+    free(adres);
 }
 
 void visit_ListAdd(ASTNode* node) {
@@ -1455,15 +1477,22 @@ void visit_ListAdd(ASTNode* node) {
 
     // Evaluate value expression (result in RAX)
     visit(node->list_add_data.deger);
-    asm_append(&text_section, "    push rax  ; Save value for list_add");
-
+    
+    // Save value on stack (mlp_list_add expects pointer to element)
+    asm_append(&text_section, "    push rax  ; Save value on stack");
+    
     // Get list pointer
     char* list_adres = kapsam_degisken_adresi_bul(list_adi);
-    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi (1st arg)", list_adres);
     asm_append(&text_section, buffer);
-
-    asm_append(&text_section, "    pop rsi  ; Load value to rsi");
-    asm_append(&text_section, "    call list_add");
+    free(list_adres);
+    
+    // Pass pointer to value on stack
+    asm_append(&text_section, "    mov rsi, rsp  ; Pass &value to rsi (2nd arg)");
+    asm_append(&text_section, "    call mlp_list_add");
+    
+    // Clean up stack
+    asm_append(&text_section, "    add rsp, 8  ; Remove value from stack");
 }
 
 void visit_ListGet(ASTNode* node) {
@@ -1479,28 +1508,112 @@ void visit_ListGet(ASTNode* node) {
 
     // Get list pointer
     char* list_adres = kapsam_degisken_adresi_bul(list_adi);
-    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi (1st arg)", list_adres);
+    asm_append(&text_section, buffer);
+    free(list_adres);
+
+    asm_append(&text_section, "    pop rsi  ; Load index to rsi (2nd arg)");
+    asm_append(&text_section, "    call mlp_list_get");
+    asm_append(&text_section, "    ; RAX now contains pointer to element");
+    
+    // Dereference pointer to get actual value (int64 or pointer)
+    asm_append(&text_section, "    mov rax, [rax]  ; Dereference to get value");
+}
+
+void visit_ListSet(ASTNode* node) {
+    char* list_adi = node->list_set_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Set: %s.set(index, value) ---", list_adi);
     asm_append(&text_section, buffer);
 
-    asm_append(&text_section, "    pop rsi  ; Load index to rsi (as int)");
-    asm_append(&text_section, "    call list_get");
-    asm_append(&text_section, "    ; RAX now contains element value");
+    // Evaluate value expression (result in RAX)
+    visit(node->list_set_data.deger);
+    asm_append(&text_section, "    push rax  ; Save value on stack");
+
+    // Evaluate index expression (result in RAX)
+    visit(node->list_set_data.indeks);
+    asm_append(&text_section, "    push rax  ; Save index");
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi (1st arg)", list_adres);
+    asm_append(&text_section, buffer);
+    free(list_adres);
+
+    asm_append(&text_section, "    pop rsi  ; Load index to rsi (2nd arg)");
+    asm_append(&text_section, "    lea rdx, [rsp]  ; Pass &value to rdx (3rd arg)");
+    asm_append(&text_section, "    call mlp_list_set");
+    
+    // Clean up stack
+    asm_append(&text_section, "    add rsp, 8  ; Remove value from stack");
+}
+
+void visit_ListRemove(ASTNode* node) {
+    char* list_adi = node->list_remove_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Remove: %s.remove(index) ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate index expression (result in RAX)
+    visit(node->list_remove_data.indeks);
+    asm_append(&text_section, "    push rax  ; Save index");
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi (1st arg)", list_adres);
+    asm_append(&text_section, buffer);
+    free(list_adres);
+
+    asm_append(&text_section, "    pop rsi  ; Load index to rsi (2nd arg)");
+    asm_append(&text_section, "    call mlp_list_remove");
+}
+
+void visit_ListInsert(ASTNode* node) {
+    char* list_adi = node->list_insert_data.list_adi->value;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Insert: %s.insert(index, value) ---", list_adi);
+    asm_append(&text_section, buffer);
+
+    // Evaluate value expression (result in RAX)
+    visit(node->list_insert_data.deger);
+    asm_append(&text_section, "    push rax  ; Save value on stack");
+
+    // Evaluate index expression (result in RAX)
+    visit(node->list_insert_data.indeks);
+    asm_append(&text_section, "    push rax  ; Save index");
+
+    // Get list pointer
+    char* list_adres = kapsam_degisken_adresi_bul(list_adi);
+    sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi (1st arg)", list_adres);
+    asm_append(&text_section, buffer);
+    free(list_adres);
+
+    asm_append(&text_section, "    pop rsi  ; Load index to rsi (2nd arg)");
+    asm_append(&text_section, "    lea rdx, [rsp]  ; Pass &value to rdx (3rd arg)");
+    asm_append(&text_section, "    call mlp_list_insert");
+    
+    // Clean up stack
+    asm_append(&text_section, "    add rsp, 8  ; Remove value from stack");
 }
 
 void visit_ListSize(ASTNode* node) {
     char* list_adi = node->list_size_data.list_adi->value;
     char buffer[256];
 
-    sprintf(buffer, "    ; --- List Size: %s.size() ---", list_adi);
+    sprintf(buffer, "    ; --- List Length: %s.length() ---", list_adi);
     asm_append(&text_section, buffer);
 
     // Get list pointer
     char* list_adres = kapsam_degisken_adresi_bul(list_adi);
     sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
     asm_append(&text_section, buffer);
+    free(list_adres);
 
-    asm_append(&text_section, "    call list_size");
-    asm_append(&text_section, "    ; RAX now contains size");
+    asm_append(&text_section, "    call mlp_list_length");
+    asm_append(&text_section, "    ; RAX now contains length");
 }
 
 void visit_ListClear(ASTNode* node) {
@@ -1514,8 +1627,9 @@ void visit_ListClear(ASTNode* node) {
     char* list_adres = kapsam_degisken_adresi_bul(list_adi);
     sprintf(buffer, "    mov rdi, %s  ; Load List* to rdi", list_adres);
     asm_append(&text_section, buffer);
+    free(list_adres);
 
-    asm_append(&text_section, "    call list_clear");
+    asm_append(&text_section, "    call mlp_list_clear");
 }
 
 // ===== Phase 4: Hash Map Visit Functions =====
@@ -2136,6 +2250,18 @@ void visit(ASTNode* node) {
             visit_ListGet(node);
             break;
 
+        case AST_LIST_SET:
+            visit_ListSet(node);
+            break;
+
+        case AST_LIST_REMOVE:
+            visit_ListRemove(node);
+            break;
+
+        case AST_LIST_INSERT:
+            visit_ListInsert(node);
+            break;
+
         case AST_LIST_SIZE:
             visit_ListSize(node);
             break;
@@ -2317,6 +2443,17 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern get_file_extension");
     asm_append(&data_section, "extern get_file_name");
     asm_append(&data_section, "extern get_directory");
+
+    // Phase 6: List (Dynamic Array) Functions
+    asm_append(&data_section, "extern mlp_list_create");
+    asm_append(&data_section, "extern mlp_list_add");
+    asm_append(&data_section, "extern mlp_list_get");
+    asm_append(&data_section, "extern mlp_list_set");
+    asm_append(&data_section, "extern mlp_list_remove");
+    asm_append(&data_section, "extern mlp_list_insert");
+    asm_append(&data_section, "extern mlp_list_clear");
+    asm_append(&data_section, "extern mlp_list_length");
+    asm_append(&data_section, "extern mlp_list_free");
 
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld

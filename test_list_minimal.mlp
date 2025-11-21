@@ -1,0 +1,3 @@
+-- Minimal List test
+list<int> numbers = list<int>()
+print "OK"
