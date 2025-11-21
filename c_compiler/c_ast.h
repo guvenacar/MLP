@@ -31,11 +31,15 @@ typedef enum {
     AST_STRUCT_FIELD_ACCESS,// Struct field erişim: p.x
     AST_STRUCT_FIELD_ATAMA, // Struct field atama: p.x = 10;
     AST_STRUCT_DEGISKEN,    // Struct değişken: Nokta p;
-    // Phase 2: Dynamic Lists
-    AST_LIST_TANIMLAMA,     // List tanımlama: list[int] numbers = list();
+    
+    // Phase 6: Dynamic Lists (Modern Generic Syntax)
+    AST_LIST_TANIMLAMA,     // List tanımlama: List<int> numbers = List<int>();
     AST_LIST_ADD,           // List add: numbers.add(10)
     AST_LIST_GET,           // List get: numbers.get(0)
-    AST_LIST_SIZE,          // List size: numbers.size()
+    AST_LIST_SET,           // List set: numbers.set(0, 10)
+    AST_LIST_REMOVE,        // List remove: numbers.remove(0)
+    AST_LIST_INSERT,        // List insert: numbers.insert(0, 10)
+    AST_LIST_SIZE,          // List size: numbers.length() or numbers.size()
     AST_LIST_CLEAR,         // List clear: numbers.clear()
 
     // Phase 3: Built-in Functions
@@ -204,9 +208,9 @@ struct ASTNode {
             Token* ad;         // Değişken ismi (p)
         } struct_degisken_data;
 
-        // ===== Phase 2: Dynamic Lists =====
+        // ===== Phase 6: Dynamic Lists (Modern Generic Syntax) =====
 
-        // List Tanımlama (list[int] numbers = list();)
+        // List Tanımlama (List<int> numbers = List<int>();)
         struct {
             Token* element_tipi;  // Element tipi (int, string, struct name)
             Token* degisken_adi;  // List değişken ismi (numbers)
@@ -224,7 +228,27 @@ struct ASTNode {
             ASTNode* indeks;      // İndeks ifadesi
         } list_get_data;
 
-        // List Size (numbers.size())
+        // List Set (numbers.set(0, 10))
+        struct {
+            Token* list_adi;      // List ismi (numbers)
+            ASTNode* indeks;      // İndeks ifadesi
+            ASTNode* deger;       // Yeni değer
+        } list_set_data;
+
+        // List Remove (numbers.remove(0))
+        struct {
+            Token* list_adi;      // List ismi (numbers)
+            ASTNode* indeks;      // İndeks ifadesi
+        } list_remove_data;
+
+        // List Insert (numbers.insert(0, 10))
+        struct {
+            Token* list_adi;      // List ismi (numbers)
+            ASTNode* indeks;      // İndeks ifadesi
+            ASTNode* deger;       // Eklenecek değer
+        } list_insert_data;
+
+        // List Size (numbers.length() or numbers.size())
         struct {
             Token* list_adi;      // List ismi (numbers)
         } list_size_data;

@@ -340,6 +340,42 @@ ASTNode* createAST_ListClear(Token* list_adi) {
     return node;
 }
 
+// Phase 6: New List methods
+ASTNode* createAST_ListSet(Token* list_adi, ASTNode* indeks, ASTNode* deger) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_SET;
+    node->list_set_data.list_adi = (Token*)malloc(sizeof(Token));
+    node->list_set_data.list_adi->type = list_adi->type;
+    node->list_set_data.list_adi->value = strdup(list_adi->value);
+    node->list_set_data.indeks = indeks;
+    node->list_set_data.deger = deger;
+    return node;
+}
+
+ASTNode* createAST_ListRemove(Token* list_adi, ASTNode* indeks) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_REMOVE;
+    node->list_remove_data.list_adi = (Token*)malloc(sizeof(Token));
+    node->list_remove_data.list_adi->type = list_adi->type;
+    node->list_remove_data.list_adi->value = strdup(list_adi->value);
+    node->list_remove_data.indeks = indeks;
+    return node;
+}
+
+ASTNode* createAST_ListInsert(Token* list_adi, ASTNode* indeks, ASTNode* deger) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_INSERT;
+    node->list_insert_data.list_adi = (Token*)malloc(sizeof(Token));
+    node->list_insert_data.list_adi->type = list_adi->type;
+    node->list_insert_data.list_adi->value = strdup(list_adi->value);
+    node->list_insert_data.indeks = indeks;
+    node->list_insert_data.deger = deger;
+    return node;
+}
+
 // Phase 3: Built-in function call
 ASTNode* createAST_BuiltinCall(TokenType func_type, ASTNode* arg1, ASTNode* arg2, ASTNode* arg3) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
@@ -691,7 +727,7 @@ ASTNode* birincil() {
             if (current_token->type == TOKEN_LEFT_PAREN) {
                 consume(TOKEN_LEFT_PAREN);
 
-                // List method: add, get, size, clear
+                // Phase 6: List methods - add, get, set, remove, insert, length, clear
                 if (strcmp(field_or_method.value, "add") == 0) {
                     ASTNode* deger = ifade();
                     consume(TOKEN_RIGHT_PAREN);
@@ -708,7 +744,42 @@ ASTNode* birincil() {
                     free(field_or_method.value);
                     return get_node;
                 }
-                else if (strcmp(field_or_method.value, "size") == 0) {
+                else if (strcmp(field_or_method.value, "set") == 0) {
+                    // list.set(index, value)
+                    ASTNode* indeks = ifade();
+                    consume(TOKEN_COMMA);
+                    ASTNode* value = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    
+                    ASTNode* set_node = createAST_ListSet(&ad_token_kopya, indeks, value);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return set_node;
+                }
+                else if (strcmp(field_or_method.value, "remove") == 0) {
+                    // list.remove(index)
+                    ASTNode* indeks = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    
+                    ASTNode* remove_node = createAST_ListRemove(&ad_token_kopya, indeks);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return remove_node;
+                }
+                else if (strcmp(field_or_method.value, "insert") == 0) {
+                    // list.insert(index, value)
+                    ASTNode* indeks = ifade();
+                    consume(TOKEN_COMMA);
+                    ASTNode* value = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+                    
+                    ASTNode* insert_node = createAST_ListInsert(&ad_token_kopya, indeks, value);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return insert_node;
+                }
+                else if (strcmp(field_or_method.value, "length") == 0 || 
+                         strcmp(field_or_method.value, "size") == 0) {
                     consume(TOKEN_RIGHT_PAREN);
                     ASTNode* size_node = createAST_ListSize(&ad_token_kopya);
                     free(ad_token_kopya.value);
@@ -723,17 +794,6 @@ ASTNode* birincil() {
                     return clear_node;
                 }
                 // ===== Phase 4: Map Methods =====
-                else if (strcmp(field_or_method.value, "set") == 0) {
-                    // map.set(key, value)
-                    ASTNode* key = ifade();
-                    consume(TOKEN_COMMA);
-                    ASTNode* value = ifade();
-                    consume(TOKEN_RIGHT_PAREN);
-                    ASTNode* set_node = createAST_MapSet(&ad_token_kopya, key, value);
-                    free(ad_token_kopya.value);
-                    free(field_or_method.value);
-                    return set_node;
-                }
                 else if (strcmp(field_or_method.value, "has") == 0) {
                     // map.has(key)
                     ASTNode* key = ifade();
@@ -743,18 +803,9 @@ ASTNode* birincil() {
                     free(field_or_method.value);
                     return has_node;
                 }
-                else if (strcmp(field_or_method.value, "remove") == 0) {
-                    // map.remove(key)
-                    ASTNode* key = ifade();
-                    consume(TOKEN_RIGHT_PAREN);
-                    ASTNode* remove_node = createAST_MapRemove(&ad_token_kopya, key);
-                    free(ad_token_kopya.value);
-                    free(field_or_method.value);
-                    return remove_node;
-                }
                 else {
                     fprintf(stderr, "Unknown list/map method: %s\n", field_or_method.value);
-                    parseError("List/Map method", "add/get/size/clear/set/has/remove");
+                    parseError("List/Map method", "add/get/set/remove/insert/length/size/clear/has");
                 }
             }
             else {
@@ -1106,12 +1157,16 @@ ASTNode* komut() {
         }
     }
 
-    // ===== Phase 2: List Tanımlama (list[Type] var = list();) =====
+    // ===== Phase 6: List Tanımlama (List<Type> var = List<Type>();) =====
+    // Modern syntax: List<int> numbers = List<int>()
     if (current_token->type == TOKEN_YAPI_LIST) {
         consume(TOKEN_YAPI_LIST);
 
-        // Expect [
-        consume(TOKEN_LEFT_BRACKET);
+        // Expect < for generic type
+        if (current_token->type != TOKEN_LT) {
+            parseError("List<Type>", "<");
+        }
+        consume(TOKEN_LT);
 
         // Element type (int, string, or custom type name)
         Token element_tip;
@@ -1126,8 +1181,11 @@ ASTNode* komut() {
             parseError("List element type", "int/string/bool/StructName");
         }
 
-        // Expect ]
-        consume(TOKEN_RIGHT_BRACKET);
+        // Expect > to close generic type
+        if (current_token->type != TOKEN_GT) {
+            parseError("List<Type>", ">");
+        }
+        consume(TOKEN_GT);
 
         // Variable name
         if (current_token->type != TOKEN_IDENTIFIER) {
@@ -1141,11 +1199,27 @@ ASTNode* komut() {
         // Expect =
         consume(TOKEN_ASSIGN);
 
-        // Expect list()
+        // Expect List<Type>()
         if (current_token->type != TOKEN_YAPI_LIST) {
-            parseError("list()", "list");
+            parseError("List<Type>()", "List");
         }
         consume(TOKEN_YAPI_LIST);
+        
+        // Expect < again for constructor
+        consume(TOKEN_LT);
+        
+        // Skip element type (already have it)
+        if (current_token->type == TOKEN_TANIMLA_SAYI ||
+            current_token->type == TOKEN_TANIMLA_METIN ||
+            current_token->type == TOKEN_TANIMLA_BOOL ||
+            current_token->type == TOKEN_IDENTIFIER) {
+            consume(current_token->type);
+        }
+        
+        // Expect >
+        consume(TOKEN_GT);
+        
+        // Expect ()
         consume(TOKEN_LEFT_PAREN);
         consume(TOKEN_RIGHT_PAREN);
 
