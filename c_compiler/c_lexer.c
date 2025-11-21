@@ -83,6 +83,7 @@ KeywordMap keywords[] = {
     {"step",     TOKEN_YAPI_STEP},
     {"break",    TOKEN_BREAK},
     {"continue", TOKEN_CONTINUE},
+    {"const",    TOKEN_YAPI_CONST},
     {"end",      TOKEN_YAPI_SON},
     {"and",      TOKEN_AND},
     {"or",       TOKEN_OR},

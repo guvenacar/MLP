@@ -1,0 +1,10 @@
+-- Test const error
+
+const int MAX = 100;
+print "MAX: "
+print MAX
+
+-- This should cause error:
+MAX = 200
+print "After change: "
+print MAX

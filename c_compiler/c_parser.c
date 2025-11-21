@@ -174,6 +174,7 @@ ASTNode* createAST_DegiskenTanimlama(Token* tip, Token* ad, ASTNode* ifade) {
     node->tanimlama_data.ad->type = ad->type;
     node->tanimlama_data.ad->value = strdup(ad->value);
     node->tanimlama_data.ifade = ifade;
+    node->tanimlama_data.is_const = false; // Default: not const
     return node;
 }
 
@@ -1235,7 +1236,39 @@ ASTNode* komut() {
         return yazdir_node;
     }
 
-    // 3. Değişken Tanımlama (Noktalı virgüllü)
+    // 3. Const Değişken Tanımlama (Phase 5.6: const int x = 10;)
+    if (current_token->type == TOKEN_YAPI_CONST) {
+        consume(TOKEN_YAPI_CONST);
+        
+        if (current_token->type != TOKEN_TANIMLA_SAYI &&
+            current_token->type != TOKEN_TANIMLA_METIN &&
+            current_token->type != TOKEN_TANIMLA_BOOL) {
+            parseError("Tip belirteci (int, string, bool)", current_token->value);
+        }
+        
+        Token tip_token;
+        tip_token.type = current_token->type;
+        tip_token.value = strdup(current_token->value);
+        consume(current_token->type);
+
+        Token ad_token;
+        if (current_token->type != TOKEN_IDENTIFIER) parseError("Değişken adı", "IDENTIFIER");
+        ad_token.type = current_token->type;
+        ad_token.value = strdup(current_token->value);
+        consume(TOKEN_IDENTIFIER);
+
+        consume(TOKEN_ASSIGN);
+        ASTNode* ifade_dugumu = ifade();
+        consume(TOKEN_SEMICOLON);
+
+        ASTNode* tanimlama_node = createAST_DegiskenTanimlama(&tip_token, &ad_token, ifade_dugumu);
+        tanimlama_node->tanimlama_data.is_const = true; // Mark as const
+        free(tip_token.value);
+        free(ad_token.value);
+        return tanimlama_node;
+    }
+
+    // 4. Değişken Tanımlama (Noktalı virgüllü)
     if (current_token->type == TOKEN_TANIMLA_SAYI ||
         current_token->type == TOKEN_TANIMLA_METIN ||
         current_token->type == TOKEN_TANIMLA_BOOL)

@@ -25,6 +25,7 @@ typedef struct {
     char* tip;        // Değişkenin tipi ("SAYISAL" veya "METIN")
     int scope_level;  // Hangi scope seviyesinde tanımlandı (0=global)
     bool is_global;   // Global değişken mi?
+    bool is_const;    // Phase 5.6: Const değişken mi?
 } Degisken;
 
 // Çok seviyeli Kapsam (Scope) - Stack bazlı
@@ -219,7 +220,7 @@ StructFieldInfo* find_field_in_struct(StructMetadata* meta, const char* field_ad
 }
 
 // Değişkeni kaydeder ve yığındaki adresini döndürür
-char* kapsam_degisken_yer_ayir(const char* ad, const char* tip) {
+char* kapsam_degisken_yer_ayir_with_const(const char* ad, const char* tip, bool is_const) {
     kapsam_yigin_ofseti += 8; // Yığında 8 byte (64-bit) yer aç
     char* adres = (char*)malloc(32);
     sprintf(adres, "[rbp-%d]", kapsam_yigin_ofseti);
@@ -231,8 +232,14 @@ char* kapsam_degisken_yer_ayir(const char* ad, const char* tip) {
     d->tip = strdup(tip);
     d->scope_level = current_scope_level;
     d->is_global = (current_scope_level == 0);
+    d->is_const = is_const; // Phase 5.6
 
     return adres;
+}
+
+// Backward compatibility wrapper
+char* kapsam_degisken_yer_ayir(const char* ad, const char* tip) {
+    return kapsam_degisken_yer_ayir_with_const(ad, tip, false);
 }
 
 // Bir değişkenin yığındaki adresini bulur
@@ -414,7 +421,7 @@ void visit_Yazdir(ASTNode* node) {
             node->tek_ifade_data.ifade->degisken_data.ad->value != NULL) {
             char* degisken_adi = node->tek_ifade_data.ifade->degisken_data.ad->value;
             char* degisken_tipi = kapsam_degisken_tipi_bul(degisken_adi);
-            if (degisken_tipi != NULL && strcmp(degisken_tipi, "METIN") == 0) {
+            if (degisken_tipi != NULL && (strcmp(degisken_tipi, "METIN") == 0 || strcmp(degisken_tipi, "string") == 0)) {
                 is_string = true;
             }
         } else {
@@ -536,6 +543,7 @@ void visit_DegiskenTanimlama(ASTNode* node) {
         d->tip = strdup(degisken_tipi);
         d->scope_level = 0;
         d->is_global = true;
+        d->is_const = node->tanimlama_data.is_const; // Phase 5.6
 
         // İfadeyi hesapla (sonuç RAX'te)
         visit(node->tanimlama_data.ifade);
@@ -549,7 +557,7 @@ void visit_DegiskenTanimlama(ASTNode* node) {
         visit(node->tanimlama_data.ifade);
 
         // 2. Değişken için yığında (stack) yer ayır
-        char* adres = kapsam_degisken_yer_ayir(degisken_adi, degisken_tipi);
+        char* adres = kapsam_degisken_yer_ayir_with_const(degisken_adi, degisken_tipi, node->tanimlama_data.is_const);
 
         // 3. İfadenin sonucunu (RAX) yığındaki yeni adrese taşı
         sprintf(buffer, "    mov %s, rax", adres); // Örn: mov [rbp-8], rax
@@ -589,6 +597,17 @@ void visit_AtamaKomutu(ASTNode* node) {
     char buffer[128];
     sprintf(buffer, "    ; --- AtamaKomutu: %s ---", degisken_adi);
     asm_append(&text_section, buffer);
+
+    // Phase 5.6: Check if variable is const
+    Degisken* var = kapsam_degisken_bul(degisken_adi);
+    if (var && var->is_const) {
+        fprintf(stderr, "\n╔════════════════════════════════════════════════════════════╗\n");
+        fprintf(stderr, "║ HATA [Generator]: Const Değişken Hatası!                  ║\n");
+        fprintf(stderr, "╚════════════════════════════════════════════════════════════╝\n\n");
+        fprintf(stderr, "❌ Değişken: '%s'\n", degisken_adi);
+        fprintf(stderr, "✗ Açıklama: const değişkenlere yeni değer atanamaz!\n\n");
+        exit(1);
+    }
 
     // 1. İfadeyi (sağ tarafı) hesapla (Sonuç RAX'e yüklenir)
     visit(node->atama_data.ifade);

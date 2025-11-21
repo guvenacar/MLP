@@ -3,6 +3,7 @@
 #ifndef C_AST_H
 #define C_AST_H
 
+#include <stdbool.h> // Phase 5.6: bool type support
 #include "c_lexer.h" // Token yapısını kullanmak için
 
 // --- 1. Düğüm Tiplerini Tanımla (Enum) ---
@@ -105,6 +106,7 @@ struct ASTNode {
             Token* tip;
             Token* ad;
             ASTNode* ifade; // Atanan değer
+            bool is_const;  // Phase 5.6: const değişken mi?
         } tanimlama_data;
         
         // YENİ: Atama Komutu (sayac = 10;)

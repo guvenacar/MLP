@@ -42,6 +42,9 @@ typedef enum {
     TOKEN_YAPI_CASE,      // case
     TOKEN_YAPI_DEFAULT,   // default
 
+    // Phase 5.6: Additional Features
+    TOKEN_YAPI_CONST,     // const
+
     // --- Built-in Functions - Phase 3 ---
     // File I/O
     TOKEN_BUILTIN_READ_FILE,
