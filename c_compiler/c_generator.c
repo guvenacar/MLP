@@ -376,7 +376,8 @@ void visit_Yazdir(ASTNode* node) {
         TokenType func_type = node->tek_ifade_data.ifade->builtin_call_data.function_type;
         if (func_type == TOKEN_BUILTIN_GET_ENV ||
             func_type == TOKEN_BUILTIN_READ_BINARY ||
-            func_type == TOKEN_BUILTIN_GET_FILE_INFO) {
+            func_type == TOKEN_BUILTIN_GET_FILE_INFO ||
+            func_type == TOKEN_BUILTIN_GET_CURRENT_DIR) {
             is_string = true;
         }
     }
@@ -1550,6 +1551,13 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_WRITE_BINARY: func_name = "write_binary"; break;
         case TOKEN_BUILTIN_GET_FILE_INFO: func_name = "get_file_info"; break;
         case TOKEN_BUILTIN_COPY_FILE: func_name = "copy_file"; break;
+        // Phase 5.3: Directory Operations
+        case TOKEN_BUILTIN_LIST_DIRECTORY: func_name = "list_directory"; break;
+        case TOKEN_BUILTIN_CREATE_DIRECTORY: func_name = "create_directory"; break;
+        case TOKEN_BUILTIN_REMOVE_DIRECTORY: func_name = "remove_directory"; break;
+        case TOKEN_BUILTIN_DIRECTORY_EXISTS: func_name = "directory_exists"; break;
+        case TOKEN_BUILTIN_GET_CURRENT_DIR: func_name = "get_current_dir"; break;
+        case TOKEN_BUILTIN_CHANGE_DIRECTORY: func_name = "change_directory"; break;
         default: func_name = "unknown"; break;
     }
 
@@ -1931,6 +1939,14 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern write_binary");
     asm_append(&data_section, "extern get_file_info");
     asm_append(&data_section, "extern copy_file");
+
+    // Phase 5.3: Directory Operations
+    asm_append(&data_section, "extern list_directory");
+    asm_append(&data_section, "extern create_directory");
+    asm_append(&data_section, "extern remove_directory");
+    asm_append(&data_section, "extern directory_exists");
+    asm_append(&data_section, "extern get_current_dir");
+    asm_append(&data_section, "extern change_directory");
 
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld

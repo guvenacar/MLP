@@ -560,7 +560,14 @@ ASTNode* birincil() {
         current_token->type == TOKEN_BUILTIN_READ_BINARY ||
         current_token->type == TOKEN_BUILTIN_WRITE_BINARY ||
         current_token->type == TOKEN_BUILTIN_GET_FILE_INFO ||
-        current_token->type == TOKEN_BUILTIN_COPY_FILE) {
+        current_token->type == TOKEN_BUILTIN_COPY_FILE ||
+        // Phase 5.3: Directory Operations
+        current_token->type == TOKEN_BUILTIN_LIST_DIRECTORY ||
+        current_token->type == TOKEN_BUILTIN_CREATE_DIRECTORY ||
+        current_token->type == TOKEN_BUILTIN_REMOVE_DIRECTORY ||
+        current_token->type == TOKEN_BUILTIN_DIRECTORY_EXISTS ||
+        current_token->type == TOKEN_BUILTIN_GET_CURRENT_DIR ||
+        current_token->type == TOKEN_BUILTIN_CHANGE_DIRECTORY) {
 
         TokenType func_type = current_token->type;
         consume(current_token->type);
@@ -1062,7 +1069,11 @@ ASTNode* komut() {
         current_token->type == TOKEN_BUILTIN_SLEEP_MS ||
         // Phase 5.3: Binary File I/O (write_binary can be used as statement)
         current_token->type == TOKEN_BUILTIN_WRITE_BINARY ||
-        current_token->type == TOKEN_BUILTIN_COPY_FILE) {
+        current_token->type == TOKEN_BUILTIN_COPY_FILE ||
+        // Phase 5.3: Directory Operations (can be used as statements)
+        current_token->type == TOKEN_BUILTIN_CREATE_DIRECTORY ||
+        current_token->type == TOKEN_BUILTIN_REMOVE_DIRECTORY ||
+        current_token->type == TOKEN_BUILTIN_CHANGE_DIRECTORY) {
         // Parse built-in call as expression first
         ASTNode* builtin_node = ifade();
         // Return as statement (no semicolon required)

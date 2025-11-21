@@ -150,6 +150,14 @@ KeywordMap keywords[] = {
     {"get_file_info",        TOKEN_BUILTIN_GET_FILE_INFO},
     {"copy_file",            TOKEN_BUILTIN_COPY_FILE},
 
+    // Phase 5.3: Directory Operations
+    {"list_directory",       TOKEN_BUILTIN_LIST_DIRECTORY},
+    {"create_directory",     TOKEN_BUILTIN_CREATE_DIRECTORY},
+    {"remove_directory",     TOKEN_BUILTIN_REMOVE_DIRECTORY},
+    {"directory_exists",     TOKEN_BUILTIN_DIRECTORY_EXISTS},
+    {"get_current_dir",      TOKEN_BUILTIN_GET_CURRENT_DIR},
+    {"change_directory",     TOKEN_BUILTIN_CHANGE_DIRECTORY},
+
     // Phase 4: Hash Map
     {"map", TOKEN_YAPI_MAP},
 

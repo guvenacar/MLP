@@ -1996,3 +1996,219 @@ int copy_file(const char* source, const char* dest) {
     return 1;  // Success
 }
 
+// ==================== PHASE 5.3: DIRECTORY OPERATIONS (6 functions) ====================
+
+/**
+ * list_directory - List all files in a directory
+ * @param path: Directory path
+ * @param count: Output parameter for number of entries (pass pointer)
+ * @return: Array of filenames (char**), or NULL on error
+ *
+ * Error codes:
+ *   ERR_FILE_NOT_FOUND (101): Directory doesn't exist
+ *   ERR_PERMISSION_DENIED (102): No read permission
+ *
+ * MLP Usage:
+ *   files := list_directory("src")
+ *   for file in files { print file }
+ *
+ * Note: Skips "." and ".." entries. Caller must free array and strings.
+ */
+char** list_directory(const char* path, int* count) {
+    if (!path || !count) {
+        set_error_code(101);
+        if (count) *count = 0;
+        return NULL;
+    }
+
+    DIR* dir = opendir(path);
+    if (!dir) {
+        set_error_code(101);  // ERR_FILE_NOT_FOUND
+        *count = 0;
+        return NULL;
+    }
+    
+    // Count entries first (excluding . and ..)
+    int entry_count = 0;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            entry_count++;
+        }
+    }
+    
+    if (entry_count == 0) {
+        closedir(dir);
+        *count = 0;
+        return NULL;  // Empty directory
+    }
+    
+    // Allocate array for filenames
+    char** files = mlp_malloc(sizeof(char*) * entry_count);
+    if (!files) {
+        closedir(dir);
+        *count = 0;
+        return NULL;
+    }
+    
+    // Read entries again
+    rewinddir(dir);
+    int i = 0;
+    while ((entry = readdir(dir)) != NULL && i < entry_count) {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            size_t name_len = strlen(entry->d_name);
+            files[i] = mlp_malloc(name_len + 1);
+            if (files[i]) {
+                strcpy(files[i], entry->d_name);
+                i++;
+            }
+        }
+    }
+    
+    closedir(dir);
+    *count = i;
+    return files;
+}
+
+/**
+ * create_directory - Create a new directory
+ * @param path: Directory path to create
+ * @return: 1 on success, 0 on failure
+ *
+ * Error codes:
+ *   ERR_FILE_EXISTS (108): Directory already exists
+ *   ERR_PERMISSION_DENIED (102): No permission to create
+ *
+ * MLP Usage:
+ *   if create_directory("build") {
+ *       print "Directory created"
+ *   }
+ */
+int create_directory(const char* path) {
+    if (!path) {
+        set_error_code(102);
+        return 0;
+    }
+
+    if (mkdir(path, 0755) != 0) {
+        if (errno == EEXIST) {
+            set_error_code(108);  // ERR_FILE_EXISTS
+        } else {
+            set_error_code(102);  // ERR_PERMISSION_DENIED
+        }
+        return 0;
+    }
+    return 1;
+}
+
+/**
+ * remove_directory - Remove an empty directory
+ * @param path: Directory path to remove
+ * @return: 1 on success, 0 on failure
+ *
+ * Error codes:
+ *   ERR_DIRECTORY_NOT_EMPTY (107): Directory contains files
+ *   ERR_PERMISSION_DENIED (102): No permission to remove
+ *
+ * MLP Usage:
+ *   if remove_directory("temp") {
+ *       print "Directory removed"
+ *   }
+ */
+int remove_directory(const char* path) {
+    if (!path) {
+        set_error_code(102);
+        return 0;
+    }
+
+    if (rmdir(path) != 0) {
+        if (errno == ENOTEMPTY || errno == EEXIST) {
+            set_error_code(107);  // ERR_DIRECTORY_NOT_EMPTY
+        } else {
+            set_error_code(102);  // ERR_PERMISSION_DENIED
+        }
+        return 0;
+    }
+    return 1;
+}
+
+/**
+ * directory_exists - Check if directory exists
+ * @param path: Directory path to check
+ * @return: 1 if exists and is directory, 0 otherwise
+ *
+ * MLP Usage:
+ *   if directory_exists("src") {
+ *       print "Source directory found"
+ *   }
+ */
+int directory_exists(const char* path) {
+    if (!path) return 0;
+
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return 0;  // Doesn't exist
+    }
+    
+    return S_ISDIR(st.st_mode) ? 1 : 0;
+}
+
+/**
+ * get_current_dir - Get current working directory
+ * @return: Current directory path string, or NULL on error
+ *
+ * Error codes:
+ *   ERR_IO_ERROR (103): Failed to get current directory
+ *
+ * MLP Usage:
+ *   cwd := get_current_dir()
+ *   print "Working in: " + cwd
+ */
+char* get_current_dir(void) {
+    char* buffer = mlp_malloc(4096);  // PATH_MAX
+    if (!buffer) {
+        set_error_code(104);  // ERR_OUT_OF_MEMORY
+        return NULL;
+    }
+
+    if (getcwd(buffer, 4096) == NULL) {
+        mlp_free(buffer);
+        set_error_code(103);  // ERR_IO_ERROR
+        return NULL;
+    }
+    
+    return buffer;
+}
+
+/**
+ * change_directory - Change current working directory
+ * @param path: New directory path
+ * @return: 1 on success, 0 on failure
+ *
+ * Error codes:
+ *   ERR_FILE_NOT_FOUND (101): Directory doesn't exist
+ *   ERR_PERMISSION_DENIED (102): No permission to access
+ *
+ * MLP Usage:
+ *   if change_directory("src") {
+ *       print "Changed to src directory"
+ *   }
+ */
+int change_directory(const char* path) {
+    if (!path) {
+        set_error_code(101);
+        return 0;
+    }
+
+    if (chdir(path) != 0) {
+        if (errno == ENOENT) {
+            set_error_code(101);  // ERR_FILE_NOT_FOUND
+        } else {
+            set_error_code(102);  // ERR_PERMISSION_DENIED
+        }
+        return 0;
+    }
+    
+    return 1;
+}
+
