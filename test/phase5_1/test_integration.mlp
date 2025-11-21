@@ -1,0 +1,261 @@
+--
+-- Phase 5.1 MLP Integration Test - Integration & Complex Scenarios
+-- Tests: Combined argc/argv and string operations
+--
+-- Expected: 8 tests
+--
+
+-- Test 1: Process command-line arguments with string ops
+function test_process_args_with_strings() then
+    PRINT "=== Test 1: Process args with strings ===";
+    
+    int count = argc;
+    int i = 0;
+    
+    PRINT "Processing arguments:";
+    DÖNGÜ i < count İKEN
+        string arg = argv.get(i);
+        int len = string_length(arg);
+        
+        PRINT "  Arg[";
+        YAZDIR_SAYI i;
+        PRINT "] = '";
+        YAZDIR_METIN arg;
+        PRINT "' (length: ";
+        YAZDIR_SAYI len;
+        PRINT ")";
+        
+        i = i + 1
+    DÖNGÜ_BİTİR
+    
+    PRINT "PASS: test_process_args_with_strings";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 2: Search for flag in arguments
+function test_search_flag() then
+    PRINT "=== Test 2: Search for flag ===";
+    
+    int count = argc;
+    int i = 0;
+    int found = 0;
+    
+    DÖNGÜ i < count İKEN
+        string arg = argv.get(i);
+        int pos = string_index_of(arg, "--");
+        
+        EĞER pos == 0 İSE
+            PRINT "Found flag: ";
+            YAZDIR_METIN arg;
+            found = 1
+        SİHİRBİTİR
+        
+        i = i + 1
+    DÖNGÜ_BİTİR
+    
+    EĞER found == 0 İSE
+        PRINT "No flags found";
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_search_flag";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 3: Extract file extension from argument
+function test_extract_extension() then
+    PRINT "=== Test 3: Extract file extension ===";
+    
+    int count = argc;
+    
+    EĞER count > 1 İSE
+        string arg = argv.get(1);
+        int pos = string_last_index_of(arg, ".");
+        
+        EĞER pos != -1 İSE
+            int len = string_length(arg);
+            int ext_len = len - pos;
+            string ext = string_substring(arg, pos, ext_len);
+            
+            PRINT "File: ";
+            YAZDIR_METIN arg;
+            PRINT "Extension: ";
+            YAZDIR_METIN ext;
+        DEĞİLSE
+            PRINT "No extension found in: ";
+            YAZDIR_METIN arg;
+        SİHİRBİTİR
+    DEĞİLSE
+        PRINT "No arguments to check";
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_extract_extension";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 4: Count total characters in all arguments
+function test_count_total_chars() then
+    PRINT "=== Test 4: Count total characters ===";
+    
+    int count = argc;
+    int i = 0;
+    int total = 0;
+    
+    DÖNGÜ i < count İKEN
+        string arg = argv.get(i);
+        int len = string_length(arg);
+        total = total + len
+        i = i + 1
+    DÖNGÜ_BİTİR
+    
+    PRINT "Total characters in all arguments: ";
+    YAZDIR_SAYI total;
+    
+    PRINT "PASS: test_count_total_chars";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 5: Find longest argument
+function test_find_longest_arg() then
+    PRINT "=== Test 5: Find longest argument ===";
+    
+    int count = argc;
+    int i = 0;
+    int max_len = 0;
+    string longest = "";
+    
+    DÖNGÜ i < count İKEN
+        string arg = argv.get(i);
+        int len = string_length(arg);
+        
+        EĞER len > max_len İSE
+            max_len = len;
+            longest = arg
+        SİHİRBİTİR
+        
+        i = i + 1
+    DÖNGÜ_BİTİR
+    
+    PRINT "Longest argument: ";
+    YAZDIR_METIN longest;
+    PRINT "Length: ";
+    YAZDIR_SAYI max_len;
+    
+    PRINT "PASS: test_find_longest_arg";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 6: Check if argument contains substring
+function test_contains_substring() then
+    PRINT "=== Test 6: Check if arg contains substring ===";
+    
+    int count = argc;
+    
+    EĞER count > 1 İSE
+        string arg = argv.get(1);
+        int pos = string_index_of(arg, "test");
+        
+        EĞER pos != -1 İSE
+            PRINT "Argument contains 'test' at position ";
+            YAZDIR_SAYI pos;
+        DEĞİLSE
+            PRINT "Argument does not contain 'test'";
+        SİHİRBİTİR
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_contains_substring";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 7: Build path from arguments
+function test_build_path() then
+    PRINT "=== Test 7: Build path from arguments ===";
+    
+    int count = argc;
+    
+    EĞER count >= 3 İSE
+        string part1 = argv.get(1);
+        string part2 = argv.get(2);
+        
+        -- Concatenate with separator
+        string path = STRING_BIRLESTIR(part1, "/");
+        path = STRING_BIRLESTIR(path, part2);
+        
+        PRINT "Built path: ";
+        YAZDIR_METIN path;
+    DEĞİLSE
+        PRINT "Need at least 2 arguments to build path";
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_build_path";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 8: Validate argument format
+function test_validate_format() then
+    PRINT "=== Test 8: Validate argument format ===";
+    
+    int count = argc;
+    int i = 1;  -- Skip program name
+    int valid = 0;
+    int invalid = 0;
+    
+    DÖNGÜ i < count İKEN
+        string arg = argv.get(i);
+        int len = string_length(arg);
+        
+        -- Check if argument is not empty
+        EĞER len > 0 İSE
+            valid = valid + 1
+        DEĞİLSE
+            invalid = invalid + 1
+        SİHİRBİTİR
+        
+        i = i + 1
+    DÖNGÜ_BİTİR
+    
+    PRINT "Valid arguments: ";
+    YAZDIR_SAYI valid;
+    PRINT "Invalid arguments: ";
+    YAZDIR_SAYI invalid;
+    
+    PRINT "PASS: test_validate_format";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Main entry
+function main(argc, argv) then
+    PRINT "========================================";
+    PRINT "Phase 5.1 - Integration Tests";
+    PRINT "========================================";
+    PRINT "";
+    
+    test_process_args_with_strings();
+    PRINT "";
+    
+    test_search_flag();
+    PRINT "";
+    
+    test_extract_extension();
+    PRINT "";
+    
+    test_count_total_chars();
+    PRINT "";
+    
+    test_find_longest_arg();
+    PRINT "";
+    
+    test_contains_substring();
+    PRINT "";
+    
+    test_build_path();
+    PRINT "";
+    
+    test_validate_format();
+    PRINT "";
+    
+    PRINT "========================================";
+    PRINT "All integration tests completed!";
+    PRINT "========================================";
+    
+    DÖNÜŞ 0
+SİHİRBİTİR

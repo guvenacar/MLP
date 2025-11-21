@@ -1,16 +1,19 @@
 -- Phase 5.2 Integration Test
 
 function test_error_handling() then
+    int code = 0;
+    int dummy_error = 0;
+    
     print "=== Error Handling Test ==="
 
     -- Test error code functions
-    set_error_code(42)
-    int code = get_error_code()
+    dummy_error = set_error_code(42)
+    code = get_error_code()
     print "Error code: "
     print code
 
     -- Test assert (should pass)
-    assert(1, "This should pass")
+    dummy_error = assert(1, "This should pass")
     print "Assert passed"
 
     -- Note: panic and exit_with_code will terminate program
@@ -20,78 +23,98 @@ function test_error_handling() then
 end
 
 function test_memory_management() then
+    int buffer = 0;
+    int before = 0;
+    int after = 0;
+    int array = 0;
+    int buf2 = 0;
+    int dummy_mem = 0;
+    
     print "=== Memory Management Test ==="
 
     -- Test malloc/free
-    int buffer = mlp_malloc(256)
+    buffer = mlp_malloc(256)
     print "Allocated 256 bytes"
 
-    int before = get_allocated_bytes()
+    before = get_allocated_bytes()
     print "Allocated bytes: "
     print before
 
-    mlp_free(buffer)
+    dummy_mem = mlp_free(buffer)
     print "Freed buffer"
 
-    int after = get_allocated_bytes()
+    after = get_allocated_bytes()
     print "Allocated bytes after free: "
     print after
 
     -- Test calloc
-    int array = mlp_calloc(10, 8)
+    array = mlp_calloc(10, 8)
     print "Allocated 10x8 bytes with calloc"
-    mlp_free(array)
+    dummy_mem = mlp_free(array)
 
     -- Test realloc
-    int buf2 = mlp_malloc(100)
+    buf2 = mlp_malloc(100)
     buf2 = mlp_realloc(buf2, 200)
     print "Reallocated from 100 to 200 bytes"
-    mlp_free(buf2)
+    dummy_mem = mlp_free(buf2)
 
     return 0
 end
 
 function test_system_utilities() then
+    string home = "";
+    int timestamp = 0;
+    int dummy_sys = 0;
+    
     print "=== System Utilities Test ==="
 
     -- Test get_env
-    string home = get_env("HOME")
+    home = get_env("HOME")
     print "HOME env var: "
     print home
 
     -- Test current_timestamp
-    int timestamp = current_timestamp()
+    timestamp = current_timestamp()
     print "Current timestamp: "
     print timestamp
 
     -- Test sleep_ms
     print "Sleeping for 100ms..."
-    sleep_ms(100)
+    dummy_sys = sleep_ms(100)
     print "Awake!"
 
     return 0
 end
 
-print "==================================="
-print "Phase 5.2 Integration Tests"
-print "==================================="
-print ""
+function run_all_tests() then
+    int leaks = 0;
+    int dummy_main = 0;
+    
+    print "==================================="
+    print "Phase 5.2 Integration Tests"
+    print "==================================="
+    print ""
 
-test_error_handling()
-print ""
+    dummy_main = test_error_handling()
+    print ""
 
-test_memory_management()
-print ""
+    dummy_main = test_memory_management()
+    print ""
 
-test_system_utilities()
-print ""
+    dummy_main = test_system_utilities()
+    print ""
 
--- Check for memory leaks at end
-int leaks = check_memory_leaks()
-if leaks == 0 then
-    print "No memory leaks detected!"
+    -- Check for memory leaks at end
+    leaks = check_memory_leaks()
+    if leaks == 0 then
+        print "No memory leaks detected!"
+    end
+
+    print "==================================="
+    print "All Tests Complete!"
+    print "==================================="
+    
+    return 0
 end
 
-print "==================================="
-print "All Tests Complete!"
-print "==================================="
+run_all_tests()

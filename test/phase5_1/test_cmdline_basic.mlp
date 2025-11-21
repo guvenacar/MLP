@@ -1,0 +1,217 @@
+--
+-- Phase 5.1 MLP Integration Test - Command-Line Arguments (Basic)
+-- Tests: argc, argv access from MLP code
+--
+-- Expected: 8 tests
+--
+
+-- Test 1: Get argc
+function test_get_argc() then
+    PRINT "=== Test 1: Get argc ===";
+    
+    int count = argc;
+    PRINT "Argument count: ";
+    YAZDIR_SAYI count;
+    
+    -- argc should be >= 1 (program name always present)
+    EĞER count < 1 İSE
+        PRINT "FAIL: argc should be >= 1";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_get_argc";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 2: Get program name (argv[0])
+function test_get_program_name() then
+    PRINT "=== Test 2: Get program name ===";
+    
+    string program = argv.get(0);
+    PRINT "Program: ";
+    YAZDIR_METIN program;
+    
+    -- Program name should not be empty
+    int len = STRING_UZUNLUK(program);
+    EĞER len == 0 İSE
+        PRINT "FAIL: program name is empty";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_get_program_name";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 3: Get first argument (if exists)
+function test_get_first_arg() then
+    PRINT "=== Test 3: Get first argument ===";
+    
+    int count = argc;
+    
+    EĞER count > 1 İSE
+        string arg1 = argv.get(1);
+        PRINT "First argument: ";
+        YAZDIR_METIN arg1;
+    DEĞİLSE
+        PRINT "No arguments provided (only program name)";
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_get_first_arg";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 4: Loop through all arguments
+function test_loop_args() then
+    PRINT "=== Test 4: Loop through arguments ===";
+    
+    int count = argc;
+    int i = 0;
+    
+    PRINT "All arguments:";
+    DÖNGÜ i < count İKEN
+        string arg = argv.get(i);
+        PRINT "  [";
+        YAZDIR_SAYI i;
+        PRINT "] = ";
+        YAZDIR_METIN arg;
+        
+        i = i + 1
+    DÖNGÜ_BİTİR
+    
+    PRINT "PASS: test_loop_args";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 5: Access out-of-bounds index
+function test_out_of_bounds() then
+    PRINT "=== Test 5: Out of bounds access ===";
+    
+    int count = argc;
+    
+    -- Try to access index beyond argc
+    string invalid = argv.get(count + 10);
+    
+    -- Should return empty string
+    int len = STRING_UZUNLUK(invalid);
+    EĞER len == 0 İSE
+        PRINT "Correctly returned empty string for out-of-bounds";
+    DEĞİLSE
+        PRINT "FAIL: Should return empty string";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_out_of_bounds";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 6: Negative index
+function test_negative_index() then
+    PRINT "=== Test 6: Negative index ===";
+    
+    string invalid = argv.get(-1);
+    
+    int len = STRING_UZUNLUK(invalid);
+    EĞER len == 0 İSE
+        PRINT "Correctly handled negative index";
+    DEĞİLSE
+        PRINT "FAIL: Should return empty string for negative index";
+        DÖNÜŞ 1
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_negative_index";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 7: Count and verify arguments
+function test_count_and_verify() then
+    PRINT "=== Test 7: Count and verify ===";
+    
+    int count = argc;
+    int i = 0;
+    int non_empty = 0;
+    
+    DÖNGÜ i < count İKEN
+        string arg = argv.get(i);
+        int len = STRING_UZUNLUK(arg);
+        
+        EĞER len > 0 İSE
+            non_empty = non_empty + 1
+        SİHİRBİTİR
+        
+        i = i + 1
+    DÖNGÜ_BİTİR
+    
+    PRINT "Total arguments: ";
+    YAZDIR_SAYI count;
+    PRINT "Non-empty arguments: ";
+    YAZDIR_SAYI non_empty;
+    
+    PRINT "PASS: test_count_and_verify";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Test 8: Check argument equality
+function test_arg_equality() then
+    PRINT "=== Test 8: Argument equality ===";
+    
+    int count = argc;
+    
+    EĞER count >= 2 İSE
+        string arg1_first = argv.get(1);
+        string arg1_second = argv.get(1);
+        
+        -- Getting same argument twice should give same result
+        int cmp = STRING_KARSILASTIR(arg1_first, arg1_second);
+        
+        EĞER cmp == 0 İSE
+            PRINT "Arguments are equal (correct)";
+        DEĞİLSE
+            PRINT "FAIL: Same argument returned different values";
+            DÖNÜŞ 1
+        SİHİRBİTİR
+    DEĞİLSE
+        PRINT "Skipping (need at least 2 arguments)";
+    SİHİRBİTİR
+    
+    PRINT "PASS: test_arg_equality";
+    DÖNÜŞ 0
+SİHİRBİTİR
+
+-- Main entry point
+function main(argc, argv) then
+    PRINT "========================================";
+    PRINT "Phase 5.1 - Command-Line Args (Basic)";
+    PRINT "========================================";
+    PRINT "";
+    
+    -- Run all tests
+    test_get_argc();
+    PRINT "";
+    
+    test_get_program_name();
+    PRINT "";
+    
+    test_get_first_arg();
+    PRINT "";
+    
+    test_loop_args();
+    PRINT "";
+    
+    test_out_of_bounds();
+    PRINT "";
+    
+    test_negative_index();
+    PRINT "";
+    
+    test_count_and_verify();
+    PRINT "";
+    
+    test_arg_equality();
+    PRINT "";
+    
+    PRINT "========================================";
+    PRINT "All tests completed!";
+    PRINT "========================================";
+    
+    DÖNÜŞ 0
+SİHİRBİTİR
