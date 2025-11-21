@@ -68,10 +68,9 @@ function test_system_utilities() then
     
     print "=== System Utilities Test ==="
 
-    -- Test get_env
-    home = get_env("HOME")
+    -- Test get_env (direct print to test string return)
     print "HOME env var: "
-    print home
+    print get_env("HOME")
 
     -- Test current_timestamp
     timestamp = current_timestamp()

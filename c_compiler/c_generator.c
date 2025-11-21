@@ -371,6 +371,12 @@ void visit_Yazdir(ASTNode* node) {
             }
         } else {
         }
+    } else if (node->tek_ifade_data.ifade->type == AST_BUILTIN_CALL) {
+        // Built-in call ise, string döndüren fonksiyonları kontrol et
+        TokenType func_type = node->tek_ifade_data.ifade->builtin_call_data.function_type;
+        if (func_type == TOKEN_BUILTIN_GET_ENV) {
+            is_string = true;
+        }
     }
 
 
