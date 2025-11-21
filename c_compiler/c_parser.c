@@ -1046,6 +1046,22 @@ ASTNode* komut() {
         return islec_tanimlama(); // Kendi içinde yönetir
     }
 
+    // 7.5. Built-in Function Call as Statement (Phase 5.2)
+    // Handle built-in calls like: set_error_code(42), mlp_free(ptr), assert(1, "msg")
+    if (current_token->type == TOKEN_BUILTIN_EXIT_WITH_CODE ||
+        current_token->type == TOKEN_BUILTIN_PANIC ||
+        current_token->type == TOKEN_BUILTIN_ASSERT ||
+        current_token->type == TOKEN_BUILTIN_SET_ERROR_CODE ||
+        current_token->type == TOKEN_BUILTIN_MLP_FREE ||
+        current_token->type == TOKEN_BUILTIN_CHECK_MEMORY_LEAKS ||
+        current_token->type == TOKEN_BUILTIN_SLEEP_MS) {
+        // Parse built-in call as expression first
+        ASTNode* builtin_node = ifade();
+        // Return as statement (no semicolon required)
+        specs_check_no_semicolon("Built-in fonksiyon çağrısı");
+        return builtin_node;
+    }
+
     // 8. Atama veya İfade Komutu (Noktalı virgülsüz)
     if (current_token->type == TOKEN_IDENTIFIER) {
         ASTNode* sol_node = ifade(); // 'birincil()' çağrılır
