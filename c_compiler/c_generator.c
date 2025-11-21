@@ -378,7 +378,12 @@ void visit_Yazdir(ASTNode* node) {
             func_type == TOKEN_BUILTIN_READ_BINARY ||
             func_type == TOKEN_BUILTIN_GET_FILE_INFO ||
             func_type == TOKEN_BUILTIN_GET_CURRENT_DIR ||
-            func_type == TOKEN_BUILTIN_GET_COMMAND_OUTPUT) {
+            func_type == TOKEN_BUILTIN_GET_COMMAND_OUTPUT ||
+            func_type == TOKEN_BUILTIN_FORMAT_TIMESTAMP ||
+            func_type == TOKEN_BUILTIN_GET_TIME_STRING ||
+            func_type == TOKEN_BUILTIN_GET_FILE_EXTENSION ||
+            func_type == TOKEN_BUILTIN_GET_FILE_NAME ||
+            func_type == TOKEN_BUILTIN_GET_DIRECTORY) {
             is_string = true;
         }
     }
@@ -1564,6 +1569,16 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_GET_COMMAND_OUTPUT: func_name = "get_command_output"; break;
         case TOKEN_BUILTIN_GET_PROCESS_ID: func_name = "get_process_id"; break;
         case TOKEN_BUILTIN_GET_PARENT_PROCESS_ID: func_name = "get_parent_process_id"; break;
+        // Phase 5.3: Time & Date Utilities
+        case TOKEN_BUILTIN_FORMAT_TIMESTAMP: func_name = "format_timestamp"; break;
+        case TOKEN_BUILTIN_PARSE_TIMESTAMP: func_name = "parse_timestamp"; break;
+        case TOKEN_BUILTIN_GET_MILLISECONDS: func_name = "get_milliseconds"; break;
+        case TOKEN_BUILTIN_GET_TIME_STRING: func_name = "get_time_string"; break;
+        // Phase 5.3: Path Utilities
+        case TOKEN_BUILTIN_JOIN_PATH: func_name = "join_path"; break;
+        case TOKEN_BUILTIN_GET_FILE_EXTENSION: func_name = "get_file_extension"; break;
+        case TOKEN_BUILTIN_GET_FILE_NAME: func_name = "get_file_name"; break;
+        case TOKEN_BUILTIN_GET_DIRECTORY: func_name = "get_directory"; break;
         default: func_name = "unknown"; break;
     }
 
@@ -1959,6 +1974,18 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern get_command_output");
     asm_append(&data_section, "extern get_process_id");
     asm_append(&data_section, "extern get_parent_process_id");
+
+    // Phase 5.3: Time & Date Utilities
+    asm_append(&data_section, "extern format_timestamp");
+    asm_append(&data_section, "extern parse_timestamp");
+    asm_append(&data_section, "extern get_milliseconds");
+    asm_append(&data_section, "extern get_time_string");
+
+    // Phase 5.3: Path Utilities
+    asm_append(&data_section, "extern join_path");
+    asm_append(&data_section, "extern get_file_extension");
+    asm_append(&data_section, "extern get_file_name");
+    asm_append(&data_section, "extern get_directory");
 
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld

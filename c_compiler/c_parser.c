@@ -26,6 +26,7 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_YAPI_ISLEC: return "İŞLEÇ";
         case TOKEN_YAPI_DONUS: return "DÖNÜŞ";
         case TOKEN_YAPI_DONGU: return "DÖNGÜ";
+        case TOKEN_YAPI_DO: return "DO";
         case TOKEN_YAPI_FOR: return "FOR";
         case TOKEN_YAPI_TO: return "TO";
         case TOKEN_YAPI_STEP: return "STEP";
@@ -572,7 +573,17 @@ ASTNode* birincil() {
         current_token->type == TOKEN_BUILTIN_EXECUTE_COMMAND ||
         current_token->type == TOKEN_BUILTIN_GET_COMMAND_OUTPUT ||
         current_token->type == TOKEN_BUILTIN_GET_PROCESS_ID ||
-        current_token->type == TOKEN_BUILTIN_GET_PARENT_PROCESS_ID) {
+        current_token->type == TOKEN_BUILTIN_GET_PARENT_PROCESS_ID ||
+        // Phase 5.3: Time & Date Utilities
+        current_token->type == TOKEN_BUILTIN_FORMAT_TIMESTAMP ||
+        current_token->type == TOKEN_BUILTIN_PARSE_TIMESTAMP ||
+        current_token->type == TOKEN_BUILTIN_GET_MILLISECONDS ||
+        current_token->type == TOKEN_BUILTIN_GET_TIME_STRING ||
+        // Phase 5.3: Path Utilities
+        current_token->type == TOKEN_BUILTIN_JOIN_PATH ||
+        current_token->type == TOKEN_BUILTIN_GET_FILE_EXTENSION ||
+        current_token->type == TOKEN_BUILTIN_GET_FILE_NAME ||
+        current_token->type == TOKEN_BUILTIN_GET_DIRECTORY) {
 
         TokenType func_type = current_token->type;
         consume(current_token->type);
@@ -1193,8 +1204,9 @@ ASTNode* dongu_komutu() {
     ASTNode* kosul_ifadesi = NULL;
     
     // If next token is not a block start, it's a conditioned while
-    // while condition \n body... end while
+    // while condition do\n body... end
     if (current_token->type != TOKEN_YAPI_SON && 
+        current_token->type != TOKEN_YAPI_DO &&
         current_token->type != TOKEN_TANIMLA_SAYI &&
         current_token->type != TOKEN_TANIMLA_METIN &&
         current_token->type != TOKEN_IDENTIFIER &&
@@ -1204,6 +1216,11 @@ ASTNode* dongu_komutu() {
         current_token->type != TOKEN_YAPI_FOR) {
         // Parse condition
         kosul_ifadesi = ifade();
+    }
+    
+    // Optional 'do' keyword after condition
+    if (current_token->type == TOKEN_YAPI_DO) {
+        consume(TOKEN_YAPI_DO);
     }
     
     ASTNode* govde_blogu = blok(); 

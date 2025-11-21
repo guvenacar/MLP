@@ -26,6 +26,7 @@ typedef enum {
     TOKEN_YAPI_ISLEC,     // function
     TOKEN_YAPI_DONUS,     // return
     TOKEN_YAPI_DONGU,     // while
+    TOKEN_YAPI_DO,        // do
     TOKEN_YAPI_DONGU_BITIR, // break
     TOKEN_YAPI_DONGU_DEVAM, // continue
     TOKEN_YAPI_FOR,       // for
@@ -112,6 +113,18 @@ typedef enum {
     TOKEN_BUILTIN_GET_COMMAND_OUTPUT,
     TOKEN_BUILTIN_GET_PROCESS_ID,
     TOKEN_BUILTIN_GET_PARENT_PROCESS_ID,
+
+    // Time & Date Utilities (Phase 5.3)
+    TOKEN_BUILTIN_FORMAT_TIMESTAMP,
+    TOKEN_BUILTIN_PARSE_TIMESTAMP,
+    TOKEN_BUILTIN_GET_MILLISECONDS,
+    TOKEN_BUILTIN_GET_TIME_STRING,
+
+    // Path Utilities (Phase 5.3)
+    TOKEN_BUILTIN_JOIN_PATH,
+    TOKEN_BUILTIN_GET_FILE_EXTENSION,
+    TOKEN_BUILTIN_GET_FILE_NAME,
+    TOKEN_BUILTIN_GET_DIRECTORY,
 
     // Hash Map (Phase 4)
     TOKEN_YAPI_MAP,  // "map" keyword

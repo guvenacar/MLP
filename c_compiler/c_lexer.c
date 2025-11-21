@@ -77,6 +77,7 @@ KeywordMap keywords[] = {
     {"function", TOKEN_YAPI_ISLEC},
     {"return",   TOKEN_YAPI_DONUS},
     {"while",    TOKEN_YAPI_DONGU},
+    {"do",       TOKEN_YAPI_DO},
     {"for",      TOKEN_YAPI_FOR},
     {"to",       TOKEN_YAPI_TO},
     {"step",     TOKEN_YAPI_STEP},
@@ -164,6 +165,18 @@ KeywordMap keywords[] = {
     {"get_process_id",       TOKEN_BUILTIN_GET_PROCESS_ID},
     {"get_parent_process_id", TOKEN_BUILTIN_GET_PARENT_PROCESS_ID},
 
+    // Phase 5.3: Time & Date Utilities
+    {"format_timestamp",     TOKEN_BUILTIN_FORMAT_TIMESTAMP},
+    {"parse_timestamp",      TOKEN_BUILTIN_PARSE_TIMESTAMP},
+    {"get_milliseconds",     TOKEN_BUILTIN_GET_MILLISECONDS},
+    {"get_time_string",      TOKEN_BUILTIN_GET_TIME_STRING},
+
+    // Phase 5.3: Path Utilities
+    {"join_path",            TOKEN_BUILTIN_JOIN_PATH},
+    {"get_file_extension",   TOKEN_BUILTIN_GET_FILE_EXTENSION},
+    {"get_file_name",        TOKEN_BUILTIN_GET_FILE_NAME},
+    {"get_directory",        TOKEN_BUILTIN_GET_DIRECTORY},
+
     // Phase 4: Hash Map
     {"map", TOKEN_YAPI_MAP},
 
@@ -225,8 +238,9 @@ static void skip_whitespace_and_comments() {
             advance_position();
         }
 
-        // Tek satır yorum: --
-        if (source_code[current_position] == '-' && source_code[current_position + 1] == '-') {
+        // Tek satır yorum: -- veya //
+        if ((source_code[current_position] == '-' && source_code[current_position + 1] == '-') ||
+            (source_code[current_position] == '/' && source_code[current_position + 1] == '/')) {
             // Satır sonuna kadar atla
             while (source_code[current_position] != '\n' && source_code[current_position] != '\0') {
                 advance_position();

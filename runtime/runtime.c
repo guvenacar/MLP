@@ -2340,3 +2340,268 @@ int get_parent_process_id(void) {
     return getppid();
 }
 
+// ==================== PHASE 5.3: TIME & DATE UTILITIES (4 functions) ====================
+
+/**
+ * format_timestamp - Format Unix timestamp to string
+ * @param timestamp: Unix timestamp (seconds since epoch)
+ * @param format: strftime format string (e.g., "%Y-%m-%d %H:%M:%S")
+ * @return: Formatted date/time string, or NULL on error
+ *
+ * Error codes:
+ *   ERR_INVALID_FORMAT (105): Invalid format string
+ *   ERR_OUT_OF_MEMORY (104): Failed to allocate memory
+ *
+ * MLP Usage:
+ *   now := current_timestamp()
+ *   formatted := format_timestamp(now, "%Y-%m-%d %H:%M:%S")
+ *   print formatted  // "2025-11-21 14:30:00"
+ *
+ * Common format specifiers:
+ *   %Y - Year (4 digits)
+ *   %m - Month (01-12)
+ *   %d - Day (01-31)
+ *   %H - Hour (00-23)
+ *   %M - Minute (00-59)
+ *   %S - Second (00-59)
+ */
+char* format_timestamp(long timestamp, const char* format) {
+    if (!format) {
+        set_error_code(105);  // ERR_INVALID_FORMAT
+        return NULL;
+    }
+
+    char* buffer = mlp_malloc(256);
+    if (!buffer) {
+        set_error_code(104);  // ERR_OUT_OF_MEMORY
+        return NULL;
+    }
+    
+    time_t t = (time_t)timestamp;
+    struct tm* tm_info = localtime(&t);
+    
+    if (strftime(buffer, 256, format, tm_info) == 0) {
+        mlp_free(buffer);
+        set_error_code(105);  // ERR_INVALID_FORMAT
+        return NULL;
+    }
+    
+    return buffer;
+}
+
+/**
+ * parse_timestamp - Parse date string to Unix timestamp
+ * @param date_string: Date string in ISO 8601 format
+ * @return: Unix timestamp, or -1 on error
+ *
+ * Error codes:
+ *   ERR_INVALID_FORMAT (105): Invalid date string format
+ *
+ * MLP Usage:
+ *   timestamp := parse_timestamp("2025-11-21 14:30:00")
+ *   print timestamp
+ *
+ * Supported formats:
+ *   "YYYY-MM-DD HH:MM:SS" - Full date and time
+ *   "YYYY-MM-DD" - Date only (time defaults to 00:00:00)
+ */
+long parse_timestamp(const char* date_string) {
+    if (!date_string) {
+        set_error_code(105);  // ERR_INVALID_FORMAT
+        return -1;
+    }
+
+    struct tm tm = {0};
+    
+    // Try ISO 8601 format: YYYY-MM-DD HH:MM:SS
+    if (strptime(date_string, "%Y-%m-%d %H:%M:%S", &tm) != NULL) {
+        return (long)mktime(&tm);
+    }
+    
+    // Try date only: YYYY-MM-DD
+    if (strptime(date_string, "%Y-%m-%d", &tm) != NULL) {
+        return (long)mktime(&tm);
+    }
+    
+    set_error_code(105);  // ERR_INVALID_FORMAT
+    return -1;
+}
+
+/**
+ * get_milliseconds - Get high-precision time in milliseconds
+ * @return: Current time in milliseconds since boot
+ *
+ * MLP Usage:
+ *   start := get_milliseconds()
+ *   // ... do work ...
+ *   elapsed := get_milliseconds() - start
+ *   print "Elapsed: " + string(elapsed) + "ms"
+ *
+ * Note: Uses CLOCK_MONOTONIC for accurate timing
+ */
+long long get_milliseconds(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        return 0;
+    }
+    return (long long)ts.tv_sec * 1000LL + ts.tv_nsec / 1000000LL;
+}
+
+/**
+ * get_time_string - Get current time as formatted string
+ * @return: Current time in format "YYYY-MM-DD HH:MM:SS"
+ *
+ * MLP Usage:
+ *   time_str := get_time_string()
+ *   print "Current time: " + time_str
+ */
+char* get_time_string(void) {
+    time_t now = time(NULL);
+    return format_timestamp((long)now, "%Y-%m-%d %H:%M:%S");
+}
+
+// ==================== PHASE 5.3: PATH UTILITIES (4 functions) ====================
+
+/**
+ * join_path - Join path components with forward slash
+ * @param parts: Array of path components
+ * @param count: Number of components
+ * @return: Joined path string
+ *
+ * MLP Usage:
+ *   path := join_path(["home", "user", "file.txt"], 3)
+ *   print path  // "home/user/file.txt"
+ */
+char* join_path(char** parts, int count) {
+    if (!parts || count == 0) {
+        char* empty = mlp_malloc(1);
+        if (empty) empty[0] = '\0';
+        return empty;
+    }
+    
+    // Calculate total length
+    size_t total_len = 0;
+    for (int i = 0; i < count; i++) {
+        if (parts[i]) {
+            total_len += strlen(parts[i]);
+        }
+        if (i < count - 1) total_len++;  // For '/' separator
+    }
+    
+    char* result = mlp_malloc(total_len + 1);
+    if (!result) return NULL;
+    
+    result[0] = '\0';
+    for (int i = 0; i < count; i++) {
+        if (parts[i]) {
+            strcat(result, parts[i]);
+        }
+        if (i < count - 1) strcat(result, "/");
+    }
+    
+    return result;
+}
+
+/**
+ * get_file_extension - Extract file extension from path
+ * @param path: File path
+ * @return: Extension string (without dot), or empty string if no extension
+ *
+ * MLP Usage:
+ *   ext := get_file_extension("test.mlp")
+ *   print ext  // "mlp"
+ */
+char* get_file_extension(const char* path) {
+    if (!path) {
+        char* empty = mlp_malloc(1);
+        if (empty) empty[0] = '\0';
+        return empty;
+    }
+
+    const char* dot = strrchr(path, '.');
+    const char* slash = strrchr(path, '/');
+    
+    // No extension or dot is in directory name
+    if (!dot || (slash && dot < slash)) {
+        char* empty = mlp_malloc(1);
+        if (empty) empty[0] = '\0';
+        return empty;
+    }
+    
+    // Copy extension (without dot)
+    size_t ext_len = strlen(dot + 1);
+    char* ext = mlp_malloc(ext_len + 1);
+    if (ext) {
+        strcpy(ext, dot + 1);
+    }
+    return ext;
+}
+
+/**
+ * get_file_name - Extract filename from path
+ * @param path: File path
+ * @return: Filename string
+ *
+ * MLP Usage:
+ *   name := get_file_name("/path/to/file.txt")
+ *   print name  // "file.txt"
+ */
+char* get_file_name(const char* path) {
+    if (!path) {
+        char* empty = mlp_malloc(1);
+        if (empty) empty[0] = '\0';
+        return empty;
+    }
+
+    const char* slash = strrchr(path, '/');
+    const char* filename = slash ? slash + 1 : path;
+    
+    size_t name_len = strlen(filename);
+    char* result = mlp_malloc(name_len + 1);
+    if (result) {
+        strcpy(result, filename);
+    }
+    return result;
+}
+
+/**
+ * get_directory - Extract directory path from file path
+ * @param path: File path
+ * @return: Directory path, or "." if no directory
+ *
+ * MLP Usage:
+ *   dir := get_directory("/path/to/file.txt")
+ *   print dir  // "/path/to"
+ */
+char* get_directory(const char* path) {
+    if (!path) {
+        char* dot = mlp_malloc(2);
+        if (dot) strcpy(dot, ".");
+        return dot;
+    }
+
+    const char* slash = strrchr(path, '/');
+    
+    if (!slash) {
+        // No directory, return "."
+        char* dot = mlp_malloc(2);
+        if (dot) strcpy(dot, ".");
+        return dot;
+    }
+    
+    size_t dir_len = slash - path;
+    if (dir_len == 0) {
+        // Root directory "/"
+        char* root = mlp_malloc(2);
+        if (root) strcpy(root, "/");
+        return root;
+    }
+    
+    char* result = mlp_malloc(dir_len + 1);
+    if (result) {
+        strncpy(result, path, dir_len);
+        result[dir_len] = '\0';
+    }
+    return result;
+}
+
