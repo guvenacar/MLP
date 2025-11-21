@@ -173,6 +173,14 @@ typedef enum {
     TOKEN_LSHIFT,         // << left shift
     TOKEN_RSHIFT,         // >> right shift
 
+    // Phase 5.7: Compound assignment operators
+    TOKEN_PLUS_ASSIGN,    // +=
+    TOKEN_MINUS_ASSIGN,   // -=
+    TOKEN_MUL_ASSIGN,     // *=
+    TOKEN_DIV_ASSIGN,     // /=
+    TOKEN_INCREMENT,      // ++
+    TOKEN_DECREMENT,      // --
+
 } TokenType;
 
 // Python'daki Token sınıfına karşılık gelen C struct'ı
