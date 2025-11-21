@@ -48,6 +48,10 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_NOT_ESIT: return "!=";
         case TOKEN_GTE: return ">=";
         case TOKEN_LTE: return "<=";
+        case TOKEN_MOD: return "%";
+        case TOKEN_AND: return "and";
+        case TOKEN_OR: return "or";
+        case TOKEN_NOT: return "not";
         default: return "UNKNOWN";
     }
 }
@@ -460,12 +464,10 @@ ASTNode* donus_komutu();
 
 int get_precedence(TokenType type) {
     switch (type) {
-        case TOKEN_PLUS:
-        case TOKEN_MINUS:
-            return 10;
-        case TOKEN_MUL:
-        case TOKEN_DIV:
-            return 20;
+        case TOKEN_OR:
+            return 3;
+        case TOKEN_AND:
+            return 4;
         case TOKEN_OP_ESIT_KARSILASTIRMA:
         case TOKEN_GT:
         case TOKEN_LT:
@@ -473,6 +475,13 @@ int get_precedence(TokenType type) {
         case TOKEN_LTE:
         case TOKEN_NOT_ESIT:
             return 5;
+        case TOKEN_PLUS:
+        case TOKEN_MINUS:
+            return 10;
+        case TOKEN_MUL:
+        case TOKEN_DIV:
+        case TOKEN_MOD:
+            return 20;
         default:
             return 0;
     }
@@ -747,8 +756,34 @@ ASTNode* birincil() {
     return NULL;
 }
 
+// Unary expressions (not, unary minus)
+ASTNode* unary_ifade() {
+    // Handle 'not' keyword
+    if (current_token->type == TOKEN_NOT) {
+        consume(TOKEN_NOT);
+        ASTNode* operand = unary_ifade();  // Recursive for multiple nots
+        
+        // Create a binary operation node: operand == 0
+        // This makes 'not x' equivalent to 'x == 0'
+        ASTNode* zero_node = (ASTNode*)malloc(sizeof(ASTNode));
+        zero_node->type = AST_SAYI;
+        zero_node->sabit_data.deger = strdup("0");
+        
+        ASTNode* comparison = (ASTNode*)malloc(sizeof(ASTNode));
+        comparison->type = AST_IKILI_ISLEM;
+        comparison->ikili_islem_data.sol = operand;
+        comparison->ikili_islem_data.sag = zero_node;
+        comparison->ikili_islem_data.operator_type = TOKEN_OP_ESIT_KARSILASTIRMA;
+        
+        return comparison;
+    }
+    
+    // Otherwise, parse primary expression
+    return birincil();
+}
+
 ASTNode* ikili_islem(int onceki_oncelik) {
-    ASTNode* sol = birincil();
+    ASTNode* sol = unary_ifade();  // Changed from birincil() to unary_ifade()
     if (sol == NULL) return NULL;
 
     while (1) {
@@ -829,6 +864,159 @@ ASTNode* komut() {
         ASTNode* struct_node = createAST_StructTanimlama(&struct_ad, field_tipleri, field_adlari, field_sayisi);
         free(struct_ad.value);
         return struct_node;
+    }
+
+    // Phase 5.4: Enum Tanımlama (enum Color then RED = 0 GREEN = 1 end)
+    if (current_token->type == TOKEN_YAPI_ENUM) {
+        consume(TOKEN_YAPI_ENUM);
+
+        // Enum adı
+        if (current_token->type != TOKEN_IDENTIFIER) {
+            parseError("Enum adı", "IDENTIFIER");
+        }
+        Token* enum_ad = (Token*)malloc(sizeof(Token));
+        enum_ad->type = current_token->type;
+        enum_ad->value = strdup(current_token->value);
+        consume(TOKEN_IDENTIFIER);
+
+        // then
+        consume(TOKEN_YAPI_KOSUL_ISE);
+
+        // Değerleri parse et
+        Token** value_adlari = (Token**)malloc(sizeof(Token*) * 100);  // Max 100 enum value
+        int* value_degerleri = (int*)malloc(sizeof(int) * 100);
+        int value_sayisi = 0;
+        int next_value = 0;
+
+        // end'e kadar değerleri oku
+        while (current_token->type != TOKEN_YAPI_SON) {
+            // Değer adı
+            if (current_token->type != TOKEN_IDENTIFIER) {
+                parseError("Enum değer adı", "IDENTIFIER");
+            }
+            Token* value_ad = (Token*)malloc(sizeof(Token));
+            value_ad->type = current_token->type;
+            value_ad->value = strdup(current_token->value);
+            value_adlari[value_sayisi] = value_ad;
+            consume(TOKEN_IDENTIFIER);
+
+            // Opsiyonel: = değer
+            if (current_token->type == TOKEN_ASSIGN) {
+                consume(TOKEN_ASSIGN);
+                if (current_token->type != TOKEN_SAYI) {
+                    parseError("Enum değeri", "SAYI");
+                }
+                next_value = atoi(current_token->value);
+                consume(TOKEN_SAYI);
+            }
+            value_degerleri[value_sayisi] = next_value;
+            next_value++;
+            value_sayisi++;
+        }
+
+        // end
+        consume(TOKEN_YAPI_SON);
+
+        // AST node oluştur
+        ASTNode* enum_node = (ASTNode*)malloc(sizeof(ASTNode));
+        enum_node->type = AST_ENUM_TANIMLAMA;
+        enum_node->enum_tanimlama_data.ad = enum_ad;
+        enum_node->enum_tanimlama_data.value_adlari = value_adlari;
+        enum_node->enum_tanimlama_data.value_degerleri = value_degerleri;
+        enum_node->enum_tanimlama_data.value_sayisi = value_sayisi;
+        return enum_node;
+    }
+
+    // Phase 5.4: Switch Statement (switch expr then case ... end)
+    if (current_token->type == TOKEN_YAPI_SWITCH) {
+        consume(TOKEN_YAPI_SWITCH);
+
+        // Switch ifadesi
+        ASTNode* switch_ifade = ifade();
+
+        // then
+        consume(TOKEN_YAPI_KOSUL_ISE);
+
+        // Case'leri parse et
+        ASTNode** cases = (ASTNode**)malloc(sizeof(ASTNode*) * 100);  // Max 100 case
+        int case_sayisi = 0;
+        ASTNode* default_blok = NULL;
+
+        // end'e kadar case'leri oku
+        while (current_token->type != TOKEN_YAPI_SON) {
+            if (current_token->type == TOKEN_YAPI_CASE) {
+                consume(TOKEN_YAPI_CASE);
+
+                // Case değeri
+                ASTNode* case_deger = ifade();
+
+                // then
+                consume(TOKEN_YAPI_KOSUL_ISE);
+
+                // Case bloğu
+                ASTNode** case_komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 100);
+                int case_komut_sayisi = 0;
+
+                while (current_token->type != TOKEN_YAPI_SON &&
+                       current_token->type != TOKEN_YAPI_CASE &&
+                       current_token->type != TOKEN_YAPI_DEFAULT) {
+                    case_komutlar[case_komut_sayisi++] = komut();
+                }
+
+                // end (case bloğu için)
+                if (current_token->type == TOKEN_YAPI_SON) {
+                    consume(TOKEN_YAPI_SON);
+                }
+
+                // Case node oluştur
+                ASTNode* case_blok = (ASTNode*)malloc(sizeof(ASTNode));
+                case_blok->type = AST_BLOK;
+                case_blok->blok_data.komutlar = case_komutlar;
+                case_blok->blok_data.sayisi = case_komut_sayisi;
+
+                ASTNode* case_node = (ASTNode*)malloc(sizeof(ASTNode));
+                case_node->type = AST_CASE_KOMUTU;
+                case_node->case_data.deger = case_deger;
+                case_node->case_data.blok = case_blok;
+                cases[case_sayisi++] = case_node;
+
+            } else if (current_token->type == TOKEN_YAPI_DEFAULT) {
+                consume(TOKEN_YAPI_DEFAULT);
+
+                // then
+                consume(TOKEN_YAPI_KOSUL_ISE);
+
+                // Default bloğu
+                ASTNode** default_komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 100);
+                int default_komut_sayisi = 0;
+
+                while (current_token->type != TOKEN_YAPI_SON) {
+                    default_komutlar[default_komut_sayisi++] = komut();
+                }
+
+                // end
+                consume(TOKEN_YAPI_SON);
+
+                default_blok = (ASTNode*)malloc(sizeof(ASTNode));
+                default_blok->type = AST_BLOK;
+                default_blok->blok_data.komutlar = default_komutlar;
+                default_blok->blok_data.sayisi = default_komut_sayisi;
+            } else {
+                parseError("case veya default", "CASE/DEFAULT");
+            }
+        }
+
+        // end (switch için)
+        consume(TOKEN_YAPI_SON);
+
+        // Switch node oluştur
+        ASTNode* switch_node = (ASTNode*)malloc(sizeof(ASTNode));
+        switch_node->type = AST_SWITCH_KOMUTU;
+        switch_node->switch_data.ifade = switch_ifade;
+        switch_node->switch_data.cases = cases;
+        switch_node->switch_data.case_sayisi = case_sayisi;
+        switch_node->switch_data.default_blok = default_blok;
+        return switch_node;
     }
 
     // Struct Değişken Tanımlama (Person p;)

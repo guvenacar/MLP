@@ -36,6 +36,12 @@ typedef enum {
     TOKEN_YAPI_STRUCT,    // struct
     TOKEN_YAPI_LIST,      // list - Phase 2
 
+    // Phase 5.4: Language Features
+    TOKEN_YAPI_ENUM,      // enum
+    TOKEN_YAPI_SWITCH,    // switch
+    TOKEN_YAPI_CASE,      // case
+    TOKEN_YAPI_DEFAULT,   // default
+
     // --- Built-in Functions - Phase 3 ---
     // File I/O
     TOKEN_BUILTIN_READ_FILE,
@@ -154,6 +160,10 @@ typedef enum {
     TOKEN_NOT_ESIT,       // !=
     TOKEN_GTE,            // >=
     TOKEN_LTE,            // <=
+    TOKEN_MOD,            // % modulo
+    TOKEN_AND,            // and keyword
+    TOKEN_OR,             // or keyword
+    TOKEN_NOT,            // not keyword
 
 } TokenType;
 

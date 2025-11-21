@@ -71,6 +71,42 @@ typedef struct {
 StructMetadata struct_metadata_table[MAX_STRUCTS];
 int struct_metadata_count = 0;
 
+// --- Phase 5.4: Enum Metadata Yönetimi ---
+#define MAX_ENUM_VALUES 100
+#define MAX_ENUMS 50
+
+typedef struct {
+    char* value_ad;
+    int value;
+} EnumValueInfo;
+
+typedef struct {
+    char* enum_ad;
+    int value_sayisi;
+    EnumValueInfo values[MAX_ENUM_VALUES];
+} EnumMetadata;
+
+// Global enum metadata tablosu
+EnumMetadata enum_metadata_table[MAX_ENUMS];
+int enum_metadata_count = 0;
+
+// Enum değeri bul
+int enum_value_bul(const char* value_ad) {
+    for (int i = 0; i < enum_metadata_count; i++) {
+        for (int j = 0; j < enum_metadata_table[i].value_sayisi; j++) {
+            if (strcmp(enum_metadata_table[i].values[j].value_ad, value_ad) == 0) {
+                return enum_metadata_table[i].values[j].value;
+            }
+        }
+    }
+    return -1; // Bulunamadı
+}
+
+// Enum değeri mi kontrol et
+int is_enum_value(const char* ad) {
+    return enum_value_bul(ad) >= 0;
+}
+
 // Kapsam Yönetim Fonksiyonları
 
 // Kapsam haritasında strdup ile ayrılmış belleği temizler
@@ -340,6 +376,10 @@ void visit_MapRemove(ASTNode* node);
 void visit_MapSize(ASTNode* node);
 void visit_MapClear(ASTNode* node);
 
+// Phase 5.4: Enum ve Switch forward declarations
+void visit_EnumTanimlama(ASTNode* node);
+void visit_Switch(ASTNode* node);
+
 void visit_Blok(ASTNode* node) {
     // Blok içindeki her komutu ziyaret et
     for (int i = 0; i < node->blok_data.sayisi; i++) {
@@ -512,10 +552,20 @@ void visit_DegiskenTanimlama(ASTNode* node) {
 
 void visit_Degisken(ASTNode* node) {
     char* degisken_adi = node->degisken_data.ad->value;
-    char* adres = kapsam_degisken_adresi_bul(degisken_adi);
-    
-    // Değerin yığındaki adresinden (örn: [rbp-8]) RAX'e yükle
     char buffer[128];
+
+    // Phase 5.4: Önce enum değeri mi kontrol et
+    int enum_val = enum_value_bul(degisken_adi);
+    if (enum_val >= 0) {
+        // Bu bir enum değeri, sabit olarak yükle
+        sprintf(buffer, "    mov rax, %d  ; Enum value: %s", enum_val, degisken_adi);
+        asm_append(&text_section, buffer);
+        return;
+    }
+
+    char* adres = kapsam_degisken_adresi_bul(degisken_adi);
+
+    // Değerin yığındaki adresinden (örn: [rbp-8]) RAX'e yükle
     sprintf(buffer, "    mov rax, %s", adres); // Örn: mov rax, [rbp-8]
     asm_append(&text_section, buffer);
 }
@@ -1497,6 +1547,90 @@ void visit_MapClear(ASTNode* node) {
     asm_append(&text_section, "    call hashmap_clear");
 }
 
+// Phase 5.4: Enum Tanımlama
+void visit_EnumTanimlama(ASTNode* node) {
+    char* enum_ad = node->enum_tanimlama_data.ad->value;
+    int value_sayisi = node->enum_tanimlama_data.value_sayisi;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Enum Definition: %s ---", enum_ad);
+    asm_append(&text_section, buffer);
+
+    // Enum metadata'yı global tabloya kaydet
+    if (enum_metadata_count >= MAX_ENUMS) {
+        fprintf(stderr, "HATA [Generator]: Maksimum enum sayısı aşıldı!\n");
+        exit(1);
+    }
+
+    EnumMetadata* meta = &enum_metadata_table[enum_metadata_count++];
+    meta->enum_ad = strdup(enum_ad);
+    meta->value_sayisi = value_sayisi;
+
+    for (int i = 0; i < value_sayisi; i++) {
+        meta->values[i].value_ad = strdup(node->enum_tanimlama_data.value_adlari[i]->value);
+        meta->values[i].value = node->enum_tanimlama_data.value_degerleri[i];
+
+        sprintf(buffer, "    ; %s.%s = %d", enum_ad, meta->values[i].value_ad, meta->values[i].value);
+        asm_append(&text_section, buffer);
+    }
+}
+
+// Phase 5.4: Switch Statement
+void visit_Switch(ASTNode* node) {
+    char buffer[256];
+    int switch_id = etiket_sayaci++;
+
+    asm_append(&text_section, "    ; --- Switch Statement ---");
+
+    // Switch ifadesini değerlendir (sonuç RAX'te)
+    visit(node->switch_data.ifade);
+    asm_append(&text_section, "    push rax  ; Switch value'yu sakla");
+
+    // Her case için karşılaştırma ve jump
+    for (int i = 0; i < node->switch_data.case_sayisi; i++) {
+        ASTNode* case_node = node->switch_data.cases[i];
+
+        sprintf(buffer, ".case_%d_%d:", switch_id, i);
+        asm_append(&text_section, buffer);
+
+        // Switch value'yu geri yükle
+        asm_append(&text_section, "    mov rax, [rsp]  ; Switch value");
+
+        // Case değerini değerlendir
+        asm_append(&text_section, "    push rax");
+        visit(case_node->case_data.deger);
+        asm_append(&text_section, "    mov rbx, rax  ; Case value");
+        asm_append(&text_section, "    pop rax");
+
+        // Karşılaştır
+        asm_append(&text_section, "    cmp rax, rbx");
+        sprintf(buffer, "    jne .case_%d_%d_skip", switch_id, i);
+        asm_append(&text_section, buffer);
+
+        // Case bloğunu çalıştır
+        visit(case_node->case_data.blok);
+
+        // Switch sonuna atla
+        sprintf(buffer, "    jmp .switch_%d_end", switch_id);
+        asm_append(&text_section, buffer);
+
+        sprintf(buffer, ".case_%d_%d_skip:", switch_id, i);
+        asm_append(&text_section, buffer);
+    }
+
+    // Default bloğu (varsa)
+    if (node->switch_data.default_blok != NULL) {
+        sprintf(buffer, ".switch_%d_default:", switch_id);
+        asm_append(&text_section, buffer);
+        visit(node->switch_data.default_blok);
+    }
+
+    // Switch sonu
+    sprintf(buffer, ".switch_%d_end:", switch_id);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    add rsp, 8  ; Switch value'yu temizle");
+}
+
 // Phase 3: Built-in function call
 void visit_BuiltinCall(ASTNode* node) {
     TokenType func = node->builtin_call_data.function_type;
@@ -1883,6 +2017,19 @@ void visit(ASTNode* node) {
         // Phase 3: Built-in function call
         case AST_BUILTIN_CALL:
             visit_BuiltinCall(node);
+            break;
+
+        // Phase 5.4: Enum ve Switch
+        case AST_ENUM_TANIMLAMA:
+            visit_EnumTanimlama(node);
+            break;
+
+        case AST_SWITCH_KOMUTU:
+            visit_Switch(node);
+            break;
+
+        case AST_CASE_KOMUTU:
+            // Case'ler switch içinde işlenir
             break;
 
         default:

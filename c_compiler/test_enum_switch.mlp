@@ -1,0 +1,57 @@
+-- Phase 5.4 Test: Enum and Switch
+
+print "=== Testing Enum ==="
+
+enum Color then
+    RED = 0
+    GREEN = 1
+    BLUE = 2
+end
+
+int c = GREEN;
+print "Color value (should be 1): "
+print c
+
+if c == GREEN then
+    print "Color is GREEN"
+end
+
+print ""
+print "=== Testing Switch ==="
+
+int day = 3;
+
+switch day then
+    case 1 then
+        print "Monday"
+    end
+    case 2 then
+        print "Tuesday"
+    end
+    case 3 then
+        print "Wednesday"
+    end
+    default then
+        print "Other day"
+    end
+end
+
+print ""
+print "=== Switch with Enum ==="
+
+int status = RED;
+
+switch status then
+    case RED then
+        print "Status: RED (error)"
+    end
+    case GREEN then
+        print "Status: GREEN (success)"
+    end
+    case BLUE then
+        print "Status: BLUE (info)"
+    end
+end
+
+print ""
+print "=== Phase 5.4 Enum/Switch Tests Complete ==="

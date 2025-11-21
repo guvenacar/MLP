@@ -84,8 +84,17 @@ KeywordMap keywords[] = {
     {"break",    TOKEN_YAPI_DONGU_BITIR},
     {"continue", TOKEN_YAPI_DONGU_DEVAM},
     {"end",      TOKEN_YAPI_SON},
+    {"and",      TOKEN_AND},
+    {"or",       TOKEN_OR},
+    {"not",      TOKEN_NOT},
     {"struct",   TOKEN_YAPI_STRUCT},
     {"list",     TOKEN_YAPI_LIST},      // Phase 2: Dynamic lists
+
+    // Phase 5.4: Language Features
+    {"enum",     TOKEN_YAPI_ENUM},
+    {"switch",   TOKEN_YAPI_SWITCH},
+    {"case",     TOKEN_YAPI_CASE},
+    {"default",  TOKEN_YAPI_DEFAULT},
 
     // Phase 3: Built-in Functions
     // File I/O
@@ -512,6 +521,10 @@ Token* getNextToken() {
     if (current_char == '/') {
         current_position++;
         return createToken(TOKEN_DIV, "/");
+    }
+    if (current_char == '%') {
+        current_position++;
+        return createToken(TOKEN_MOD, "%");
     }
     if (current_char == '>') {
         current_position++;

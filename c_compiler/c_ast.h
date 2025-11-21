@@ -48,6 +48,12 @@ typedef enum {
     AST_MAP_REMOVE,         // Map remove: ages.remove("Charlie")
     AST_MAP_SIZE,           // Map size: ages.size()
     AST_MAP_CLEAR,          // Map clear: ages.clear()
+
+    // Phase 5.4: Language Features
+    AST_ENUM_TANIMLAMA,     // Enum definition: enum Color then RED = 0 ... end
+    AST_ENUM_VALUE,         // Enum value reference: Color.RED or just RED
+    AST_SWITCH_KOMUTU,      // Switch statement
+    AST_CASE_KOMUTU,        // Case clause
 } ASTNodeType;
 
 // İleri Bildirimler (C'de iç içe struct'lar için gerekli)
@@ -269,6 +275,36 @@ struct ASTNode {
         struct {
             Token* map_adi;       // Map name (ages)
         } map_clear_data;
+
+        // ===== Phase 5.4: Language Features =====
+
+        // Enum Tanımlama (enum Color then RED = 0 GREEN = 1 end)
+        struct {
+            Token* ad;              // Enum ismi (Color)
+            Token** value_adlari;   // Değer isimleri (RED, GREEN, BLUE)
+            int* value_degerleri;   // Değerler (0, 1, 2) - NULL ise otomatik
+            int value_sayisi;       // Değer sayısı
+        } enum_tanimlama_data;
+
+        // Enum Value (Color.RED veya sadece RED)
+        struct {
+            Token* enum_ad;         // Enum ismi (opsiyonel, NULL olabilir)
+            Token* value_ad;        // Değer ismi (RED)
+        } enum_value_data;
+
+        // Switch Statement
+        struct {
+            ASTNode* ifade;         // Switch edilecek ifade
+            ASTNode** cases;        // Case listesi
+            int case_sayisi;        // Case sayısı
+            ASTNode* default_blok;  // Default bloğu (opsiyonel)
+        } switch_data;
+
+        // Case Clause
+        struct {
+            ASTNode* deger;         // Case değeri (sabit)
+            ASTNode* blok;          // Case bloğu
+        } case_data;
     };
 };
 
