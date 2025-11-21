@@ -81,14 +81,18 @@ KeywordMap keywords[] = {
     {"for",      TOKEN_YAPI_FOR},
     {"to",       TOKEN_YAPI_TO},
     {"step",     TOKEN_YAPI_STEP},
-    {"break",    TOKEN_YAPI_DONGU_BITIR},
-    {"continue", TOKEN_YAPI_DONGU_DEVAM},
+    {"break",    TOKEN_BREAK},
+    {"continue", TOKEN_CONTINUE},
     {"end",      TOKEN_YAPI_SON},
     {"and",      TOKEN_AND},
     {"or",       TOKEN_OR},
     {"not",      TOKEN_NOT},
     {"struct",   TOKEN_YAPI_STRUCT},
     {"list",     TOKEN_YAPI_LIST},      // Phase 2: Dynamic lists
+
+    // Phase 5.8: Control flow & debugging
+    {"stop",     TOKEN_STOP},
+    {"goto",     TOKEN_GOTO},
 
     // Phase 5.4: Language Features
     {"enum",     TOKEN_YAPI_ENUM},
@@ -547,30 +551,57 @@ Token* getNextToken() {
     }
     if (current_char == '+') {
         current_position++;
+        if (source_code[current_position] == '=') {
+            current_position++;
+            return createToken(TOKEN_PLUS_ASSIGN, "+=");
+        }
+        if (source_code[current_position] == '+') {
+            current_position++;
+            return createToken(TOKEN_INCREMENT, "++");
+        }
         return createToken(TOKEN_PLUS, "+");
     }
     if (current_char == '-') {
         // '-' karakteri geldiğinde:
         if (source_code[current_position + 1] == '-') {
-            // Satır sonuna kadar yorum
-            current_position += 2;
-            while (source_code[current_position] != '\n' && source_code[current_position] != '\0') {
-                current_position++;
+            // Check if it's comment (-- followed by space) or decrement (--)
+            // Comments start with "-- " (with space after)
+            // Decrement is "--" at end of identifier (followed by newline/eof or operator)
+            char after_second = source_code[current_position + 2];
+            if (after_second == ' ' || after_second == '\t') {
+                // Definitely a comment: "-- text"
+                current_position += 2;
+                while (source_code[current_position] != '\n' && source_code[current_position] != '\0') {
+                    current_position++;
+                }
+                if (source_code[current_position] == '\n') current_position++;
+                return getNextToken();
             }
-            if (source_code[current_position] == '\n') current_position++;
-            // Yorum bitti, bir sonraki tokeni almak için başa dön
-            return getNextToken(); // ✅ continue yerine recursive çağrı
+            // Otherwise it's decrement operator
+            current_position += 2;
+            return createToken(TOKEN_DECREMENT, "--");
         }
-        // Tek '-' ise çıkarma operatörü
         current_position++;
-        return createToken(TOKEN_MINUS, "-"); // ✅ TOKEN_MINUS kullan
+        if (source_code[current_position] == '=') {
+            current_position++;
+            return createToken(TOKEN_MINUS_ASSIGN, "-=");
+        }
+        return createToken(TOKEN_MINUS, "-");
     }
     if (current_char == '*') {
         current_position++;
+        if (source_code[current_position] == '=') {
+            current_position++;
+            return createToken(TOKEN_MUL_ASSIGN, "*=");
+        }
         return createToken(TOKEN_MUL, "*");
     }
     if (current_char == '/') {
         current_position++;
+        if (source_code[current_position] == '=') {
+            current_position++;
+            return createToken(TOKEN_DIV_ASSIGN, "/=");
+        }
         return createToken(TOKEN_DIV, "/");
     }
     if (current_char == '%') {
@@ -604,6 +635,12 @@ Token* getNextToken() {
     if (current_char == ':') {
         current_position++;
         return createToken(TOKEN_COLON, ":");
+    }
+    
+    // Phase 5.8: Ternary operator
+    if (current_char == '?') {
+        current_position++;
+        return createToken(TOKEN_QUESTION, "?");
     }
 
     // Phase 5.5: Bitwise operators

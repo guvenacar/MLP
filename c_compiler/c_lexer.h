@@ -181,6 +181,14 @@ typedef enum {
     TOKEN_INCREMENT,      // ++
     TOKEN_DECREMENT,      // --
 
+    // Phase 5.8: Control flow & debugging
+    TOKEN_QUESTION,       // ? (ternary operator)
+    TOKEN_BREAK,          // break keyword
+    TOKEN_CONTINUE,       // continue keyword
+    TOKEN_STOP,           // stop keyword (debugging breakpoint)
+    TOKEN_GOTO,           // goto keyword
+    TOKEN_LABEL,          // label: (label definition)
+
 } TokenType;
 
 // Python'daki Token sınıfına karşılık gelen C struct'ı

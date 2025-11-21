@@ -1,0 +1,58 @@
+-- Phase 5.7 Test: Compound Assignment & Increment/Decrement
+
+print "=== Testing Compound Assignment ==="
+
+int x = 10;
+print "Initial x: "
+print x
+
+x += 5
+print "After x += 5: "
+print x
+
+x -= 3
+print "After x -= 3: "
+print x
+
+x *= 2
+print "After x *= 2: "
+print x
+
+x /= 4
+print "After x /= 4: "
+print x
+
+print ""
+print "=== Testing Increment/Decrement ==="
+
+int counter = 0;
+print "Initial counter: "
+print counter
+
+counter++
+print "After counter++: "
+print counter
+
+counter++
+print "After counter++ again: "
+print counter
+
+counter--
+print "After counter--: "
+print counter
+
+print ""
+print "=== Testing in Loop ==="
+
+int sum = 0;
+int i = 1;
+while i <= 5 do
+    sum += i
+    i++
+end
+
+print "Sum of 1 to 5: "
+print sum
+
+print ""
+print "=== Phase 5.7 Tests Complete ==="

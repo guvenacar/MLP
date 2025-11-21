@@ -1,0 +1,44 @@
+-- Phase 5.8: Control Flow & Debugging Test - Part 1
+print "=== Phase 5.8: Control Flow & Debugging ==="
+
+-- 1. Ternary Operator (?:)
+print ""
+print "1. Ternary Operator"
+int x = 10;
+int y = 5;
+int max = x > y ? x : y;
+print "max(10, 5) = "
+print max
+
+int min = x < y ? x : y;  
+print "min(10, 5) = "
+print min
+
+-- Nested ternary
+int a = 15;
+int b = 10;
+int c = 20;
+int largest = a > b ? (a > c ? a : c) : (b > c ? b : c);
+print "largest(15, 10, 20) = "
+print largest
+
+-- Ternary with strings (result in int for now)
+int result = 5 > 3 ? 1 : 0;
+print "5 > 3 ? 1 : 0 = "
+print result
+
+-- 2. Break Statement
+print ""
+print "2. Break Statement"
+print "Loop with break at 5:"
+int i = 0;
+while i < 10 do
+    if i == 5 then
+        break
+    end
+    print i
+    i = i + 1
+end
+
+print ""
+print "=== Part 1 Complete ==="

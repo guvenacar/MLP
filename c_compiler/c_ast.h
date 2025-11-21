@@ -54,6 +54,14 @@ typedef enum {
     AST_ENUM_VALUE,         // Enum value reference: Color.RED or just RED
     AST_SWITCH_KOMUTU,      // Switch statement
     AST_CASE_KOMUTU,        // Case clause
+
+    // Phase 5.8: Control flow & debugging
+    AST_TERNARY,            // Ternary operator: condition ? true_val : false_val
+    AST_BREAK,              // break keyword
+    AST_CONTINUE,           // continue keyword
+    AST_STOP,               // stop keyword (debugging breakpoint - int3)
+    AST_GOTO,               // goto label
+    AST_LABEL,              // label:
 } ASTNodeType;
 
 // İleri Bildirimler (C'de iç içe struct'lar için gerekli)
@@ -305,6 +313,25 @@ struct ASTNode {
             ASTNode* deger;         // Case değeri (sabit)
             ASTNode* blok;          // Case bloğu
         } case_data;
+
+        // ===== Phase 5.8: Control flow & debugging =====
+
+        // Ternary operator (condition ? true_val : false_val)
+        struct {
+            ASTNode* kosul;         // Condition expression
+            ASTNode* dogru_deger;   // True value
+            ASTNode* yanlis_deger;  // False value
+        } ternary_data;
+
+        // Goto statement (goto label_name)
+        struct {
+            Token* label_adi;       // Label name
+        } goto_data;
+
+        // Label definition (label_name:)
+        struct {
+            Token* label_adi;       // Label name
+        } label_data;
     };
 };
 

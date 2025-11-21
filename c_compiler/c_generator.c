@@ -44,7 +44,8 @@ static int metin_sayaci = 0;
 
 // YENİ: Aktif Döngü Bitiş Etiketi
 // (İç içe döngüler için bu bir yığın (stack) olmalıdır, şimdilik basit tutalım)
-static int aktif_dongu_son_etiketi = -1; 
+static int aktif_dongu_son_etiketi = -1;
+static int aktif_dongu_baslangic_etiketi = -1;  // Phase 5.8: For continue support
 
 // Argüman register'ları (Linux x86-64 ABI)
 const char* arg_registerleri[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
@@ -349,6 +350,7 @@ void visit_KosulKomutu(ASTNode* node); // İleri bildirim
 void visit_DonguKomutu(ASTNode* node); // İleri bildirim
 void visit_ForKomutu(ASTNode* node); // İleri bildirim
 void visit_DonguBitirKomutu(ASTNode* node); // İleri bildirim
+void visit_DonguDevamKomutu(ASTNode* node); // Phase 5.8: Continue
 void visit_IslecTanimlama(ASTNode* node); // İleri bildirim
 void visit_IslecCagirma(ASTNode* node); // İleri bildirim
 void visit_DonusKomutu(ASTNode* node); // İleri bildirim
@@ -359,6 +361,12 @@ void visit_StructTanimlama(ASTNode* node); // İleri bildirim
 void visit_StructFieldAccess(ASTNode* node); // İleri bildirim
 void visit_StructFieldAtama(ASTNode* node); // İleri bildirim
 void visit_StructDegisken(ASTNode* node); // İleri bildirim
+
+// Phase 5.8: Control flow & debugging forward declarations
+void visit_Ternary(ASTNode* node);
+void visit_Stop(ASTNode* node);
+void visit_Goto(ASTNode* node);
+void visit_Label(ASTNode* node);
 
 // Phase 2: List visitor forward declarations
 void visit_ListTanimlama(ASTNode* node);
@@ -644,7 +652,9 @@ void visit_DonguKomutu(ASTNode* node) {
 
     // 1. DÖNGÜ_BITIR için bu döngünün bitiş etiketini kaydet
     int onceki_aktif_dongu_son_etiketi = aktif_dongu_son_etiketi;
+    int onceki_aktif_dongu_baslangic_etiketi = aktif_dongu_baslangic_etiketi;
     aktif_dongu_son_etiketi = etiket_son;
+    aktif_dongu_baslangic_etiketi = etiket_basla;
 
     // 2. Döngü Başlangıç Etiketi
     sprintf(buffer, ".L%d:", etiket_basla); // .L_BASLA
@@ -672,6 +682,7 @@ void visit_DonguKomutu(ASTNode* node) {
 
     // 7. Döngü bitti, eski etiketi geri yükle (iç içe döngüler için)
     aktif_dongu_son_etiketi = onceki_aktif_dongu_son_etiketi;
+    aktif_dongu_baslangic_etiketi = onceki_aktif_dongu_baslangic_etiketi;
 }
 
 void visit_ForKomutu(ASTNode* node) {
@@ -691,10 +702,13 @@ void visit_ForKomutu(ASTNode* node) {
     
     // 2. Labels
     int etiket_basla = etiket_sayaci++;
+    int etiket_continue = etiket_sayaci++;  // Phase 5.8: For continue target
     int etiket_son = etiket_sayaci++;
     
     int onceki_aktif_dongu_son_etiketi = aktif_dongu_son_etiketi;
+    int onceki_aktif_dongu_baslangic_etiketi = aktif_dongu_baslangic_etiketi;
     aktif_dongu_son_etiketi = etiket_son;
+    aktif_dongu_baslangic_etiketi = etiket_continue;  // Continue jumps to increment, not loop start
     
     // 3. Loop start
     sprintf(buffer, ".L%d:", etiket_basla);
@@ -717,7 +731,12 @@ void visit_ForKomutu(ASTNode* node) {
     // 5. Loop body
     visit(node->for_data.govde);
     
-    // 6. Increment: i = i + step (default 1)
+    // 6. Continue target label - increment happens here
+    sprintf(buffer, ".L%d:", etiket_continue);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- For Loop Continue/Increment ---");
+    
+    // 7. Increment: i = i + step (default 1)
     if (node->for_data.adim != NULL) {
         visit(node->for_data.adim);  // Step in rax
         asm_append(&text_section, "    mov rcx, rax");  // Save step
@@ -734,15 +753,16 @@ void visit_ForKomutu(ASTNode* node) {
         asm_append(&text_section, buffer);
     }
     
-    // 7. Jump back to start
+    // 8. Jump back to condition check (loop start)
     sprintf(buffer, "    jmp .L%d", etiket_basla);
     asm_append(&text_section, buffer);
     
-    // 8. Loop end
+    // 9. Loop end
     sprintf(buffer, ".L%d:", etiket_son);
     asm_append(&text_section, buffer);
     
     aktif_dongu_son_etiketi = onceki_aktif_dongu_son_etiketi;
+    aktif_dongu_baslangic_etiketi = onceki_aktif_dongu_baslangic_etiketi;
 }
 
 void visit_DonguBitirKomutu(ASTNode* node) {
@@ -754,6 +774,72 @@ void visit_DonguBitirKomutu(ASTNode* node) {
     char buffer[128];
     sprintf(buffer, "    jmp .L%d", aktif_dongu_son_etiketi); // jmp .L_SON
     asm_append(&text_section, "    ; --- DonguBitir Komutu ---");
+    asm_append(&text_section, buffer);
+}
+
+// Phase 5.8: Continue implementation
+void visit_DonguDevamKomutu(ASTNode* node) {
+    if (aktif_dongu_baslangic_etiketi == -1) {
+        fprintf(stderr, "HATA [Generator]: 'continue' bir döngü içinde değil.\n");
+        exit(1);
+    }
+    
+    char buffer[128];
+    sprintf(buffer, "    jmp .L%d", aktif_dongu_baslangic_etiketi); // jmp back to loop start
+    asm_append(&text_section, "    ; --- Continue Komutu ---");
+    asm_append(&text_section, buffer);
+}
+
+// Phase 5.8: Stop (debugging breakpoint - int3)
+void visit_Stop(ASTNode* node) {
+    asm_append(&text_section, "    ; --- Stop (Debug Breakpoint) ---");
+    asm_append(&text_section, "    int3");  // x86-64 breakpoint instruction
+}
+
+// Phase 5.8: Goto
+void visit_Goto(ASTNode* node) {
+    char* label_adi = node->goto_data.label_adi->value;
+    char buffer[256];
+    sprintf(buffer, "    jmp __label_%s", label_adi);
+    asm_append(&text_section, "    ; --- Goto ---");
+    asm_append(&text_section, buffer);
+}
+
+// Phase 5.8: Label definition
+void visit_Label(ASTNode* node) {
+    char* label_adi = node->label_data.label_adi->value;
+    char buffer[256];
+    sprintf(buffer, "__label_%s:", label_adi);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- Label ---");
+}
+
+// Phase 5.8: Ternary operator (condition ? true_val : false_val)
+void visit_Ternary(ASTNode* node) {
+    int etiket_false = etiket_sayaci++;
+    int etiket_end = etiket_sayaci++;
+    char buffer[256];
+
+    asm_append(&text_section, "    ; --- Ternary Operator ---");
+    
+    // Evaluate condition
+    visit(node->ternary_data.kosul);
+    asm_append(&text_section, "    test rax, rax");
+    sprintf(buffer, "    jz .L%d", etiket_false);  // Jump to false_val if condition is 0
+    asm_append(&text_section, buffer);
+    
+    // True branch
+    visit(node->ternary_data.dogru_deger);  // Result in rax
+    sprintf(buffer, "    jmp .L%d", etiket_end);  // Skip false branch
+    asm_append(&text_section, buffer);
+    
+    // False branch
+    sprintf(buffer, ".L%d:", etiket_false);
+    asm_append(&text_section, buffer);
+    visit(node->ternary_data.yanlis_deger);  // Result in rax
+    
+    // End
+    sprintf(buffer, ".L%d:", etiket_end);
     asm_append(&text_section, buffer);
 }
 
@@ -1939,13 +2025,33 @@ void visit(ASTNode* node) {
             break;
             
         // YENİ: Döngü Bitir Komutu (break)
-        case AST_DONGU_BITIR_KOMUTU:
+        case AST_BREAK:
             visit_DonguBitirKomutu(node);
             break;
 
         // YENİ: Continue Komutu
-        case AST_DONGU_DEVAM_KOMUTU:
-            // TODO: Implement continue (jump to loop start)
+        case AST_CONTINUE:
+            visit_DonguDevamKomutu(node);
+            break;
+
+        // Phase 5.8: Stop (debugging breakpoint)
+        case AST_STOP:
+            visit_Stop(node);
+            break;
+
+        // Phase 5.8: Goto
+        case AST_GOTO:
+            visit_Goto(node);
+            break;
+
+        // Phase 5.8: Label
+        case AST_LABEL:
+            visit_Label(node);
+            break;
+
+        // Phase 5.8: Ternary operator
+        case AST_TERNARY:
+            visit_Ternary(node);
             break;
 
         // YENİ: İşleç Tanımlama

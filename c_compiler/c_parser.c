@@ -30,8 +30,6 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_YAPI_FOR: return "FOR";
         case TOKEN_YAPI_TO: return "TO";
         case TOKEN_YAPI_STEP: return "STEP";
-        case TOKEN_YAPI_DONGU_BITIR: return "DÖNGÜ_BITIR";
-        case TOKEN_YAPI_DONGU_DEVAM: return "continue";
         case TOKEN_YAPI_SON: return "SON";
         case TOKEN_LEFT_PAREN: return "(";
         case TOKEN_RIGHT_PAREN: return ")";
@@ -58,6 +56,11 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_BITWISE_NOT: return "~";
         case TOKEN_LSHIFT: return "<<";
         case TOKEN_RSHIFT: return ">>";
+        case TOKEN_QUESTION: return "?";
+        case TOKEN_BREAK: return "break";
+        case TOKEN_CONTINUE: return "continue";
+        case TOKEN_STOP: return "stop";
+        case TOKEN_GOTO: return "goto";
         default: return "UNKNOWN";
     }
 }
@@ -470,6 +473,8 @@ ASTNode* donus_komutu();
 
 int get_precedence(TokenType type) {
     switch (type) {
+        case TOKEN_QUESTION:  // Phase 5.8: Ternary operator (?:)
+            return 2;
         case TOKEN_OR:
             return 3;
         case TOKEN_AND:
@@ -827,6 +832,24 @@ ASTNode* ikili_islem(int onceki_oncelik) {
         if (oncelik <= onceki_oncelik) {
             break;
         }
+
+        // Phase 5.8: Ternary operator (condition ? true_val : false_val)
+        if (op_type == TOKEN_QUESTION) {
+            consume(TOKEN_QUESTION);
+            ASTNode* dogru_deger = ifade();  // True value
+            consume(TOKEN_COLON);            // :
+            ASTNode* yanlis_deger = ikili_islem(oncelik);  // False value
+
+            ASTNode* ternary_node = (ASTNode*)malloc(sizeof(ASTNode));
+            if (ternary_node == NULL) return NULL;
+            ternary_node->type = AST_TERNARY;
+            ternary_node->ternary_data.kosul = sol;
+            ternary_node->ternary_data.dogru_deger = dogru_deger;
+            ternary_node->ternary_data.yanlis_deger = yanlis_deger;
+            sol = ternary_node;
+            continue;
+        }
+
         consume(op_type);
         ASTNode* sag = ikili_islem(oncelik);
         ASTNode* yeni_node = (ASTNode*)malloc(sizeof(ASTNode));
@@ -1269,21 +1292,48 @@ ASTNode* komut() {
         return dongu_komutu(); // Kendi içinde 'end while'ı yönetir
     }
     
-    // 6. DÖNGÜ_BITIR/break (Noktalı virgülsüz)
-    if (current_token->type == TOKEN_YAPI_DONGU_BITIR) {
-        consume(TOKEN_YAPI_DONGU_BITIR);
-        specs_check_no_semicolon("DÖNGÜ_BITIR");
+    // 6. break (Noktalı virgülsüz)
+    if (current_token->type == TOKEN_BREAK) {
+        consume(TOKEN_BREAK);
+        specs_check_no_semicolon("break");
         ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
-        node->type = AST_DONGU_BITIR_KOMUTU;
+        node->type = AST_BREAK;
         return node;
     }
 
     // 7. continue (Noktalı virgülsüz)
-    if (current_token->type == TOKEN_YAPI_DONGU_DEVAM) {
-        consume(TOKEN_YAPI_DONGU_DEVAM);
+    if (current_token->type == TOKEN_CONTINUE) {
+        consume(TOKEN_CONTINUE);
         specs_check_no_semicolon("continue");
         ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
-        node->type = AST_DONGU_DEVAM_KOMUTU;
+        node->type = AST_CONTINUE;
+        return node;
+    }
+
+    // Phase 5.8: stop (debugging breakpoint)
+    if (current_token->type == TOKEN_STOP) {
+        consume(TOKEN_STOP);
+        specs_check_no_semicolon("stop");
+        ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+        node->type = AST_STOP;
+        return node;
+    }
+
+    // Phase 5.8: goto label_name
+    if (current_token->type == TOKEN_GOTO) {
+        consume(TOKEN_GOTO);
+        if (current_token->type != TOKEN_IDENTIFIER) {
+            parseError("Label name expected after goto", "IDENTIFIER");
+        }
+        Token* label_adi = (Token*)malloc(sizeof(Token));
+        label_adi->type = current_token->type;
+        label_adi->value = strdup(current_token->value);
+        consume(TOKEN_IDENTIFIER);
+        specs_check_no_semicolon("goto");
+        
+        ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+        node->type = AST_GOTO;
+        node->goto_data.label_adi = label_adi;
         return node;
     }
     
@@ -1324,7 +1374,96 @@ ASTNode* komut() {
 
     // 8. Atama veya İfade Komutu (Noktalı virgülsüz)
     if (current_token->type == TOKEN_IDENTIFIER) {
+        // Phase 5.8: Check for label (identifier followed by colon)
+        Token* peek_token = peekNextToken();
+        if (peek_token && peek_token->type == TOKEN_COLON) {
+            Token* label_adi = (Token*)malloc(sizeof(Token));
+            label_adi->type = current_token->type;
+            label_adi->value = strdup(current_token->value);
+            consume(TOKEN_IDENTIFIER);
+            consume(TOKEN_COLON);
+            specs_check_no_semicolon("label");
+            
+            ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+            node->type = AST_LABEL;
+            node->label_data.label_adi = label_adi;
+            return node;
+        }
+
         ASTNode* sol_node = ifade(); // 'birincil()' çağrılır
+
+        // Phase 5.7: Increment/Decrement (x++, x--)
+        if (sol_node->type == AST_DEGISKEN &&
+            (current_token->type == TOKEN_INCREMENT || current_token->type == TOKEN_DECREMENT)) {
+            TokenType op_type = current_token->type;
+            consume(op_type);
+
+            Token* ad_token = sol_node->degisken_data.ad;
+
+            // Create: x = x + 1 or x = x - 1
+            ASTNode* var_ref = (ASTNode*)malloc(sizeof(ASTNode));
+            var_ref->type = AST_DEGISKEN;
+            Token* var_token = (Token*)malloc(sizeof(Token));
+            var_token->type = TOKEN_IDENTIFIER;
+            var_token->value = strdup(ad_token->value);
+            var_token->line = ad_token->line;
+            var_token->column = ad_token->column;
+            var_ref->degisken_data.ad = var_token;
+
+            ASTNode* one_node = (ASTNode*)malloc(sizeof(ASTNode));
+            one_node->type = AST_SAYI;
+            one_node->sabit_data.deger = strdup("1");
+
+            ASTNode* binary_op = (ASTNode*)malloc(sizeof(ASTNode));
+            binary_op->type = AST_IKILI_ISLEM;
+            binary_op->ikili_islem_data.sol = var_ref;
+            binary_op->ikili_islem_data.sag = one_node;
+            binary_op->ikili_islem_data.operator_type = (op_type == TOKEN_INCREMENT) ? TOKEN_PLUS : TOKEN_MINUS;
+
+            ASTNode* atama_node = createAST_AtamaKomutu(ad_token, binary_op);
+            free(sol_node);
+            return atama_node;
+        }
+
+        // Phase 5.7: Compound Assignment (+=, -=, *=, /=)
+        if (sol_node->type == AST_DEGISKEN &&
+            (current_token->type == TOKEN_PLUS_ASSIGN || current_token->type == TOKEN_MINUS_ASSIGN ||
+             current_token->type == TOKEN_MUL_ASSIGN || current_token->type == TOKEN_DIV_ASSIGN)) {
+            TokenType compound_op = current_token->type;
+            consume(compound_op);
+            ASTNode* sag_ifade = ifade();
+
+            Token* ad_token = sol_node->degisken_data.ad;
+
+            // Create: x = x op value
+            ASTNode* var_ref = (ASTNode*)malloc(sizeof(ASTNode));
+            var_ref->type = AST_DEGISKEN;
+            Token* var_token = (Token*)malloc(sizeof(Token));
+            var_token->type = TOKEN_IDENTIFIER;
+            var_token->value = strdup(ad_token->value);
+            var_token->line = ad_token->line;
+            var_token->column = ad_token->column;
+            var_ref->degisken_data.ad = var_token;
+
+            TokenType binary_op_type;
+            switch (compound_op) {
+                case TOKEN_PLUS_ASSIGN: binary_op_type = TOKEN_PLUS; break;
+                case TOKEN_MINUS_ASSIGN: binary_op_type = TOKEN_MINUS; break;
+                case TOKEN_MUL_ASSIGN: binary_op_type = TOKEN_MUL; break;
+                case TOKEN_DIV_ASSIGN: binary_op_type = TOKEN_DIV; break;
+                default: binary_op_type = TOKEN_PLUS; break;
+            }
+
+            ASTNode* binary_op = (ASTNode*)malloc(sizeof(ASTNode));
+            binary_op->type = AST_IKILI_ISLEM;
+            binary_op->ikili_islem_data.sol = var_ref;
+            binary_op->ikili_islem_data.sag = sag_ifade;
+            binary_op->ikili_islem_data.operator_type = binary_op_type;
+
+            ASTNode* atama_node = createAST_AtamaKomutu(ad_token, binary_op);
+            free(sol_node);
+            return atama_node;
+        }
 
         // DURUM 7.1: ATAMA (örn: x = 5, arr[i] = 5, p.x = 10)
         // 'ifade()' bize bir AST_DEGISKEN (x), AST_ARRAY_ERISIM veya AST_STRUCT_FIELD_ACCESS döndürdüyse
@@ -1426,24 +1565,19 @@ ASTNode* dongu_komutu() {
     // Check if there's a condition or it's an infinite loop
     ASTNode* kosul_ifadesi = NULL;
     
-    // If next token is not a block start, it's a conditioned while
-    // while condition do\n body... end
-    if (current_token->type != TOKEN_YAPI_SON && 
-        current_token->type != TOKEN_YAPI_DO &&
-        current_token->type != TOKEN_TANIMLA_SAYI &&
-        current_token->type != TOKEN_TANIMLA_METIN &&
-        current_token->type != TOKEN_IDENTIFIER &&
-        current_token->type != TOKEN_YAPI_YAZDIR &&
-        current_token->type != TOKEN_YAPI_KOSUL_EGER &&
-        current_token->type != TOKEN_YAPI_DONGU &&
-        current_token->type != TOKEN_YAPI_FOR) {
+    // If next token is NOT 'do'/'then' or block starter, parse condition
+    // Infinite loop: while do ... end or while \n body... end
+    // Conditioned: while condition do ... end
+    if (current_token->type != TOKEN_YAPI_DO &&
+        current_token->type != TOKEN_YAPI_KOSUL_ISE &&
+        current_token->type != TOKEN_YAPI_SON) {
         // Parse condition
         kosul_ifadesi = ifade();
     }
     
-    // Optional 'do' keyword after condition
-    if (current_token->type == TOKEN_YAPI_DO) {
-        consume(TOKEN_YAPI_DO);
+    // Optional 'do' or 'then' keyword after condition
+    if (current_token->type == TOKEN_YAPI_DO || current_token->type == TOKEN_YAPI_KOSUL_ISE) {
+        consume(current_token->type);
     }
     
     ASTNode* govde_blogu = blok(); 
@@ -1483,6 +1617,11 @@ ASTNode* for_komutu() {
     if (current_token->type == TOKEN_YAPI_STEP) {
         consume(TOKEN_YAPI_STEP);
         adim_ifade = ifade();
+    }
+    
+    // Optional 'do' or 'then' before body
+    if (current_token->type == TOKEN_YAPI_DO || current_token->type == TOKEN_YAPI_KOSUL_ISE) {
+        consume(current_token->type);
     }
     
     // Parse body
@@ -1566,7 +1705,9 @@ ASTNode* blok() {
     while (current_token != NULL && // NULL kontrolü eklendi
            current_token->type != TOKEN_EOF &&
            current_token->type != TOKEN_YAPI_SON &&
-           current_token->type != TOKEN_YAPI_KOSUL_DEGILSE) 
+           current_token->type != TOKEN_YAPI_KOSUL_DEGILSE &&
+           current_token->type != TOKEN_YAPI_CASE &&
+           current_token->type != TOKEN_YAPI_DEFAULT) 
     {
         // Boş noktalı virgülleri atla (Sadece tanımlamalar için)
         if (current_token->type == TOKEN_SEMICOLON) {
