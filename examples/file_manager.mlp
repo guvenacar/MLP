@@ -1,0 +1,462 @@
+-- File Manager Example for MLP
+-- Demonstrates: Directory operations, file info, path utilities
+-- Phase 5.3 - Advanced I/O & Network Utilities
+
+print "===================================="
+print "MLP File Manager Demo"
+print "===================================="
+print ""
+
+-- ==================== Global State ====================
+
+string current_directory = ""
+
+-- ==================== Utility Functions ====================
+
+function init_file_manager() then
+    current_directory = get_current_dir()
+    print "File Manager initialized"
+    print "Current directory: "
+    print current_directory
+    print ""
+end
+
+function show_prompt() then
+    print ""
+    print current_directory
+    print " > "
+end
+
+-- ==================== Directory Listing ====================
+
+function list_files() then
+    print "=== Directory Contents ==="
+    print "Location: "
+    print current_directory
+    print ""
+
+    list[string] entries = list_directory(current_directory)
+
+    if entries.size() == 0 then
+        print "(empty directory)"
+        list_destroy(entries)
+        return 0
+    end
+
+    int total_files = 0
+    int total_dirs = 0
+    int total_size = 0
+
+    int i = 0
+    while i < entries.size()
+        string name = entries.get(i)
+        string full_path = join_path_2(current_directory, name)
+
+        -- Get file info
+        int info = get_file_info(full_path)
+        if info != 0 then
+            int is_dir = file_info_is_directory(info)
+            int size = file_info_size(info)
+            int mtime = file_info_modified(info)
+
+            -- Format output
+            if is_dir == 1 then
+                print "[DIR]  "
+                total_dirs = total_dirs + 1
+            else
+                print "[FILE] "
+                total_files = total_files + 1
+                total_size = total_size + size
+            end
+
+            print name
+
+            if is_dir == 0 then
+                print " ("
+                print size
+                print " bytes)"
+            end
+
+            print ""
+            mlp_free(info)
+        end
+
+        i = i + 1
+    end
+
+    list_destroy(entries)
+
+    print ""
+    print "Total: "
+    print total_dirs
+    print " directories, "
+    print total_files
+    print " files ("
+    print total_size
+    print " bytes)"
+
+    return 1
+end
+
+-- ==================== Detailed File Info ====================
+
+function show_file_info(filename) then
+    string full_path = join_path_2(current_directory, filename)
+
+    int info = get_file_info(full_path)
+    if info == 0 then
+        print "Error: File not found: "
+        print filename
+        return 0
+    end
+
+    print "=== File Information ==="
+    print "Path: "
+    print full_path
+    print ""
+
+    -- Basic info
+    int is_dir = file_info_is_directory(info)
+    print "Type: "
+    if is_dir == 1 then
+        print "Directory"
+    else
+        print "File"
+    end
+    print ""
+
+    -- Size
+    int size = file_info_size(info)
+    print "Size: "
+    print size
+    print " bytes"
+
+    -- Human readable size
+    if size > 1048576 then
+        print " ("
+        print size / 1048576
+        print " MB)"
+    else if size > 1024 then
+        print " ("
+        print size / 1024
+        print " KB)"
+    end
+    print ""
+
+    -- Timestamps
+    int mtime = file_info_modified(info)
+    string modified = format_timestamp(mtime, "%Y-%m-%d %H:%M:%S")
+    print "Modified: "
+    print modified
+    print ""
+
+    -- Permissions
+    int perms = file_info_permissions(info)
+    print "Permissions: "
+    print perms
+    print " (octal)"
+    print ""
+
+    -- Access flags
+    int readable = file_info_is_readable(info)
+    int writable = file_info_is_writable(info)
+    print "Readable: "
+    if readable == 1 then
+        print "Yes"
+    else
+        print "No"
+    end
+    print ""
+
+    print "Writable: "
+    if writable == 1 then
+        print "Yes"
+    else
+        print "No"
+    end
+    print ""
+
+    -- Path components
+    string dir = get_directory(full_path)
+    string name = get_file_name(full_path)
+    string ext = get_file_extension(full_path)
+
+    print ""
+    print "Directory: "
+    print dir
+    print ""
+    print "Filename: "
+    print name
+    print ""
+    print "Extension: "
+    if string_length(ext) > 0 then
+        print ext
+    else
+        print "(none)"
+    end
+    print ""
+
+    mlp_free(info)
+    return 1
+end
+
+-- ==================== Directory Navigation ====================
+
+function change_to_directory(dirname) then
+    string new_path = ""
+
+    -- Handle special cases
+    if dirname == ".." then
+        -- Go up one level
+        new_path = get_directory(current_directory)
+        if string_length(new_path) == 0 then
+            new_path = "/"
+        end
+    else if string_char_at(dirname, 0) == "/" then
+        -- Absolute path
+        new_path = dirname
+    else
+        -- Relative path
+        new_path = join_path_2(current_directory, dirname)
+    end
+
+    -- Check if directory exists
+    if directory_exists(new_path) == 0 then
+        print "Error: Directory not found: "
+        print new_path
+        return 0
+    end
+
+    -- Change directory
+    int result = change_directory(new_path)
+    if result != 0 then
+        print "Error: Cannot change to directory"
+        return 0
+    end
+
+    current_directory = get_current_dir()
+    print "Changed to: "
+    print current_directory
+
+    return 1
+end
+
+-- ==================== File Operations ====================
+
+function create_new_directory(dirname) then
+    string full_path = join_path_2(current_directory, dirname)
+
+    if directory_exists(full_path) == 1 then
+        print "Error: Directory already exists"
+        return 0
+    end
+
+    int result = create_directory(full_path)
+    if result != 0 then
+        print "Error: Failed to create directory"
+        return 0
+    end
+
+    print "Created directory: "
+    print dirname
+    return 1
+end
+
+function remove_empty_directory(dirname) then
+    string full_path = join_path_2(current_directory, dirname)
+
+    if directory_exists(full_path) == 0 then
+        print "Error: Directory not found"
+        return 0
+    end
+
+    int result = remove_directory(full_path)
+    if result != 0 then
+        int error = get_error_code()
+        if error == 3 then
+            print "Error: Directory is not empty"
+        else
+            print "Error: Failed to remove directory"
+        end
+        return 0
+    end
+
+    print "Removed directory: "
+    print dirname
+    return 1
+end
+
+function copy_file_here(source, dest_name) then
+    string dest_path = join_path_2(current_directory, dest_name)
+
+    -- Check if source exists
+    if file_exists(source) == 0 then
+        print "Error: Source file not found: "
+        print source
+        return 0
+    end
+
+    int result = copy_file(source, dest_path)
+    if result != 0 then
+        print "Error: Failed to copy file"
+        return 0
+    end
+
+    print "Copied to: "
+    print dest_path
+    return 1
+end
+
+-- ==================== Search Functions ====================
+
+function find_files_by_extension(extension) then
+    print "=== Files with extension "
+    print extension
+    print " ==="
+    print ""
+
+    list[string] entries = list_directory(current_directory)
+    int found = 0
+
+    int i = 0
+    while i < entries.size()
+        string name = entries.get(i)
+        string ext = get_file_extension(name)
+
+        if ext == extension then
+            string full_path = join_path_2(current_directory, name)
+            int info = get_file_info(full_path)
+
+            if info != 0 then
+                int size = file_info_size(info)
+                print "  "
+                print name
+                print " ("
+                print size
+                print " bytes)"
+                print ""
+                mlp_free(info)
+                found = found + 1
+            end
+        end
+
+        i = i + 1
+    end
+
+    list_destroy(entries)
+
+    print ""
+    print "Found "
+    print found
+    print " files"
+
+    return found
+end
+
+-- ==================== Statistics ====================
+
+function show_directory_statistics() then
+    print "=== Directory Statistics ==="
+    print "Path: "
+    print current_directory
+    print ""
+
+    list[string] entries = list_directory(current_directory)
+
+    int file_count = 0
+    int dir_count = 0
+    int total_size = 0
+    int largest_size = 0
+    string largest_file = ""
+
+    int i = 0
+    while i < entries.size()
+        string name = entries.get(i)
+        string full_path = join_path_2(current_directory, name)
+
+        int info = get_file_info(full_path)
+        if info != 0 then
+            if file_info_is_directory(info) == 1 then
+                dir_count = dir_count + 1
+            else
+                file_count = file_count + 1
+                int size = file_info_size(info)
+                total_size = total_size + size
+
+                if size > largest_size then
+                    largest_size = size
+                    largest_file = name
+                end
+            end
+            mlp_free(info)
+        end
+
+        i = i + 1
+    end
+
+    list_destroy(entries)
+
+    print "Directories: "
+    print dir_count
+    print ""
+    print "Files: "
+    print file_count
+    print ""
+    print "Total size: "
+    print total_size
+    print " bytes"
+    print ""
+
+    if file_count > 0 then
+        print "Average file size: "
+        print total_size / file_count
+        print " bytes"
+        print ""
+        print "Largest file: "
+        print largest_file
+        print " ("
+        print largest_size
+        print " bytes)"
+        print ""
+    end
+end
+
+-- ==================== Demo Runner ====================
+
+function run_file_manager_demo() then
+    init_file_manager()
+
+    print "--- Demo 1: List Current Directory ---"
+    list_files()
+    print ""
+
+    print "--- Demo 2: Directory Statistics ---"
+    show_directory_statistics()
+    print ""
+
+    print "--- Demo 3: Find MLP Files ---"
+    find_files_by_extension(".mlp")
+    print ""
+
+    print "--- Demo 4: Create Test Directory ---"
+    create_new_directory("test_fm_dir")
+
+    print "--- Demo 5: Navigate to Test Directory ---"
+    change_to_directory("test_fm_dir")
+    list_files()
+
+    print "--- Demo 6: Go Back ---"
+    change_to_directory("..")
+
+    print "--- Demo 7: Remove Test Directory ---"
+    remove_empty_directory("test_fm_dir")
+
+    print ""
+    print "===================================="
+    print "File Manager Demo Complete!"
+    print "===================================="
+end
+
+-- ==================== Main ====================
+
+run_file_manager_demo()
