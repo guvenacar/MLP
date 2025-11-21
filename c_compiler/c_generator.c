@@ -1685,6 +1685,31 @@ void visit_IkiliIslem(ASTNode* node) {
             asm_append(&text_section, "    movzx rax, al");
             break;
 
+        // Phase 5.4: Modulo operator
+        case TOKEN_MOD: // %
+            asm_append(&text_section, "    cqo");          // RAX'i RDX:RAX'e genişlet (sign extend)
+            asm_append(&text_section, "    idiv rbx");     // RAX / RBX -> bölüm RAX'te, kalan RDX'te
+            asm_append(&text_section, "    mov rax, rdx"); // Kalanı RAX'e taşı
+            break;
+
+        // Phase 5.4: Logical operators
+        case TOKEN_AND: // and
+            asm_append(&text_section, "    test rax, rax"); // RAX sıfır mı?
+            asm_append(&text_section, "    setne al");      // RAX != 0 ise AL = 1
+            asm_append(&text_section, "    movzx rax, al");
+            asm_append(&text_section, "    test rbx, rbx"); // RBX sıfır mı?
+            asm_append(&text_section, "    setne bl");      // RBX != 0 ise BL = 1
+            asm_append(&text_section, "    and al, bl");    // AL = AL AND BL
+            asm_append(&text_section, "    movzx rax, al"); // Sonuç RAX'te
+            break;
+
+        case TOKEN_OR: // or
+            asm_append(&text_section, "    or rax, rbx");   // RAX = RAX OR RBX
+            asm_append(&text_section, "    test rax, rax"); // Sonuç sıfır mı?
+            asm_append(&text_section, "    setne al");      // Sıfır değilse AL = 1
+            asm_append(&text_section, "    movzx rax, al"); // Sonuç 0 veya 1
+            break;
+
         default:
             fprintf(stderr, "HATA [Generator]: Desteklenmeyen ikili operatör tipi: %d\n",
                 node->ikili_islem_data.operator_type);
