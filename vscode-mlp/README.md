@@ -24,8 +24,9 @@ Syntax highlighting extension for **MLP (Multi-Language Programming)** - a revol
 ### From VSIX (Recommended)
 ```bash
 cd vscode-mlp
+npm install -g vsce
 vsce package
-code --install-extension mlp-language-1.0.0.vsix
+code --install-extension mlp-language-1.1.0.vsix
 ```
 
 ### From Source
@@ -35,7 +36,52 @@ code --install-extension mlp-language-1.0.0.vsix
 2. Restart VS Code
 3. Open any `.mlp` file to see syntax highlighting!
 
+## ✨ What's New in v1.1.0
+
+- 🎯 **Code Snippets**: 15+ ready-to-use snippets for faster coding
+- 📦 **Project Templates**: 5 starter templates (Hello World, Calculator, Fibonacci, List Demo, File I/O)
+- 📚 **Quick Start Guide**: Complete guide for starting new MLP projects
+- 🚀 **Improved Workflow**: Better developer experience with auto-complete
+
 ## Usage
+
+### Quick Start
+1. Create a new folder for your project
+2. Open in VS Code: `code my-mlp-project`
+3. Create a new file: `main.mlp`
+4. Type `mlp-hello` and press `Tab` for Hello World template
+5. Or explore other snippets (see below)
+
+### Code Snippets
+
+Type these prefixes and press `Tab`:
+
+| Prefix | Description |
+|--------|-------------|
+| `mlp-hello` | Hello World program |
+| `mlp-main` | Main function |
+| `mlp-func` | Function definition |
+| `mlp-if` | If statement |
+| `mlp-ifelse` | If-else statement |
+| `mlp-while` | While loop |
+| `mlp-for` | For loop |
+| `mlp-list` | Create List<T> |
+| `mlp-struct` | Struct definition |
+| `mlp-enum` | Enum definition |
+| `mlp-switch` | Switch statement |
+| `mlp-fileread` | Read file |
+| `mlp-filewrite` | Write file |
+| `mlp-tr-hello` | Turkish Hello World |
+| `mlp-tr-func` | Turkish function |
+
+### Project Templates
+
+Ready-to-use templates in `templates/` folder:
+- `hello-world.mlp` - Simple starter
+- `calculator.mlp` - Calculator with functions
+- `fibonacci.mlp` - Fibonacci sequence
+- `list-demo.mlp` - List<T> operations
+- `file-demo.mlp` - File I/O examples
 
 Create a file with `.mlp` extension and start coding in any supported language:
 
