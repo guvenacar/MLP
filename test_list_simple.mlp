@@ -1,9 +1,0 @@
--- Test: Simple list operations
-
-list[int] numbers = list();
-
-numbers.add(10)
-numbers.add(20)
-numbers.add(30)
-
-print "List test complete"

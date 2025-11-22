@@ -1,0 +1,103 @@
+// Phase 4: Comprehensive HashMap Test
+// Tests all map operations: create, set, get, has, remove, size, clear
+
+function main()
+    print "=== HashMap Comprehensive Test ==="
+    print ""
+    
+    // Test 1: Create and basic operations
+    print "Test 1: Create map and add entries"
+    map[string:numeric] ages = map()
+    
+    ages.set("Alice", 30)
+    ages.set("Bob", 25)
+    ages.set("Charlie", 35)
+    
+    print "Added 3 entries"
+    print "Map size: "
+    print ages.size()
+    print ""
+    
+    // Test 2: Get values
+    print "Test 2: Get values"
+    print "Alice's age: "
+    print ages.get("Alice")
+    print "Bob's age: "
+    print ages.get("Bob")
+    print "Charlie's age: "
+    print ages.get("Charlie")
+    print ""
+    
+    // Test 3: Has key check
+    print "Test 3: Check if keys exist"
+    print "Has 'Alice': "
+    print ages.has("Alice")
+    print "Has 'David': "
+    print ages.has("David")
+    print ""
+    
+    // Test 4: Update existing value
+    print "Test 4: Update value"
+    ages.set("Alice", 31)
+    print "Alice's new age: "
+    print ages.get("Alice")
+    print ""
+    
+    // Test 5: Remove entry
+    print "Test 5: Remove entry"
+    ages.remove("Bob")
+    print "After removing Bob, size: "
+    print ages.size()
+    print "Has 'Bob': "
+    print ages.has("Bob")
+    print ""
+    
+    // Test 6: Numeric keys
+    print "Test 6: Map with numeric keys"
+    map[numeric:string] scores = map()
+    scores.set(100, "Perfect")
+    scores.set(90, "Excellent")
+    scores.set(80, "Good")
+    
+    print "Score 100: "
+    print scores.get(100)
+    print "Score 90: "
+    print scores.get(90)
+    print "Scores map size: "
+    print scores.size()
+    print ""
+    
+    // Test 7: Clear map
+    print "Test 7: Clear map"
+    ages.clear()
+    print "After clear, ages size: "
+    print ages.size()
+    print "Has 'Alice': "
+    print ages.has("Alice")
+    print ""
+    
+    // Test 8: Multiple sets and gets
+    print "Test 8: Multiple operations"
+    map[string:numeric] inventory = map()
+    inventory.set("apples", 50)
+    inventory.set("oranges", 30)
+    inventory.set("bananas", 20)
+    
+    print "Initial inventory size: "
+    print inventory.size()
+    
+    inventory.set("apples", 45)  // Update
+    inventory.set("grapes", 15)  // Add new
+    inventory.remove("bananas")   // Remove
+    
+    print "Final inventory size: "
+    print inventory.size()
+    print "Apples: "
+    print inventory.get("apples")
+    print "Grapes: "
+    print inventory.get("grapes")
+    print ""
+    
+    print "=== All Map Tests Complete ==="
+    return 0
+end function

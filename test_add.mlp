@@ -1,6 +1,0 @@
-function add(a, b) then
-    return a + b
-end
-
-int result = add(5, 3);
-print result

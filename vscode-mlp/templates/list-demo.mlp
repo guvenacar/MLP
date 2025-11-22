@@ -1,0 +1,43 @@
+// MLP List<T> Demo Project
+// Demonstrating List operations
+
+print "List<T> Demo"
+print "============"
+
+// Create a list
+list<int> numbers = list<int>();
+
+print "Adding numbers to list..."
+numbers.add(10)
+numbers.add(20)
+numbers.add(30)
+numbers.add(40)
+numbers.add(50)
+
+print "List size: "
+print numbers.size()
+
+// Access elements
+print "First element: "
+print numbers.get(0)
+
+print "Third element: "
+print numbers.get(2)
+
+// Modify element
+print "Changing second element to 99..."
+numbers.set(1, 99)
+
+print "Second element now: "
+print numbers.get(1)
+
+// Print all elements
+print "All elements:"
+int i = 0
+while i < numbers.size() do
+    print "Element "
+    print i
+    print ": "
+    print numbers.get(i)
+    i = i + 1
+end

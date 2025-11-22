@@ -1,6 +1,0 @@
-int x = 42;
-int y = 10;
-
-if x > y then
-    print("OK")
-endif

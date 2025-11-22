@@ -1,6 +1,6 @@
 # MLP API Reference
 
-**Version:** Phase 5.1
+**Version:** Phase 5.3
 **Last Updated:** November 21, 2025
 
 ---
@@ -12,6 +12,11 @@
 | **Command-Line Args** | argc, argv | Phase 5.1 🔄 |
 | **Enhanced String Ops** | 4 new functions | Phase 5.1 🔄 |
 | **File I/O** | 6 functions | Phase 3 ✅ |
+| **Binary I/O** | 4 functions | Phase 5.3 🔄 |
+| **Directory Ops** | 6 functions | Phase 5.3 🔄 |
+| **Process Control** | 4 functions | Phase 5.3 🔄 |
+| **Time Utilities** | 4 functions | Phase 5.3 🔄 |
+| **Path Utilities** | 4 functions | Phase 5.3 🔄 |
 | **String Ops** | 15 functions (6 existing + 9 new) | Phase 3 ✅ |
 | **Type Conversions** | 6 functions | Phase 4 ✅ |
 | **Math Operations** | 4 functions | Phase 4 ✅ |
@@ -53,6 +58,136 @@ Check if file exists.
 Get file size in bytes.
 - **Returns:** Size or -1 on error
 - **Example:** `int size = file_size("data.bin");`
+
+---
+
+## 📦 Binary File I/O (Phase 5.3) 🔄
+
+### `read_binary(path: string) -> pointer`
+Read entire file as byte array.
+- **Returns:** Pointer to allocated bytes, 0 on error
+- **Example:** `int data = read_binary("program.o");`
+
+### `write_binary(path: string, data: pointer, size: int) -> int`
+Write byte array to file.
+- **Returns:** 0 on success, -1 on error
+- **Example:** `write_binary("output.bin", buffer, 1024);`
+
+### `get_file_info(path: string) -> FileInfo*`
+Get file metadata (size, modified time, permissions).
+- **Returns:** Pointer to FileInfo struct, 0 if not found
+- **Example:** `int info = get_file_info("source.mlp");`
+
+### `copy_file(source: string, dest: string) -> int`
+Copy file from source to destination.
+- **Returns:** 0 on success, -1 on error
+- **Example:** `copy_file("original.txt", "backup.txt");`
+
+---
+
+## 📂 Directory Operations (Phase 5.3) 🔄
+
+### `list_directory(path: string) -> list[string]`
+List files and subdirectories in directory.
+- **Returns:** List of entry names
+- **Example:** `list[string] files = list_directory("src");`
+
+### `create_directory(path: string) -> int`
+Create new directory.
+- **Returns:** 0 on success, -1 on error
+- **Example:** `create_directory("build/obj");`
+
+### `remove_directory(path: string) -> int`
+Remove empty directory.
+- **Returns:** 0 on success, -1 on error
+- **Example:** `remove_directory("temp");`
+
+### `directory_exists(path: string) -> int`
+Check if directory exists.
+- **Returns:** 1 if exists, 0 otherwise
+- **Example:** `if directory_exists("build") == 1 then`
+
+### `get_current_dir() -> string`
+Get current working directory.
+- **Returns:** Absolute path to current directory
+- **Example:** `string cwd = get_current_dir();`
+
+### `change_directory(path: string) -> int`
+Change current working directory.
+- **Returns:** 0 on success, -1 on error
+- **Example:** `change_directory("src");`
+
+---
+
+## 🔧 Process Control (Phase 5.3) 🔄
+
+### `execute_command(cmd: string) -> int`
+Execute shell command and return exit code.
+- **Returns:** Exit code (0-255), -1 on execution failure
+- **Example:** `int result = execute_command("nasm -f elf64 file.asm");`
+
+### `get_command_output(cmd: string) -> string`
+Execute command and capture stdout.
+- **Returns:** Command output as string
+- **Example:** `string branch = get_command_output("git branch --show-current");`
+
+### `get_process_id() -> int`
+Get current process ID.
+- **Returns:** PID (positive integer)
+- **Example:** `int pid = get_process_id();`
+
+### `get_parent_process_id() -> int`
+Get parent process ID.
+- **Returns:** PPID (positive integer)
+- **Example:** `int ppid = get_parent_process_id();`
+
+---
+
+## ⏰ Time Utilities (Phase 5.3) 🔄
+
+### `format_timestamp(timestamp: int, format: string) -> string`
+Format Unix timestamp to string.
+- **Returns:** Formatted date/time string
+- **Example:** `string date = format_timestamp(ts, "%Y-%m-%d %H:%M:%S");`
+
+### `parse_timestamp(date_string: string) -> int`
+Parse date string to Unix timestamp.
+- **Returns:** Timestamp, 0 on parse error
+- **Example:** `int ts = parse_timestamp("2025-11-21");`
+
+### `get_milliseconds() -> int`
+Get high-precision time for profiling.
+- **Returns:** Milliseconds (monotonic)
+- **Example:** `int start = get_milliseconds();`
+
+### `get_time_string() -> string`
+Get current time as formatted string.
+- **Returns:** "YYYY-MM-DD HH:MM:SS"
+- **Example:** `string now = get_time_string();`
+
+---
+
+## 📁 Path Utilities (Phase 5.3) 🔄
+
+### `join_path(parts: string[], count: int) -> string`
+Join path components with separator.
+- **Returns:** Joined path string
+- **Example:** `string path = join_path_2("build", "output.o");`
+
+### `get_file_extension(path: string) -> string`
+Extract file extension from path.
+- **Returns:** Extension including dot (e.g., ".txt")
+- **Example:** `string ext = get_file_extension("file.mlp");`
+
+### `get_file_name(path: string) -> string`
+Extract filename from path.
+- **Returns:** Filename with extension
+- **Example:** `string name = get_file_name("/home/user/doc.txt");`
+
+### `get_directory(path: string) -> string`
+Extract directory from path.
+- **Returns:** Directory portion
+- **Example:** `string dir = get_directory("/home/user/doc.txt");`
 
 ---
 
@@ -409,11 +544,11 @@ end
 ### Functions
 
 ```mlp
-function add(a, b) then
+func add(numeric a, numeric b)
     return a + b
-end
+end func
 
-int result = add(5, 3);
+numeric result = add(5, 3)
 ```
 
 ---
@@ -434,6 +569,13 @@ int result = add(5, 3);
 - [HASHMAP_COMPILER_DESIGN.md](HASHMAP_COMPILER_DESIGN.md) - Hash map compiler integration
 - [TYPE_CONVERSIONS_DESIGN.md](TYPE_CONVERSIONS_DESIGN.md) - Type conversion utilities
 - [MATH_OPERATIONS_DESIGN.md](MATH_OPERATIONS_DESIGN.md) - Math operation utilities
+
+### Phase 5.3 Documentation
+- [BINARY_IO_DESIGN.md](docs/BINARY_IO_DESIGN.md) - Binary file I/O specification
+- [DIRECTORY_OPS_DESIGN.md](docs/DIRECTORY_OPS_DESIGN.md) - Directory operations specification
+- [PROCESS_CONTROL_DESIGN.md](docs/PROCESS_CONTROL_DESIGN.md) - Process control specification
+- [TIME_UTILITIES_DESIGN.md](docs/TIME_UTILITIES_DESIGN.md) - Time utilities specification
+- [PATH_UTILITIES_DESIGN.md](docs/PATH_UTILITIES_DESIGN.md) - Path utilities specification
 
 ### Planning & Roadmap
 - [TURING_COMPLETE_PLAN.md](TURING_COMPLETE_PLAN.md) - Development roadmap

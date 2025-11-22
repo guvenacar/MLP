@@ -1,8 +1,0 @@
--- Test struct definition only
-
-struct Person then
-    string name;
-    int age;
-end
-
-print "Struct defined (but not used)"

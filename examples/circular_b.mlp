@@ -1,0 +1,4 @@
+// File B - imports A (circular!)
+import "examples/circular_a.mlp"
+
+numeric b_value = 200

@@ -1,0 +1,11 @@
+// Main program - imports math_utils module
+
+import "examples/math_utils.mlp"
+
+numeric circumference = 2 * PI * 10
+
+print "PI value: {PI}"
+print "E value: {E}"
+print "Math version: {MATH_VERSION}"
+print "Circumference (r=10): {circumference}"
+

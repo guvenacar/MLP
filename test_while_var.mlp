@@ -1,7 +1,0 @@
-int i = 0;
-
-while i < 5
-    int x = i * 2;
-    print x
-    i = i + 1
-end

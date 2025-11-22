@@ -1,0 +1,6 @@
+// Math constants and simple variables - module to be imported
+
+numeric PI = 314
+numeric E = 271
+string MATH_VERSION = "1.0"
+

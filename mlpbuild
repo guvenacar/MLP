@@ -1,0 +1,43 @@
+#!/bin/bash
+# MLP Full Build Script - Compile, assemble, and link
+# Usage: mlpbuild <input.mlp> [output_binary]
+
+set -e
+
+if [ "$#" -lt 1 ]; then
+    echo "Kullanım: mlpbuild <girdi.mlp> [çıktı_binary]"
+    echo "Usage: mlpbuild <input.mlp> [output_binary]"
+    exit 1
+fi
+
+INPUT="$1"
+BASENAME=$(basename "$INPUT" .mlp)
+OUTPUT="${2:-$BASENAME}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MLP="$SCRIPT_DIR/mlp"
+
+# Temporary files
+ASM_FILE=$(mktemp --suffix=.asm)
+OBJ_FILE=$(mktemp --suffix=.o)
+
+echo "🚀 MLP Full Build"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Step 1: Compile to assembly
+"$MLP" "$INPUT" "$ASM_FILE"
+
+# Step 2: Assemble
+echo "⚙️  Assembly: $ASM_FILE → $OBJ_FILE"
+nasm -f elf64 "$ASM_FILE" -o "$OBJ_FILE"
+
+# Step 3: Link
+echo "🔗 Linking: $OBJ_FILE → $OUTPUT"
+gcc -no-pie "$OBJ_FILE" "$SCRIPT_DIR/runtime/runtime.o" "$SCRIPT_DIR/runtime/hashmap.o" -o "$OUTPUT" -lm
+
+# Cleanup
+rm -f "$ASM_FILE" "$OBJ_FILE"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Başarıyla oluşturuldu / Successfully built: $OUTPUT"
+echo "▶️  Çalıştırmak için / To run: ./$OUTPUT"

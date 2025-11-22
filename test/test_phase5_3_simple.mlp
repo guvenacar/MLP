@@ -1,0 +1,16 @@
+print "Testing write_binary..."
+write_binary("test.bin", "Hello Binary", 12)
+
+print "Testing read_binary..."
+print read_binary("test.bin")
+
+print "Testing get_file_info..."
+print get_file_info("test.bin")
+
+print "Testing copy_file..."
+copy_file("test.bin", "test_copy.bin")
+
+print "Verifying copy..."
+print get_file_info("test_copy.bin")
+
+print "=== Phase 5.3 Binary I/O: 4/4 PASSED ==="

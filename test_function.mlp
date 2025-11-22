@@ -1,7 +1,0 @@
--- Test function syntax
-
-function add(a, b) then
-    return a + b
-end function
-
-print add(10, 20)

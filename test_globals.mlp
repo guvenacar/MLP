@@ -1,7 +1,0 @@
--- Test global variables
-
-SAYISAL x = 10;
-METIN msg = "hello";
-
-YAZDIR x;
-YAZDIR msg;

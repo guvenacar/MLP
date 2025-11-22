@@ -1,0 +1,14 @@
+// MLP Hello World Project
+// This is a simple starter template
+
+print "Hello, World!"
+print "Welcome to MLP - Multi-Language Programming!"
+
+// Try variables
+int x = 42
+string name = "MLP Developer"
+
+print "The answer is: "
+print x
+print "Hello, "
+print name

@@ -2,7 +2,7 @@
   "name": "mlp-language",
   "displayName": "MLP Language Support",
   "description": "Syntax highlighting for MLP (Multi-Language Programming) - Multi-language syntax support for Turkish, English, Russian, Chinese, Hindi",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "mlp-lang",
   "repository": {
     "type": "git",
@@ -12,13 +12,16 @@
     "vscode": "^1.50.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Snippets"
   ],
   "keywords": [
     "mlp",
     "multi-language",
     "turkish",
-    "programming"
+    "programming",
+    "snippets",
+    "templates"
   ],
   "contributes": {
     "languages": [
@@ -34,6 +37,12 @@
         "language": "mlp",
         "scopeName": "source.mlp",
         "path": "./syntaxes/mlp.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "mlp",
+        "path": "./snippets/mlp.json"
       }
     ]
   }

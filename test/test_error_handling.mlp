@@ -1,0 +1,337 @@
+-- Phase 5.2 MLP Integration Tests - Error Handling
+-- NOTE: This test will be runnable once Claude #1 completes implementation
+
+print "===================================="
+print "Error Handling Integration Tests"
+print "===================================="
+print ""
+
+-- Test counter
+int passed = 0
+int failed = 0
+
+-- ==================== Test: Error Code Management ====================
+
+function test_error_codes() then
+    print "Test: Error Code Management"
+
+    set_error_code(0)
+    int code = get_error_code()
+    if code == 0 then
+        print "  PASS: Initial error code is 0"
+        passed = passed + 1
+    else
+        print "  FAIL: Initial error code not 0"
+        failed = failed + 1
+    end
+
+    set_error_code(42)
+    code = get_error_code()
+    if code == 42 then
+        print "  PASS: Error code set to 42"
+        passed = passed + 1
+    else
+        print "  FAIL: Error code not 42"
+        failed = failed + 1
+    end
+
+    set_error_code(-1)
+    code = get_error_code()
+    if code == -1 then
+        print "  PASS: Negative error codes work"
+        passed = passed + 1
+    else
+        print "  FAIL: Negative error codes don't work"
+        failed = failed + 1
+    end
+
+    set_error_code(0)
+    print ""
+    return 0
+end
+
+-- ==================== Test: Assertions Pass ====================
+
+function test_assertions_pass() then
+    print "Test: Assertions That Pass"
+
+    assert(1, "This should pass")
+    print "  PASS: assert(1) passed"
+    passed = passed + 1
+
+    assert(42, "Non-zero should pass")
+    print "  PASS: assert(42) passed"
+    passed = passed + 1
+
+    int x = 10
+    assert(x > 0, "x should be positive")
+    print "  PASS: assert(x > 0) passed"
+    passed = passed + 1
+
+    print ""
+    return 0
+end
+
+-- ==================== Test: Error Propagation ====================
+
+function inner_function() then
+    set_error_code(100)
+    return 0
+end
+
+function middle_function() then
+    int result = inner_function()
+    if result == 0 then
+        return 0
+    end
+    return 1
+end
+
+function outer_function() then
+    int result = middle_function()
+    if result == 0 then
+        return get_error_code()
+    end
+    return 0
+end
+
+function test_error_propagation() then
+    print "Test: Error Propagation"
+
+    int error = outer_function()
+    if error == 100 then
+        print "  PASS: Error propagated through call stack"
+        passed = passed + 1
+    else
+        print "  FAIL: Error not propagated correctly"
+        failed = failed + 1
+    end
+
+    set_error_code(0)
+    print ""
+    return 0
+end
+
+-- ==================== Test: Safe Division ====================
+
+function safe_divide(a, b) then
+    if b == 0 then
+        set_error_code(1)
+        return 0
+    end
+    set_error_code(0)
+    return a / b
+end
+
+function test_safe_divide() then
+    print "Test: Safe Division"
+
+    int result = safe_divide(10, 2)
+    int error = get_error_code()
+    if error == 0 then
+        if result == 5 then
+            print "  PASS: 10 / 2 = 5"
+            passed = passed + 1
+        else
+            print "  FAIL: 10 / 2 != 5"
+            failed = failed + 1
+        end
+    else
+        print "  FAIL: Error on valid division"
+        failed = failed + 1
+    end
+
+    result = safe_divide(10, 0)
+    error = get_error_code()
+    if error != 0 then
+        print "  PASS: Division by zero detected"
+        passed = passed + 1
+    else
+        print "  FAIL: Division by zero not detected"
+        failed = failed + 1
+    end
+
+    set_error_code(0)
+    print ""
+    return 0
+end
+
+-- ==================== Test: Precondition Checks ====================
+
+function checked_array_get(index, max) then
+    assert(index >= 0, "Index must be non-negative")
+    assert(index < max, "Index must be less than max")
+    return index * 10
+end
+
+function test_preconditions() then
+    print "Test: Precondition Checks"
+
+    int value = checked_array_get(5, 10)
+    if value == 50 then
+        print "  PASS: Valid array access"
+        passed = passed + 1
+    else
+        print "  FAIL: Invalid result"
+        failed = failed + 1
+    end
+
+    value = checked_array_get(0, 10)
+    if value == 0 then
+        print "  PASS: Boundary case (index=0)"
+        passed = passed + 1
+    else
+        print "  FAIL: Boundary case failed"
+        failed = failed + 1
+    end
+
+    print ""
+    return 0
+end
+
+-- ==================== Test: Error Reset ====================
+
+function test_error_reset() then
+    print "Test: Error Reset"
+
+    set_error_code(123)
+    set_error_code(0)
+    int code = get_error_code()
+    
+    if code == 0 then
+        print "  PASS: Error code reset to 0"
+        passed = passed + 1
+    else
+        print "  FAIL: Error code not reset"
+        failed = failed + 1
+    end
+
+    print ""
+    return 0
+end
+
+-- ==================== Test: Multiple Error States ====================
+
+function operation_that_fails() then
+    set_error_code(404)
+    return 0
+end
+
+function operation_that_succeeds() then
+    set_error_code(0)
+    return 1
+end
+
+function test_multiple_error_states() then
+    print "Test: Multiple Error States"
+
+    int result1 = operation_that_fails()
+    int error1 = get_error_code()
+    
+    if error1 == 404 then
+        print "  PASS: First operation set error 404"
+        passed = passed + 1
+    else
+        print "  FAIL: First operation error incorrect"
+        failed = failed + 1
+    end
+
+    int result2 = operation_that_succeeds()
+    int error2 = get_error_code()
+    
+    if error2 == 0 then
+        print "  PASS: Second operation cleared error"
+        passed = passed + 1
+    else
+        print "  FAIL: Second operation didn't clear error"
+        failed = failed + 1
+    end
+
+    print ""
+    return 0
+end
+
+-- ==================== Test: Assert With Computed Values ====================
+
+function test_assert_computed() then
+    print "Test: Assert With Computed Values"
+
+    int a = 5
+    int b = 3
+    int sum = a + b
+    
+    assert(sum == 8, "Sum should be 8")
+    print "  PASS: assert(sum == 8) passed"
+    passed = passed + 1
+
+    assert(sum > 0, "Sum should be positive")
+    print "  PASS: assert(sum > 0) passed"
+    passed = passed + 1
+
+    assert(sum < 100, "Sum should be less than 100")
+    print "  PASS: assert(sum < 100) passed"
+    passed = passed + 1
+
+    print ""
+    return 0
+end
+
+-- ==================== Test: Error Codes in Loops ====================
+
+function test_error_in_loop() then
+    print "Test: Error Codes in Loops"
+
+    int i = 0
+    int errors_found = 0
+    
+    while i < 5 then
+        if i == 3 then
+            set_error_code(999)
+        end
+        
+        int code = get_error_code()
+        if code != 0 then
+            errors_found = errors_found + 1
+        end
+        
+        i = i + 1
+    end
+
+    if errors_found == 2 then
+        print "  PASS: Error persisted through loop iterations"
+        passed = passed + 1
+    else
+        print "  FAIL: Error didn't persist correctly"
+        failed = failed + 1
+    end
+
+    set_error_code(0)
+    print ""
+    return 0
+end
+
+-- ==================== Run All Tests ====================
+
+test_error_codes()
+test_assertions_pass()
+test_error_propagation()
+test_safe_divide()
+test_preconditions()
+test_error_reset()
+test_multiple_error_states()
+test_assert_computed()
+test_error_in_loop()
+
+print "===================================="
+print "Results:"
+print "  Passed: "
+print passed
+print "  Failed: "
+print failed
+print "===================================="
+
+if failed > 0 then
+    exit_with_code(1)
+end
+
+exit_with_code(0)

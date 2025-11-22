@@ -1,0 +1,23 @@
+-- Phase 5.9: String Interpolation Test
+-- Test basic string interpolation with variables
+
+numeric age = 25
+string name = "Alice"
+numeric count = 42
+
+-- Test 1: Simple interpolation
+print "Hello {name}!"
+
+-- Test 2: Multiple variables
+print "Name: {name}, Age: {age}"
+
+-- Test 3: Number only
+print "Count is {count}"
+
+-- Test 4: Mixed content
+print "User {name} is {age} years old and has {count} items"
+
+-- Test 5: With expressions
+numeric x = 10
+numeric y = 20
+print "x = {x}, y = {y}"

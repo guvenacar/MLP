@@ -157,12 +157,12 @@ parse_array():
 
 ```mlp
 -- Lexer
-function json_tokenize(text) then
+func json_tokenize(text)
     -- Returns: token_count
 end function
 
 -- Parser
-function json_parse(text) then
+func json_parse(text)
     -- Tokenize first
     int count = json_tokenize(text)
     -- Parse tokens into data structure
@@ -170,11 +170,11 @@ function json_parse(text) then
 end function
 
 -- Query API (simplified for preprocessor)
-function json_get_string(key) then
+func json_get_string(key)
     -- Returns: value as string, or "" if not found
 end function
 
-function json_get_language_keyword(lang_id, english_keyword) then
+func json_get_language_keyword(lang_id, english_keyword)
     -- Special query for language definitions
     -- Returns: native keyword (e.g., "tr-TR", "if" → "eğer")
 end function

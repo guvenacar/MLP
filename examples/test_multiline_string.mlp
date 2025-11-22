@@ -1,0 +1,17 @@
+// Test multi-line strings
+
+string message = """
+Bu bir
+çok satırlı
+metin örneğidir!
+"""
+
+string code = """
+function hello()
+    print "Hello World"
+end function
+"""
+
+print message
+print "---"
+print code

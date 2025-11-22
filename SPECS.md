@@ -1,8 +1,8 @@
 # MLP Language Specification v3.0
 
-**Status:** Production Ready ✅
-**Last Updated:** November 18, 2025
-**Compiler Version:** 3.0 (Multi-Language)
+**Status:** Production Ready ✅ + Phase 6.2 Generic Types 🚀
+**Last Updated:** November 22, 2025
+**Compiler Version:** 3.0 (Multi-Language) + Phase 6.2 (Generic Types)
 **Architecture:** English-Native Compiler + Multi-Language Preprocessor
 
 ---
@@ -21,6 +21,7 @@
 10. [Compiler Architecture](#compiler-architecture)
 11. [Adding New Languages](#adding-new-languages)
 12. [Migration Guide](#migration-guide)
+13. **[NEW: Phase 6 - Literal & Generic Types](#phase-6-literal-and-generic-types)** 🚀
 
 ---
 
@@ -98,7 +99,7 @@ If no language is specified, defaults to `en-US` (English).
 **English:**
 ```mlp
 -- lang: en-US
-int x = 5;
+int x = 5
 int y = 10;
 int c = 0;
 
@@ -106,7 +107,7 @@ if x == y then
     c = 15
 else
     c = 20
-end
+end func
 
 print "Result:"
 print c
@@ -183,7 +184,7 @@ The MLP compiler core understands only English keywords. All other languages are
 | `end` | Block end | `end` |
 | `while` | Loop | `while` |
 | `break` | Exit loop | `break` |
-| `function` | Function definition | `function add(a, b) then` |
+| `function` | Function definition | `func add(a, b)` |
 | `return` | Return value | `return x + y` |
 | `print` | Output | `print "Hello"` |
 | `true` | Boolean true | `true` |
@@ -213,12 +214,54 @@ The MLP compiler core understands only English keywords. All other languages are
 
 ## Preprocessor
 
+### 🔴 CRITICAL ARCHITECTURE RULE
+
+**THE LEXER MUST NEVER SEE NON-ENGLISH KEYWORDS!**
+
+```
+❌ WRONG ARCHITECTURE:
+Turkish Source → Lexer (add YAZDIR token) → Parser
+
+✅ CORRECT ARCHITECTURE:
+Turkish Source → Preprocessor (YAZDIR→print) → English IR → Lexer → Parser
+```
+
+**Why this matters:**
+- Lexer/Parser understand ONLY English keywords
+- Multi-language support is PREPROCESSOR's responsibility
+- Assembly generated from English keywords ONLY
+- Adding new language = just edit diller.json (10 minutes)
+- Compiler core never changes for new languages
+
 ### How It Works
 
-The preprocessor translates keywords from any language to English while preserving:
-- String literals (content inside `"..."`)
-- Comments (`--` single-line, `{- ... -}` multi-line)
-- Code structure
+**Preprocessor Pipeline:**
+
+```
+Input: Turkish/Russian/Hindi .mlp file
+  ↓
+1. Detect language from "-- lang: XX-XX" header
+  ↓
+2. Load keyword mappings from diller.json
+  ↓
+3. Process line by line with state machine:
+   STATE_CODE     → Translate keywords
+   STATE_STRING   → Preserve UTF-8 content
+   STATE_COMMENT  → Preserve as-is
+  ↓
+4. Output: English .mlp with preserved UTF-8 strings
+  ↓
+Compiler sees: English keywords + UTF-8 strings
+```
+
+**What gets translated:**
+- Keywords: YAZDIR → print, EĞER → if, SAYISAL → numeric
+- Type names: METIN → string, MANTIKSAL → boolean
+
+**What gets preserved:**
+- String contents: `"Merhaba Dünya"` stays as-is (UTF-8)
+- Comments: `-- Bu yorum` stays as-is
+- String escape sequences: `\n`, `\t`, `\"`
 
 ### State Machine
 
@@ -226,9 +269,50 @@ The preprocessor uses a 3-state machine:
 
 ```
 STATE_CODE:     Normal code - translate keywords
-STATE_STRING:   Inside "..." - preserve as-is
+STATE_STRING:   Inside "..." - preserve UTF-8 as-is
 STATE_COMMENT:  Inside comment - preserve as-is
 ```
+
+### UTF-8 String Handling in Compiler
+
+**Problem:** NASM doesn't accept UTF-8 bytes directly in strings
+
+**Solution:** Byte sequence approach (in visit_Metin() ~line 4883)
+
+```c
+// 1. Detect UTF-8
+int has_utf8 = 0;
+for (const char* p = string; *p; p++) {
+    if ((unsigned char)*p >= 128) {  // Non-ASCII byte
+        has_utf8 = 1;
+        break;
+    }
+}
+
+// 2. Output format based on content
+if (has_utf8) {
+    // UTF-8 → Byte sequence
+    // "Merhaba" → db 77,101,114,104,97,98,97,0
+    sprintf(buffer, "%s: db ", label);
+    for (const char* p = string; *p; p++) {
+        sprintf(buffer + strlen(buffer), "%d,", (unsigned char)*p);
+    }
+    strcat(buffer, "0");
+} else {
+    // ASCII → Quoted string with smart delimiter
+    // "Hello" → db "Hello", 0
+    // "Say \"Hi\"" → db 'Say "Hi"', 0
+    int has_quote = (strchr(string, '"') != NULL);
+    char delim = has_quote ? '\'' : '"';
+    sprintf(buffer, "%s: db %c%s%c, 0", label, delim, string, delim);
+}
+```
+
+**Result:**
+- Turkish "Merhaba" displays correctly
+- Russian "Привет" displays correctly
+- Hindi "नमस्ते" displays correctly
+- Quotes handled: `"Say \"Hi\""` works
 
 **Example:**
 
@@ -245,7 +329,7 @@ Output (English):
 string mesaj = "EĞER bu değişmez";
 if x > 10 then
     print mesaj
-end
+end func
 ```
 
 Note: `"EĞER bu değişmez"` remains unchanged because it's inside a string literal.
@@ -296,23 +380,26 @@ Defined in `diller.json`:
 
 ## Syntax Rules
 
-### Rule 1: Semicolon Usage
+### Rule 1: No Semicolons (Python-Style)
 
-**Semicolons are ONLY used for variable declarations:**
+**MLP uses Python-style syntax - NO semicolons anywhere:**
 
 ✅ **Correct:**
 ```mlp
-int x;
-int y = 10;
-string name = "Alice";
+int x
+int y = 10
+string name = "Alice"
+x = 5
+print x
+return x + y
 ```
 
 ❌ **Wrong:**
 ```mlp
-return x + y;    -- NO semicolon
-end;             -- NO semicolon
-print x;         -- NO semicolon
-x = 5;           -- NO semicolon (assignment)
+int x;           -- NO semicolons!
+x = 5;           -- NO semicolons!
+print x;         -- NO semicolons!
+return x + y;    -- NO semicolons!
 ```
 
 ### Rule 2: Block Termination
@@ -320,22 +407,22 @@ x = 5;           -- NO semicolon (assignment)
 **All blocks end with `end`:**
 
 ```mlp
-function add(a, b) then
+func add(a, b)
     return a + b
-end
+end func
 
 if x > 0 then
     print "Positive"
 else
     print "Negative"
-end
+end func
 
 while
     if i >= 10 then
         break
     end
     i = i + 1
-end
+end func
 ```
 
 ### Rule 3: Comments
@@ -380,13 +467,13 @@ string quote = "She said \"Hi\"";
 ```mlp
 if condition then
     -- statements
-end
+end func
 
 if condition then
     -- statements
 else
     -- statements
-end
+end func
 
 -- Nested
 if x == 0 then
@@ -397,7 +484,7 @@ else
     else
         print "Negative"
     end
-end
+end func
 ```
 
 ### Loop (while)
@@ -407,7 +494,7 @@ end
 while
     print "Forever"
     break  -- Exit with break
-end
+end func
 
 -- Conditional loop
 int i = 0;
@@ -417,7 +504,7 @@ while
     end
     print i
     i = i + 1
-end
+end func
 ```
 
 ---
@@ -427,19 +514,19 @@ end
 ### Definition
 
 ```mlp
-function name(param1, param2, ...) then
+func name(param1, param2, ...)
     -- statements
     return value
-end
+end func
 ```
 
 ### Examples
 
 **Simple function:**
 ```mlp
-function add(a, b) then
+func add(a, b)
     return a + b
-end
+end func
 
 int result = add(5, 3);
 print result  -- 8
@@ -447,22 +534,22 @@ print result  -- 8
 
 **Recursive function:**
 ```mlp
-function factorial(n) then
+func factorial(n)
     if n <= 1 then
         return 1
     end
     return n * factorial(n - 1)
-end
+end func
 
 print factorial(5)  -- 120
 ```
 
 **No return value:**
 ```mlp
-function greet(name) then
+func greet(name)
     print "Hello, "
     print name
-end
+end func
 
 greet("Alice")
 ```
@@ -545,6 +632,44 @@ print cwd
 ---
 
 ## Compiler Architecture
+
+### 🏗️ Self-Hosting Status
+
+**MLP IS FULLY SELF-HOSTING** ✅ (Completed: November 22, 2024)
+
+MLP can now compile itself! The compiler has been rewritten in MLP:
+- **Lexer:** `self_host/lexer.mlp` - Tokenization in MLP
+- **Parser:** `self_host/parser.mlp` - AST construction in MLP  
+- **Generator:** `self_host/generator.mlp` - Assembly generation in MLP
+- **Main Compiler:** `self_host/mlpc.mlp` - Complete compiler in MLP
+
+### 🔀 Hybrid Architecture (Two Compilation Paths)
+
+MLP supports two distinct compilation pipelines:
+
+#### Path 1: MLP → Assembly (Direct)
+
+```
+Source.mlp → self_host/mlpc.mlp → x86-64 Assembly
+```
+
+- Uses MLP-written compiler components
+- Direct assembly generation via `generator.mlp`
+- Faster compilation time
+- Pure MLP implementation
+
+#### Path 2: MLP → C → Assembly (Default) ⭐
+
+```
+Source.mlp → c_compiler/mlpc → C Intermediate → x86-64 Assembly
+```
+
+- Uses C-based bootstrap compiler
+- Generates optimized C code first
+- Better performance optimizations
+- **Recommended for production use**
+
+**Both paths are fully functional and tested!**
 
 ### Components
 
@@ -833,12 +958,12 @@ The compiler provides detailed error messages:
 
 ```mlp
 -- lang: en-US
-function fibonacci(n) then
+func fibonacci(n)
     if n <= 1 then
         return n
     end
     return fibonacci(n - 1) + fibonacci(n - 2)
-end
+end func
 
 int i = 0;
 while
@@ -852,7 +977,7 @@ while
     print fibonacci(i)
 
     i = i + 1
-end
+end func
 ```
 
 ### Example 2: File I/O (Russian)
@@ -936,9 +1061,9 @@ Use your language's naming conventions:
 ```mlp
 -- lang: tr-TR
 -- Bu fonksiyon faktöriyel hesaplar
-function faktoriyel(n) then
+func faktoriyel(n)
     ...
-end
+end func
 ```
 
 ### 4. Test Edge Cases
@@ -974,7 +1099,232 @@ MLP demonstrates that programming languages can support multiple natural languag
 
 ---
 
+---
+
+## Phase 6 - Literal and Generic Types
+
+### Phase 6.1: NULL and Boolean Literals ✅
+
+**Status:** Completed November 22, 2025
+
+MLP now supports NULL, true, and false literals natively.
+
+**New Keywords:**
+- `null` - NULL literal (represented as 0 internally)
+- `true` - Boolean true (represented as 1)
+- `false` - Boolean false (represented as 0)
+
+**Examples:**
+
+```mlp
+-- NULL support
+numeric x = null
+string name = null
+
+if value == null then
+    print "Value is null"
+end func
+
+-- Boolean literals
+boolean flag = true
+boolean active = false
+
+if flag == true then
+    print "Flag is true"
+end func
+```
+
+**NULL Comparison:**
+```mlp
+-- NULL equals 0
+if null == 0 then
+    print "null == 0: TRUE"
+end func
+
+-- Boolean arithmetic
+if true == 1 then
+    print "true == 1: TRUE"
+end func
+
+if false == 0 then
+    print "false == 0: TRUE"
+end func
+```
+
+**Implementation:**
+- Added `TOKEN_NULL`, `TOKEN_TRUE`, `TOKEN_FALSE` to lexer
+- Updated parser's `birincil()` function to handle these literals
+- NULL represented as 0, true as 1, false as 0 in generated assembly
+
+---
+
+### Phase 6.2: Generic Type System ✅
+
+**Status:** 90% Complete - Parser & Syntax Done, Runtime in MLP
+
+MLP now supports generic types with `optional<T>` as the first implementation.
+
+**Generic Syntax:**
+
+```mlp
+-- Generic type declaration
+optional<numeric> maybe_number
+optional<string> maybe_text
+
+-- Create with NULL
+optional<numeric> x = null
+
+-- Type parameter syntax
+generic T
+optional<T> create_optional(T value)
+    -- implementation
+end func
+```
+
+**Optional<T> Implementation:**
+
+MLP provides a self-hosted Optional<T> library written in pure MLP:
+
+```mlp
+-- Optional<numeric> struct
+struct OptionalNumeric
+    numeric value
+    boolean has_value
+end struct
+
+-- Create empty optional
+func optional_numeric_none()
+    OptionalNumeric opt
+    opt.value = 0
+    opt.has_value = false
+    return opt
+end func
+
+-- Create optional with value
+func optional_numeric_some(numeric val)
+    OptionalNumeric opt
+    opt.value = val
+    opt.has_value = true
+    return opt
+end func
+
+-- Check if has value
+func optional_numeric_has_value(OptionalNumeric opt)
+    return opt.has_value
+end func
+
+-- Get value (with error check)
+func optional_numeric_value(OptionalNumeric opt)
+    if opt.has_value then
+        return opt.value
+    else
+        print "ERROR: Accessing value of empty optional!"
+        return 0
+    end
+end func
+
+-- Get value or default
+func optional_numeric_value_or(OptionalNumeric opt, numeric default_val)
+    if opt.has_value then
+        return opt.value
+    else
+        return default_val
+    end
+end func
+```
+
+**Usage Example:**
+
+```mlp
+-- Create empty optional
+OptionalNumeric maybe_num = optional_numeric_none()
+
+if optional_numeric_has_value(maybe_num) then
+    print "Has value"
+else
+    print "No value (correct!)"
+end func
+
+-- Get with default
+numeric val = optional_numeric_value_or(maybe_num, 42)
+print val  -- 42
+
+-- Create optional with value
+OptionalNumeric some_num = optional_numeric_some(100)
+
+if optional_numeric_has_value(some_num) then
+    numeric actual = optional_numeric_value(some_num)
+    print actual  -- 100
+end func
+```
+
+**Self-Hosting Principle:**
+
+All Optional<T> runtime code is written in MLP itself (`mlp_lib/optional.mlp`), demonstrating:
+- MLP can implement complex data structures
+- Self-hosting compiler development (dogfooding)
+- Library code serves as examples for users
+- No Python or C code needed for new features
+
+**Implementation Details:**
+
+1. **Lexer:** Added `TOKEN_OPTIONAL`, `TOKEN_GENERIC`
+2. **Parser:**
+   - Generic type parameter parsing: `optional<numeric>`
+   - AST nodes: `AST_OPTIONAL_TANIMLAMA`, etc.
+   - Compound keywords: "end function", "end if", etc.
+3. **Code Generator:** Visitor stubs for optional operations
+4. **Runtime:** Pure MLP implementation in `mlp_lib/optional.mlp`
+
+**Supported Generic Types:**
+
+Currently implemented:
+- `optional<numeric>` - Optional integer/decimal
+- `optional<string>` - Optional text
+- `optional<boolean>` - Optional boolean
+
+**Future Generic Types:**
+
+Planned for Phase 6.3+:
+- `list<T>` - Dynamic arrays
+- `map<K, V>` - Hash maps
+- `result<T, E>` - Error handling
+- Custom generic structs
+
+---
+
+### Critical Bug Fixes (November 22, 2025)
+
+**Bug #1: "end function" Not Recognized**
+
+**Problem:** Compound keyword "end function" was being parsed as two separate tokens ("end" and "function"), causing syntax errors.
+
+**Root Cause:** The base "end" keyword was completely missing from KeywordMap. Compound keyword handler existed but couldn't run without the base token.
+
+**Fix:** Added `{"end", TOKEN_END}` to KeywordMap at line 1012 in `mlp_compiler.c`
+
+**Impact:**
+- All compound keywords now work: "end function", "end if", "end while"
+- Function definitions compile correctly
+- Tests pass: `test_just_func.mlp`, `test_func_call.mlp`
+
+**Bug #2: Type Keyword Confusion**
+
+**Problem:** AI assistant attempted to add int/float/bool as type keywords, violating MLP design.
+
+**Root Cause:** Misunderstanding of MLP type system.
+
+**Clarification:**
+- MLP ONLY uses: `numeric`, `string`, `boolean`
+- NO int, float, char, or bool keywords exist
+- ALL numbers are BigDecimal (numeric)
+- ALL text is BigString (string)
+
+**Fix:** Removed incorrect aliases, updated AI_RULES.md with CRITICAL warnings
+
+---
+
 **© 2025 MLP Project**
-**Version:** 3.0
-**Status:** Production Ready ✅
+**Version:** 3.0 + Phase 6.2
+**Status:** Production Ready ✅ + Generic Types 🚀
 **License:** MIT

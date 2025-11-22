@@ -1,0 +1,32 @@
+-- Phase 5.8: Part 2 - Continue and For
+print "=== Part 2: Continue and For ==="
+
+-- 3. Continue Statement
+print ""
+print "3. Continue Statement"
+print "Loop skipping even numbers:"
+int j = 0;
+while j < 10 do
+    j = j + 1
+    if j % 2 == 0 then
+        continue
+    end
+    print j
+end
+
+-- 4. Break and Continue in For Loop
+print ""
+print "4. For loop with break/continue"
+print "For loop 1-20, skip multiples of 3, break at 15:"
+for k = 1 to 20 do
+    if k % 3 == 0 then
+        continue
+    end
+    if k > 15 then
+        break
+    end
+    print k
+end
+
+print ""
+print "=== Part 2 Complete ==="

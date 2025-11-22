@@ -1,8 +1,62 @@
 # 🤖 AI Asistanları İçin MLP Projesi Kılavuzu
 
-**Son Güncelleme:** 19 Kasım 2025  
-**Durum:** 🚀 Production Ready v3.0  
-**Hedef:** Multi-Language Programming Language - Kod yazmanın dil engeli yok!  
+**Son Güncelleme:** 22 Kasım 2025
+**Durum:** 🚀 Production Ready v3.0 + Phase 6.2 (Generic Types)
+**Hedef:** Multi-Language Programming Language - Kod yazmanın dil engeli yok!
+
+---
+
+## 🔴 KRİTİK KURAL: SELF-HOSTING İLKESİ
+
+**BUNDAN SONRA TÜM YENİ ÖZELLIKLER VE RUNTIME KODU MLP DİLİNDE YAZILACAKTIR!**
+
+### Zorunlu Gereksinimler
+
+1. **✅ YAPILMASI GEREKENLER:**
+   - Yeni runtime fonksiyonları → **MLP dilinde yaz**
+   - Utility functions → **MLP dilinde yaz**
+   - Test kodları → **MLP dilinde yaz**
+   - Built-in library extensions → **MLP dilinde yaz**
+   - TODO.md'deki eksikler → **MLP dilinde tamamlanacak**
+   - Tüm çözümler ve implementasyonlar → **MLP dilinde üretilecek**
+
+2. **❌ YAPILMAMASI GEREKENLER:**
+   - Python kodu yazma (preprocessor hariç)
+   - C kodu yazma (sadece compiler core'da değişiklik için izin gerekli)
+   - Bash scripts (sadece build automation için)
+   - TODO.md'deki özellikleri C/Python'da implement etmek
+
+3. **🎯 İSTİSNALAR (Sadece izinle):**
+   - Compiler core (lexer/parser/generator) - C dilinde
+   - Preprocessor (dil çevirici) - Python'da
+   - Build system - Bash/Makefile
+
+### Neden Self-Hosting?
+
+- **MLP ARTIK TAM SELF-HOSTING'TİR!** ✅ (22 Kasım 2024'te tamamlandı)
+- Kendi derleyicisi MLP dilinde yazılmıştır (`self_host/mlpc.mlp`)
+- Lexer, Parser, Generator - hepsi MLP dilinde
+- Yeni özellikler MLP'de yazılarak dil test edilir
+- Dogfooding: Kendi dilimizi kullanarak geliştiririz
+- Community için örnek kod sağlar
+- TODO.md'deki tüm eksikler MLP'de tamamlanarak dilin gücü kanıtlanır
+
+### 🏗️ Hibrit Mimari (İki Derleme Yolu)
+
+MLP, iki farklı derleme yolu sunar:
+
+1. **MLP → Assembly (Direkt)** 
+   - `self_host/generator.mlp` kullanılarak
+   - MLP kaynak kodu → x86-64 Assembly
+   - Daha hızlı derleme
+   
+2. **MLP → C → Assembly (Varsayılan)** ⭐
+   - `c_compiler/mlpc` (C derleyici) kullanılarak
+   - MLP kaynak kodu → C kodu → Assembly
+   - Daha optimize edilmiş kod
+   - Production kullanımı için önerilen yol
+
+**Her iki yol da tamamen çalışır durumda!**
 
 ---
 
@@ -22,6 +76,99 @@
 - Operatörler ve kontrol yapıları
 - Noktalı virgül kuralları
 - Çok dilli destek mimarisi
+
+### ⚠️ KRİTİK MİMARİ KURALLARI - MUTLAK UYULACAK!
+
+**🔴 KURAL #1: PREPROCESSOR PIPELINE (ASLA İHLAL ETMEYİN!)**
+
+```
+Kaynak Kod (.mlp - Türkçe/Rusça/Hintçe/vs)
+    ↓
+❌ LEXER ASLA TÜRKÇE GÖRMEZ!
+    ↓
+MLP_PREPROCESSOR (C dilinde - runtime/mlp_preprocessor.c)
+    ├─→ diller.json'dan keyword mapping'leri oku
+    ├─→ Türkçe/Rusça/Hintçe keywords → English keywords
+    ├─→ String içerikleri KORU (çevirme!)
+    ├─→ UTF-8 karakterleri AYNEN KORU
+    └─→ Çıktı: English IR (.mlp)
+    ↓
+English IR (.mlp)
+    ├─→ Keywords: print, if, while, end, numeric, string
+    ├─→ Strings: "Merhaba" (UTF-8 korunmuş)
+    └─→ Comments: Korunmuş
+    ↓
+MLPC (Compiler - self_host/mlp_compiler.c)
+    ├─→ SADECE İngilizce keywords anlar
+    ├─→ UTF-8 strings'i byte sequence'e çevirir
+    └─→ Assembly üretir
+    ↓
+Assembly (.asm)
+    ├─→ ASCII strings: db "Hello", 0
+    ├─→ UTF-8 strings: db 196,176,108,... (byte sequence)
+    └─→ Smart delimiter: '...' veya "..."
+    ↓
+NASM + GCC → Binary
+```
+
+**🔴 KURAL #2: LEXER ASLA TÜRKÇE GÖRMEZ!**
+
+```mlp
+❌ YANLIŞ MİMARİ:
+Türkçe kaynak → Lexer (YAZDIR token'ı ekle) → Parser
+
+✅ DOĞRU MİMARİ:
+Türkçe kaynak → Preprocessor (YAZDIR → print) → English IR → Lexer (print token'ı) → Parser
+```
+
+**Neden?**
+- Lexer/Parser sadece English keywords bilir
+- Çok dil desteği preprocessor katmanında
+- Assembly SADECE İngilizce keyword'lerden üretilir
+- diller.json'a yeni dil eklemek 10 dakika
+- Compiler core değişmeden yeni dil eklenebilir
+
+**🔴 KURAL #3: UTF-8 HANDLING (BYTE SEQUENCE YAKLAŞIMI)**
+
+**Problem:**
+- NASM UTF-8 karakterleri string içinde doğrudan kabul etmez
+- NASM `\"` escape sequence'ini `"..."` içinde kabul etmez
+
+**Çözüm:**
+```c
+// visit_Metin() fonksiyonunda (mlp_compiler.c ~line 4883)
+
+// 1. UTF-8 tespit et
+int has_utf8 = 0;
+for (const char* p = string; *p; p++) {
+    if ((unsigned char)*p >= 128) {  // Non-ASCII
+        has_utf8 = 1;
+        break;
+    }
+}
+
+// 2. UTF-8 varsa byte sequence kullan
+if (has_utf8) {
+    // Output: db 196,176,108,107,32,115,97,116,196,177,114,0
+    sprintf(buffer, "%s: db ", label);
+    for (const char* p = string; *p; p++) {
+        sprintf(buffer + strlen(buffer), "%d,", (unsigned char)*p);
+    }
+    strcat(buffer, "0");  // Null terminator
+}
+// 3. ASCII ise smart delimiter
+else {
+    // String içinde \" varsa ' kullan, yoksa \" kullan
+    int has_quote = (strchr(string, '"') != NULL);
+    char delim = has_quote ? '\'' : '"';
+    sprintf(buffer, "%s: db %c%s%c, 0", label, delim, string, delim);
+}
+```
+
+**Sonuç:**
+- UTF-8: `"İlk satır"` → `db 196,176,108,107,32,115,97,116,196,177,114,0`
+- ASCII: `"Hello"` → `db "Hello", 0`
+- Quotes: `"Say \"Hi\""` → `db 'Say "Hi"', 0`
 
 ### 2. 📚 README.md - Proje Genel Bakış
 
@@ -68,67 +215,147 @@
 
 ### Mimari Felsefesi
 
+**🔴 KRİTİK: LEXER ASLA TÜRKÇE/RUSÇA/HİNTÇE GÖRMEZ!**
+
 ```
-┌─────────────────────────────────────────┐
-│  Kaynak Kod (Herhangi bir dil)          │
-│  - Türkçe: EĞER, DÖNGÜ, İŞLEÇ         │
-│  - Rusça: если, пока, функция          │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Kaynak Kod (.mlp - Türkçe/Rusça/Hintçe)        │
+│  - Türkçe: YAZDIR "Merhaba", EĞER, DÖNGÜ       │
+│  - Rusça: печать "Привет", если, пока          │
+│  - Hintçe: likho "नमस्ते", agar, jab_tak        │
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  PREPROCESSOR (dil_cevirici.py)         │
-│  - Dil tespiti (-- lang: tr-TR)        │
-│  - Anahtar kelime çevirisi             │
-│  - String ve comment korunması          │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  MLP_PREPROCESSOR (runtime/mlp_preprocessor.c)  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  1. Dil tespiti: -- lang: tr-TR header         │
+│  2. diller.json'dan keyword map yükle          │
+│  3. SADECE KEYWORDS çevir:                      │
+│     YAZDIR → print                              │
+│     EĞER → if                                   │
+│     SAYISAL → numeric                           │
+│  4. STRING İÇERİKLERİNİ KORU:                  │
+│     "Merhaba Dünya" → "Merhaba Dünya" (UTF-8)│
+│  5. COMMENT'LERİ KORU:                          │
+│     -- Bu yorum → -- Bu yorum                  │
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  İngilizce Ara Kod (.preprocessed.mlp)  │
-│  - if, while, function                  │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  English IR (.mlp)                              │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  print "Merhaba Dünya"  ← UTF-8 korunmuş       │
+│  if x > 10 then         ← Keywords İngilizce   │
+│  numeric y = 42         ← Tip isimleri İngilizce│
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  COMPILER (C ile yazılmış)              │
-│  - Lexer → Parser → Generator           │
-│  - SADECE İngilizce anlar              │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  MLPC COMPILER (self_host/mlp_compiler.c)       │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  - Lexer: SADECE İngilizce keywords tanır      │
+│  - Parser: AST oluşturur                        │
+│  - Generator: Assembly üretir                   │
+│  - UTF-8 Handler: Byte sequence'e çevirir      │
+│    * ASCII: db "Hello", 0                       │
+│    * UTF-8: db 77,101,114,104,97,98,97,0       │
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  x86-64 Assembly → Native Executable    │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Assembly (.asm - NASM syntax)                  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  str_1: db 77,101,114,104,97,98,97,0  ; UTF-8   │
+│  str_2: db "Hello", 0                 ; ASCII   │
+└─────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────┐
+│  NASM + GCC → Native Binary                     │
+│  ✅ UTF-8 characters display correctly          │
+└─────────────────────────────────────────────────┘
 ```
 
-**Tasarım Kararı:** Compiler core basit kalsın (English-only), çok dil desteği preprocessor katmanında!
+**Tasarım Kararları:**
+1. **Lexer English-only** → Basit, bakımı kolay
+2. **Preprocessor layer** → Çok dil desteği burada
+3. **UTF-8 byte sequence** → NASM compatibility
+4. **Smart delimiter** → ' vs " based on content
+5. **Pipeline ayrımı** → Her katman tek sorumlu
 
 ---
 
 ## 🔴 VERİ TİPLERİ - KRİTİK BİLGİ!
 
-### ⚠️ DİKKAT: MLP'de `int` YOK!
+### ⚠️ DİKKAT: MLP'DE SADECE NUMERIC VAR!
 
-**MLP'nin gerçek veri tipleri:**
+**MLP'nin GERÇEK veri tipleri:**
 
-| Tip | English | Turkish | Açıklama |
-|-----|---------|---------|----------|
-| **SAYISAL** | `int` (compiler'da) | `SAYISAL`, `sayisal`, `SAYISAL` | BigDecimal (sınırsız hassasiyet) - tam sayı + ondalık |
-| **SÖZEL** | `string` | `METIN`, `metin`, `YAZI`, `yazi` | BigString (sınırsız uzunluk) |
-| **ZITLIK** | `true`/`false` | `DOĞRU`/`YANLIŞ`, `dogru`/`yanlis` | Boolean |
-| **HİÇLİK** | (future) | `HİÇ`, `NULL` | Null değer (henüz implement edilmedi) |
+| MLP Tipi | English Keyword | Turkish | Russian | Açıklama |
+|----------|-----------------|---------|---------|----------|
+| **NUMERIC** | `numeric` | SAYISAL | ЧИСЛО | BigDecimal (sınırsız hassasiyet - int + float birleşik) |
+| **STRING** | `string` | METIN, SÖZEL | СТРОКА | BigString (sınırsız uzunluk) |
+| **BOOLEAN** | `boolean` | MANTIKSAL, ZITLIK | ЛОГИЧЕСКИЙ | Boolean (true/false) |
+| **NULL** | ✅ VAR | `null` | NULL | Null literal (0 olarak temsil edilir) |
+| **CHAR** | ❌ YOK! | - | - | Char tipi YOK - tek karakterlik string kullan |
+| **VOID** | ❌ YOK! | - | - | Return yoksa function kullan |
+
+### ⚠️ MLP'DE OLMAYAN KAVRAMLAR:
+
+| Kavram | Durum | Açıklama |
+|--------|-------|----------|
+| **null / nothing** | ✅ VAR | `null` keyword destekleniyor (numeric 0 olarak temsil edilir) |
+| **this / self** | ❌ YOK (henüz) | OOP implement edilmedi (v4.0'da gelecek) |
+| **char** | ❌ YOK | Tek karakterlik string kullan: `string c = "A"` |
+| **static** | ❌ YOK | Global scope yok - function içinde tanımla |
+| **global** | ❌ YOK | Her şey function scope'ta |
+| **class** | ❌ YOK (henüz) | v4.0'da OOP gelecek - şimdilik struct kullan |
+| **const** | ✅ VAR | `const numeric PI = 3.14159` (read-only değişken) |
+| **enum** | ✅ VAR | `enum Color { RED, GREEN, BLUE }` |
+| **struct** | ✅ VAR | `struct Person { string name, numeric age }` |
 
 ### 🚨 YANLIŞ VS DOĞRU
 
 ```mlp
-❌ YANLIŞ: int x = 5;              -- "int" kelimesi kullanıcıya gösterilmemeli
-✅ DOĞRU:  SAYISAL x = 5;          -- Türkçe programda
-✅ DOĞRU:  int x = 5;              -- İngilizce programda
-✅ DOĞRU:  целое x = 5;            -- Rusça programda
+❌ YANLIŞ: int x = 5               -- MLP'de "int" YOK!
+❌ YANLIŞ: float pi = 3.14           -- MLP'de "float" YOK!
+❌ YANLIŞ: char c = 'A'              -- MLP'de "char" YOK!
+❌ YANLIŞ: static numeric count = 0  -- MLP'de "static" YOK!
+❌ YANLIŞ: class Person { }          -- MLP'de "class" YOK (henüz)!
+
+✅ DOĞRU:  numeric x = 5            -- Tek sayı tipi: numeric (BigDecimal)
+✅ DOĞRU:  numeric pi = 3.14159     -- Ondalıklı da numeric
+✅ DOĞRU:  string c = "A"           -- Tek karakter de string
+✅ DOĞRU:  string name = null       -- NULL değer destekleniyor!
+✅ DOĞRU:  numeric value = null     -- NULL = 0 (numeric)
+✅ DOĞRU:  numeric count = 0        -- Global yok, function scope
+✅ DOĞRU:  struct Person { }        -- class yerine struct (v3.0)
+
+-- Türkçe kaynak (user writes):
+SAYISAL x = 5                       ✅ Kullanıcı Türkçe yazar
+SAYISAL pi = 3.14                   ✅ Ondalık da SAYISAL
+METIN harf = "A"                    ✅ Tek karakter de METIN
+-- Preprocessor çevirir:
+numeric x = 5                       ✅ Compiler numeric görür
+numeric pi = 3.14                   ✅ Hepsi numeric (BigDecimal)
+string harf = "A"                   ✅ string'e çevrilir
+
+-- Çoklu tanımlama (MLP özelliği):
+a, b, c = numeric, string, boolean  ✅ Tek satırda çoklu tanımlama
+
+-- Const kullanımı:
+const numeric PI = 3.14159          ✅ Read-only değişken (değiştirilemez)
+
+-- NULL ve Boolean Literals (Phase 6.1):
+numeric x = null                    ✅ NULL değer (0 olarak temsil edilir)
+boolean flag = true                 ✅ Boolean literal (1)
+boolean active = false              ✅ Boolean literal (0)
+if value == null then               ✅ NULL karşılaştırması
+    print "Value is null"
+end if
 ```
 
 **NEDEN?**
-- MLP'de "int" sadece compiler'ın internal keyword'ü
-- Kullanıcı kendi dilindeki kelimeyi kullanır
-- Preprocessor `SAYISAL` → `int` çevirisini yapar
-- Compiler sadece `int` görür
+- MLP'de **sadece NUMERIC** var (int/float ayrımı yok)
+- **BigDecimal** kullanır (sınırsız hassasiyet)
+- Preprocessor: SAYISAL → numeric, METIN → string
+- Compiler sadece numeric/string/boolean görür
 
 ---
 
@@ -150,26 +377,46 @@ her zaman kendi dilindeki kelimeyi kullanır."
 
 ### 2. ❌ SPECS.md'yi İhlal Etmeyin!
 
-**Noktalı Virgül Kuralı:**
+**Noktalı Virgül Kuralı: NO SEMICOLONS (Python-Style)**
 
 ```mlp
-✅ DOĞRU:
-SAYISAL x;              -- Tanımlama → noktalı virgül VAR
-SAYISAL y = 10;         -- İnitialize → noktalı virgül VAR
-x = 20                  -- Atama → noktalı virgül YOK
-DÖNÜŞ x + y             -- Return → noktalı virgül YOK
-YAZDIR x                -- Print → noktalı virgül YOK
-SON                     -- Block end → noktalı virgül YOK
+✅ DOĞRU (Base Language):
+numeric x = 10          -- NO semicolon (Python-style)
+string name = "test"    -- NO semicolon
+x = 20                  -- NO semicolon
+return x + y            -- NO semicolon
+print x                 -- NO semicolon
+end                     -- NO semicolon
+
+-- Çoklu tanımlama (MLP özelliği):
+a, b = numeric, string  -- NO semicolon
 
 ❌ YANLIŞ:
-DÖNÜŞ x + y;            -- Noktalı virgül YASAK
-SON;                    -- Noktalı virgül YASAK
-x = 20;                 -- Noktalı virgül YASAK
+numeric x = 10;         -- Noktalı virgül YASAK!
+return x + y;           -- Noktalı virgül YASAK!
+end;                    -- Noktalı virgül YASAK!
 ```
 
-**NEDEN?** Tutarlılık! Sadece tanımlamalar cümle gibi biter.
+**NEDEN?** Python-style syntax! Newline-terminated statements. Hiçbir yerde noktalı virgül yok.
 
-### 3. ❌ Dil Eşitliğini Bozma!
+### 3. ❌ Veri Tiplerini Karıştırma!
+
+**MLP'de int/float YOKTUR!**
+
+```mlp
+❌ YANLIŞ: "MLP'de int ve float var"
+✅ DOĞRU:  "MLP'de sadece numeric var (BigDecimal - int+float birleşik)"
+
+❌ YANLIŞ: int x = 5
+❌ YANLIŞ: float pi = 3.14
+✅ DOĞRU:  numeric x = 5
+✅ DOĞRU:  numeric pi = 3.14159
+
+-- Çoklu tanımlama:
+✅ DOĞRU:  a, b, c = numeric, string, boolean
+```
+
+### 4. ❌ Dil Eşitliğini Bozma!
 
 **Tüm diller eşittir!**
 
@@ -181,7 +428,7 @@ x = 20;                 -- Noktalı virgül YASAK
 ✅ DOĞRU:  "diller.json'a yeni dil tanımı ekleyelim"
 ```
 
-### 4. ❌ String/Comment İçeriğini Çevirmeyin!
+### 5. ❌ String/Comment İçeriğini Çevirmeyin!
 
 **Preprocessor state machine:**
 
@@ -197,7 +444,7 @@ SON                                 -- Bu çevrilir → end
 
 **KURAL:** STATE_CODE → çevir, STATE_STRING/STATE_COMMENT → koru!
 
-### 5. ❌ Tasarım Kararlarını Değiştirmeyin!
+### 6. ❌ Tasarım Kararlarını Değiştirmeyin!
 
 **Bu konularda kullanıcıya sormadan değişiklik yapmayın:**
 - Anahtar kelimeler (İŞLEÇ, DÖNÜŞ, EĞER)
@@ -268,6 +515,29 @@ cat /home/pardus/projeler/tyd-lang/MLP/diller.json
 
 ## 📖 DİL KURALLARI (ÖZET)
 
+### ⚠️ ÖNEMLİ: "then" Kullanımı
+
+**KRİTİK KURAL:** `then` kelimesi **SADECE** `if` statement'larında kullanılır!
+
+```mlp
+✅ DOĞRU:
+if x > 5 then           -- ✅ 'then' sadece if ile kullanılır
+    print x
+end if
+
+❌ YANLIŞ:
+func add(a, b) then     -- ❌ HATALI! Fonksiyonlarda 'then' kullanılmaz!
+    return a + b
+end func
+
+✅ DOĞRU:
+func add(a, b)          -- ✅ Fonksiyonlarda 'then' yok
+    return a + b
+end func
+```
+
+**Semantik açıklama:** `then` kelimesi "sonra, o zaman" anlamına gelir ve sadece koşullu ifadelerde mantıklıdır. Fonksiyon tanımlamalarında anlamsızdır.
+
 ### Noktalı Virgül (;)
 
 ```mlp
@@ -279,25 +549,29 @@ YAZDIR x                ✅ Print (NO semicolon)
 SON                     ✅ Block end (NO semicolon)
 ```
 
-### Blok Yapıları
+### Blok Yapıları (Base Language - English)
 
 ```mlp
+func add(a, b)
+    return a + b
+end func                ✅ Explicit (preferred)
+-- veya:
+end                     ⚠️ Generic (tolerated)
+
+if x > 5 then
+    print x
+else
+    print "small"
+end if                  ✅ Explicit terminator
+
+while x < 10
+    x = x + 1
+end while               ✅ Condition-based loop
+
+-- Türkçe kaynak örneği:
 İŞLEÇ topla(a, b) İSE
     DÖNÜŞ a + b
-SON                     ✅ end (NOT: SON İŞLEÇ gibi context-aware değil!)
-
-EĞER x > 5 İSE
-    YAZDIR x
-DEĞİLSE
-    YAZDIR "küçük"
-SON
-
-DÖNGÜ
-    EĞER i >= 10 İSE
-        BİTİR
-    SON
-    i = i + 1
-SON
+SON İŞLEÇ               ← Preprocessor bunu "end func" yapar
 ```
 
 ### Yorumlar
@@ -313,21 +587,39 @@ SON
 
 ### Çok Dilli Örnek
 
-**Türkçe:**
+**Türkçe (user writes):**
 ```mlp
 -- lang: tr-TR
-SAYISAL x = 42;
+SAYISAL x = 42
+SAYISAL pi = 3.14159
+a, b = METIN, MANTIKSAL
 YAZDIR "Merhaba Dünya"
 ```
 
-**Rusça:**
+**Preprocessor çıktısı (compiler receives):**
+```mlp
+numeric x = 42
+numeric pi = 3.14159
+a, b = string, boolean
+print "Merhaba Dünya"
+```
+
+**Rusça (user writes):**
 ```mlp
 -- lang: ru-RU
-целое x = 42;
+ЧИСЛО x = 42
+ЧИСЛО pi = 3.14159
 печать "Привет Мир"
 ```
 
-**İkisi de aynı assembly → aynı executable!**
+**Preprocessor çıktısı (compiler receives):**
+```mlp
+numeric x = 42
+numeric pi = 3.14159
+print "Привет Мир"
+```
+
+**İkisi de aynı English IR → aynı assembly → aynı executable!**
 
 ---
 

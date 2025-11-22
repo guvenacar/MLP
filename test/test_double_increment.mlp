@@ -1,0 +1,15 @@
+-- Test double increment
+
+int x = 10;
+print "Start: "
+print x
+
+x++
+print "After first x++: "
+print x
+
+x++
+print "After second x++: "
+print x
+
+print "Done"

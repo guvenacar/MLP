@@ -109,42 +109,90 @@ cd ..
 
 ### Pipeline
 
+**🔴 CRITICAL: Lexer NEVER sees non-English keywords!**
+
 ```
 Multi-Language Source (.mlp)
+  Example: YAZDIR "Merhaba", EĞER, SAYISAL
         ↓
-┌─────────────────┐
-│  PREPROCESSOR   │  → Detect language from header
-│ (dil_cevirici)  │  → Translate keywords to English
-└─────────────────┘  → Preserve strings & comments
+┌──────────────────────────────────────────┐
+│  PREPROCESSOR (mlp_preprocessor - C)     │
+│  ════════════════════════════════════════│
+│  1. Detect: -- lang: tr-TR               │
+│  2. Load: diller.json keyword mappings   │
+│  3. Translate KEYWORDS:                  │
+│     YAZDIR → print                       │
+│     EĞER → if                            │
+│     SAYISAL → numeric                    │
+│  4. PRESERVE string contents (UTF-8):    │
+│     "Merhaba" → "Merhaba" (unchanged)   │
+│  5. PRESERVE comments                    │
+└──────────────────────────────────────────┘
         ↓
-English Source (.preprocessed.mlp)
+English IR (.mlp)
+  Keywords: print, if, numeric (English)
+  Strings: "Merhaba" (UTF-8 preserved)
         ↓
-┌─────────────────┐
-│    COMPILER     │  → Lexer: Source → Tokens
-│ (English-only)  │  → Parser: Tokens → AST
-└─────────────────┘  → Generator: AST → Assembly
+┌──────────────────────────────────────────┐
+│  COMPILER (mlpc - C)                     │
+│  ════════════════════════════════════════│
+│  → Lexer: English keywords only          │
+│  → Parser: Build AST                     │
+│  → UTF-8 Handler: Detect non-ASCII       │
+│    * UTF-8 string → byte sequence        │
+│      "Merhaba" → db 77,101,114,...,0     │
+│    * ASCII string → quoted               │
+│      "Hello" → db "Hello", 0             │
+│  → Generator: Produce Assembly           │
+└──────────────────────────────────────────┘
         ↓
-x86-64 Assembly (.asm)
+x86-64 Assembly (.asm - NASM)
+  str_1: db 77,101,114,104,97,98,97,0  ; UTF-8
+  str_2: db "Hello", 0                 ; ASCII
         ↓
-┌─────────────────┐
-│  NASM + GCC     │  → Assemble & Link
-└─────────────────┘
+┌──────────────────────────────────────────┐
+│  NASM + GCC                              │
+│  → Assemble & Link with runtime          │
+└──────────────────────────────────────────┘
         ↓
 Native Executable
+  ✅ Displays: Merhaba (UTF-8 correct)
+  ✅ Displays: Привет (Russian works)
+  ✅ Displays: नमस्ते (Hindi works)
 ```
 
 ### Key Design Decisions
 
-**English-Native Compiler Core:**
-- Compiler only understands English keywords
+**1. English-Native Compiler Core:**
+- Compiler ONLY understands English keywords
+- Lexer NEVER sees Turkish/Russian/Hindi
 - Keeps compiler simple and maintainable
 - No hardcoded language-specific logic
+- Adding new language = 0 compiler changes
 
-**Preprocessor for Multi-Language:**
+**2. Preprocessor for Multi-Language:**
+- Runs BEFORE lexer (critical!)
 - State machine: CODE/STRING/COMMENT states
-- Preserves string literals and comments
-- Language-agnostic translation
-- Easy to add new languages (just edit `diller.json`)
+- Translates keywords: YAZDIR → print
+- Preserves UTF-8 strings: "Merhaba" unchanged
+- Preserves comments completely
+- Language-agnostic translation via diller.json
+- Easy to add new languages (10 minutes, just JSON edit)
+
+**3. UTF-8 Byte Sequence Approach:**
+- Problem: NASM doesn't accept UTF-8 in strings
+- Solution: Detect UTF-8, output as byte array
+- UTF-8: `"Merhaba"` → `db 77,101,114,104,97,98,97,0`
+- ASCII: `"Hello"` → `db "Hello", 0`
+- Smart delimiter: Use `'` if string contains `"`
+- Result: All languages display correctly
+
+**4. Pipeline Separation:**
+- Each layer has single responsibility
+- Preprocessor: Language translation
+- Compiler: English → Assembly
+- UTF-8 Handler: Encoding conversion
+- Clean architecture, easy maintenance
 
 **Result:** True multi-language support where all languages are equal!
 
@@ -164,7 +212,7 @@ if x > 10 then
     print "Large"
 else
     print "Small"
-end
+end func
 
 -- Loop
 int i = 0;
@@ -174,17 +222,17 @@ while
     end
     print i
     i = i + 1
-end
+end func
 ```
 
 ### Functions
 ```mlp
-function fibonacci(n) then
+func fibonacci(n)
     if n <= 1 then
         return n
     end
     return fibonacci(n - 1) + fibonacci(n - 2)
-end
+end func
 
 int result = fibonacci(10);
 print result
@@ -257,7 +305,7 @@ while
             print count
         end
     end
-end
+end func
 
 gui_window_destroy(window)
 ```
@@ -290,6 +338,40 @@ SON
 
 gui_window_destroy(pencere)
 ```
+
+### 🎨 MLP GUI Designer - Visual Studio Style Editor
+
+**NEW!** Create GUI applications visually with drag-and-drop interface!
+
+**MLP GUI Designer** is a professional, Electron-based visual GUI designer that lets you:
+
+- 🖱️ **Drag & Drop Widgets**: Button, Label, TextBox, CheckBox, and more
+- ⚙️ **Live Property Editor**: Edit properties in real-time
+- 🔄 **Design/Code View**: Switch between visual design and generated code
+- 💾 **Project Management**: Save and load projects (.mlpgui format)
+- 📤 **MLP Code Export**: Export to runnable MLP code
+
+**Quick Start:**
+```bash
+cd mlp_gui_designer
+npm install
+npm start
+```
+
+**Features:**
+
+- Visual Studio-style interface with dark theme
+- 9 widget types (Button, Label, TextBox, CheckBox, RadioButton, Panel, GroupBox, ListBox, ComboBox)
+- Property panel with live editing
+- Event handler support (onClick, onChange, etc.)
+- Automatic MLP code generation
+- Keyboard shortcuts (Ctrl+S, Ctrl+E, Delete, etc.)
+- Resize and reposition widgets with mouse
+- Export to .mlp files ready to compile
+
+**See:** [mlp_gui_designer/README.md](mlp_gui_designer/README.md) for detailed documentation
+
+---
 
 ### VSCode Development Workflow
 
@@ -524,30 +606,81 @@ All produce the same result from equivalent source code!
 
 ```
 MLP/
-├── c_compiler/              # English-native compiler (C)
-│   ├── c_lexer.c/h         # Lexer
-│   ├── c_parser.c/h        # Parser
-│   ├── c_generator.c/h     # Code generator
-│   └── compiler_test       # Executable
+├── 📄 Core Documentation
+│   ├── README.md            # This file - Project overview
+│   ├── SPECS.md             # 🔒 Language specification (LOCKED)
+│   ├── AI_RULES.md          # Guidelines for AI assistants
+│   ├── TODO.md              # Feature roadmap and status
+│   ├── API_REFERENCE.md     # Runtime API documentation
+│   ├── ROADMAP.md           # Development roadmap
+│   ├── CONTRIBUTING.md      # Contribution guidelines
+│   └── LICENSE              # MIT License
 │
-├── runtime/
-│   └── runtime.c           # Runtime library
+├── 🏗️ Compiler (Bootstrap - C)
+│   ├── stage0/              # C-based bootstrap compiler
+│   │   ├── c_lexer.c/h     # Tokenizer
+│   │   ├── c_parser.c/h    # AST parser
+│   │   └── c_generator.c/h # Assembly generator
+│   └── mlpc                 # Compiler wrapper script
 │
-├── dil_cevirici.py         # Multi-language preprocessor
-├── diller.json             # Language definitions
-├── mlpc                    # Compiler wrapper script
-├── migrate.py              # Migration tool
+├── 🚀 Self-Hosting Compiler (MLP)
+│   └── self_host/           # MLP compiler written in MLP ✅
+│       ├── mlpc.mlp         # Main compiler
+│       ├── lexer.mlp        # Tokenizer in MLP
+│       ├── parser.mlp       # Parser in MLP
+│       ├── generator.mlp    # Code generator in MLP
+│       └── howto.md         # Self-hosting guide
 │
-├── tyd_compiler/           # Self-hosting compiler (MLP)
-│   ├── tyd_lexer.mlp       # Lexer in MLP
-│   ├── tyd_parser.mlp      # Parser in MLP
-│   └── tyd_generator.mlp   # Generator in MLP
+├── 🔧 Runtime & Libraries
+│   ├── runtime/
+│   │   ├── runtime.c        # Standard library (I/O, strings, math)
+│   │   └── hashmap.c        # Hash map implementation
+│   └── mlp_lib/             # MLP standard library modules
 │
-├── test_*.mlp              # Multi-language test cases
-├── SPECS.md                # Language specification
-├── PREPROCESSOR_DESIGN.md  # Preprocessor design doc
-└── README.md               # This file
+├── 🌍 Multi-Language Support
+│   ├── dil_cevirici.py      # Preprocessor (keyword translation)
+│   ├── diller.json          # Language keyword definitions
+│   └── syntax.json          # Syntax mappings
+│
+├── 📦 Examples & Tests
+│   ├── examples/            # Sample programs
+│   │   ├── merhaba_dunya.mlp  # Hello World (Turkish)
+│   │   ├── hello_english.mlp  # Hello World (English)
+│   │   └── *.preprocessed.mlp # Preprocessor outputs
+│   └── tests/               # Test suite
+│       ├── test_*.mlp       # Unit tests
+│       └── test_*.asm       # Assembly outputs
+│
+├── 📚 Archive
+│   └── docs/archive/        # Historical documentation
+│       ├── PHASE*.md        # Development phase reports
+│       ├── *_DESIGN.md      # Design documents
+│       └── SESSION*.md      # Session summaries
+│
+└── 🛠️ Development Tools
+    ├── vscode-mlp/          # VS Code extension
+    ├── gui_editor/          # GUI editor (experimental)
+    └── archive_python/      # Legacy Python implementations
 ```
+
+### Key Directories
+
+- **`stage0/`**: C bootstrap compiler (production-ready)
+- **`self_host/`**: MLP self-hosting compiler ✅ (22 Nov 2024)
+- **`runtime/`**: C runtime library with 18+ string functions
+- **`examples/`**: Sample programs in multiple languages
+- **`tests/`**: Comprehensive test suite
+- **`docs/archive/`**: Historical development documentation
+
+### Self-Hosting Status ✅
+
+MLP is **fully self-hosting** as of November 22, 2024:
+- Compiler written in MLP: `self_host/mlpc.mlp` (984 lines)
+- Two compilation paths available:
+  1. **MLP → Assembly** (Direct via `generator.mlp`)
+  2. **MLP → C → Assembly** (Default, more optimized)
+
+See [self_host/howto.md](./self_host/howto.md) for usage.
 
 ---
 
@@ -578,12 +711,19 @@ Contributions are welcome!
 
 ## 📖 Documentation
 
-- **[SPECS.md](./SPECS.md)** - Complete language specification
-- **[LIST_DESIGN.md](./LIST_DESIGN.md)** - Dynamic lists implementation (Phase 2 ✅)
-- **[TURING_COMPLETE_PLAN.md](./TURING_COMPLETE_PLAN.md)** - Self-hosting roadmap
-- **[SESSION_SUMMARY_PHASE2.md](./SESSION_SUMMARY_PHASE2.md)** - Phase 2 implementation notes
-- **[PREPROCESSOR_DESIGN.md](./PREPROCESSOR_DESIGN.md)** - Preprocessor architecture
-- **[diller.json](./diller.json)** - Language definitions
+### Core Documentation
+- **[SPECS.md](./SPECS.md)** 🔒 - Complete language specification (LOCKED)
+- **[AI_RULES.md](./AI_RULES.md)** - Guidelines for AI assistants
+- **[TODO.md](./TODO.md)** - Feature roadmap and current status
+- **[API_REFERENCE.md](./API_REFERENCE.md)** - Runtime API documentation
+- **[ROADMAP.md](./ROADMAP.md)** - Development roadmap
+
+### Implementation Guides
+- **[self_host/howto.md](./self_host/howto.md)** - Self-hosting compiler usage
+- **[diller.json](./diller.json)** - Language keyword definitions
+
+### Historical Documentation
+All historical documents (PHASE*.md, *_DESIGN.md, SESSION*.md) have been moved to `docs/archive/` for reference.
 
 ---
 

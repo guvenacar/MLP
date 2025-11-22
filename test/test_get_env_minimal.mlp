@@ -1,0 +1,12 @@
+function test_get_env() then
+    string home = "";
+    home = get_env("HOME")
+    print "HOME: "
+    print home
+    return 0
+end
+
+function main() then
+    test_get_env()
+    return 0
+end
