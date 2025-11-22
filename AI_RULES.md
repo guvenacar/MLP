@@ -33,11 +33,30 @@
 
 ### Neden Self-Hosting?
 
-- MLP artık kendi kendini derleyebilir (self-hosting)
+- **MLP ARTIK TAM SELF-HOSTING'TİR!** ✅ (22 Kasım 2024'te tamamlandı)
+- Kendi derleyicisi MLP dilinde yazılmıştır (`self_host/mlpc.mlp`)
+- Lexer, Parser, Generator - hepsi MLP dilinde
 - Yeni özellikler MLP'de yazılarak dil test edilir
 - Dogfooding: Kendi dilimizi kullanarak geliştiririz
 - Community için örnek kod sağlar
 - TODO.md'deki tüm eksikler MLP'de tamamlanarak dilin gücü kanıtlanır
+
+### 🏗️ Hibrit Mimari (İki Derleme Yolu)
+
+MLP, iki farklı derleme yolu sunar:
+
+1. **MLP → Assembly (Direkt)** 
+   - `self_host/generator.mlp` kullanılarak
+   - MLP kaynak kodu → x86-64 Assembly
+   - Daha hızlı derleme
+   
+2. **MLP → C → Assembly (Varsayılan)** ⭐
+   - `c_compiler/mlpc` (C derleyici) kullanılarak
+   - MLP kaynak kodu → C kodu → Assembly
+   - Daha optimize edilmiş kod
+   - Production kullanımı için önerilen yol
+
+**Her iki yol da tamamen çalışır durumda!**
 
 ---
 
@@ -57,6 +76,99 @@
 - Operatörler ve kontrol yapıları
 - Noktalı virgül kuralları
 - Çok dilli destek mimarisi
+
+### ⚠️ KRİTİK MİMARİ KURALLARI - MUTLAK UYULACAK!
+
+**🔴 KURAL #1: PREPROCESSOR PIPELINE (ASLA İHLAL ETMEYİN!)**
+
+```
+Kaynak Kod (.mlp - Türkçe/Rusça/Hintçe/vs)
+    ↓
+❌ LEXER ASLA TÜRKÇE GÖRMEZ!
+    ↓
+MLP_PREPROCESSOR (C dilinde - runtime/mlp_preprocessor.c)
+    ├─→ diller.json'dan keyword mapping'leri oku
+    ├─→ Türkçe/Rusça/Hintçe keywords → English keywords
+    ├─→ String içerikleri KORU (çevirme!)
+    ├─→ UTF-8 karakterleri AYNEN KORU
+    └─→ Çıktı: English IR (.mlp)
+    ↓
+English IR (.mlp)
+    ├─→ Keywords: print, if, while, end, numeric, string
+    ├─→ Strings: "Merhaba" (UTF-8 korunmuş)
+    └─→ Comments: Korunmuş
+    ↓
+MLPC (Compiler - self_host/mlp_compiler.c)
+    ├─→ SADECE İngilizce keywords anlar
+    ├─→ UTF-8 strings'i byte sequence'e çevirir
+    └─→ Assembly üretir
+    ↓
+Assembly (.asm)
+    ├─→ ASCII strings: db "Hello", 0
+    ├─→ UTF-8 strings: db 196,176,108,... (byte sequence)
+    └─→ Smart delimiter: '...' veya "..."
+    ↓
+NASM + GCC → Binary
+```
+
+**🔴 KURAL #2: LEXER ASLA TÜRKÇE GÖRMEZ!**
+
+```mlp
+❌ YANLIŞ MİMARİ:
+Türkçe kaynak → Lexer (YAZDIR token'ı ekle) → Parser
+
+✅ DOĞRU MİMARİ:
+Türkçe kaynak → Preprocessor (YAZDIR → print) → English IR → Lexer (print token'ı) → Parser
+```
+
+**Neden?**
+- Lexer/Parser sadece English keywords bilir
+- Çok dil desteği preprocessor katmanında
+- Assembly SADECE İngilizce keyword'lerden üretilir
+- diller.json'a yeni dil eklemek 10 dakika
+- Compiler core değişmeden yeni dil eklenebilir
+
+**🔴 KURAL #3: UTF-8 HANDLING (BYTE SEQUENCE YAKLAŞIMI)**
+
+**Problem:**
+- NASM UTF-8 karakterleri string içinde doğrudan kabul etmez
+- NASM `\"` escape sequence'ini `"..."` içinde kabul etmez
+
+**Çözüm:**
+```c
+// visit_Metin() fonksiyonunda (mlp_compiler.c ~line 4883)
+
+// 1. UTF-8 tespit et
+int has_utf8 = 0;
+for (const char* p = string; *p; p++) {
+    if ((unsigned char)*p >= 128) {  // Non-ASCII
+        has_utf8 = 1;
+        break;
+    }
+}
+
+// 2. UTF-8 varsa byte sequence kullan
+if (has_utf8) {
+    // Output: db 196,176,108,107,32,115,97,116,196,177,114,0
+    sprintf(buffer, "%s: db ", label);
+    for (const char* p = string; *p; p++) {
+        sprintf(buffer + strlen(buffer), "%d,", (unsigned char)*p);
+    }
+    strcat(buffer, "0");  // Null terminator
+}
+// 3. ASCII ise smart delimiter
+else {
+    // String içinde \" varsa ' kullan, yoksa \" kullan
+    int has_quote = (strchr(string, '"') != NULL);
+    char delim = has_quote ? '\'' : '"';
+    sprintf(buffer, "%s: db %c%s%c, 0", label, delim, string, delim);
+}
+```
+
+**Sonuç:**
+- UTF-8: `"İlk satır"` → `db 196,176,108,107,32,115,97,116,196,177,114,0`
+- ASCII: `"Hello"` → `db "Hello", 0`
+- Quotes: `"Say \"Hi\""` → `db 'Say "Hi"', 0`
 
 ### 2. 📚 README.md - Proje Genel Bakış
 
@@ -103,37 +215,69 @@
 
 ### Mimari Felsefesi
 
+**🔴 KRİTİK: LEXER ASLA TÜRKÇE/RUSÇA/HİNTÇE GÖRMEZ!**
+
 ```
-┌─────────────────────────────────────────┐
-│  Kaynak Kod (Herhangi bir dil)          │
-│  - Türkçe: EĞER, DÖNGÜ, İŞLEÇ         │
-│  - Rusça: если, пока, функция          │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Kaynak Kod (.mlp - Türkçe/Rusça/Hintçe)        │
+│  - Türkçe: YAZDIR "Merhaba", EĞER, DÖNGÜ       │
+│  - Rusça: печать "Привет", если, пока          │
+│  - Hintçe: likho "नमस्ते", agar, jab_tak        │
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  PREPROCESSOR (dil_cevirici.py)         │
-│  - Dil tespiti (-- lang: tr-TR)        │
-│  - Anahtar kelime çevirisi             │
-│  - String ve comment korunması          │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  MLP_PREPROCESSOR (runtime/mlp_preprocessor.c)  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  1. Dil tespiti: -- lang: tr-TR header         │
+│  2. diller.json'dan keyword map yükle          │
+│  3. SADECE KEYWORDS çevir:                      │
+│     YAZDIR → print                              │
+│     EĞER → if                                   │
+│     SAYISAL → numeric                           │
+│  4. STRING İÇERİKLERİNİ KORU:                  │
+│     "Merhaba Dünya" → "Merhaba Dünya" (UTF-8)│
+│  5. COMMENT'LERİ KORU:                          │
+│     -- Bu yorum → -- Bu yorum                  │
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  İngilizce Ara Kod (.preprocessed.mlp)  │
-│  - if, while, function                  │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  English IR (.mlp)                              │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  print "Merhaba Dünya"  ← UTF-8 korunmuş       │
+│  if x > 10 then         ← Keywords İngilizce   │
+│  numeric y = 42         ← Tip isimleri İngilizce│
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  COMPILER (C ile yazılmış)              │
-│  - Lexer → Parser → Generator           │
-│  - SADECE İngilizce anlar              │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  MLPC COMPILER (self_host/mlp_compiler.c)       │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  - Lexer: SADECE İngilizce keywords tanır      │
+│  - Parser: AST oluşturur                        │
+│  - Generator: Assembly üretir                   │
+│  - UTF-8 Handler: Byte sequence'e çevirir      │
+│    * ASCII: db "Hello", 0                       │
+│    * UTF-8: db 77,101,114,104,97,98,97,0       │
+└─────────────────────────────────────────────────┘
                 ↓
-┌─────────────────────────────────────────┐
-│  x86-64 Assembly → Native Executable    │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Assembly (.asm - NASM syntax)                  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  str_1: db 77,101,114,104,97,98,97,0  ; UTF-8   │
+│  str_2: db "Hello", 0                 ; ASCII   │
+└─────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────┐
+│  NASM + GCC → Native Binary                     │
+│  ✅ UTF-8 characters display correctly          │
+└─────────────────────────────────────────────────┘
 ```
 
-**Tasarım Kararı:** Compiler core basit kalsın (English-only), çok dil desteği preprocessor katmanında!
+**Tasarım Kararları:**
+1. **Lexer English-only** → Basit, bakımı kolay
+2. **Preprocessor layer** → Çok dil desteği burada
+3. **UTF-8 byte sequence** → NASM compatibility
+4. **Smart delimiter** → ' vs " based on content
+5. **Pipeline ayrımı** → Her katman tek sorumlu
 
 ---
 
@@ -371,6 +515,29 @@ cat /home/pardus/projeler/tyd-lang/MLP/diller.json
 
 ## 📖 DİL KURALLARI (ÖZET)
 
+### ⚠️ ÖNEMLİ: "then" Kullanımı
+
+**KRİTİK KURAL:** `then` kelimesi **SADECE** `if` statement'larında kullanılır!
+
+```mlp
+✅ DOĞRU:
+if x > 5 then           -- ✅ 'then' sadece if ile kullanılır
+    print x
+end if
+
+❌ YANLIŞ:
+func add(a, b) then     -- ❌ HATALI! Fonksiyonlarda 'then' kullanılmaz!
+    return a + b
+end func
+
+✅ DOĞRU:
+func add(a, b)          -- ✅ Fonksiyonlarda 'then' yok
+    return a + b
+end func
+```
+
+**Semantik açıklama:** `then` kelimesi "sonra, o zaman" anlamına gelir ve sadece koşullu ifadelerde mantıklıdır. Fonksiyon tanımlamalarında anlamsızdır.
+
 ### Noktalı Virgül (;)
 
 ```mlp
@@ -385,9 +552,9 @@ SON                     ✅ Block end (NO semicolon)
 ### Blok Yapıları (Base Language - English)
 
 ```mlp
-function add(a, b) then
+func add(a, b)
     return a + b
-end function            ✅ Explicit (preferred)
+end func                ✅ Explicit (preferred)
 -- veya:
 end                     ⚠️ Generic (tolerated)
 
@@ -404,7 +571,7 @@ end while               ✅ Condition-based loop
 -- Türkçe kaynak örneği:
 İŞLEÇ topla(a, b) İSE
     DÖNÜŞ a + b
-SON İŞLEÇ               ← Preprocessor bunu "end function" yapar
+SON İŞLEÇ               ← Preprocessor bunu "end func" yapar
 ```
 
 ### Yorumlar

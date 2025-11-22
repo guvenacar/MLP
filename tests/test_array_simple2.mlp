@@ -1,0 +1,3 @@
+-- Test: Simple array without literal
+numeric arr[5]
+print 42

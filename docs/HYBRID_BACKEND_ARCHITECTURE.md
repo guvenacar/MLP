@@ -466,9 +466,9 @@ Backend* get_asm_backend(void) {
 
 **Test:**
 ```mlp
-function add(a, b) then
+func add(a, b)
     return a + b
-end
+end func
 
 int x = 5;
 int y = 10;
@@ -482,7 +482,7 @@ print result  # 15
 
 **MLP Kodu:**
 ```mlp
-function test() then
+func test()
     list<int> nums = list<int>();
     nums.add(42);
     nums.add(100);
@@ -494,7 +494,7 @@ function test() then
     end
     
     -- nums burada free edilmeli
-end
+end func
 ```
 
 **Üretilen C:**
@@ -526,7 +526,7 @@ void test() {
 
 **MLP:**
 ```mlp
-function search(target) then
+func search(target)
     list<int> data = list<int>();
     data.add(1);
     data.add(2);
@@ -536,7 +536,7 @@ function search(target) then
     end
     
     return -1
-end
+end func
 ```
 
 **Üretilen C (Cleanup Label Pattern):**

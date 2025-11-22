@@ -1,0 +1,52 @@
+#!/bin/bash
+# MLP Compiler Wrapper - Automatic language preprocessing
+# Usage: mlp <input.mlp> <output.asm>
+
+set -e
+
+if [ "$#" -ne 2 ]; then
+    echo "Kullanım: mlp <girdi.mlp> <çıktı.asm>"
+    echo "Usage: mlp <input.mlp> <output.asm>"
+    exit 1
+fi
+
+INPUT="$1"
+OUTPUT="$2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PREPROCESSOR="$SCRIPT_DIR/runtime/mlp_preprocessor"
+COMPILER="$SCRIPT_DIR/mlpc"
+
+# Check if input file exists
+if [ ! -f "$INPUT" ]; then
+    echo "HATA: Dosya bulunamadı: $INPUT"
+    echo "ERROR: File not found: $INPUT"
+    exit 1
+fi
+
+# Detect language from first line (-- lang: XX-XX)
+LANG_LINE=$(head -n 1 "$INPUT")
+if [[ $LANG_LINE =~ --[[:space:]]*lang:[[:space:]]*([a-z]{2}-[A-Z]{2}) ]]; then
+    LANG_ID="${BASH_REMATCH[1]}"
+    echo "🌍 Dil algılandı / Language detected: $LANG_ID"
+    
+    # Preprocess if not English
+    if [ "$LANG_ID" != "en-US" ]; then
+        TEMP_EN=$(mktemp --suffix=.mlp)
+        echo "📝 Ön işleme / Preprocessing: $INPUT → English"
+        "$PREPROCESSOR" "$INPUT" "$TEMP_EN" --lang="$LANG_ID"
+        
+        echo "🔨 Derleniyor / Compiling: English → $OUTPUT"
+        "$COMPILER" "$TEMP_EN" "$OUTPUT"
+        
+        rm -f "$TEMP_EN"
+    else
+        echo "🔨 Derleniyor / Compiling: $INPUT → $OUTPUT"
+        "$COMPILER" "$INPUT" "$OUTPUT"
+    fi
+else
+    echo "⚠️  Dil belirtilmemiş, İngilizce varsayılıyor"
+    echo "⚠️  No language specified, assuming English"
+    "$COMPILER" "$INPUT" "$OUTPUT"
+fi
+
+echo "✅ Başarılı / Success: $OUTPUT"

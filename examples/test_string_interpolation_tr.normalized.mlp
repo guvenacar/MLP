@@ -1,0 +1,8 @@
+sayı yas = 25
+metin isim = "Ahmet"
+sayı adet = 42
+
+yazdir "Merhaba {isim}!"
+yazdir "İsim: {isim}, Yaş: {yas}"
+yazdir "Adet: {adet}"
+yazdir "Kullanıcı {isim} {yas} yaşında ve {adet} eşyası var"

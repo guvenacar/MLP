@@ -31,9 +31,9 @@ This document specifies time utility functions for MLP, enabling programs to wor
 
 **Signature**:
 ```mlp
-function format_timestamp(timestamp, format) then
+func format_timestamp(timestamp, format)
     -- Returns formatted date/time string
-end
+end func
 ```
 
 **Parameters**:
@@ -61,18 +61,18 @@ end
 
 **Example**:
 ```mlp
-function show_build_time(timestamp) then
+func show_build_time(timestamp)
     string formatted = format_timestamp(timestamp, "%Y-%m-%d %H:%M:%S")
     print "Build time: "
     print formatted
-end
+end func
 
-function format_log_entry(timestamp, message) then
+func format_log_entry(timestamp, message)
     string time_str = format_timestamp(timestamp, "[%H:%M:%S]")
     string entry = string_concat(time_str, " ")
     entry = string_concat(entry, message)
     return entry
-end
+end func
 ```
 
 **Common Formats**:
@@ -101,9 +101,9 @@ format_timestamp(ts, "[%Y%m%d_%H%M%S]")    -- "[20251121_143045]"
 
 **Signature**:
 ```mlp
-function parse_timestamp(date_string) then
+func parse_timestamp(date_string)
     -- Returns Unix timestamp
-end
+end func
 ```
 
 **Parameters**:
@@ -121,7 +121,7 @@ end
 
 **Example**:
 ```mlp
-function compare_dates(date1, date2) then
+func compare_dates(date1, date2)
     int ts1 = parse_timestamp(date1)
     int ts2 = parse_timestamp(date2)
 
@@ -148,7 +148,7 @@ function compare_dates(date1, date2) then
     end
 
     return 1
-end
+end func
 ```
 
 ---
@@ -159,9 +159,9 @@ end
 
 **Signature**:
 ```mlp
-function get_milliseconds() then
+func get_milliseconds()
     -- Returns milliseconds since epoch (or program start)
-end
+end func
 ```
 
 **Parameters**: None
@@ -177,7 +177,7 @@ end
 
 **Example**:
 ```mlp
-function measure_execution(name) then
+func measure_execution(name)
     int start = get_milliseconds()
 
     -- Execute work
@@ -192,9 +192,9 @@ function measure_execution(name) then
     print " ms"
 
     return elapsed
-end
+end func
 
-function benchmark_function(iterations) then
+func benchmark_function(iterations)
     int total = 0
     int i = 0
 
@@ -212,7 +212,7 @@ function benchmark_function(iterations) then
     print " ms over "
     print iterations
     print " iterations"
-end
+end func
 ```
 
 ---
@@ -223,9 +223,9 @@ end
 
 **Signature**:
 ```mlp
-function get_time_string() then
+func get_time_string()
     -- Returns current time as "YYYY-MM-DD HH:MM:SS"
-end
+end func
 ```
 
 **Parameters**: None
@@ -240,23 +240,23 @@ end
 
 **Example**:
 ```mlp
-function log_message(level, message) then
+func log_message(level, message)
     string timestamp = get_time_string()
     print timestamp
     print " ["
     print level
     print "] "
     print message
-end
+end func
 
-function create_build_report() then
+func create_build_report()
     print "Build Report"
     print "============"
     print "Generated: "
     print get_time_string()
     print ""
     -- ... rest of report
-end
+end func
 ```
 
 ---
@@ -375,15 +375,15 @@ call mlp_get_milliseconds
 ### 3.1 Build System Timestamps
 
 ```mlp
-function log_build_step(step_name) then
+func log_build_step(step_name)
     string time = get_time_string()
     print "["
     print time
     print "] "
     print step_name
-end
+end func
 
-function check_file_freshness(source, object) then
+func check_file_freshness(source, object)
     int src_info = get_file_info(source)
     int obj_info = get_file_info(object)
 
@@ -407,13 +407,13 @@ function check_file_freshness(source, object) then
     end
 
     return 1  -- Object is up to date
-end
+end func
 ```
 
 ### 3.2 Performance Profiling
 
 ```mlp
-function profile_compiler() then
+func profile_compiler()
     print "=== Compiler Performance Profile ==="
 
     -- Lexing
@@ -445,13 +445,13 @@ function profile_compiler() then
     print "Total: "
     print total
     print " ms"
-end
+end func
 ```
 
 ### 3.3 Log File Management
 
 ```mlp
-function create_log_filename() then
+func create_log_filename()
     int ts = current_timestamp()
     string date_part = format_timestamp(ts, "%Y%m%d")
 
@@ -460,9 +460,9 @@ function create_log_filename() then
     filename = string_concat(filename, ".txt")
 
     return filename
-end
+end func
 
-function write_log_entry(level, message) then
+func write_log_entry(level, message)
     string timestamp = get_time_string()
 
     string entry = timestamp
@@ -474,13 +474,13 @@ function write_log_entry(level, message) then
 
     string log_file = create_log_filename()
     append_file(log_file, entry)
-end
+end func
 ```
 
 ### 3.4 Duration Calculation
 
 ```mlp
-function calculate_age(birth_date) then
+func calculate_age(birth_date)
     int birth_ts = parse_timestamp(birth_date)
     if birth_ts == 0 then
         print "Invalid date format"
@@ -494,9 +494,9 @@ function calculate_age(birth_date) then
     int days = seconds_diff / 86400
 
     return days
-end
+end func
 
-function time_since(timestamp) then
+func time_since(timestamp)
     int now = current_timestamp()
     int diff = now - timestamp
 
@@ -513,7 +513,7 @@ function time_since(timestamp) then
         print diff / 86400
         print " days ago"
     end
-end
+end func
 ```
 
 ---
@@ -523,7 +523,7 @@ end
 ### 4.1 Invalid Timestamps
 
 ```mlp
-function safe_format_timestamp(timestamp, format) then
+func safe_format_timestamp(timestamp, format)
     -- Validate timestamp (reasonable range)
     if timestamp < 0 then
         print "Error: Negative timestamp"
@@ -542,13 +542,13 @@ function safe_format_timestamp(timestamp, format) then
     end
 
     return result
-end
+end func
 ```
 
 ### 4.2 Parse Errors
 
 ```mlp
-function parse_date_safe(date_string) then
+func parse_date_safe(date_string)
     int timestamp = parse_timestamp(date_string)
 
     if timestamp == 0 then
@@ -562,7 +562,7 @@ function parse_date_safe(date_string) then
     end
 
     return timestamp
-end
+end func
 ```
 
 ---
@@ -591,7 +591,7 @@ end
 ### 6.1 Unit Tests
 
 ```mlp
-function test_format_timestamp() then
+func test_format_timestamp()
     -- Known timestamp: 2025-11-21 00:00:00 UTC
     int ts = 1763740800
 
@@ -603,9 +603,9 @@ function test_format_timestamp() then
     assert(string_length(result) == 8, "Time format wrong length")
 
     print "test_format_timestamp: PASSED"
-end
+end func
 
-function test_parse_timestamp() then
+func test_parse_timestamp()
     int ts = parse_timestamp("2025-11-21")
     assert(ts > 0, "Parse failed")
 
@@ -616,9 +616,9 @@ function test_parse_timestamp() then
     assert(ts == 0, "Should fail on invalid")
 
     print "test_parse_timestamp: PASSED"
-end
+end func
 
-function test_get_milliseconds() then
+func test_get_milliseconds()
     int t1 = get_milliseconds()
     -- Small delay
     int i = 0
@@ -631,15 +631,15 @@ function test_get_milliseconds() then
     assert(t2 - t1 < 1000, "Loop shouldn't take > 1 second")
 
     print "test_get_milliseconds: PASSED"
-end
+end func
 
-function test_get_time_string() then
+func test_get_time_string()
     string time = get_time_string()
     assert(string_length(time) == 19, "Should be YYYY-MM-DD HH:MM:SS")
     assert(string_char_at(time, 4) == "-", "Should have dash at pos 4")
 
     print "test_get_time_string: PASSED"
-end
+end func
 ```
 
 ---

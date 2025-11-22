@@ -107,7 +107,7 @@ if x == y then
     c = 15
 else
     c = 20
-end
+end func
 
 print "Result:"
 print c
@@ -184,7 +184,7 @@ The MLP compiler core understands only English keywords. All other languages are
 | `end` | Block end | `end` |
 | `while` | Loop | `while` |
 | `break` | Exit loop | `break` |
-| `function` | Function definition | `function add(a, b) then` |
+| `function` | Function definition | `func add(a, b)` |
 | `return` | Return value | `return x + y` |
 | `print` | Output | `print "Hello"` |
 | `true` | Boolean true | `true` |
@@ -214,12 +214,54 @@ The MLP compiler core understands only English keywords. All other languages are
 
 ## Preprocessor
 
+### 🔴 CRITICAL ARCHITECTURE RULE
+
+**THE LEXER MUST NEVER SEE NON-ENGLISH KEYWORDS!**
+
+```
+❌ WRONG ARCHITECTURE:
+Turkish Source → Lexer (add YAZDIR token) → Parser
+
+✅ CORRECT ARCHITECTURE:
+Turkish Source → Preprocessor (YAZDIR→print) → English IR → Lexer → Parser
+```
+
+**Why this matters:**
+- Lexer/Parser understand ONLY English keywords
+- Multi-language support is PREPROCESSOR's responsibility
+- Assembly generated from English keywords ONLY
+- Adding new language = just edit diller.json (10 minutes)
+- Compiler core never changes for new languages
+
 ### How It Works
 
-The preprocessor translates keywords from any language to English while preserving:
-- String literals (content inside `"..."`)
-- Comments (`--` single-line, `{- ... -}` multi-line)
-- Code structure
+**Preprocessor Pipeline:**
+
+```
+Input: Turkish/Russian/Hindi .mlp file
+  ↓
+1. Detect language from "-- lang: XX-XX" header
+  ↓
+2. Load keyword mappings from diller.json
+  ↓
+3. Process line by line with state machine:
+   STATE_CODE     → Translate keywords
+   STATE_STRING   → Preserve UTF-8 content
+   STATE_COMMENT  → Preserve as-is
+  ↓
+4. Output: English .mlp with preserved UTF-8 strings
+  ↓
+Compiler sees: English keywords + UTF-8 strings
+```
+
+**What gets translated:**
+- Keywords: YAZDIR → print, EĞER → if, SAYISAL → numeric
+- Type names: METIN → string, MANTIKSAL → boolean
+
+**What gets preserved:**
+- String contents: `"Merhaba Dünya"` stays as-is (UTF-8)
+- Comments: `-- Bu yorum` stays as-is
+- String escape sequences: `\n`, `\t`, `\"`
 
 ### State Machine
 
@@ -227,9 +269,50 @@ The preprocessor uses a 3-state machine:
 
 ```
 STATE_CODE:     Normal code - translate keywords
-STATE_STRING:   Inside "..." - preserve as-is
+STATE_STRING:   Inside "..." - preserve UTF-8 as-is
 STATE_COMMENT:  Inside comment - preserve as-is
 ```
+
+### UTF-8 String Handling in Compiler
+
+**Problem:** NASM doesn't accept UTF-8 bytes directly in strings
+
+**Solution:** Byte sequence approach (in visit_Metin() ~line 4883)
+
+```c
+// 1. Detect UTF-8
+int has_utf8 = 0;
+for (const char* p = string; *p; p++) {
+    if ((unsigned char)*p >= 128) {  // Non-ASCII byte
+        has_utf8 = 1;
+        break;
+    }
+}
+
+// 2. Output format based on content
+if (has_utf8) {
+    // UTF-8 → Byte sequence
+    // "Merhaba" → db 77,101,114,104,97,98,97,0
+    sprintf(buffer, "%s: db ", label);
+    for (const char* p = string; *p; p++) {
+        sprintf(buffer + strlen(buffer), "%d,", (unsigned char)*p);
+    }
+    strcat(buffer, "0");
+} else {
+    // ASCII → Quoted string with smart delimiter
+    // "Hello" → db "Hello", 0
+    // "Say \"Hi\"" → db 'Say "Hi"', 0
+    int has_quote = (strchr(string, '"') != NULL);
+    char delim = has_quote ? '\'' : '"';
+    sprintf(buffer, "%s: db %c%s%c, 0", label, delim, string, delim);
+}
+```
+
+**Result:**
+- Turkish "Merhaba" displays correctly
+- Russian "Привет" displays correctly
+- Hindi "नमस्ते" displays correctly
+- Quotes handled: `"Say \"Hi\""` works
 
 **Example:**
 
@@ -246,7 +329,7 @@ Output (English):
 string mesaj = "EĞER bu değişmez";
 if x > 10 then
     print mesaj
-end
+end func
 ```
 
 Note: `"EĞER bu değişmez"` remains unchanged because it's inside a string literal.
@@ -324,22 +407,22 @@ return x + y;    -- NO semicolons!
 **All blocks end with `end`:**
 
 ```mlp
-function add(a, b) then
+func add(a, b)
     return a + b
-end
+end func
 
 if x > 0 then
     print "Positive"
 else
     print "Negative"
-end
+end func
 
 while
     if i >= 10 then
         break
     end
     i = i + 1
-end
+end func
 ```
 
 ### Rule 3: Comments
@@ -384,13 +467,13 @@ string quote = "She said \"Hi\"";
 ```mlp
 if condition then
     -- statements
-end
+end func
 
 if condition then
     -- statements
 else
     -- statements
-end
+end func
 
 -- Nested
 if x == 0 then
@@ -401,7 +484,7 @@ else
     else
         print "Negative"
     end
-end
+end func
 ```
 
 ### Loop (while)
@@ -411,7 +494,7 @@ end
 while
     print "Forever"
     break  -- Exit with break
-end
+end func
 
 -- Conditional loop
 int i = 0;
@@ -421,7 +504,7 @@ while
     end
     print i
     i = i + 1
-end
+end func
 ```
 
 ---
@@ -431,19 +514,19 @@ end
 ### Definition
 
 ```mlp
-function name(param1, param2, ...) then
+func name(param1, param2, ...)
     -- statements
     return value
-end
+end func
 ```
 
 ### Examples
 
 **Simple function:**
 ```mlp
-function add(a, b) then
+func add(a, b)
     return a + b
-end
+end func
 
 int result = add(5, 3);
 print result  -- 8
@@ -451,22 +534,22 @@ print result  -- 8
 
 **Recursive function:**
 ```mlp
-function factorial(n) then
+func factorial(n)
     if n <= 1 then
         return 1
     end
     return n * factorial(n - 1)
-end
+end func
 
 print factorial(5)  -- 120
 ```
 
 **No return value:**
 ```mlp
-function greet(name) then
+func greet(name)
     print "Hello, "
     print name
-end
+end func
 
 greet("Alice")
 ```
@@ -549,6 +632,44 @@ print cwd
 ---
 
 ## Compiler Architecture
+
+### 🏗️ Self-Hosting Status
+
+**MLP IS FULLY SELF-HOSTING** ✅ (Completed: November 22, 2024)
+
+MLP can now compile itself! The compiler has been rewritten in MLP:
+- **Lexer:** `self_host/lexer.mlp` - Tokenization in MLP
+- **Parser:** `self_host/parser.mlp` - AST construction in MLP  
+- **Generator:** `self_host/generator.mlp` - Assembly generation in MLP
+- **Main Compiler:** `self_host/mlpc.mlp` - Complete compiler in MLP
+
+### 🔀 Hybrid Architecture (Two Compilation Paths)
+
+MLP supports two distinct compilation pipelines:
+
+#### Path 1: MLP → Assembly (Direct)
+
+```
+Source.mlp → self_host/mlpc.mlp → x86-64 Assembly
+```
+
+- Uses MLP-written compiler components
+- Direct assembly generation via `generator.mlp`
+- Faster compilation time
+- Pure MLP implementation
+
+#### Path 2: MLP → C → Assembly (Default) ⭐
+
+```
+Source.mlp → c_compiler/mlpc → C Intermediate → x86-64 Assembly
+```
+
+- Uses C-based bootstrap compiler
+- Generates optimized C code first
+- Better performance optimizations
+- **Recommended for production use**
+
+**Both paths are fully functional and tested!**
 
 ### Components
 
@@ -837,12 +958,12 @@ The compiler provides detailed error messages:
 
 ```mlp
 -- lang: en-US
-function fibonacci(n) then
+func fibonacci(n)
     if n <= 1 then
         return n
     end
     return fibonacci(n - 1) + fibonacci(n - 2)
-end
+end func
 
 int i = 0;
 while
@@ -856,7 +977,7 @@ while
     print fibonacci(i)
 
     i = i + 1
-end
+end func
 ```
 
 ### Example 2: File I/O (Russian)
@@ -940,9 +1061,9 @@ Use your language's naming conventions:
 ```mlp
 -- lang: tr-TR
 -- Bu fonksiyon faktöriyel hesaplar
-function faktoriyel(n) then
+func faktoriyel(n)
     ...
-end
+end func
 ```
 
 ### 4. Test Edge Cases
@@ -1002,7 +1123,7 @@ string name = null
 
 if value == null then
     print "Value is null"
-end
+end func
 
 -- Boolean literals
 boolean flag = true
@@ -1010,7 +1131,7 @@ boolean active = false
 
 if flag == true then
     print "Flag is true"
-end
+end func
 ```
 
 **NULL Comparison:**
@@ -1018,16 +1139,16 @@ end
 -- NULL equals 0
 if null == 0 then
     print "null == 0: TRUE"
-end
+end func
 
 -- Boolean arithmetic
 if true == 1 then
     print "true == 1: TRUE"
-end
+end func
 
 if false == 0 then
     print "false == 0: TRUE"
-end
+end func
 ```
 
 **Implementation:**
@@ -1055,9 +1176,9 @@ optional<numeric> x = null
 
 -- Type parameter syntax
 generic T
-optional<T> create_optional(T value) then
+optional<T> create_optional(T value)
     -- implementation
-end
+end func
 ```
 
 **Optional<T> Implementation:**
@@ -1066,50 +1187,50 @@ MLP provides a self-hosted Optional<T> library written in pure MLP:
 
 ```mlp
 -- Optional<numeric> struct
-struct OptionalNumeric then
+struct OptionalNumeric
     numeric value
     boolean has_value
-end
+end struct
 
 -- Create empty optional
-function optional_numeric_none() then
+func optional_numeric_none()
     OptionalNumeric opt
     opt.value = 0
     opt.has_value = false
     return opt
-end
+end func
 
 -- Create optional with value
-function optional_numeric_some(numeric val) then
+func optional_numeric_some(numeric val)
     OptionalNumeric opt
     opt.value = val
     opt.has_value = true
     return opt
-end
+end func
 
 -- Check if has value
-function optional_numeric_has_value(OptionalNumeric opt) then
+func optional_numeric_has_value(OptionalNumeric opt)
     return opt.has_value
-end
+end func
 
 -- Get value (with error check)
-function optional_numeric_value(OptionalNumeric opt) then
+func optional_numeric_value(OptionalNumeric opt)
     if opt.has_value then
         return opt.value
     else
         print "ERROR: Accessing value of empty optional!"
         return 0
     end
-end
+end func
 
 -- Get value or default
-function optional_numeric_value_or(OptionalNumeric opt, numeric default_val) then
+func optional_numeric_value_or(OptionalNumeric opt, numeric default_val)
     if opt.has_value then
         return opt.value
     else
         return default_val
     end
-end
+end func
 ```
 
 **Usage Example:**
@@ -1122,7 +1243,7 @@ if optional_numeric_has_value(maybe_num) then
     print "Has value"
 else
     print "No value (correct!)"
-end
+end func
 
 -- Get with default
 numeric val = optional_numeric_value_or(maybe_num, 42)
@@ -1134,7 +1255,7 @@ OptionalNumeric some_num = optional_numeric_some(100)
 if optional_numeric_has_value(some_num) then
     numeric actual = optional_numeric_value(some_num)
     print actual  -- 100
-end
+end func
 ```
 
 **Self-Hosting Principle:**

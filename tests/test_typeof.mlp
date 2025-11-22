@@ -1,0 +1,33 @@
+-- Test typeof operator (Phase 5.7)
+
+numeric age = 25
+string name = "Ahmet"
+
+print "Testing typeof operator:"
+print ""
+
+-- Test with numeric literal
+string type1 = typeof(42)
+print "typeof(42) = "
+print type1
+print ""
+
+-- Test with string literal  
+string type2 = typeof("hello")
+print "typeof(hello) = "
+print type2
+print ""
+
+-- Test with numeric variable
+string type3 = typeof(age)
+print "typeof(age) = "
+print type3
+print ""
+
+-- Test with string variable
+string type4 = typeof(name)
+print "typeof(name) = "
+print type4
+print ""
+
+print "All typeof tests complete!"

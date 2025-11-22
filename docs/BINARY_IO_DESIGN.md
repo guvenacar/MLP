@@ -31,9 +31,9 @@ This document specifies binary file I/O functions for MLP, enabling programs to 
 
 **Signature**:
 ```mlp
-function read_binary(path) then
+func read_binary(path)
     -- Returns pointer to byte array, sets size via out parameter
-end
+end func
 ```
 
 **Parameters**:
@@ -53,7 +53,7 @@ end
 
 **Example**:
 ```mlp
-function load_object_file(path) then
+func load_object_file(path)
     int data = read_binary(path)
     if data == 0 then
         panic("Failed to read object file")
@@ -68,7 +68,7 @@ function load_object_file(path) then
     -- Don't forget to free
     mlp_free(data)
     return 1
-end
+end func
 ```
 
 **Error Handling**:
@@ -91,10 +91,10 @@ end
 
 **Signature**:
 ```mlp
-function write_binary(path, data, size) then
+func write_binary(path, data, size)
     -- Writes size bytes from data to file
     -- Returns 0 on success, -1 on error
-end
+end func
 ```
 
 **Parameters**:
@@ -115,7 +115,7 @@ end
 
 **Example**:
 ```mlp
-function save_compiled_output(path, code, code_size) then
+func save_compiled_output(path, code, code_size)
     int result = write_binary(path, code, code_size)
     if result != 0 then
         print "Error: Failed to write output file"
@@ -126,7 +126,7 @@ function save_compiled_output(path, code, code_size) then
     print " bytes to "
     print path
     return 1
-end
+end func
 ```
 
 **Error Handling**:
@@ -147,9 +147,9 @@ end
 
 **Signature**:
 ```mlp
-function get_file_info(path) then
+func get_file_info(path)
     -- Returns pointer to FileInfo struct
-end
+end func
 ```
 
 **Parameters**:
@@ -169,12 +169,12 @@ struct FileInfo then
     int is_directory;   -- 1 if directory, 0 if file
     int is_readable;    -- 1 if readable, 0 otherwise
     int is_writable;    -- 1 if writable, 0 otherwise
-end
+end func
 ```
 
 **Example**:
 ```mlp
-function check_source_file(path) then
+func check_source_file(path)
     int info = get_file_info(path)
     if info == 0 then
         print "File not found: "
@@ -194,19 +194,19 @@ function check_source_file(path) then
 
     mlp_free(info)
     return 1
-end
+end func
 ```
 
 **Helper Functions**:
 ```mlp
 -- Access FileInfo fields
-function file_info_size(info) then ... end
-function file_info_modified(info) then ... end
-function file_info_created(info) then ... end
-function file_info_permissions(info) then ... end
-function file_info_is_directory(info) then ... end
-function file_info_is_readable(info) then ... end
-function file_info_is_writable(info) then ... end
+func file_info_size(info) ... end
+func file_info_modified(info) ... end
+func file_info_created(info) ... end
+func file_info_permissions(info) ... end
+func file_info_is_directory(info) ... end
+func file_info_is_readable(info) ... end
+func file_info_is_writable(info) ... end
 ```
 
 ---
@@ -217,9 +217,9 @@ function file_info_is_writable(info) then ... end
 
 **Signature**:
 ```mlp
-function copy_file(source, dest) then
+func copy_file(source, dest)
     -- Copies file, returns 0 on success
-end
+end func
 ```
 
 **Parameters**:
@@ -239,7 +239,7 @@ end
 
 **Example**:
 ```mlp
-function backup_file(path) then
+func backup_file(path)
     string backup_path = string_concat(path, ".bak")
 
     int result = copy_file(path, backup_path)
@@ -251,7 +251,7 @@ function backup_file(path) then
     print "Backup created: "
     print backup_path
     return 1
-end
+end func
 ```
 
 **Error Handling**:
@@ -432,7 +432,7 @@ call mlp_write_binary
 ### 3.1 Compiler Object File Handling
 
 ```mlp
-function compile_to_object(source_path, object_path) then
+func compile_to_object(source_path, object_path)
     -- Read source
     string source = read_file(source_path)
     if string_length(source) == 0 then
@@ -451,13 +451,13 @@ function compile_to_object(source_path, object_path) then
 
     mlp_free(machine_code)
     return 1
-end
+end func
 ```
 
 ### 3.2 Build System File Comparison
 
 ```mlp
-function needs_rebuild(source, object) then
+func needs_rebuild(source, object)
     int src_info = get_file_info(source)
     int obj_info = get_file_info(object)
 
@@ -480,13 +480,13 @@ function needs_rebuild(source, object) then
     end
 
     return 0
-end
+end func
 ```
 
 ### 3.3 Binary File Processing
 
 ```mlp
-function process_executable(path) then
+func process_executable(path)
     int data = read_binary(path)
     if data == 0 then
         print "Cannot read executable"
@@ -505,7 +505,7 @@ function process_executable(path) then
 
     mlp_free(data)
     return 1
-end
+end func
 ```
 
 ---
@@ -515,7 +515,7 @@ end
 ### 4.1 Robust File Reading
 
 ```mlp
-function safe_read_binary(path) then
+func safe_read_binary(path)
     -- Check file exists first
     if file_exists(path) == 0 then
         set_error_code(1)
@@ -547,13 +547,13 @@ function safe_read_binary(path) then
     -- Read file
     int data = read_binary(path)
     return data
-end
+end func
 ```
 
 ### 4.2 Atomic Write Pattern
 
 ```mlp
-function atomic_write(path, data, size) then
+func atomic_write(path, data, size)
     -- Write to temp file first
     string temp_path = string_concat(path, ".tmp")
 
@@ -568,7 +568,7 @@ function atomic_write(path, data, size) then
     -- delete_file(temp_path)  -- Needs Phase 5.3 completion
 
     return result
-end
+end func
 ```
 
 ---
@@ -617,7 +617,7 @@ end
 ### 7.1 Unit Tests
 
 ```mlp
-function test_read_write_binary() then
+func test_read_write_binary()
     -- Create test data
     int data = mlp_malloc(256)
     -- Fill with test pattern
@@ -637,9 +637,9 @@ function test_read_write_binary() then
     mlp_free(data)
     mlp_free(read_data)
     print "test_read_write_binary: PASSED"
-end
+end func
 
-function test_get_file_info() then
+func test_get_file_info()
     -- Create test file
     write_file("test_info.txt", "Hello World")
 
@@ -654,9 +654,9 @@ function test_get_file_info() then
 
     mlp_free(info)
     print "test_get_file_info: PASSED"
-end
+end func
 
-function test_copy_file() then
+func test_copy_file()
     write_file("source.txt", "Copy test content")
 
     int result = copy_file("source.txt", "dest.txt")
@@ -666,7 +666,7 @@ function test_copy_file() then
     assert(string_length(content) == 17, "Content length mismatch")
 
     print "test_copy_file: PASSED"
-end
+end func
 ```
 
 ### 7.2 Integration Tests

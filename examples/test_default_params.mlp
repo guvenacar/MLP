@@ -1,0 +1,12 @@
+// Test default parameters - syntax parsing only
+
+function add(a = 10, b = 20)
+    return a + b
+end function
+
+numeric result = add()
+print result
+
+
+
+

@@ -673,12 +673,12 @@ Her aşama sadece kendi işini yapıyor:
 ### MLP Kaynak Kodu
 
 ```mlp
-function fibonacci(n) then
+func fibonacci(n)
     if n <= 1 then
         return n
     end
     return fibonacci(n - 1) + fibonacci(n - 2)
-end
+end func
 
 int result = fibonacci(10);
 print result

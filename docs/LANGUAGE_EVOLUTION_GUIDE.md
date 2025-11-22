@@ -108,7 +108,7 @@ git checkout -b v4.0-major-syntax-update
 -- Yeni keyword ekle
 if keyword_str == "decimal" then
     return Token_DECIMAL
-end
+end func
 ```
 
 **Token enum'u güncelle:**
@@ -126,7 +126,7 @@ Token_STRING = 3
 
 ```mlp
 -- Değişken tanımlama parsing
-function parse_declaration() then
+func parse_declaration()
     -- Eski: Token_INT kontrolü
     -- if token.type == Token_INT then
     
@@ -143,7 +143,7 @@ function parse_declaration() then
         -- Expression parse et (3.14 gibi)
         -- ...
     end
-end
+end func
 ```
 
 ### Adım 6: Code Generator Güncelleme
@@ -151,7 +151,7 @@ end
 **Dosya:** `self_host/generator.mlp`
 
 ```mlp
-function generate_declaration(node) then
+func generate_declaration(node)
     -- Eski: int için stack allocation
     -- if node.type == Node_INT_DECL then
     --     emit("    sub rsp, 8")  -- 64-bit int
@@ -169,7 +169,7 @@ function generate_declaration(node) then
             emit("    movq [rbp-" + node.offset + "], xmm0")
         end
     end
-end
+end func
 ```
 
 ### Adım 7: Runtime Güncelleme (gerekirse)
@@ -284,7 +284,7 @@ cd ..
 if keyword_str == "int" then
     print_warning("'int' deprecated. Use 'decimal' instead.")
     return Token_DECIMAL  -- Hala çalış ama uyar
-end
+end func
 ```
 
 **Veya migration tool:**
@@ -345,12 +345,12 @@ Detaylı migration guide oluştur.
 -- Keyword tanıma
 if keyword_str == "decimal" then
     return create_token(Token_DECIMAL, "decimal", line, col)
-end
+end func
 ```
 
 #### 3. self_host/parser.mlp
 ```mlp
-function parse_var_declaration() then
+func parse_var_declaration()
     if current_token.type == Token_DECIMAL then
         advance_token()
         
@@ -361,12 +361,12 @@ function parse_var_declaration() then
         
         return DeclarationNode(name, value)
     end
-end
+end func
 ```
 
 #### 4. self_host/generator.mlp
 ```mlp
-function gen_decimal_decl(node) then
+func gen_decimal_decl(node)
     emit("    ; decimal " + node.name)
     emit("    sub rsp, 8")
     
@@ -374,7 +374,7 @@ function gen_decimal_decl(node) then
     emit("    mov rax, " + float_to_hex(node.value))
     emit("    movq xmm0, rax")
     emit("    movq [rbp-" + node.offset + "], xmm0")
-end
+end func
 ```
 
 #### 5. runtime/runtime.c
@@ -526,7 +526,7 @@ decimal var999 = 999.0;
 if keyword_str == "int" then
     emit_warning("'int' is deprecated. Use 'decimal' in v5.0")
     return Token_DECIMAL  -- Hala çalışıyor
-end
+end func
 
 -- Version 5.0: int tamamen kaldırılacak
 ```
@@ -537,7 +537,7 @@ end
 -- Her iki keyword de aynı şeyi yapıyor
 if keyword_str == "int" or keyword_str == "decimal" then
     return Token_DECIMAL
-end
+end func
 ```
 
 ### Strateji 3: Migration Tool

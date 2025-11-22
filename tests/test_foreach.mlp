@@ -1,0 +1,62 @@
+-- Test 1: Basic for-each with array literal
+print "=== Test 1: Basic For-Each ==="
+numeric numbers[] = [10, 20, 30, 40, 50]
+for number in numbers
+    print number
+end for
+
+-- Test 2: For-each with operations inside loop
+print ""
+print "=== Test 2: For-Each with Operations ==="
+numeric values[] = [5, 10, 15, 20]
+for val in values
+    numeric doubled = val * 2
+    print doubled
+end for
+
+-- Test 3: Nested for-each loops
+print ""
+print "=== Test 3: Nested For-Each Loops ==="
+numeric outer[] = [1, 2, 3]
+numeric inner[] = [10, 20]
+for x in outer
+    for y in inner
+        numeric result = x * y
+        print result
+    end for
+end for
+
+-- Test 4: For-each with break
+print ""
+print "=== Test 4: For-Each with Break ==="
+numeric items[] = [1, 2, 3, 4, 5, 6]
+for item in items
+    if item == 4 then
+        break
+    end if
+    print item
+end for
+
+-- Test 5: For-each with if condition (skip continue due to parser bug)
+print ""
+print "=== Test 5: For-Each with If Condition ==="
+numeric mylist[] = [1, 2, 3, 4, 5]
+for elem in mylist
+    if elem != 3 then
+        print elem
+    end if
+end for
+
+-- Test 6: Mixed range and for-each
+print ""
+print "=== Test 6: Mixed Range and For-Each ==="
+numeric data[] = [100, 200, 300]
+for i in range(3)
+    print i
+end for
+for d in data
+    print d
+end for
+
+print ""
+print "=== All For-Each Tests Complete ==="

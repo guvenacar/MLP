@@ -31,9 +31,9 @@ This document specifies directory operation functions for MLP, enabling programs
 
 **Signature**:
 ```mlp
-function list_directory(path) then
+func list_directory(path)
     -- Returns list of directory entries
-end
+end func
 ```
 
 **Parameters**:
@@ -52,7 +52,7 @@ end
 
 **Example**:
 ```mlp
-function show_directory_contents(path) then
+func show_directory_contents(path)
     list[string] entries = list_directory(path)
 
     if entries.size() == 0 then
@@ -74,7 +74,7 @@ function show_directory_contents(path) then
 
     list_destroy(entries)
     return 1
-end
+end func
 ```
 
 **Error Handling**:
@@ -96,9 +96,9 @@ end
 
 **Signature**:
 ```mlp
-function create_directory(path) then
+func create_directory(path)
     -- Creates directory, returns 0 on success
-end
+end func
 ```
 
 **Parameters**:
@@ -115,7 +115,7 @@ end
 
 **Example**:
 ```mlp
-function setup_build_directory() then
+func setup_build_directory()
     int result = create_directory("build")
     if result != 0 then
         int error = get_error_code()
@@ -129,7 +129,7 @@ function setup_build_directory() then
 
     print "Created build directory"
     return 1
-end
+end func
 ```
 
 **Error Codes**:
@@ -147,9 +147,9 @@ end
 
 **Signature**:
 ```mlp
-function remove_directory(path) then
+func remove_directory(path)
     -- Removes empty directory, returns 0 on success
-end
+end func
 ```
 
 **Parameters**:
@@ -166,7 +166,7 @@ end
 
 **Example**:
 ```mlp
-function cleanup_temp_directory() then
+func cleanup_temp_directory()
     -- First, list and delete files (if needed)
     list[string] files = list_directory("temp")
 
@@ -185,7 +185,7 @@ function cleanup_temp_directory() then
 
     print "Temp directory removed"
     return 1
-end
+end func
 ```
 
 **Error Codes**:
@@ -203,9 +203,9 @@ end
 
 **Signature**:
 ```mlp
-function directory_exists(path) then
+func directory_exists(path)
     -- Returns 1 if exists and is directory, 0 otherwise
-end
+end func
 ```
 
 **Parameters**:
@@ -222,7 +222,7 @@ end
 
 **Example**:
 ```mlp
-function ensure_output_directory(path) then
+func ensure_output_directory(path)
     if directory_exists(path) == 1 then
         return 1  -- Already exists
     end
@@ -235,7 +235,7 @@ function ensure_output_directory(path) then
     end
 
     return 1
-end
+end func
 ```
 
 ---
@@ -246,9 +246,9 @@ end
 
 **Signature**:
 ```mlp
-function get_current_dir() then
+func get_current_dir()
     -- Returns current working directory path
-end
+end func
 ```
 
 **Parameters**: None
@@ -264,7 +264,7 @@ end
 
 **Example**:
 ```mlp
-function show_current_directory() then
+func show_current_directory()
     string cwd = get_current_dir()
 
     if string_length(cwd) == 0 then
@@ -275,7 +275,7 @@ function show_current_directory() then
     print "Current directory: "
     print cwd
     return 1
-end
+end func
 ```
 
 ---
@@ -286,9 +286,9 @@ end
 
 **Signature**:
 ```mlp
-function change_directory(path) then
+func change_directory(path)
     -- Changes to directory, returns 0 on success
-end
+end func
 ```
 
 **Parameters**:
@@ -305,7 +305,7 @@ end
 
 **Example**:
 ```mlp
-function build_in_directory(build_dir) then
+func build_in_directory(build_dir)
     -- Save current directory
     string original_dir = get_current_dir()
 
@@ -323,7 +323,7 @@ function build_in_directory(build_dir) then
     -- Return to original directory
     change_directory(original_dir)
     return 1
-end
+end func
 ```
 
 **Error Codes**:
@@ -491,7 +491,7 @@ call mlp_get_current_dir
 ### 3.1 Source Tree Traversal
 
 ```mlp
-function find_source_files(dir) then
+func find_source_files(dir)
     list[string] sources = list()
     list[string] entries = list_directory(dir)
 
@@ -517,13 +517,13 @@ function find_source_files(dir) then
 
     list_destroy(entries)
     return sources
-end
+end func
 ```
 
 ### 3.2 Build System Output Directory
 
 ```mlp
-function setup_build_output(config) then
+func setup_build_output(config)
     -- Create main build directory
     if directory_exists("build") == 0 then
         create_directory("build")
@@ -544,13 +544,13 @@ function setup_build_output(config) then
     print "Build output: "
     print config_dir
     return config_dir
-end
+end func
 ```
 
 ### 3.3 Temporary Directory Management
 
 ```mlp
-function with_temp_directory() then
+func with_temp_directory()
     -- Create temp directory
     string temp_dir = "/tmp/mlp_build_12345"
     create_directory(temp_dir)
@@ -571,7 +571,7 @@ function with_temp_directory() then
     remove_directory(temp_dir)
 
     return 1
-end
+end func
 ```
 
 ---
@@ -581,7 +581,7 @@ end
 ### 4.1 Safe Directory Creation
 
 ```mlp
-function ensure_directory_exists(path) then
+func ensure_directory_exists(path)
     -- Already exists?
     if directory_exists(path) == 1 then
         return 1
@@ -604,7 +604,7 @@ function ensure_directory_exists(path) then
     print "Error: Cannot create directory: "
     print path
     return 0
-end
+end func
 ```
 
 ### 4.2 Directory Stack Pattern
@@ -613,7 +613,7 @@ end
 -- Global directory stack (simplified)
 list[string] dir_stack = list()
 
-function push_directory(path) then
+func push_directory(path)
     string current = get_current_dir()
     dir_stack.add(current)
 
@@ -624,9 +624,9 @@ function push_directory(path) then
         return 0
     end
     return 1
-end
+end func
 
-function pop_directory() then
+func pop_directory()
     if dir_stack.size() == 0 then
         return 0
     end
@@ -635,7 +635,7 @@ function pop_directory() then
     -- (would need list.remove_last())
     change_directory(prev)
     return 1
-end
+end func
 ```
 
 ---
@@ -689,7 +689,7 @@ end
 ### 7.1 Unit Tests
 
 ```mlp
-function test_create_remove_directory() then
+func test_create_remove_directory()
     -- Create
     int result = create_directory("test_dir")
     assert(result == 0, "create_directory failed")
@@ -701,9 +701,9 @@ function test_create_remove_directory() then
     assert(directory_exists("test_dir") == 0, "Directory should not exist")
 
     print "test_create_remove_directory: PASSED"
-end
+end func
 
-function test_list_directory() then
+func test_list_directory()
     -- Create test structure
     create_directory("test_list")
     write_file("test_list/file1.txt", "content1")
@@ -718,9 +718,9 @@ function test_list_directory() then
 
     list_destroy(entries)
     print "test_list_directory: PASSED"
-end
+end func
 
-function test_current_directory() then
+func test_current_directory()
     string original = get_current_dir()
     assert(string_length(original) > 0, "Should have current dir")
 
@@ -738,7 +738,7 @@ function test_current_directory() then
     remove_directory("test_cd")
 
     print "test_current_directory: PASSED"
-end
+end func
 ```
 
 ### 7.2 Integration Tests

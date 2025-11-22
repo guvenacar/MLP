@@ -26,6 +26,7 @@ typedef enum {
     // --- Değer Typeleri ---
     TOKEN_NUMBER,
     TOKEN_STRING,
+    TOKEN_INTERPOLATED_STRING,  // Phase 5.9: String interpolation "Hello {name}"
     TOKEN_IDENTIFIER,
     TOKEN_TRUE,       // true literal
     TOKEN_FALSE,      // false literal
@@ -64,6 +65,7 @@ typedef enum {
     TOKEN_YAPI_STRUCT,    // struct
     TOKEN_LIST,      // list - Phase 2
     TOKEN_OPTIONAL,  // optional - Phase 6.2: Generic optional type
+    TOKEN_MAP,       // map - Phase 4: Hash maps
 
     // Phase 5.4: Language Features
     TOKEN_YAPI_ENUM,      // enum
@@ -73,6 +75,12 @@ typedef enum {
 
     // Phase 5.6: Additional Features
     TOKEN_CONST,     // const
+    TOKEN_TYPEOF,    // typeof - Phase 5.7: Type introspection
+    TOKEN_IMPORT,    // import - Phase 5.10: Module system
+    
+    // Phase 5.8: Range and For-Each
+    TOKEN_IN,        // in - for X in Y
+    TOKEN_RANGE,     // range - range(start, end, step)
 
     // --- Built-in Functions - Phase 3 ---
     // File I/O
@@ -99,6 +107,13 @@ typedef enum {
     TOKEN_BUILTIN_STRING_TO_INT,
     TOKEN_BUILTIN_CHAR_TO_STRING,
     TOKEN_BUILTIN_STRING_CONCAT,
+    
+    // Type Casting Helpers (Phase 5.7)
+    TOKEN_BUILTIN_NUM,              // num(str) - Convert string to numeric
+    TOKEN_BUILTIN_STR,              // str(num) - Convert numeric to string
+    TOKEN_BUILTIN_READ_INPUT,       // read_input() - Read line from stdin
+    TOKEN_BUILTIN_READ_LINE,        // read_line() - Alias for read_input
+    TOKEN_BUILTIN_READ_INT,         // read_int() - Read integer from stdin
 
     // Math Operations (Phase 4)
     TOKEN_BUILTIN_MATH_ABS,
@@ -178,10 +193,6 @@ typedef enum {
     TOKEN_BUILTIN_GET_FILE_NAME,
     TOKEN_BUILTIN_GET_DIRECTORY,
 
-    // Hash Map (Phase 4)
-    TOKEN_MAP,  // "map" keyword
-    TOKEN_COLON,     // : for key:value syntax
-
     // --- Operatörler ve Ayırıcılar ---
     // --- Operatörler ve Ayırıcılar ---
     TOKEN_LEFT_PAREN,   // (
@@ -192,6 +203,7 @@ typedef enum {
     TOKEN_ASSIGN,       // =
     TOKEN_SEMICOLON,    // ;  <-- YENİ
     TOKEN_DOT,          // .  <-- Struct field access
+    TOKEN_COLON,        // :  <-- Map key:value separator
 
     // Tek Karakterli Operatörler
     TOKEN_PLUS,         // +
@@ -243,6 +255,9 @@ typedef struct {
     char* value; // Token'ın string değeri (örn: "topla" or "123")
     int line;    // Token'ın bulunduğu satır numarası (1'den başlar)
     int column;  // Token'ın bulunduğu kolon numarası (1'den başlar)
+    // Phase 5.9: String interpolation support
+    char** interpolation_parts;  // String parçaları ["Hello ", "{name}", "!"]
+    int interpolation_count;     // Parça sayısı
 } Token;
 
 // Lexer Fonksiyon Bildirimleri
@@ -263,6 +278,8 @@ typedef enum {
     AST_BLOK,
     AST_SAYI,
     AST_METIN,
+    AST_INTERPOLATED_STRING,  // Phase 5.9: String interpolation
+    AST_IMPORT,              // Phase 5.10: Module import
     AST_DEGISKEN,
     AST_IKILI_ISLEM,
     AST_VARIABLE_DECLARATION,
@@ -271,14 +288,18 @@ typedef enum {
     AST_IF_STATEMENT_KOMUTU, // <-- YENİ (IF)
     AST_WHILE_LOOP_KOMUTU, // <-- YENİ (WHILE - while)
     AST_FOR_KOMUTU, // <-- YENİ (FOR - for loop)
+    AST_FOR_IN_RANGE,       // Phase 5.8: for X in range(...) loop
+    AST_FOR_EACH,           // Phase 5.8: for X in array/list loop
     AST_WHILE_LOOP_BITIR_KOMUTU, // <-- YENİ (WHILE_BITIR - break)
     AST_WHILE_LOOP_DEVAM_KOMUTU, // <-- YENİ (continue)
     AST_FUNCTION_DECLARATION,
     AST_RETURN_STATEMENT_KOMUTU,
     AST_ISLEC_CAGIRMA,
+    AST_TYPEOF_EXPR,        // typeof operator - Phase 5.7
     AST_ARRAY_TANIMLAMA,    // Array bildirimi: SAYISAL arr[10];
     AST_ARRAY_ERISIM,       // Array erişim: arr[5]
     AST_ARRAY_ATAMA,        // Array atama: arr[5] = 10;
+    AST_ARRAY_LITERAL,      // Array literal: [1, 2, 3, 4, 5]
     AST_STRUCT_DECLARATION,   // Struct tanımlama: YAPI Nokta İSE ... SON
     AST_STRUCT_FIELD_ACCESS,// Struct field erişim: p.x
     AST_STRUCT_FIELD_ATAMA, // Struct field atama: p.x = 10;
@@ -286,6 +307,7 @@ typedef enum {
     
     // Phase 6: Dynamic Lists (Modern Generic Syntax)
     AST_LIST_TANIMLAMA,     // List tanımlama: List<int> numbers = List<int>();
+    AST_LIST_LITERAL,       // List literal: (1, 2, 3, 4, 5)
     AST_LIST_ADD,           // List add: numbers.add(10)
     AST_LIST_GET,           // List get: numbers.get(0)
     AST_LIST_SET,           // List set: numbers.set(0, 10)
@@ -352,6 +374,17 @@ struct ASTNode {
             char* deger; // Token'dan gelen değer
         } sabit_data;
 
+        // Phase 5.9: String Interpolation
+        struct {
+            char** parts;     // String parçaları: literal ve {variable} patterns
+            int part_count;   // Parça sayısı
+        } interpolation_data;
+
+        // Phase 5.10: Import Statement
+        struct {
+            char* file_path;  // İmport edilecek dosya yolu
+        } import_data;
+
         // İkili İşlem yapısı (a + b)
         struct {
             ASTNode* sol;
@@ -405,6 +438,7 @@ struct ASTNode {
             Token* ad;
             Token** parametreler; // YENİ: Parametre adları (Token listesi)
             int parametre_sayisi; // YENİ
+            ASTNode** parametre_default_degerleri; // Phase 5.11: Default parameter values (NULL if no default)
             ASTNode* govde;
         } islec_tanimlama_data;
         
@@ -414,6 +448,11 @@ struct ASTNode {
             ASTNode** argumanlar;
             int arguman_sayisi;
         } islec_cagirma_data;
+        
+        // typeof Operator (typeof(expr)) - Phase 5.7
+        struct {
+            ASTNode* ifade;  // Expression to get type of
+        } typeof_data;
         
         // Diğer komutlar (PRINT, DÖNÜŞ, ATAMA)
         struct {
@@ -439,6 +478,12 @@ struct ASTNode {
             ASTNode* indeks;   // İndeks ifadesi
             ASTNode* deger;    // Atanacak değer
         } array_atama_data;
+
+        // Array Literal ([1, 2, 3, 4, 5])
+        struct {
+            ASTNode** elemanlar;  // Array elemanları
+            int eleman_sayisi;    // Eleman sayısı
+        } array_literal_data;
 
         // Struct Tanımlama (YAPI Nokta İSE SAYISAL x; SAYISAL y; SON)
         struct {
@@ -469,11 +514,19 @@ struct ASTNode {
 
         // ===== Phase 6: Dynamic Lists (Modern Generic Syntax) =====
 
-        // List Tanımlama (List<int> numbers = List<int>();)
+        // List Tanımlama (numeric items() or numeric items(10) or numeric items() = (1,2,3))
         struct {
-            Token* element_tipi;  // Element tipi (int, string, struct name)
-            Token* degisken_adi;  // List değişken ismi (numbers)
+            Token* element_tipi;  // Element tipi (numeric, string, boolean)
+            Token* degisken_adi;  // List değişken ismi (items)
+            ASTNode* capacity;    // Initial capacity (NULL for default) or literal
+            ASTNode* initial_value; // List literal for initialization (NULL if none)
         } list_tanimlama_data;
+
+        // List Literal ((1, 2, 3, 4, 5))
+        struct {
+            ASTNode** elemanlar;  // List elemanları
+            int eleman_sayisi;    // Eleman sayısı
+        } list_literal_data;
 
         // List Add (numbers.add(10))
         struct {
@@ -647,6 +700,22 @@ struct ASTNode {
         struct {
             Token* label_adi;       // Label name
         } label_data;
+
+        // Phase 5.8: For-in-range loop (for i in range(...))
+        struct {
+            Token* degisken;    // Loop variable (i)
+            ASTNode* start;     // Start value (0 or expression)
+            ASTNode* end;       // End value (10 or expression)
+            ASTNode* step;      // Step value (optional, default 1)
+            ASTNode* govde;     // Loop body
+        } for_in_range_data;
+
+        // Phase 5.8: For-each loop (for item in array/list)
+        struct {
+            Token* degisken;    // Loop variable (item)
+            Token* array_adi;   // Array/list name to iterate over
+            ASTNode* govde;     // Loop body
+        } for_each_data;
     };
 };
 
@@ -1003,6 +1072,10 @@ Token* createToken(TokenType type, const char* value) {
     }
 
     token->type = type;
+    
+    // Phase 5.9: Initialize interpolation fields
+    token->interpolation_parts = NULL;
+    token->interpolation_count = 0;
 
     // Değer (value) string'ini dinamik olarak kopyala
     if (value != NULL) {
@@ -1036,6 +1109,10 @@ KeywordMap keywords[] = {
     {"string",   TOKEN_TYPE_STRING},
     {"boolean",  TOKEN_TYPE_BOOLEAN},
     {"const",    TOKEN_CONST},
+    {"typeof",   TOKEN_TYPEOF},
+    {"import",   TOKEN_IMPORT},    // Phase 5.10: Module system
+    {"in",       TOKEN_IN},        // Phase 5.8: for X in Y
+    {"range",    TOKEN_RANGE},     // Phase 5.8: range(start, end, step)
 
     // Control Flow Keywords
     {"print",    TOKEN_PRINT},
@@ -1063,6 +1140,7 @@ KeywordMap keywords[] = {
     {"struct",   TOKEN_YAPI_STRUCT},
     {"list",     TOKEN_LIST},      // Phase 2: Dynamic lists
     {"optional", TOKEN_OPTIONAL},  // Phase 6.2: Generic optional type
+    {"map",      TOKEN_MAP},       // Phase 4: Hash maps
 
     // Phase 5.8: Control flow & debugging
     {"stop",     TOKEN_STOP},
@@ -1099,6 +1177,13 @@ KeywordMap keywords[] = {
     {"string_to_int",   TOKEN_BUILTIN_STRING_TO_INT},
     {"char_to_string",  TOKEN_BUILTIN_CHAR_TO_STRING},
     {"string_concat",   TOKEN_BUILTIN_STRING_CONCAT},
+    
+    // Phase 5.7: Type Casting Helpers
+    {"num",             TOKEN_BUILTIN_NUM},
+    {"str",             TOKEN_BUILTIN_STR},
+    {"read_input",      TOKEN_BUILTIN_READ_INPUT},
+    {"read_line",       TOKEN_BUILTIN_READ_LINE},
+    {"read_int",        TOKEN_BUILTIN_READ_INT},
 
     // Phase 4: Math Operations
     {"math_abs", TOKEN_BUILTIN_MATH_ABS},
@@ -1490,21 +1575,77 @@ Token* getNextToken() {
         }
     }
 
-    // STRING LITERAL Okuma ("merhaba" or 'multi-char string')
+    // STRING LITERAL Okuma ("merhaba" or 'multi-char string' or """multi-line""")
     if (current_char == '"' || current_char == '\'') {
         char quote_char = current_char;
-        current_position++; // Açılış tırnağını atla
+        
+        // Phase 5.8: Check for triple-quote multi-line string (""")
+        int is_multiline = 0;
+        if (quote_char == '"' && 
+            source_code[current_position + 1] == '"' && 
+            source_code[current_position + 2] == '"') {
+            is_multiline = 1;
+            current_position += 3; // Skip opening """
+        } else {
+            current_position++; // Skip single quote
+        }
 
         // Escape sequence'leri işleyerek string'i oluştur
-        char* value = (char*)malloc(1024); // Maksimum string uzunluğu
+        char* value = (char*)malloc(4096); // Larger buffer for multi-line strings
         int value_index = 0;
+        int has_interpolation = 0; // Phase 5.9: Check for {variable} patterns
 
-        // Kapanış tırnağına kadar oku ve escape sequence'leri dönüştür
-        while (source_code[current_position] != '\0' && source_code[current_position] != quote_char) {
-            // Escape sequence desteği (\n, \t, \", \\, vb.)
-            if (source_code[current_position] == '\\' && source_code[current_position + 1] != '\0') {
-                current_position++; // Backslash'i atla
-                char escape_char = source_code[current_position];
+        if (is_multiline) {
+            // Multi-line string: read until closing """
+            while (source_code[current_position] != '\0') {
+                // Check for closing """
+                if (source_code[current_position] == '"' &&
+                    source_code[current_position + 1] == '"' &&
+                    source_code[current_position + 2] == '"') {
+                    current_position += 3; // Skip closing """
+                    break;
+                }
+                
+                // Phase 5.9: Check for interpolation pattern {variable}
+                if (source_code[current_position] == '{' &&
+                    source_code[current_position + 1] != '\0' &&
+                    source_code[current_position + 1] != '}') {
+                    has_interpolation = 1;
+                }
+                
+                // Include everything literally (including newlines)
+                value[value_index++] = source_code[current_position];
+                current_position++;
+                
+                if (value_index >= 4095) {
+                    fprintf(stderr, "ERROR [Lexer]: Multi-line string too long (max 4096 chars)\n");
+                    free(value);
+                    return createToken(TOKEN_EOF, NULL);
+                }
+            }
+            
+            if (source_code[current_position - 3] != '"' || 
+                source_code[current_position - 2] != '"' ||
+                source_code[current_position - 1] != '"') {
+                fprintf(stderr, "ERROR [Lexer]: Unclosed multi-line string (missing closing \"\"\")\n");
+                free(value);
+                return createToken(TOKEN_EOF, NULL);
+            }
+        } else {
+            // Single-line string: original logic
+            // Kapanış tırnağına kadar oku ve escape sequence'leri dönüştür
+            while (source_code[current_position] != '\0' && source_code[current_position] != quote_char) {
+                // Phase 5.9: Check for interpolation pattern {variable}
+                if (source_code[current_position] == '{' &&
+                    source_code[current_position + 1] != '\0' &&
+                    source_code[current_position + 1] != '}') {
+                    has_interpolation = 1;
+                }
+                
+                // Escape sequence desteği (\n, \t, \", \\, vb.)
+                if (source_code[current_position] == '\\' && source_code[current_position + 1] != '\0') {
+                    current_position++; // Backslash'i atla
+                    char escape_char = source_code[current_position];
 
                 // Escape karakterini gerçek karaktere dönüştür
                 switch (escape_char) {
@@ -1526,18 +1667,23 @@ Token* getNextToken() {
                 value[value_index++] = source_code[current_position];
                 current_position++;
             }
+            }
+            
+            if (source_code[current_position] == '\0') {
+                fprintf(stderr, "ERROR [Lexer]: Kapanmamış string literal\n");
+                free(value);
+                return createToken(TOKEN_EOF, NULL);
+            }
+
+            value[value_index] = '\0'; // String'i sonlandır
+            current_position++; // Kapanış tırnağını atla
         }
 
-        if (source_code[current_position] == '\0') {
-            fprintf(stderr, "ERROR [Lexer]: Kapanmamış string literal\n");
-            free(value);
-            return createToken(TOKEN_EOF, NULL);
-        }
-
-        value[value_index] = '\0'; // String'i sonlandır
-        current_position++; // Kapanış tırnağını atla
-
-        Token* token = createToken(TOKEN_STRING, value);
+        value[value_index] = '\0'; // String'i sonlandır (multi-line için de)
+        
+        // Phase 5.9: Create appropriate token type based on interpolation
+        TokenType token_type = has_interpolation ? TOKEN_INTERPOLATED_STRING : TOKEN_STRING;
+        Token* token = createToken(token_type, value);
         free(value);
         return token;
     }
@@ -1712,6 +1858,9 @@ Token* check_keyword(const char* word) {
     if (strcmp(word, "string") == 0) return createToken(TOKEN_TYPE_STRING, word);
     if (strcmp(word, "boolean") == 0) return createToken(TOKEN_TYPE_BOOLEAN, word);
     if (strcmp(word, "const") == 0) return createToken(TOKEN_CONST, word);
+    if (strcmp(word, "typeof") == 0) return createToken(TOKEN_TYPEOF, word);
+    if (strcmp(word, "in") == 0) return createToken(TOKEN_IN, word);
+    if (strcmp(word, "range") == 0) return createToken(TOKEN_RANGE, word);
     
     // Control flow (English base)
     if (strcmp(word, "print") == 0) return createToken(TOKEN_PRINT, word);
@@ -1820,6 +1969,41 @@ Token* peekNextToken() {
 
 // --- Parser Durum Yönetimi ---
 static Token* current_token = NULL;
+
+// ===== Parser-Level Variable Type Tracking =====
+#define MAX_PARSE_VARS 100
+
+typedef struct {
+    char* name;
+    char* type;  // "List", "HashMap", "numeric", "string", etc.
+} ParseVar;
+
+ParseVar parse_vars[MAX_PARSE_VARS];
+int parse_var_count = 0;
+
+void register_parse_var(const char* name, const char* type) {
+    if (parse_var_count >= MAX_PARSE_VARS) return;
+    parse_vars[parse_var_count].name = strdup(name);
+    parse_vars[parse_var_count].type = strdup(type);
+    parse_var_count++;
+}
+
+const char* get_parse_var_type(const char* name) {
+    for (int i = parse_var_count - 1; i >= 0; i--) {
+        if (strcmp(parse_vars[i].name, name) == 0) {
+            return parse_vars[i].type;
+        }
+    }
+    return NULL;
+}
+
+void clear_parse_vars() {
+    for (int i = 0; i < parse_var_count; i++) {
+        free(parse_vars[i].name);
+        free(parse_vars[i].type);
+    }
+    parse_var_count = 0;
+}
 
 // Token tip ismini döndüren helper fonksiyon
 static const char* getTokenTypeName(TokenType type) {
@@ -1956,6 +2140,74 @@ ASTNode* createAST_Metin(Token* token) {
     return node;
 }
 
+// Phase 5.9: Parse interpolated string and split into parts
+ASTNode* createAST_InterpolatedString(Token* token) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_INTERPOLATED_STRING;
+    
+    // Parse string and extract parts: literals and {variables}
+    const char* str = token->value;
+    int capacity = 10;
+    char** parts = (char**)malloc(sizeof(char*) * capacity);
+    int count = 0;
+    
+    char buffer[1024];
+    int buf_idx = 0;
+    int i = 0;
+    
+    while (str[i] != '\0') {
+        if (str[i] == '{' && str[i+1] != '\0' && str[i+1] != '}') {
+            // Save current literal part if any
+            if (buf_idx > 0) {
+                buffer[buf_idx] = '\0';
+                if (count >= capacity) {
+                    capacity *= 2;
+                    parts = (char**)realloc(parts, sizeof(char*) * capacity);
+                }
+                parts[count++] = strdup(buffer);
+                buf_idx = 0;
+            }
+            
+            // Extract variable name from {variable}
+            i++; // Skip {
+            char var_name[256];
+            int var_idx = 0;
+            while (str[i] != '\0' && str[i] != '}') {
+                var_name[var_idx++] = str[i++];
+            }
+            var_name[var_idx] = '\0';
+            
+            if (str[i] == '}') i++; // Skip }
+            
+            // Store as {variable} format for later identification
+            if (count >= capacity) {
+                capacity *= 2;
+                parts = (char**)realloc(parts, sizeof(char*) * capacity);
+            }
+            char var_pattern[270];
+            sprintf(var_pattern, "{%s}", var_name);
+            parts[count++] = strdup(var_pattern);
+        } else {
+            buffer[buf_idx++] = str[i++];
+        }
+    }
+    
+    // Save final literal part if any
+    if (buf_idx > 0) {
+        buffer[buf_idx] = '\0';
+        if (count >= capacity) {
+            capacity *= 2;
+            parts = (char**)realloc(parts, sizeof(char*) * capacity);
+        }
+        parts[count++] = strdup(buffer);
+    }
+    
+    node->interpolation_data.parts = parts;
+    node->interpolation_data.part_count = count;
+    return node;
+}
+
 ASTNode* createAST_Degisken(Token* token) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
@@ -2041,6 +2293,16 @@ ASTNode* createAST_ArrayAtama(Token* ad, ASTNode* indeks, ASTNode* deger) {
     return node;
 }
 
+// Array Literal ([1, 2, 3, 4, 5])
+ASTNode* createAST_ArrayLiteral(ASTNode** elemanlar, int eleman_sayisi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_ARRAY_LITERAL;
+    node->array_literal_data.elemanlar = elemanlar;
+    node->array_literal_data.eleman_sayisi = eleman_sayisi;
+    return node;
+}
+
 // Struct Tanımlama (YAPI Nokta İSE SAYISAL x; SAYISAL y; SON)
 ASTNode* createAST_StructTanimlama(Token* ad, Token** field_tipleri, Token** field_adlari, int field_sayisi) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
@@ -2100,12 +2362,32 @@ ASTNode* createAST_StructDegisken(Token* struct_tip, Token* ad) {
 
 // ===== Phase 2: List AST Creation Helpers =====
 
-ASTNode* createAST_ListTanimlama(Token* element_tipi, Token* degisken_adi) {
+ASTNode* createAST_ListTanimlama(Token* element_tipi, Token* degisken_adi, ASTNode* capacity, ASTNode* initial_value) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_LIST_TANIMLAMA;
-    node->list_tanimlama_data.element_tipi = element_tipi;  // Direct assignment
-    node->list_tanimlama_data.degisken_adi = degisken_adi;  // Direct assignment
+    
+    // Properly copy tokens to heap (matching ArrayTanimlama pattern)
+    node->list_tanimlama_data.element_tipi = (Token*)malloc(sizeof(Token));
+    node->list_tanimlama_data.element_tipi->type = element_tipi->type;
+    node->list_tanimlama_data.element_tipi->value = strdup(element_tipi->value);
+    
+    node->list_tanimlama_data.degisken_adi = (Token*)malloc(sizeof(Token));
+    node->list_tanimlama_data.degisken_adi->type = degisken_adi->type;
+    node->list_tanimlama_data.degisken_adi->value = strdup(degisken_adi->value);
+    
+    node->list_tanimlama_data.capacity = capacity;           // Initial capacity or NULL
+    node->list_tanimlama_data.initial_value = initial_value; // List literal or NULL
+    return node;
+}
+
+// List Literal ((1, 2, 3, 4, 5))
+ASTNode* createAST_ListLiteral(ASTNode** elemanlar, int eleman_sayisi) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_LIST_LITERAL;
+    node->list_literal_data.elemanlar = elemanlar;
+    node->list_literal_data.eleman_sayisi = eleman_sayisi;
     return node;
 }
 
@@ -2335,7 +2617,7 @@ ASTNode* createAST_KosulKomutu(ASTNode* kosul, ASTNode* ise_blok, ASTNode* degil
     return node;
 }
 
-ASTNode* createAST_IslecTanimlama(Token* ad, Token** parametreler, int parametre_sayisi, ASTNode* govde) {
+ASTNode* createAST_IslecTanimlama(Token* ad, Token** parametreler, int parametre_sayisi, ASTNode** parametre_defaults, ASTNode* govde) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_FUNCTION_DECLARATION;
@@ -2344,6 +2626,7 @@ ASTNode* createAST_IslecTanimlama(Token* ad, Token** parametreler, int parametre
     node->islec_tanimlama_data.ad->value = strdup(ad->value);
     node->islec_tanimlama_data.parametreler = parametreler;
     node->islec_tanimlama_data.parametre_sayisi = parametre_sayisi;
+    node->islec_tanimlama_data.parametre_default_degerleri = parametre_defaults; // Phase 5.11
     node->islec_tanimlama_data.govde = govde;
     return node;
 }
@@ -2421,6 +2704,13 @@ ASTNode* birincil() {
         return node;
     }
 
+    // Phase 5.9: Interpolated String
+    if (current_token->type == TOKEN_INTERPOLATED_STRING) {
+        ASTNode* node = createAST_InterpolatedString(current_token);
+        consume(TOKEN_INTERPOLATED_STRING);
+        return node;
+    }
+
     // Boolean literals (true/false)
     if (current_token->type == TOKEN_TRUE) {
         Token* true_token = createToken(TOKEN_NUMBER, "1");
@@ -2446,12 +2736,91 @@ ASTNode* birincil() {
 
     if (current_token->type == TOKEN_LEFT_PAREN) {
         consume(TOKEN_LEFT_PAREN);
-        ASTNode* node = ifade();
-        if (current_token->type != TOKEN_RIGHT_PAREN) {
-            parseError("Kapanış Parantezi expected.", ")");
+        
+        // Check if it's a list literal: (1, 2, 3)
+        // Peek ahead to see if it's expression or list literal
+        if (current_token->type == TOKEN_RIGHT_PAREN) {
+            // Empty list literal: ()
+            consume(TOKEN_RIGHT_PAREN);
+            return createAST_ListLiteral(NULL, 0);
         }
+        
+        // Try to parse as list literal
+        // If first element followed by comma, it's a list literal
+        ASTNode* first = ifade();
+        
+        if (current_token->type == TOKEN_COMMA) {
+            // It's a list literal: (expr, ...)
+            int capacity = 10;
+            ASTNode** elemanlar = (ASTNode**)malloc(sizeof(ASTNode*) * capacity);
+            elemanlar[0] = first;
+            int count = 1;
+            
+            while (current_token->type == TOKEN_COMMA) {
+                consume(TOKEN_COMMA);
+                if (current_token->type == TOKEN_RIGHT_PAREN) break; // Trailing comma
+                
+                if (count >= capacity) {
+                    capacity *= 2;
+                    elemanlar = (ASTNode**)realloc(elemanlar, sizeof(ASTNode*) * capacity);
+                }
+                elemanlar[count++] = ifade();
+            }
+            
+            consume(TOKEN_RIGHT_PAREN);
+            return createAST_ListLiteral(elemanlar, count);
+        } else {
+            // It's a parenthesized expression
+            if (current_token->type != TOKEN_RIGHT_PAREN) {
+                parseError("Kapanış Parantezi expected.", ")");
+            }
+            consume(TOKEN_RIGHT_PAREN);
+            return first;
+        }
+    }
+
+    // Array literal: [1, 2, 3, 4, 5]
+    if (current_token->type == TOKEN_LEFT_BRACKET) {
+        consume(TOKEN_LEFT_BRACKET);
+        
+        if (current_token->type == TOKEN_RIGHT_BRACKET) {
+            // Empty array literal: []
+            consume(TOKEN_RIGHT_BRACKET);
+            return createAST_ArrayLiteral(NULL, 0);
+        }
+        
+        int capacity = 10;
+        ASTNode** elemanlar = (ASTNode**)malloc(sizeof(ASTNode*) * capacity);
+        int count = 0;
+        
+        elemanlar[count++] = ifade();
+        
+        while (current_token->type == TOKEN_COMMA) {
+            consume(TOKEN_COMMA);
+            if (current_token->type == TOKEN_RIGHT_BRACKET) break; // Trailing comma
+            
+            if (count >= capacity) {
+                capacity *= 2;
+                elemanlar = (ASTNode**)realloc(elemanlar, sizeof(ASTNode*) * capacity);
+            }
+            elemanlar[count++] = ifade();
+        }
+        
+        consume(TOKEN_RIGHT_BRACKET);
+        return createAST_ArrayLiteral(elemanlar, count);
+    }
+
+    // Phase 5.7: typeof operator - typeof(expr)
+    if (current_token->type == TOKEN_TYPEOF) {
+        consume(TOKEN_TYPEOF);
+        consume(TOKEN_LEFT_PAREN);
+        ASTNode* expr = ifade();
         consume(TOKEN_RIGHT_PAREN);
-        return node;
+        
+        ASTNode* typeof_node = (ASTNode*)malloc(sizeof(ASTNode));
+        typeof_node->type = AST_TYPEOF_EXPR;
+        typeof_node->typeof_data.ifade = expr;
+        return typeof_node;
     }
 
     // Phase 3: Built-in function calls
@@ -2475,6 +2844,12 @@ ASTNode* birincil() {
         current_token->type == TOKEN_BUILTIN_STRING_TO_INT ||
         current_token->type == TOKEN_BUILTIN_CHAR_TO_STRING ||
         current_token->type == TOKEN_BUILTIN_STRING_CONCAT ||
+        // Phase 5.7: Type Casting Helpers
+        current_token->type == TOKEN_BUILTIN_NUM ||
+        current_token->type == TOKEN_BUILTIN_STR ||
+        current_token->type == TOKEN_BUILTIN_READ_INPUT ||
+        current_token->type == TOKEN_BUILTIN_READ_LINE ||
+        current_token->type == TOKEN_BUILTIN_READ_INT ||
         // Phase 4: Math Operations
         current_token->type == TOKEN_BUILTIN_MATH_ABS ||
         current_token->type == TOKEN_BUILTIN_MATH_MIN ||
@@ -2629,34 +3004,80 @@ ASTNode* birincil() {
                     return add_node;
                 }
                 else if (strcmp(field_or_method.value, "get") == 0) {
-                    ASTNode* indeks = ifade();
-                    consume(TOKEN_RIGHT_PAREN);
-                    ASTNode* get_node = createAST_ListGet(&ad_token_kopya, indeks);
-                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
-                    free(field_or_method.value);
-                    return get_node;
+                    // Check variable type to determine if it's list or map
+                    const char* var_type = get_parse_var_type(ad_token_kopya.value);
+                    
+                    if (var_type && strcmp(var_type, "HashMap") == 0) {
+                        // map.get(key)
+                        ASTNode* key = ifade();
+                        consume(TOKEN_RIGHT_PAREN);
+                        
+                        ASTNode* get_node = createAST_MapGet(&ad_token_kopya, key);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return get_node;
+                    } else {
+                        // list.get(index)
+                        ASTNode* indeks = ifade();
+                        consume(TOKEN_RIGHT_PAREN);
+                        
+                        ASTNode* get_node = createAST_ListGet(&ad_token_kopya, indeks);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return get_node;
+                    }
                 }
                 else if (strcmp(field_or_method.value, "set") == 0) {
-                    // list.set(index, value)
-                    ASTNode* indeks = ifade();
-                    consume(TOKEN_COMMA);
-                    ASTNode* value = ifade();
-                    consume(TOKEN_RIGHT_PAREN);
+                    // Check variable type to determine if it's list or map
+                    const char* var_type = get_parse_var_type(ad_token_kopya.value);
                     
-                    ASTNode* set_node = createAST_ListSet(&ad_token_kopya, indeks, value);
-                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
-                    free(field_or_method.value);
-                    return set_node;
+                    if (var_type && strcmp(var_type, "HashMap") == 0) {
+                        // map.set(key, value)
+                        ASTNode* key = ifade();
+                        consume(TOKEN_COMMA);
+                        ASTNode* value = ifade();
+                        consume(TOKEN_RIGHT_PAREN);
+                        
+                        ASTNode* set_node = createAST_MapSet(&ad_token_kopya, key, value);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return set_node;
+                    } else {
+                        // list.set(index, value)
+                        ASTNode* indeks = ifade();
+                        consume(TOKEN_COMMA);
+                        ASTNode* value = ifade();
+                        consume(TOKEN_RIGHT_PAREN);
+                        
+                        ASTNode* set_node = createAST_ListSet(&ad_token_kopya, indeks, value);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return set_node;
+                    }
                 }
                 else if (strcmp(field_or_method.value, "remove") == 0) {
-                    // list.remove(index)
-                    ASTNode* indeks = ifade();
-                    consume(TOKEN_RIGHT_PAREN);
+                    // Check variable type
+                    const char* var_type = get_parse_var_type(ad_token_kopya.value);
                     
-                    ASTNode* remove_node = createAST_ListRemove(&ad_token_kopya, indeks);
-                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
-                    free(field_or_method.value);
-                    return remove_node;
+                    if (var_type && strcmp(var_type, "HashMap") == 0) {
+                        // map.remove(key)
+                        ASTNode* key = ifade();
+                        consume(TOKEN_RIGHT_PAREN);
+                        
+                        ASTNode* remove_node = createAST_MapRemove(&ad_token_kopya, key);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return remove_node;
+                    } else {
+                        // list.remove(index)
+                        ASTNode* indeks = ifade();
+                        consume(TOKEN_RIGHT_PAREN);
+                        
+                        ASTNode* remove_node = createAST_ListRemove(&ad_token_kopya, indeks);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return remove_node;
+                    }
                 }
                 else if (strcmp(field_or_method.value, "insert") == 0) {
                     // list.insert(index, value)
@@ -2673,17 +3094,43 @@ ASTNode* birincil() {
                 else if (strcmp(field_or_method.value, "length") == 0 || 
                          strcmp(field_or_method.value, "size") == 0) {
                     consume(TOKEN_RIGHT_PAREN);
-                    ASTNode* size_node = createAST_ListSize(&ad_token_kopya);
-                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
-                    free(field_or_method.value);
-                    return size_node;
+                    
+                    // Check variable type
+                    const char* var_type = get_parse_var_type(ad_token_kopya.value);
+                    
+                    if (var_type && strcmp(var_type, "HashMap") == 0) {
+                        // map.size()
+                        ASTNode* size_node = createAST_MapSize(&ad_token_kopya);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return size_node;
+                    } else {
+                        // list.size()
+                        ASTNode* size_node = createAST_ListSize(&ad_token_kopya);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return size_node;
+                    }
                 }
                 else if (strcmp(field_or_method.value, "clear") == 0) {
                     consume(TOKEN_RIGHT_PAREN);
-                    ASTNode* clear_node = createAST_ListClear(&ad_token_kopya);
-                    free(ad_token_kopya.value);  // AST has its own copy, safe to free
-                    free(field_or_method.value);
-                    return clear_node;
+                    
+                    // Check variable type
+                    const char* var_type = get_parse_var_type(ad_token_kopya.value);
+                    
+                    if (var_type && strcmp(var_type, "HashMap") == 0) {
+                        // map.clear()
+                        ASTNode* clear_node = createAST_MapClear(&ad_token_kopya);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return clear_node;
+                    } else {
+                        // list.clear()
+                        ASTNode* clear_node = createAST_ListClear(&ad_token_kopya);
+                        free(ad_token_kopya.value);
+                        free(field_or_method.value);
+                        return clear_node;
+                    }
                 }
                 // ===== Phase 4: Map Methods =====
                 else if (strcmp(field_or_method.value, "has") == 0) {
@@ -2808,6 +3255,25 @@ ASTNode* ikili_islem(int onceki_oncelik) {
 }
 
 ASTNode* komut() {
+    // Phase 5.10: Import Statement (import "file.mlp")
+    if (current_token->type == TOKEN_IMPORT) {
+        consume(TOKEN_IMPORT);
+        
+        // Dosya yolu string literal olmalı
+        if (current_token->type != TOKEN_STRING) {
+            parseError("Import dosya yolu", "STRING");
+        }
+        
+        char* file_path = strdup(current_token->value);
+        consume(TOKEN_STRING);
+        
+        ASTNode* import_node = (ASTNode*)malloc(sizeof(ASTNode));
+        import_node->type = AST_IMPORT;
+        import_node->import_data.file_path = file_path;
+        
+        return import_node;
+    }
+    
     // 0. YAPI - Struct Tanımlama (YAPI Nokta İSE ... SON)
     if (current_token->type == TOKEN_YAPI_STRUCT) {
         consume(TOKEN_YAPI_STRUCT);
@@ -2821,10 +3287,7 @@ ASTNode* komut() {
         struct_ad.value = strdup(current_token->value);
         consume(TOKEN_IDENTIFIER);
 
-        // İSE
-        consume(TOKEN_THEN);
-
-        // Field'ları parse et
+        // Field'ları parse et (then keyword kaldırıldı)
         Token** field_tipleri = (Token**)malloc(sizeof(Token*) * 20);  // Max 20 field
         Token** field_adlari = (Token**)malloc(sizeof(Token*) * 20);
         int field_sayisi = 0;
@@ -2885,10 +3348,7 @@ ASTNode* komut() {
         enum_ad->value = strdup(current_token->value);
         consume(TOKEN_IDENTIFIER);
 
-        // then
-        consume(TOKEN_THEN);
-
-        // Değerleri parse et
+        // Değerleri parse et (then keyword kaldırıldı)
         Token** value_adlari = (Token**)malloc(sizeof(Token*) * 100);  // Max 100 enum value
         int* value_degerleri = (int*)malloc(sizeof(int) * 100);
         int value_sayisi = 0;
@@ -3127,6 +3587,9 @@ ASTNode* komut() {
         // Semicolon kaldırıldı - Python tarzı
         // consume(TOKEN_SEMICOLON);
 
+        // Register map variable for parser-level type tracking
+        register_parse_var(degisken_adi.value, "HashMap");
+
         ASTNode* map_node = createAST_MapTanimlama(&key_tip, &value_tip, &degisken_adi);
         free(key_tip.value);
         free(value_tip.value);
@@ -3207,13 +3670,26 @@ ASTNode* komut() {
         ad_token.value = strdup(current_token->value);
         consume(TOKEN_IDENTIFIER);
 
-        // Array tanımlaması mı? (SAYISAL arr[10];)
+        // Array tanımlaması mı? (numeric arr[10] veya numeric arr[] = [1,2,3])
         if (current_token->type == TOKEN_LEFT_BRACKET) {
             consume(TOKEN_LEFT_BRACKET);
+            
+            // Check for array literal initialization: numeric arr[] = [...]
+            if (current_token->type == TOKEN_RIGHT_BRACKET) {
+                consume(TOKEN_RIGHT_BRACKET);
+                consume(TOKEN_ASSIGN);
+                ASTNode* literal = ifade();  // Should be array literal [1,2,3]
+                
+                // Create array declaration with size from literal
+                ASTNode* array_node = createAST_ArrayTanimlama(&tip_token, &ad_token, literal);
+                free(tip_token.value);
+                free(ad_token.value);
+                return array_node;
+            }
+            
+            // Regular array with size: numeric arr[10]
             ASTNode* boyut = ifade();  // Array boyutu
             consume(TOKEN_RIGHT_BRACKET);
-            // Semicolon kaldırıldı - Python tarzı
-            // consume(TOKEN_SEMICOLON);
 
             ASTNode* array_node = createAST_ArrayTanimlama(&tip_token, &ad_token, boyut);
             free(tip_token.value);
@@ -3221,7 +3697,50 @@ ASTNode* komut() {
             return array_node;
         }
 
-        // Normal değişken tanımlaması (SAYISAL x = 5)
+        // List tanımlaması mı? (numeric items() or numeric items(10) or numeric items() = (1,2,3))
+        if (current_token->type == TOKEN_LEFT_PAREN) {
+            consume(TOKEN_LEFT_PAREN);
+            
+            ASTNode* capacity_node = NULL;
+            ASTNode* literal_node = NULL;
+            
+            // Check for capacity: numeric items(10)
+            if (current_token->type == TOKEN_NUMBER) {
+                capacity_node = createAST_Sayi(current_token);
+                consume(TOKEN_NUMBER);
+                consume(TOKEN_RIGHT_PAREN);
+                
+                register_parse_var(ad_token.value, "List");
+                ASTNode* list_node = createAST_ListTanimlama(&tip_token, &ad_token, capacity_node, NULL);
+                free(tip_token.value);
+                free(ad_token.value);
+                return list_node;
+            } else if (current_token->type == TOKEN_RIGHT_PAREN) {
+                // Empty list: numeric items() or numeric items() = (1,2,3)
+                consume(TOKEN_RIGHT_PAREN);
+                
+                // Check for literal initialization: numeric items() = (1,2,3)
+                if (current_token->type == TOKEN_ASSIGN) {
+                    consume(TOKEN_ASSIGN);
+                    literal_node = ifade();  // Should be list literal (1,2,3)
+                    
+                    register_parse_var(ad_token.value, "List");
+                    ASTNode* list_node = createAST_ListTanimlama(&tip_token, &ad_token, NULL, literal_node);
+                    free(tip_token.value);
+                    free(ad_token.value);
+                    return list_node;
+                }
+                
+                // Empty list with no initialization
+                register_parse_var(ad_token.value, "List");
+                ASTNode* list_node = createAST_ListTanimlama(&tip_token, &ad_token, NULL, NULL);
+                free(tip_token.value);
+                free(ad_token.value);
+                return list_node;
+            }
+        }
+
+        // Normal değişken tanımlaması (numeric x = 5)
         consume(TOKEN_ASSIGN);
         ASTNode* ifade_dugumu = ifade();
 
@@ -3458,15 +3977,18 @@ ASTNode* komut() {
             return sol_node; // Fonksiyon çağrısını komut olarak döndür
         }
 
-        // DURUM 7.3: LIST METHOD CALLS (list.add(), list.clear(), list.set(), etc.)
-        // Phase 6: List method calls as statements
+        // DURUM 7.3: LIST & MAP METHOD CALLS (list.add(), map.set(), etc.)
+        // Phase 2 & 4: List and Map method calls as statements
         if (sol_node->type == AST_LIST_ADD || 
             sol_node->type == AST_LIST_CLEAR ||
             sol_node->type == AST_LIST_SET ||
             sol_node->type == AST_LIST_REMOVE ||
-            sol_node->type == AST_LIST_INSERT) {
-            specs_check_no_semicolon("List method call");
-            return sol_node; // List method call as statement
+            sol_node->type == AST_LIST_INSERT ||
+            sol_node->type == AST_MAP_SET ||
+            sol_node->type == AST_MAP_REMOVE ||
+            sol_node->type == AST_MAP_CLEAR) {
+            specs_check_no_semicolon("List/Map method call");
+            return sol_node; // Method call as statement
         }
 
         // Error: 'x' (standalone) or 'x + 5' (expression) is not a statement.
@@ -3540,7 +4062,10 @@ ASTNode* dongu_komutu() {
 ASTNode* for_komutu() {
     consume(TOKEN_FOR);
     
-    // for i = 0 to 10 [step 2]
+    // Check for two syntax forms:
+    // 1. for i = 0 to 10 [step 2]       (traditional)
+    // 2. for i in range(0, 10, 2)       (range-based - Phase 5.8)
+    
     if (current_token->type != TOKEN_IDENTIFIER) {
         parseError("Loop variable name", "IDENTIFIER");
     }
@@ -3549,6 +4074,126 @@ ASTNode* for_komutu() {
     degisken_token.value = strdup(current_token->value);
     consume(TOKEN_IDENTIFIER);
     
+    // Check if it's 'in' keyword (range-based for)
+    if (current_token->type == TOKEN_IN) {
+        consume(TOKEN_IN);
+        
+        // Two possibilities:
+        // 1. for i in range(...)  -> AST_FOR_IN_RANGE
+        // 2. for i in array_name  -> AST_FOR_EACH
+        
+        if (current_token->type == TOKEN_RANGE) {
+            // Range-based for loop
+            consume(TOKEN_RANGE);
+            consume(TOKEN_LEFT_PAREN);
+            
+            // Parse arguments: start, end, [step]
+            ASTNode* start_expr = NULL;
+            ASTNode* end_expr = NULL;
+            ASTNode* step_expr = NULL;
+            
+            if (current_token->type == TOKEN_RIGHT_PAREN) {
+                // range() with no args - error
+                parseError("range() requires at least 1 argument", "expression");
+            }
+            
+            // First argument (can be end if only 1 arg, or start if 2+ args)
+            ASTNode* first_arg = ifade();
+            
+            if (current_token->type == TOKEN_COMMA) {
+                // Two or more arguments: range(start, end, [step])
+                consume(TOKEN_COMMA);
+                start_expr = first_arg;
+                end_expr = ifade();
+                
+                if (current_token->type == TOKEN_COMMA) {
+                    // Three arguments: range(start, end, step)
+                    consume(TOKEN_COMMA);
+                    step_expr = ifade();
+                }
+            } else {
+                // One argument: range(end) - start defaults to 0
+                Token* zero_token = createToken(TOKEN_NUMBER, "0");
+                start_expr = createAST_Sayi(zero_token);
+                end_expr = first_arg;
+            }
+            
+            consume(TOKEN_RIGHT_PAREN);
+            
+            // Optional 'do' or 'then' before body
+            if (current_token->type == TOKEN_YAPI_DO || current_token->type == TOKEN_THEN) {
+                consume(current_token->type);
+            }
+            
+            // Parse body
+            ASTNode* govde_blogu = blok();
+            
+            // Accept both "end for" and plain "end"
+            if (current_token->type == TOKEN_END_FOR) {
+                consume(TOKEN_END_FOR);
+            } else {
+                consume(TOKEN_END);
+            }
+            
+            specs_check_no_semicolon("FOR IN RANGE SON");
+            
+            // Create AST_FOR_IN_RANGE node
+            ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+            node->type = AST_FOR_IN_RANGE;
+            node->for_in_range_data.degisken = (Token*)malloc(sizeof(Token));
+            node->for_in_range_data.degisken->type = degisken_token.type;
+            node->for_in_range_data.degisken->value = strdup(degisken_token.value);
+            node->for_in_range_data.start = start_expr;
+            node->for_in_range_data.end = end_expr;
+            node->for_in_range_data.step = step_expr;
+            node->for_in_range_data.govde = govde_blogu;
+            
+            free(degisken_token.value);
+            return node;
+        } else if (current_token->type == TOKEN_IDENTIFIER) {
+            // For-each loop: for item in array_name
+            Token array_token;
+            array_token.type = current_token->type;
+            array_token.value = strdup(current_token->value);
+            consume(TOKEN_IDENTIFIER);
+            
+            // Optional 'do' or 'then' before body
+            if (current_token->type == TOKEN_YAPI_DO || current_token->type == TOKEN_THEN) {
+                consume(current_token->type);
+            }
+            
+            // Parse body
+            ASTNode* govde_blogu = blok();
+            
+            // Accept both "end for" and plain "end"
+            if (current_token->type == TOKEN_END_FOR) {
+                consume(TOKEN_END_FOR);
+            } else {
+                consume(TOKEN_END);
+            }
+            
+            specs_check_no_semicolon("FOR EACH SON");
+            
+            // Create AST_FOR_EACH node
+            ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+            node->type = AST_FOR_EACH;
+            node->for_each_data.degisken = (Token*)malloc(sizeof(Token));
+            node->for_each_data.degisken->type = degisken_token.type;
+            node->for_each_data.degisken->value = strdup(degisken_token.value);
+            node->for_each_data.array_adi = (Token*)malloc(sizeof(Token));
+            node->for_each_data.array_adi->type = array_token.type;
+            node->for_each_data.array_adi->value = strdup(array_token.value);
+            node->for_each_data.govde = govde_blogu;
+            
+            free(degisken_token.value);
+            free(array_token.value);
+            return node;
+        } else {
+            parseError("'range' or array name expected after 'in'", "range or identifier");
+        }
+    }
+    
+    // Traditional for loop: for i = 0 to 10 [step 2]
     consume(TOKEN_ASSIGN);
     ASTNode* baslangic_ifade = ifade();
     
@@ -3605,9 +4250,11 @@ ASTNode* islec_tanimlama() {
 
     consume(TOKEN_LEFT_PAREN);
     Token** parametre_listesi = NULL;
+    ASTNode** parametre_defaults = NULL; // Phase 5.11: Default values
     int p_sayisi = 0;
     if (current_token->type != TOKEN_RIGHT_PAREN) {
         parametre_listesi = (Token**)malloc(sizeof(Token*) * 10);
+        parametre_defaults = (ASTNode**)malloc(sizeof(ASTNode*) * 10);
         do {
             if (current_token->type != TOKEN_IDENTIFIER) {
                 parseError("Parametre adı expected.", "IDENTIFIER");
@@ -3616,13 +4263,22 @@ ASTNode* islec_tanimlama() {
             param_token->type = current_token->type;
             param_token->value = strdup(current_token->value);
             parametre_listesi[p_sayisi] = param_token;
+            consume(TOKEN_IDENTIFIER); // Consume parameter name first
+            
+            // Phase 5.11: Check for default value (= expression)
+            if (current_token->type == TOKEN_ASSIGN) {
+                consume(TOKEN_ASSIGN);
+                parametre_defaults[p_sayisi] = ifade(); // Parse default value
+            } else {
+                parametre_defaults[p_sayisi] = NULL; // No default
+            }
+            
             p_sayisi++;
-            consume(TOKEN_IDENTIFIER);
         } while (current_token->type == TOKEN_COMMA && (consume(TOKEN_COMMA), 1));
     }
     consume(TOKEN_RIGHT_PAREN);
 
-    consume(TOKEN_THEN);
+    // then keyword kaldırıldı - direkt blok başlar
     ASTNode* govde_blogu = blok();
     
     // Accept both "end function" / "end işleç" and plain "end"
@@ -3634,7 +4290,7 @@ ASTNode* islec_tanimlama() {
     
     specs_check_no_semicolon("OPERATOR SON");
     
-    ASTNode* node = createAST_IslecTanimlama(&ad_token, parametre_listesi, p_sayisi, govde_blogu);
+    ASTNode* node = createAST_IslecTanimlama(&ad_token, parametre_listesi, p_sayisi, parametre_defaults, govde_blogu);
     free(ad_token.value);
     return node;
 }
@@ -3824,7 +4480,7 @@ ASTNode* list_tanimlama_parse() {
     // Semicolon kaldırıldı - Python tarzı
     // consume(TOKEN_SEMICOLON);
 
-    ASTNode* list_node = createAST_ListTanimlama(element_tip, degisken_adi);
+    ASTNode* list_node = createAST_ListTanimlama(element_tip, degisken_adi, NULL, NULL);
     // Tokens are now owned by AST
     return list_node;
 }
@@ -3869,6 +4525,7 @@ typedef struct {
     int scope_level;  // Hangi scope seviyesinde tanımlandı (0=global)
     bool is_global;   // Global değişken mi?
     bool is_const;    // Phase 5.6: Const değişken mi?
+    int array_boyut;  // Phase 5.8: Array boyutu (0 = not an array)
 } Degisken;
 
 // Çok seviyeli Kapsam (Scope) - Stack bazlı
@@ -4006,6 +4663,17 @@ void kapsam_cik() {
 
     // Stack offset'i geri yükle
     kapsam_yigin_ofseti = scope_stack_offsets[current_scope_level];
+}
+
+// Scope'ta değişken ara (Phase 5.9: String interpolation için)
+Degisken* kapsam_bul(const char* ad) {
+    // En içteki scope'tan başlayarak ara
+    for (int i = kapsam_degisken_sayisi - 1; i >= 0; i--) {
+        if (strcmp(kapsam_haritasi[i].ad, ad) == 0) {
+            return &kapsam_haritasi[i];
+        }
+    }
+    return NULL; // Bulunamadı
 }
 
 // --- Struct Metadata Helper Fonksiyonları ---
@@ -4200,14 +4868,19 @@ void visit_AtamaKomutu(ASTNode* node); // İleri bildirim
 void visit_KosulKomutu(ASTNode* node); // İleri bildirim
 void visit_DonguKomutu(ASTNode* node); // İleri bildirim
 void visit_ForKomutu(ASTNode* node); // İleri bildirim
+void visit_ForInRange(ASTNode* node); // Phase 5.8: for X in range(...)
+void visit_ForEach(ASTNode* node);    // Phase 5.8: for X in array
 void visit_DonguBitirKomutu(ASTNode* node); // İleri bildirim
 void visit_DonguDevamKomutu(ASTNode* node); // Phase 5.8: Continue
 void visit_IslecTanimlama(ASTNode* node); // İleri bildirim
 void visit_IslecCagirma(ASTNode* node); // İleri bildirim
 void visit_DonusKomutu(ASTNode* node); // İleri bildirim
+void visit_TypeofExpr(ASTNode* node); // Phase 5.7: typeof operator
 void visit_ArrayTanimlama(ASTNode* node); // İleri bildirim
 void visit_ArrayErisim(ASTNode* node); // İleri bildirim
 void visit_ArrayAtama(ASTNode* node); // İleri bildirim
+void visit_ArrayLiteral(ASTNode* node); // İleri bildirim - Array literal
+void visit_ListLiteral(ASTNode* node); // İleri bildirim - List literal
 void visit_StructTanimlama(ASTNode* node); // İleri bildirim
 void visit_StructFieldAccess(ASTNode* node); // İleri bildirim
 void visit_StructFieldAtama(ASTNode* node); // İleri bildirim
@@ -4268,6 +4941,9 @@ void visit_Yazdir(ASTNode* node) {
 
     if (node->tek_ifade_data.ifade->type == AST_METIN) {
         is_string = true;
+    } else if (node->tek_ifade_data.ifade->type == AST_INTERPOLATED_STRING) {
+        // Phase 5.9: String interpolation always returns a string
+        is_string = true;
     } else if (node->tek_ifade_data.ifade->type == AST_DEGISKEN) {
         // Değişken ise, tipini kontrol et
         if (node->tek_ifade_data.ifade->degisken_data.ad != NULL &&
@@ -4321,11 +4997,11 @@ void visit_Sayi(ASTNode* node) {
 
 // Helper function: Escape special characters for NASM assembly
 char* escape_string_for_asm(const char* input) {
-    static char buffer[2048];
+    static char buffer[4096];  // Increased for UTF-8 escape sequences
     int j = 0;
 
-    for (int i = 0; input[i] != '\0' && j < 2046; i++) {
-        char c = input[i];
+    for (int i = 0; input[i] != '\0' && j < 4090; i++) {
+        unsigned char c = (unsigned char)input[i];
 
         // Escape special characters
         if (c == '\n') {
@@ -4340,11 +5016,13 @@ char* escape_string_for_asm(const char* input) {
         } else if (c == '\\') {
             buffer[j++] = '\\';
             buffer[j++] = '\\';
-        } else if (c == '\"') {
-            buffer[j++] = '\\';
-            buffer[j++] = '\"';
-        } else {
+        } else if (c >= 32 && c < 127) {
+            // Printable ASCII (including quotes - handled by delimiter choice in visit_Metin)
             buffer[j++] = c;
+        } else {
+            // Non-ASCII or non-printable: escape as octal \xxx
+            sprintf(buffer + j, "\\%03o", c);
+            j += 4;
         }
     }
     buffer[j] = '\0';
@@ -4354,20 +5032,307 @@ char* escape_string_for_asm(const char* input) {
 void visit_Metin(ASTNode* node) {
     // String literal'i .data bölümüne ekle ve adresini RAX'e yükle
     char etiket[64];
-    char buffer[2048];
+    char buffer[8192];
 
     // Benzersiz etiket oluştur
     sprintf(etiket, "str_%d", metin_sayaci++);
 
-    // Escape special characters for assembly
-    char* escaped = escape_string_for_asm(node->sabit_data.deger);
+    // Check if string contains non-ASCII (UTF-8) or special characters
+    int has_utf8 = 0;
+    for (const char* p = node->sabit_data.deger; *p; p++) {
+        if ((unsigned char)*p >= 128) {
+            has_utf8 = 1;
+            break;
+        }
+    }
 
-    // .data bölümüne string ekle (null-terminated)
-    sprintf(buffer, "%s: db \"%s\", 0", etiket, escaped);
-    asm_append(&data_section, buffer);
+    if (has_utf8) {
+        // UTF-8 string: output as byte sequence
+        sprintf(buffer, "%s: db ", etiket);
+        int len = strlen(buffer);
+        
+        for (const char* p = node->sabit_data.deger; *p; p++) {
+            if (*p == '\n') {
+                len += sprintf(buffer + len, "10,");  // newline
+            } else if (*p == '\t') {
+                len += sprintf(buffer + len, "9,");   // tab
+            } else if (*p == '\r') {
+                len += sprintf(buffer + len, "13,");  // carriage return
+            } else {
+                len += sprintf(buffer + len, "%d,", (unsigned char)*p);
+            }
+        }
+        sprintf(buffer + len, "0");  // null terminator
+        asm_append(&data_section, buffer);
+    } else {
+        // ASCII-only: use quoted string with smart delimiter
+        char* escaped = escape_string_for_asm(node->sabit_data.deger);
+        int has_double_quote = (strchr(escaped, '"') != NULL);
+        char delimiter = has_double_quote ? '\'' : '"';
+        
+        sprintf(buffer, "%s: db %c%s%c, 0", etiket, delimiter, escaped, delimiter);
+        asm_append(&data_section, buffer);
+    }
 
     // String'in adresini RAX'e yükle
     sprintf(buffer, "    mov rax, %s", etiket);
+    asm_append(&text_section, buffer);
+}
+
+// Phase 5.9: String Interpolation
+// Converts "Hello {name}, age {age}" into string_concat calls
+void visit_InterpolatedString(ASTNode* node) {
+    char buffer[512];
+    
+    if (node->interpolation_data.part_count == 0) {
+        // Empty string
+        sprintf(buffer, "    mov rax, 0");
+        asm_append(&text_section, buffer);
+        return;
+    }
+    
+    // Process first part
+    char* first_part = node->interpolation_data.parts[0];
+    if (first_part[0] == '{' && first_part[strlen(first_part)-1] == '}') {
+        // First part is a variable {var}
+        char var_name[256];
+        strncpy(var_name, first_part + 1, strlen(first_part) - 2);
+        var_name[strlen(first_part) - 2] = '\0';
+        
+        // Load variable value
+        Degisken* degisken = kapsam_bul(var_name);
+        if (degisken == NULL) {
+            fprintf(stderr, "ERROR: Undefined variable '%s' in interpolation\n", var_name);
+            return;
+        }
+        
+        sprintf(buffer, "    mov rax, %s", degisken->asm_adresi);
+        asm_append(&text_section, buffer);
+        
+        // Check if variable is already a string
+        char* tip = kapsam_degisken_tipi_bul(var_name);
+        bool is_string_var = (tip != NULL && (strcmp(tip, "METIN") == 0 || strcmp(tip, "string") == 0));
+        
+        if (!is_string_var) {
+            // Convert numeric to string using int_to_string
+            sprintf(buffer, "    push rax");
+            asm_append(&text_section, buffer);
+            sprintf(buffer, "    mov rdi, rax");
+            asm_append(&text_section, buffer);
+            sprintf(buffer, "    call int_to_string  ; Convert numeric to string");
+            asm_append(&text_section, buffer);
+        }
+        // Result in RAX (string pointer)
+    } else {
+        // First part is a literal
+        // Create string literal
+        char etiket[64];
+        sprintf(etiket, "str_%d", metin_sayaci++);
+        
+        int has_utf8 = 0;
+        for (const char* p = first_part; *p; p++) {
+            if ((unsigned char)*p >= 128) {
+                has_utf8 = 1;
+                break;
+            }
+        }
+        
+        if (has_utf8) {
+            sprintf(buffer, "%s: db ", etiket);
+            int len = strlen(buffer);
+            for (const char* p = first_part; *p; p++) {
+                len += sprintf(buffer + len, "%d,", (unsigned char)*p);
+            }
+            sprintf(buffer + len, "0");
+        } else {
+            char* escaped = escape_string_for_asm(first_part);
+            int has_quote = (strchr(escaped, '"') != NULL);
+            char delim = has_quote ? '\'' : '"';
+            sprintf(buffer, "%s: db %c%s%c, 0", etiket, delim, escaped, delim);
+        }
+        asm_append(&data_section, buffer);
+        
+        sprintf(buffer, "    mov rax, %s", etiket);
+        asm_append(&text_section, buffer);
+    }
+    
+    // Concatenate remaining parts
+    for (int i = 1; i < node->interpolation_data.part_count; i++) {
+        char* part = node->interpolation_data.parts[i];
+        
+        // Save current result (string so far)
+        sprintf(buffer, "    push rax  ; Save accumulated string");
+        asm_append(&text_section, buffer);
+        
+        if (part[0] == '{' && part[strlen(part)-1] == '}') {
+            // This is a variable {var}
+            char var_name[256];
+            strncpy(var_name, part + 1, strlen(part) - 2);
+            var_name[strlen(part) - 2] = '\0';
+            
+            // Load variable
+            Degisken* degisken = kapsam_bul(var_name);
+            if (degisken == NULL) {
+                fprintf(stderr, "ERROR: Undefined variable '%s' in interpolation\n", var_name);
+                return;
+            }
+            
+            sprintf(buffer, "    mov rax, %s", degisken->asm_adresi);
+            asm_append(&text_section, buffer);
+            
+            // Check if variable is already a string
+            char* tip = kapsam_degisken_tipi_bul(var_name);
+            bool is_string_var = (tip != NULL && (strcmp(tip, "METIN") == 0 || strcmp(tip, "string") == 0));
+            
+            if (!is_string_var) {
+                // Convert numeric to string
+                sprintf(buffer, "    mov rdi, rax");
+                asm_append(&text_section, buffer);
+                sprintf(buffer, "    call int_to_string  ; Convert to string");
+                asm_append(&text_section, buffer);
+            }
+            // Result in RAX (string pointer)
+        } else {
+            // This is a literal string
+            char etiket[64];
+            sprintf(etiket, "str_%d", metin_sayaci++);
+            
+            int has_utf8 = 0;
+            for (const char* p = part; *p; p++) {
+                if ((unsigned char)*p >= 128) {
+                    has_utf8 = 1;
+                    break;
+                }
+            }
+            
+            if (has_utf8) {
+                sprintf(buffer, "%s: db ", etiket);
+                int len = strlen(buffer);
+                for (const char* p = part; *p; p++) {
+                    len += sprintf(buffer + len, "%d,", (unsigned char)*p);
+                }
+                sprintf(buffer + len, "0");
+            } else {
+                char* escaped = escape_string_for_asm(part);
+                int has_quote = (strchr(escaped, '"') != NULL);
+                char delim = has_quote ? '\'' : '"';
+                sprintf(buffer, "%s: db %c%s%c, 0", etiket, delim, escaped, delim);
+            }
+            asm_append(&data_section, buffer);
+            
+            sprintf(buffer, "    mov rax, %s", etiket);
+            asm_append(&text_section, buffer);
+        }
+        
+        // RAX = new part (literal or converted variable)
+        // Pop previous accumulated string into RDI
+        sprintf(buffer, "    mov rsi, rax  ; Second string (new part)");
+        asm_append(&text_section, buffer);
+        sprintf(buffer, "    pop rdi       ; First string (accumulated)");
+        asm_append(&text_section, buffer);
+        
+        // Call string_concat
+        sprintf(buffer, "    call string_concat  ; Concatenate strings");
+        asm_append(&text_section, buffer);
+        // Result in RAX (concatenated string)
+    }
+    
+    // Final result in RAX
+}
+
+// Phase 5.10: Import Module System
+// Global variables for tracking imported files
+char** imported_files = NULL;
+int imported_files_count = 0;
+int imported_files_capacity = 0;
+
+// Check if a file has already been imported (prevent circular imports)
+bool is_file_imported(const char* file_path) {
+    for (int i = 0; i < imported_files_count; i++) {
+        if (strcmp(imported_files[i], file_path) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Add file to imported list
+void mark_file_imported(const char* file_path) {
+    if (imported_files_capacity == 0) {
+        imported_files_capacity = 10;
+        imported_files = (char**)malloc(sizeof(char*) * imported_files_capacity);
+    } else if (imported_files_count >= imported_files_capacity) {
+        imported_files_capacity *= 2;
+        imported_files = (char**)realloc(imported_files, sizeof(char*) * imported_files_capacity);
+    }
+    imported_files[imported_files_count++] = strdup(file_path);
+}
+
+void visit_Import(ASTNode* node) {
+    char* file_path = node->import_data.file_path;
+    
+    // Comment in assembly
+    char buffer[512];
+    sprintf(buffer, "    ; --- IMPORT: %s ---", file_path);
+    asm_append(&text_section, buffer);
+    
+    // Check for circular imports
+    if (is_file_imported(file_path)) {
+        sprintf(buffer, "    ; (already imported, skipping)");
+        asm_append(&text_section, buffer);
+        return;
+    }
+    
+    // Mark as imported
+    mark_file_imported(file_path);
+    
+    // Read the imported file
+    FILE* file = fopen(file_path, "r");
+    if (!file) {
+        fprintf(stderr, "ERROR: Cannot open import file '%s'\n", file_path);
+        exit(1);
+    }
+    
+    // Read entire file into memory
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    char* import_source = (char*)malloc(file_size + 1);
+    fread(import_source, 1, file_size, file);
+    import_source[file_size] = '\0';
+    fclose(file);
+    
+    // Save current lexer state
+    const char* saved_source = source_code;
+    int saved_position = current_position;
+    int saved_line = current_line;
+    int saved_column = current_column;
+    Token* saved_current = current_token;
+    
+    // Initialize lexer with imported file
+    initLexer(import_source);
+    
+    // Get first token
+    current_token = getNextToken();
+    
+    // Parse the imported file (only top-level statements)
+    while (current_token->type != TOKEN_EOF) {
+        ASTNode* stmt = komut();
+        if (stmt != NULL) {
+            visit(stmt);
+        }
+    }
+    
+    // Restore lexer state
+    free(import_source);
+    initLexer(saved_source);
+    current_position = saved_position;
+    current_line = saved_line;
+    current_column = saved_column;
+    current_token = saved_current;
+    
+    sprintf(buffer, "    ; --- END IMPORT: %s ---", file_path);
     asm_append(&text_section, buffer);
 }
 
@@ -4639,6 +5604,83 @@ void visit_ForKomutu(ASTNode* node) {
     aktif_dongu_baslangic_etiketi = onceki_aktif_dongu_baslangic_etiketi;
 }
 
+// Phase 5.8: For-In-Range Loop
+// for i in range(start, end, step)
+void visit_ForInRange(ASTNode* node) {
+    char* var_name = node->for_in_range_data.degisken->value;
+    
+    // Allocate loop variable in scope
+    char* var_addr = kapsam_degisken_yer_ayir(var_name, "SAYISAL");
+    
+    // Initialize: i = start
+    visit(node->for_in_range_data.start);  // Start value in rax
+    char buffer[256];
+    sprintf(buffer, "    mov %s, rax", var_addr);
+    asm_append(&text_section, buffer);
+    
+    // Calculate and store end value (we need it for comparison)
+    visit(node->for_in_range_data.end);  // End value in rax
+    asm_append(&text_section, "    push rax  ; Save end value");
+    
+    // Calculate and store step value (default 1 if NULL)
+    if (node->for_in_range_data.step != NULL) {
+        visit(node->for_in_range_data.step);  // Step in rax
+        asm_append(&text_section, "    push rax  ; Save step value");
+    } else {
+        asm_append(&text_section, "    push 1  ; Default step = 1");
+    }
+    
+    // Labels
+    int etiket_basla = etiket_sayaci++;
+    int etiket_continue = etiket_sayaci++;
+    int etiket_son = etiket_sayaci++;
+    
+    int onceki_aktif_dongu_son_etiketi = aktif_dongu_son_etiketi;
+    int onceki_aktif_dongu_baslangic_etiketi = aktif_dongu_baslangic_etiketi;
+    aktif_dongu_son_etiketi = etiket_son;
+    aktif_dongu_baslangic_etiketi = etiket_continue;
+    
+    // Loop start
+    sprintf(buffer, ".L%d:", etiket_basla);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- For-In-Range Loop ---");
+    
+    // Check condition: i < end (range is exclusive like Python)
+    sprintf(buffer, "    mov rax, %s", var_addr);  // Load i
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    mov rbx, [rsp+8]  ; Load end value from stack");
+    asm_append(&text_section, "    cmp rax, rbx");  // Compare i with end
+    sprintf(buffer, "    jge .L%d", etiket_son);  // Jump if i >= end (exclusive)
+    asm_append(&text_section, buffer);
+    
+    // Loop body
+    visit(node->for_in_range_data.govde);
+    
+    // Continue target - increment happens here
+    sprintf(buffer, ".L%d:", etiket_continue);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- Range Loop Continue/Increment ---");
+    
+    // Increment: i = i + step
+    sprintf(buffer, "    mov rax, %s", var_addr);  // Load i
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    add rax, [rsp]  ; Add step");
+    sprintf(buffer, "    mov %s, rax", var_addr);  // Store updated i
+    asm_append(&text_section, buffer);
+    
+    // Jump back to condition check
+    sprintf(buffer, "    jmp .L%d", etiket_basla);
+    asm_append(&text_section, buffer);
+    
+    // Loop end
+    sprintf(buffer, ".L%d:", etiket_son);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    add rsp, 16  ; Clean up step and end from stack");
+    
+    aktif_dongu_son_etiketi = onceki_aktif_dongu_son_etiketi;
+    aktif_dongu_baslangic_etiketi = onceki_aktif_dongu_baslangic_etiketi;
+}
+
 void visit_DonguBitirKomutu(ASTNode* node) {
     if (aktif_dongu_son_etiketi == -1) {
         fprintf(stderr, "HATA [Generator]: 'WHILE_BITIR' bir döngü içinde değil.\n");
@@ -4662,6 +5704,118 @@ void visit_DonguDevamKomutu(ASTNode* node) {
     sprintf(buffer, "    jmp .L%d", aktif_dongu_baslangic_etiketi); // jmp back to loop start
     asm_append(&text_section, "    ; --- Continue Komutu ---");
     asm_append(&text_section, buffer);
+}
+
+// Phase 5.8: For-each loop (for item in array)
+void visit_ForEach(ASTNode* node) {
+    char* var_name = node->for_each_data.degisken->value;
+    char* array_name = node->for_each_data.array_adi->value;
+    char buffer[256];
+    
+    sprintf(buffer, "    ; --- For-Each Loop: %s in %s ---", var_name, array_name);
+    asm_append(&text_section, buffer);
+    
+    // Find array in scope
+    Degisken* array_var = NULL;
+    for (int i = 0; i < kapsam_degisken_sayisi; i++) {
+        if (strcmp(kapsam_haritasi[i].ad, array_name) == 0) {
+            array_var = &kapsam_haritasi[i];
+            break;
+        }
+    }
+    
+    if (array_var == NULL) {
+        fprintf(stderr, "HATA [Generator]: Array '%s' bulunamadı.\n", array_name);
+        exit(1);
+    }
+    
+    if (array_var->array_boyut == 0) {
+        fprintf(stderr, "HATA [Generator]: '%s' bir array değil veya boyutu bilinmiyor.\n", array_name);
+        exit(1);
+    }
+    
+    int array_size = array_var->array_boyut;
+    sprintf(buffer, "    ; Array size: %d elements", array_size);
+    asm_append(&text_section, buffer);
+    
+    // Allocate loop variable (will hold array element value)
+    char* var_addr = kapsam_degisken_yer_ayir(var_name, "SAYISAL");
+    
+    // Allocate index counter variable (internal, not visible to user)
+    char internal_index_var[64];
+    sprintf(internal_index_var, "__foreach_idx_%s", var_name);
+    char* index_addr = kapsam_degisken_yer_ayir(internal_index_var, "SAYISAL");
+    
+    // Initialize index = 0
+    asm_append(&text_section, "    mov rax, 0  ; Initialize loop index");
+    sprintf(buffer, "    mov %s, rax", index_addr);
+    asm_append(&text_section, buffer);
+    
+    // Get array base address
+    char* array_base = kapsam_degisken_adresi_bul(array_name);
+    
+    // Labels
+    int etiket_basla = etiket_sayaci++;
+    int etiket_continue = etiket_sayaci++;
+    int etiket_son = etiket_sayaci++;
+    
+    int onceki_aktif_dongu_son_etiketi = aktif_dongu_son_etiketi;
+    int onceki_aktif_dongu_baslangic_etiketi = aktif_dongu_baslangic_etiketi;
+    aktif_dongu_son_etiketi = etiket_son;
+    aktif_dongu_baslangic_etiketi = etiket_continue;
+    
+    // Loop start
+    sprintf(buffer, ".L%d:", etiket_basla);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- For-Each Loop Start ---");
+    
+    // Check condition: index < array_size
+    sprintf(buffer, "    mov rax, %s", index_addr);  // Load index
+    asm_append(&text_section, buffer);
+    sprintf(buffer, "    cmp rax, %d", array_size);  // Compare with size
+    asm_append(&text_section, buffer);
+    sprintf(buffer, "    jge .L%d", etiket_son);  // Jump if index >= size
+    asm_append(&text_section, buffer);
+    
+    // Load array[index] into loop variable
+    sprintf(buffer, "    mov rax, %s", index_addr);  // Load index
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    imul rax, 8  ; index * 8");
+    sprintf(buffer, "    lea rbx, %s  ; Array base", array_base);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    add rbx, rax  ; base + offset");
+    asm_append(&text_section, "    mov rax, [rbx]  ; Load array[index]");
+    sprintf(buffer, "    mov %s, rax  ; Store in loop variable", var_addr);
+    asm_append(&text_section, buffer);
+    
+    free(array_base);
+    
+    // Loop body
+    visit(node->for_each_data.govde);
+    
+    // Continue target - increment happens here
+    sprintf(buffer, ".L%d:", etiket_continue);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- For-Each Continue/Increment ---");
+    
+    // Increment index: index = index + 1
+    sprintf(buffer, "    mov rax, %s", index_addr);  // Load index
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    add rax, 1");
+    sprintf(buffer, "    mov %s, rax", index_addr);  // Store updated index
+    asm_append(&text_section, buffer);
+    
+    // Jump back to condition check
+    sprintf(buffer, "    jmp .L%d", etiket_basla);
+    asm_append(&text_section, buffer);
+    
+    // Loop end
+    sprintf(buffer, ".L%d:", etiket_son);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    ; --- For-Each Loop End ---");
+    
+    aktif_dongu_son_etiketi = onceki_aktif_dongu_son_etiketi;
+    aktif_dongu_baslangic_etiketi = onceki_aktif_dongu_baslangic_etiketi;
 }
 
 // Phase 5.8: Stop (debugging breakpoint - int3)
@@ -4993,14 +6147,10 @@ void visit_ArrayTanimlama(ASTNode* node) {
     sprintf(buffer, "    ; --- ArrayTanimlama: %s ---", array_adi);
     asm_append(&text_section, buffer);
 
-    // Boyut ifadesini hesapla (sonuç RAX'te olacak)
-    visit(node->array_tanimlama_data.boyut);
-
-    // Boyut sabit olmalı (şimdilik sadece sabit boyutlu arrayler)
-    // RAX'te boyut var
-    // Array için yığında yer ayır
-    // Şimdilik basit: Her eleman 8 byte (SAYISAL)
-    // Toplam boyut = eleman_sayisi * 8
+    // NOTE: Don't visit() the boyut directly here!
+    // If boyut is AST_ARRAY_LITERAL, we'll handle it specially below.
+    // If boyut is AST_SAYI, we can extract the value without visiting.
+    // Visiting boyut would cause AST_ARRAY_LITERAL to hit the error case in visit().
 
     // Array bilgisini kaydet
     Degisken* d = &kapsam_haritasi[kapsam_degisken_sayisi++];
@@ -5009,17 +6159,24 @@ void visit_ArrayTanimlama(ASTNode* node) {
     sprintf(d->tip, "ARRAY_%s", array_tipi);  // Örn: "ARRAY_SAYISAL"
     d->scope_level = current_scope_level;
     d->is_global = (current_scope_level == 0);
+    d->array_boyut = 0;  // Will be set below
 
     // Boyut bilgisini sakla (şimdilik compile-time sabit olmalı)
-    // HACK: Boyut değerini AST'den almayı deneyelim
     int array_boyut = 0;
+    int has_literal = 0;
+    
     if (node->array_tanimlama_data.boyut->type == AST_SAYI) {
         array_boyut = atoi(node->array_tanimlama_data.boyut->sabit_data.deger);
+    } else if (node->array_tanimlama_data.boyut->type == AST_ARRAY_LITERAL) {
+        // Array literal initialization: numeric arr[] = [1, 2, 3]
+        array_boyut = node->array_tanimlama_data.boyut->array_literal_data.eleman_sayisi;
+        has_literal = 1;
     } else {
         fprintf(stderr, "HATA [Generator]: Array boyutu compile-time sabit olmalı\n");
         exit(1);
     }
 
+    d->array_boyut = array_boyut;  // Phase 5.8: Save size for for-each loops
     int total_bytes = array_boyut * 8;  // Her eleman 8 byte
 
     if (current_scope_level == 0) {
@@ -5030,6 +6187,24 @@ void visit_ArrayTanimlama(ASTNode* node) {
         char* global_adres = (char*)malloc(64);
         sprintf(global_adres, "global_array_%s", array_adi);
         d->asm_adresi = global_adres;
+        
+        if (has_literal) {
+            // Initialize global array from literal in _start or main
+            sprintf(buffer, "    ; Initialize global array %s", array_adi);
+            asm_append(&text_section, buffer);
+            sprintf(buffer, "    lea rdi, [rel global_array_%s]", array_adi);
+            asm_append(&text_section, buffer);
+            
+            // Directly initialize elements without calling visit()
+            ASTNode** elemanlar = node->array_tanimlama_data.boyut->array_literal_data.elemanlar;
+            for (int i = 0; i < array_boyut; i++) {
+                sprintf(buffer, "    ; Element %d", i);
+                asm_append(&text_section, buffer);
+                visit(elemanlar[i]);  // Calculate value in RAX
+                sprintf(buffer, "    mov [rdi + %d], rax", i * 8);
+                asm_append(&text_section, buffer);
+            }
+        }
     } else {
         // Local array: Stack'te
         kapsam_yigin_ofseti += total_bytes;
@@ -5041,6 +6216,22 @@ void visit_ArrayTanimlama(ASTNode* node) {
         sprintf(buffer, "    sub rsp, %d  ; Array allocation for %s[%d]",
                 total_bytes, array_adi, array_boyut);
         asm_append(&text_section, buffer);
+        
+        if (has_literal) {
+            // Initialize local array from literal - inline, no extra allocation
+            sprintf(buffer, "    lea rdi, %s  ; Array base address", d->asm_adresi);
+            asm_append(&text_section, buffer);
+            
+            // Directly initialize elements without calling visit()
+            ASTNode** elemanlar = node->array_tanimlama_data.boyut->array_literal_data.elemanlar;
+            for (int i = 0; i < array_boyut; i++) {
+                sprintf(buffer, "    ; Element %d", i);
+                asm_append(&text_section, buffer);
+                visit(elemanlar[i]);  // Calculate value in RAX
+                sprintf(buffer, "    mov [rdi + %d], rax", i * 8);
+                asm_append(&text_section, buffer);
+            }
+        }
     }
 }
 
@@ -5102,6 +6293,79 @@ void visit_ArrayAtama(ASTNode* node) {
     // Değeri yaz
     asm_append(&text_section, "    pop rax  ; Değeri geri al");
     asm_append(&text_section, "    mov [rcx], rax  ; Array elemanına yaz");
+}
+
+// Array Literal - [1, 2, 3, 4, 5]
+// Creates array on stack and returns pointer in RAX
+void visit_ArrayLiteral(ASTNode* node) {
+    int eleman_sayisi = node->array_literal_data.eleman_sayisi;
+    ASTNode** elemanlar = node->array_literal_data.elemanlar;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- Array Literal: [%d elements] ---", eleman_sayisi);
+    asm_append(&text_section, buffer);
+
+    if (eleman_sayisi == 0) {
+        // Empty array - return null pointer
+        asm_append(&text_section, "    mov rax, 0  ; Empty array");
+        return;
+    }
+
+    // Allocate space on stack for array
+    int total_bytes = eleman_sayisi * 8;
+    sprintf(buffer, "    sub rsp, %d  ; Allocate array on stack", total_bytes);
+    asm_append(&text_section, buffer);
+    
+    // Save array base address
+    asm_append(&text_section, "    mov rbx, rsp  ; Array base address");
+
+    // Initialize each element
+    for (int i = 0; i < eleman_sayisi; i++) {
+        sprintf(buffer, "    ; Element %d", i);
+        asm_append(&text_section, buffer);
+        
+        // Calculate element value
+        visit(elemanlar[i]);
+        
+        // Store in array
+        sprintf(buffer, "    mov [rbx + %d], rax  ; Store element %d", i * 8, i);
+        asm_append(&text_section, buffer);
+    }
+
+    // Return array pointer in RAX
+    asm_append(&text_section, "    mov rax, rbx  ; Return array pointer");
+}
+
+// List Literal - (1, 2, 3, 4, 5)
+// Creates dynamic list and returns pointer in RAX
+void visit_ListLiteral(ASTNode* node) {
+    int eleman_sayisi = node->list_literal_data.eleman_sayisi;
+    ASTNode** elemanlar = node->list_literal_data.elemanlar;
+    char buffer[256];
+
+    sprintf(buffer, "    ; --- List Literal: (%d elements) ---", eleman_sayisi);
+    asm_append(&text_section, buffer);
+
+    // Create empty list
+    asm_append(&text_section, "    call list_create  ; Create list");
+    asm_append(&text_section, "    push rax  ; Save list pointer");
+
+    // Add each element
+    for (int i = 0; i < eleman_sayisi; i++) {
+        sprintf(buffer, "    ; Add element %d", i);
+        asm_append(&text_section, buffer);
+        
+        // Calculate element value
+        visit(elemanlar[i]);
+        
+        // Call list_add(list, value)
+        asm_append(&text_section, "    mov rdi, [rsp]  ; List pointer (arg1)");
+        asm_append(&text_section, "    mov rsi, rax  ; Value (arg2)");
+        asm_append(&text_section, "    call list_add");
+    }
+
+    // Return list pointer in RAX
+    asm_append(&text_section, "    pop rax  ; Restore list pointer");
 }
 
 // Struct Tanımlama - Metadata sakla (şimdilik sadece comment)
@@ -5290,23 +6554,21 @@ void visit_ListTanimlama(ASTNode* node) {
     char* degisken_adi = node->list_tanimlama_data.degisken_adi->value;
     char buffer[256];
 
-    sprintf(buffer, "    ; --- List Tanımlama: List<%s> %s ---", element_tip, degisken_adi);
+    sprintf(buffer, "    ; --- List Tanimlama: %s ---", degisken_adi);
     asm_append(&text_section, buffer);
 
     // Determine element size based on type
-    int element_size = 8; // Default: 8 bytes (pointer or int64)
+    int element_size = 8; // Default: 8 bytes (numeric is int64)
     
-    // Map MLP types to sizes
-    if (strcmp(element_tip, "int") == 0 || strcmp(element_tip, "SAYISAL") == 0) {
+    // Map MLP types to sizes (using English base keywords)
+    if (strcmp(element_tip, "numeric") == 0 || strcmp(element_tip, "SAYISAL") == 0) {
         element_size = 8; // int64
     } else if (strcmp(element_tip, "string") == 0 || strcmp(element_tip, "METIN") == 0) {
         element_size = 8; // char* pointer
-    } else if (strcmp(element_tip, "bool") == 0 || strcmp(element_tip, "BOOL") == 0) {
+    } else if (strcmp(element_tip, "boolean") == 0 || strcmp(element_tip, "BOOL") == 0) {
         element_size = 8; // Treat as int64
     } else {
-        // Custom struct type - for now use 8 bytes (pointer)
-        // TODO: Look up actual struct size from symbol table
-        element_size = 8;
+        element_size = 8; // Default for other types
     }
 
     // Call mlp_list_create(element_size)
@@ -5319,6 +6581,46 @@ void visit_ListTanimlama(ASTNode* node) {
     char* adres = kapsam_degisken_yer_ayir(degisken_adi, "List");
     sprintf(buffer, "    mov %s, rax  ; Store List* in %s", adres, degisken_adi);
     asm_append(&text_section, buffer);
+    
+    // If we have a list literal initialization, add elements
+    if (node->list_tanimlama_data.initial_value != NULL && 
+        node->list_tanimlama_data.initial_value->type == AST_LIST_LITERAL) {
+        
+        sprintf(buffer, "    ; Initialize list %s from literal", degisken_adi);
+        asm_append(&text_section, buffer);
+        
+        ASTNode** elemanlar = node->list_tanimlama_data.initial_value->list_literal_data.elemanlar;
+        int eleman_sayisi = node->list_tanimlama_data.initial_value->list_literal_data.eleman_sayisi;
+        
+        sprintf(buffer, "    push rax  ; Save List* pointer");
+        asm_append(&text_section, buffer);
+        
+        for (int i = 0; i < eleman_sayisi; i++) {
+            sprintf(buffer, "    ; Add element %d", i);
+            asm_append(&text_section, buffer);
+            
+            // Evaluate element value
+            visit(elemanlar[i]);  // Value in RAX
+            
+            // Save value on stack
+            asm_append(&text_section, "    push rax  ; Save element value");
+            
+            // Load List* pointer
+            sprintf(buffer, "    mov rdi, [rsp+8]  ; Load List* (1st arg)");
+            asm_append(&text_section, buffer);
+            
+            // Pass pointer to value
+            asm_append(&text_section, "    mov rsi, rsp  ; Pass &value (2nd arg)");
+            asm_append(&text_section, "    call mlp_list_add");
+            
+            // Clean up value from stack
+            asm_append(&text_section, "    add rsp, 8  ; Remove element value");
+        }
+        
+        // Clean up List* pointer
+        asm_append(&text_section, "    add rsp, 8  ; Remove List* pointer");
+    }
+    
     free(adres);
 }
 
@@ -5744,6 +7046,12 @@ void visit_BuiltinCall(ASTNode* node) {
         case TOKEN_BUILTIN_STRING_TO_INT: func_name = "string_to_int"; break;
         case TOKEN_BUILTIN_CHAR_TO_STRING: func_name = "char_to_string"; break;
         case TOKEN_BUILTIN_STRING_CONCAT: func_name = "string_concat"; break;
+        // Phase 5.7: Type Casting Helpers
+        case TOKEN_BUILTIN_NUM: func_name = "num"; break;
+        case TOKEN_BUILTIN_STR: func_name = "str"; break;
+        case TOKEN_BUILTIN_READ_INPUT: func_name = "read_input"; break;
+        case TOKEN_BUILTIN_READ_LINE: func_name = "read_line"; break;
+        case TOKEN_BUILTIN_READ_INT: func_name = "read_int"; break;
         // Phase 4: Math Operations
         case TOKEN_BUILTIN_MATH_ABS: func_name = "math_abs"; break;
         case TOKEN_BUILTIN_MATH_MIN: func_name = "math_min"; break;
@@ -5840,6 +7148,40 @@ void visit_BuiltinCall(ASTNode* node) {
     asm_append(&text_section, buffer);
 
     // Result is in RAX
+}
+
+// Phase 5.7: typeof operator - returns type name as string
+void visit_TypeofExpr(ASTNode* node) {
+    asm_append(&text_section, "    ; --- typeof(expr) ---");
+    
+    // For now, we'll implement a simple version that works with literals
+    // Full runtime type detection requires type metadata which we don't track yet
+    
+    ASTNode* expr = node->typeof_data.ifade;
+    
+    // Check expression type at compile time
+    if (expr->type == AST_SAYI) {
+        // It's a number
+        asm_append(&data_section, "typeof_numeric: db \"numeric\", 0");
+        asm_append(&text_section, "    lea rax, [rel typeof_numeric]");
+    } else if (expr->type == AST_METIN) {
+        // It's a string
+        asm_append(&data_section, "typeof_string: db \"string\", 0");
+        asm_append(&text_section, "    lea rax, [rel typeof_string]");
+    } else if (expr->type == AST_DEGISKEN) {
+        // It's a variable - we need runtime type detection
+        // For now, call a runtime function that will determine type
+        visit(expr);  // Evaluate expression, result in RAX
+        asm_append(&text_section, "    mov rdi, rax  ; Value to check");
+        asm_append(&text_section, "    call mlp_get_type  ; Returns type string in RAX");
+    } else {
+        // For other expressions, evaluate and call runtime function
+        visit(expr);
+        asm_append(&text_section, "    mov rdi, rax");
+        asm_append(&text_section, "    call mlp_get_type");
+    }
+    
+    // Result (type name string) is in RAX
 }
 
 void visit_DonusKomutu(ASTNode* node) {
@@ -5991,6 +7333,12 @@ void visit(ASTNode* node) {
         case AST_METIN:
             visit_Metin(node);
             break;
+        case AST_INTERPOLATED_STRING:  // Phase 5.9
+            visit_InterpolatedString(node);
+            break;
+        case AST_IMPORT:  // Phase 5.10: Module import
+            visit_Import(node);
+            break;
         case AST_PRINT_STATEMENT:
             visit_Yazdir(node);
             break;
@@ -6028,6 +7376,15 @@ void visit(ASTNode* node) {
         // YENİ: For Komutu
         case AST_FOR_KOMUTU:
             visit_ForKomutu(node);
+            break;
+            
+        // Phase 5.8: For-In-Range
+        case AST_FOR_IN_RANGE:
+            visit_ForInRange(node);
+            break;
+            
+        case AST_FOR_EACH:
+            visit_ForEach(node);
             break;
             
         // YENİ: Döngü Bitir Komutu (break)
@@ -6070,6 +7427,11 @@ void visit(ASTNode* node) {
             visit_IslecCagirma(node);
             break;
             
+        // Phase 5.7: typeof operator
+        case AST_TYPEOF_EXPR:
+            visit_TypeofExpr(node);
+            break;
+            
         // YENİ: Dönüş Komutu
         case AST_RETURN_STATEMENT_KOMUTU:
             visit_DonusKomutu(node);
@@ -6088,6 +7450,20 @@ void visit(ASTNode* node) {
         // Array Atama
         case AST_ARRAY_ATAMA:
             visit_ArrayAtama(node);
+            break;
+
+        case AST_ARRAY_LITERAL:
+            fprintf(stderr, "HATA [Generator]: Array literal sadece array tanımlamasında kullanılabilir!\n");
+            fprintf(stderr, "  Kullanım: numeric arr[] = [1, 2, 3]\n");
+            fprintf(stderr, "  YANLIŞ: print [1, 2, 3]  (şimdilik desteklenmiyor)\n");
+            exit(1);
+            break;
+
+        case AST_LIST_LITERAL:
+            fprintf(stderr, "HATA [Generator]: List literal sadece list tanımlamasında kullanılabilir!\n");
+            fprintf(stderr, "  Kullanım: numeric items() = (1, 2, 3)\n");
+            fprintf(stderr, "  YANLIŞ: print (1, 2, 3)  (şimdilik desteklenmiyor)\n");
+            exit(1);
             break;
 
         // Struct Tanımlama
@@ -6114,6 +7490,9 @@ void visit(ASTNode* node) {
         case AST_LIST_TANIMLAMA:
             visit_ListTanimlama(node);
             break;
+
+        // Note: AST_LIST_LITERAL is handled inline in ListTanimlama
+        // Don't add a case for it here to avoid duplicate code generation
 
         case AST_LIST_ADD:
             visit_ListAdd(node);
@@ -6266,6 +7645,21 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern string_length");
     asm_append(&data_section, "extern string_substring");
     asm_append(&data_section, "extern string_concat");
+    asm_append(&data_section, "extern string_char_at");  // Phase 6.1: MLP Runtime helpers
+    asm_append(&data_section, "extern char_code");       // Phase 6.1: MLP Runtime helpers
+    asm_append(&data_section, "extern code_to_char");    // Phase 6.1: MLP Runtime helpers
+    
+    // Input functions (Phase 5.7)
+    asm_append(&data_section, "extern read_input");
+    asm_append(&data_section, "extern read_line");
+    asm_append(&data_section, "extern read_int");
+    
+    // Type casting helpers (Phase 5.7)
+    asm_append(&data_section, "extern num");
+    asm_append(&data_section, "extern str");
+    
+    // Type introspection (Phase 5.7)
+    asm_append(&data_section, "extern mlp_get_type");
 
     // GUI functions (gui_mock.c or real GUI backend)
     asm_append(&data_section, "extern gui_window_create");
@@ -6347,6 +7741,16 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern mlp_list_clear");
     asm_append(&data_section, "extern mlp_list_length");
     asm_append(&data_section, "extern mlp_list_free");
+
+    // Phase 4: Hash Map Functions
+    asm_append(&data_section, "extern hashmap_create");
+    asm_append(&data_section, "extern hashmap_put");
+    asm_append(&data_section, "extern hashmap_get");
+    asm_append(&data_section, "extern hashmap_remove");
+    asm_append(&data_section, "extern hashmap_contains");
+    asm_append(&data_section, "extern hashmap_size");
+    asm_append(&data_section, "extern hashmap_clear");
+    asm_append(&data_section, "extern hashmap_destroy");
 
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld

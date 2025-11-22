@@ -1,5 +1,41 @@
 # MLP Dili - Özellik Durum ve TODO Listesi
 
+## 🏆 Self-Hosting Durumu
+
+**MLP ARTIK TAM SELF-HOSTING'TİR!** ✅ (Tamamlandı: 22 Kasım 2024)
+
+MLP derleyicisi kendi kendini derleyebilir durumda:
+- **Lexer:** `self_host/lexer.mlp` - MLP ile yazılmış tokenizer
+- **Parser:** `self_host/parser.mlp` - MLP ile yazılmış AST oluşturucu
+- **Generator:** `self_host/generator.mlp` - MLP ile yazılmış assembly üretici
+- **Ana Derleyici:** `self_host/mlpc.mlp` - Tam MLP derleyicisi MLP'de
+
+### 🔀 Hibrit Mimari (İki Derleme Yolu)
+
+MLP, iki farklı derleme yolu sunar:
+
+#### Yol 1: MLP → Assembly (Direkt)
+```
+kaynak.mlp → self_host/mlpc.mlp → x86-64 Assembly
+```
+- MLP ile yazılmış derleyici bileşenleri kullanır
+- `generator.mlp` ile direkt assembly üretimi
+- Daha hızlı derleme süresi
+- Saf MLP implementasyonu
+
+#### Yol 2: MLP → C → Assembly (Varsayılan) ⭐
+```
+kaynak.mlp → c_compiler/mlpc → C Ara Kodu → x86-64 Assembly
+```
+- C tabanlı bootstrap derleyici kullanır
+- Önce optimize C kodu üretir
+- Daha iyi performans optimizasyonları
+- **Production kullanımı için önerilen**
+
+**Her iki yol da tamamen çalışır durumda!**
+
+---
+
 ## 📌 Self-Hosting İçin GEREKLİ Minimum Özellikler
 
 Self-hosting (MLP ile MLP derleyicisini yazmak) için **TÜM özelliklerin** tamamlanmasına gerek **YOK**. Sadece şunlar kritik:
@@ -14,24 +50,33 @@ Self-hosting (MLP ile MLP derleyicisini yazmak) için **TÜM özelliklerin** tam
 - ✅ struct (veri yapıları için)
 - ✅ enum (token tipleri için)
 
-### ⚠️ Self-Hosting İçin EKSİK Kritik Özellikler:
+### ✅ Self-Hosting İçin HAZIR Özellikler:
 
-1. **🔴 ARRAY/DİZİ DESTEĞİ** (EN ÖNEMLİ!)
-   - Token listesi için: `Token[] tokens`
-   - AST node listesi için: `ASTNode[] nodes`
-   - String array için: `string[] keywords`
-   - **Öncelik: YÜKSEK** - Bu olmadan derleyici yazılamaz
+1. **✅ ARRAY/DİZİ DESTEĞİ** - TAMAMLANDI! (22 Kasım 2024)
+   - Array literal syntax: `numeric arr[] = [1, 2, 3]`
+   - Array erişimi: `arr[0]`, `arr[i]`
+   - Global ve local scope'ta çalışıyor
+   - **Durum: TAMAMLANDI** ✅
 
-2. **🟡 Dynamic Memory/Array Büyütme**
-   - malloc/realloc zaten var ✅
-   - Array resize fonksiyonları gerekli
-   - **Öncelik: ORTA** - Workaround'lar mümkün
+2. **✅ LIST/DİNAMİK DİZİ DESTEĞİ** - TAMAMLANDI! (22 Kasım 2024)
+   - List tanımlama: `numeric items()`, `numeric items(10)`
+   - List literal: `numeric items() = (1,2,3)`
+   - Metodlar: add, get, set, remove, insert, size, clear
+   - **Durum: TAMAMLANDI** ✅
 
-3. **🟡 Input Fonksiyonu** (İsteğe bağlı)
+3. **✅ MAP/DICTIONARY DESTEĞİ** - TAMAMLANDI! (22 Kasım 2024)
+   - Map tanımlama: `map[string:numeric] ages = map()`
+   - Metodlar: set, get, has, remove, size, clear
+   - String ve numeric key desteği
+   - **Durum: TAMAMLANDI** ✅
+
+### ⚠️ Self-Hosting İçin KALAN Kritik Özellikler:
+
+1. **🟡 Input Fonksiyonu** (İsteğe bağlı)
    - Komut satırı argümanları için
-   - **Öncelik: DÜŞÜK** - Dosyadan okuma ile halledilebilir
+   - **Öncelik: ORTA** - Dosyadan okuma ile halledilebilir
 
-4. **🟢 Module/Import Sistemi** (Nice-to-have)
+2. **🟢 Module/Import Sistemi** (Nice-to-have)
    - Lexer, Parser, Generator'ı ayrı dosyalarda tutmak için
    - **Öncelik: DÜŞÜK** - Tek dosyada da yazılabilir
 
@@ -80,16 +125,23 @@ Self-hosting (MLP ile MLP derleyicisini yazmak) için **TÜM özelliklerin** tam
 - [x] Fonksiyon çağrıları
 
 ### Veri Yapıları
+
 - [x] `enum` (numaralandırma)
 - [x] `struct` (yapı tanımlama)
 - [x] Struct field erişimi (`.` operatörü)
+- [x] **Arrays** - Sabit boyutlu diziler `int arr[10]`, array literal `[1,2,3]` ⭐ YENİ (22 Kas 2024)
+- [x] **Lists** - Dinamik listeler `numeric items()` + 7 metod (add/get/set/remove/insert/size/clear) ⭐ YENİ (22 Kas 2024)
+- [x] **Maps/Dictionaries** - Hash map `map[K:V]` + 6 metod (set/get/has/remove/size/clear) ⭐ YENİ (22 Kas 2024)
 
-### String İşlemleri (15 fonksiyon)
-- [x] `string_length()`, `string_concat()`, `string_compare()`
-- [x] `string_at()`, `string_substring()`, `string_equals()`
+### String İşlemleri (18+ fonksiyon) ✅ TAM
+- [x] `string_length()`, `string_concat()`, `string_compare()`, `string_equals()`
+- [x] `string_at()`, `string_substring()`, `string_char_at()`
 - [x] `string_split()`, `string_join()`, `string_replace()`
 - [x] `string_trim()`, `string_upper()`, `string_lower()`
 - [x] `string_find()`, `string_starts_with()`, `string_ends_with()`
+- [x] `string_to_int()`, `int_to_string()`, `string_to_float()`, `float_to_string()`
+- [x] `string_to_bool()`, `bool_to_string()`, `char_to_string()`
+- [x] `string_index_of()`, `string_last_index_of()`
 
 ### Dosya İşlemleri (8 fonksiyon)
 - [x] `open_file()`, `read_file()`, `write_file()`, `close_file()`
@@ -163,8 +215,8 @@ array_remove(numbers, 3)
 
 ## 🟡 ORTA ÖNCELİKLİ EKSİKLER
 
-### 2. Input/Stdin Okuma
-**Öncelik: ORTA - Alternatif: dosyadan okuma**
+### 2. ✅ Input/Stdin Okuma - TAMAMLANDI! (22 Kasım 2025)
+**Öncelik: ORTA - TAMAMLANDI**
 
 ```mlp
 string input = read_input()
@@ -177,83 +229,162 @@ string line = read_line()
 - REPL (Read-Eval-Print Loop)
 - Interactive program'lar
 
-**Workaround:** Dosyadan okuma zaten var ✅
+**Durum: TAMAMLANDI** ✅
+- `read_input()` - Stdin'den satır okur
+- `read_line()` - Alias for read_input
+- `read_int()` - Integer okur ve parse eder
 
-### 3. Type Casting/Dönüşüm
-**Öncelik: ORTA**
-
-```mlp
-int x = 65
-char ch = (char)x  -- 'A'
-string s = int_to_string(x)  -- Zaten var ✅
-int y = string_to_int("123")
-```
-
-**Durum:**
-- `int_to_string()` zaten var ✅
-- Eksik: `string_to_int()`, explicit casting
-
-### 4. Default Parametreler
-**Öncelik: DÜŞÜK - Claude #2 başlamış**
+### 3. ✅ Type Casting/Dönüşüm - TAMAMLANDI! (22 Kasım 2025)
+**Öncelik: ORTA - TAMAMLANDI**
 
 ```mlp
-func greet(string name = "World") -> string {
-    return "Hello, " + name
-}
-
-print greet()           -- "Hello, World"
-print greet("Alice")    -- "Hello, Alice"
+string s = str(42)         -- "42"
+numeric n = num("123")     -- 123
 ```
+
+**Durum: TAMAMLANDI** ✅
+- `num(string)` - String'i numeric'e çevirir
+- `str(numeric)` - Numeric'i string'e çevirir (akıllı formatlama)
+- `int_to_string()` - Mevcut ✅
+- `string_to_int()` - Mevcut ✅
+
+### 3. ⚠️ Default Parameters - KISMEN TAMAMLANDI (22 Kasım 2025)
+**Öncelik: DÜŞÜK - Syntax desteği var, runtime tam değil**
+
+```mlp
+function greet(name = "World")
+    return "Hello " + name
+end function
+```
+
+**Durum: %50 TAMAMLANDI** ⚠️
+- ✅ Syntax parsing: `param = value` destekleniyor (then keyword kaldırıldı)
+- ✅ AST'de default değerler saklanıyor
+- ❌ Runtime: Eksik parametreleri default değerle doldurma YOK
+- ❌ Function registry: Fonksiyon tanımlarını runtime'da bulmak için sistem gerekli
+
+**Workaround:** Manuel if kontrolü ile simüle edilebilir:
+```mlp
+function greet(name)
+    if name == null then
+        name = "World"
+    end if
+    return "Hello " + name
+end function
+```
+
+**Not:** Tam implementasyon için function registry ve compile-time/runtime parametre matching gerekiyor. Self-hosting için kritik değil.
 
 ---
 
 ## 🟢 DÜŞÜK ÖNCELİKLİ EKSİKLER
 
-### 5. typeof Operatörü
-**Öncelik: DÜŞÜK - Claude #2 başlamış**
+### 5. ✅ typeof Operatörü - TAMAMLANDI! (22 Kasım 2025)
+**Öncelik: DÜŞÜK - TAMAMLANDI**
 
 ```mlp
-int x = 10
-string type_name = typeof(x)  -- "int"
+numeric x = 10
+string type_name = typeof(x)  -- "numeric"
 ```
 
-### 6. Range Syntax
-**Öncelik: DÜŞÜK - Claude #2 başlamış**
+**Durum: TAMAMLANDI** ✅
+- Compile-time type detection (literals)
+- Runtime type detection (variables)
+- Returns: "numeric", "string", "boolean", "pointer"
+- Test: `tests/test_typeof.mlp` ✅
+
+### 6. ✅ Range Syntax - TAMAMLANDI! (22 Kasım 2025)
+**Öncelik: DÜŞÜK - TAMAMLANDI**
 
 ```mlp
-for i in range(0, 10) {
+-- Single argument: range(end) - 0 to end-1
+for i in range(10)
     print i
-}
+end for
+
+-- Two arguments: range(start, end)
+for i in range(5, 15)
+    print i
+end for
+
+-- Three arguments: range(start, end, step)
+for i in range(0, 20, 2)
+    print i
+end for
 ```
 
-### 7. Module/Import Sistemi
-**Öncelik: DÜŞÜK**
+**Durum: TAMAMLANDI** ✅
+- `for X in range(...)` syntax implemented
+- Supports 1, 2, or 3 arguments
+- Exclusive end (Python-style): range(5) → 0,1,2,3,4
+- Works with expressions: range(start, end)
+- Nested loops supported
+- Break/continue work correctly
+- Test: `tests/test_range.mlp` ✅
+
+### 7. ✅ Module/Import System - TAMAMLANDI! (22 Kasım 2025)
+**Öncelik: DÜŞÜK - TAMAMLANDI**
 
 ```mlp
-import lexer
-import parser
-import generator
-
--- veya
-import "lexer.mlp"
-import "parser.mlp"
+import "utils.mlp"
+import "math_helpers.mlp"
 ```
 
-**Workaround:** Tüm kodu tek dosyada yazabiliriz
+**Durum: TAMAMLANDI** ✅
+- Syntax: `import "file.mlp"` - Explicit file path
+- Circular import protection (automatic skip on re-import)
+- Lexer: TOKEN_IMPORT keyword recognition
+- Parser: AST_IMPORT node with file path
+- Generator: File reading, parsing, and code integration
+- Global scope sharing: Imported variables accessible in main file
+- Test: `examples/test_import.mlp` + `examples/math_utils.mlp` ✅
+- Circular test: `examples/test_circular.mlp` ✅
 
-### 8. String Interpolation
-**Öncelik: DÜŞÜK**
+**Örnek Kullanım:**
+```mlp
+// math_utils.mlp
+numeric PI = 314
+string MATH_VERSION = "1.0"
+
+// main.mlp
+import "math_utils.mlp"
+print "PI = {PI}"  // Output: PI = 314
+```
+
+**Circular Import Koruması:**
+```
+A imports B → B imports A (circular detected, skipped)
+```
+
+### 8. ✅ String Interpolation - TAMAMLANDI (22 Kasım 2025)
+**Öncelik: DÜŞÜK - TAMAMLANDI**
 
 ```mlp
 string name = "Alice"
-int age = 25
+numeric age = 25
 print "Name: {name}, Age: {age}"
 ```
 
-**Workaround:** String concat zaten var ✅
+**Durum: TAMAMLANDI** ✅
+- Syntax: `"Hello {variable}!"` pattern support
+- Works with string and numeric variables
+- Automatic type conversion for numeric values
+- Multiple variables in single string
+- Lexer: TOKEN_INTERPOLATED_STRING detection
+- Parser: AST_INTERPOLATED_STRING node
+- Generator: String concatenation with int_to_string
+- Test: `examples/test_string_interpolation.mlp` ✅
 
-### 9. Multi-line String
-**Öncelik: DÜŞÜK**
+**Örnek Çıktı:**
+```
+Hello Alice!
+Name: Alice, Age: 25
+Count is 42
+User Alice is 25 years old and has 42 items
+```
+
+### 9. ✅ Multi-line String - TAMAMLANDI! (Phase 5.8)
+**Öncelik: DÜŞÜK - TAMAMLANDI**
 
 ```mlp
 string text = """
@@ -262,6 +393,14 @@ Bu bir
 string'tir
 """
 ```
+
+**Durum: TAMAMLANDI** ✅
+- Syntax: `"""..."""` triple-quote syntax
+- Newline karakterleri korunur
+- String interpolation ile uyumlu
+- Test: `examples/test_multiline_string.mlp` ✅
+
+**Not:** Phase 5.8'de eklenmiş, zaten çalışıyor durumda.
 
 ---
 

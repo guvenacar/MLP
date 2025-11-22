@@ -31,9 +31,9 @@ This document specifies path utility functions for MLP, enabling programs to man
 
 **Signature**:
 ```mlp
-function join_path(parts[], count) then
+func join_path(parts[], count)
     -- Returns joined path string
-end
+end func
 ```
 
 **Parameters**:
@@ -51,12 +51,12 @@ end
 
 **Example**:
 ```mlp
-function build_output_path(dir, filename) then
+func build_output_path(dir, filename)
     string parts[2]
     parts[0] = dir
     parts[1] = filename
     return join_path(parts, 2)
-end
+end func
 
 -- Usage
 string path = build_output_path("build", "output.o")
@@ -66,21 +66,21 @@ string path = build_output_path("build", "output.o")
 **Convenience Functions**:
 ```mlp
 -- Two-part join (most common)
-function join_path_2(dir, file) then
+func join_path_2(dir, file)
     string parts[2]
     parts[0] = dir
     parts[1] = file
     return join_path(parts, 2)
-end
+end func
 
 -- Three-part join
-function join_path_3(a, b, c) then
+func join_path_3(a, b, c)
     string parts[3]
     parts[0] = a
     parts[1] = b
     parts[2] = c
     return join_path(parts, 3)
-end
+end func
 ```
 
 **Edge Cases**:
@@ -99,9 +99,9 @@ join_path_2("/home", "/user")      -- "/home/user" (removes duplicate /)
 
 **Signature**:
 ```mlp
-function get_file_extension(path) then
+func get_file_extension(path)
     -- Returns extension including dot
-end
+end func
 ```
 
 **Parameters**:
@@ -118,15 +118,15 @@ end
 
 **Example**:
 ```mlp
-function is_source_file(path) then
+func is_source_file(path)
     string ext = get_file_extension(path)
     if ext == ".mlp" then
         return 1
     end
     return 0
-end
+end func
 
-function compile_based_on_type(path) then
+func compile_based_on_type(path)
     string ext = get_file_extension(path)
 
     if ext == ".mlp" then
@@ -139,7 +139,7 @@ function compile_based_on_type(path) then
         print "Unknown file type: "
         print ext
     end
-end
+end func
 ```
 
 **Edge Cases**:
@@ -159,9 +159,9 @@ get_file_extension("dir.name/file")      -- "" (dot in directory)
 
 **Signature**:
 ```mlp
-function get_file_name(path) then
+func get_file_name(path)
     -- Returns filename without directory
-end
+end func
 ```
 
 **Parameters**:
@@ -178,18 +178,18 @@ end
 
 **Example**:
 ```mlp
-function show_compiling(path) then
+func show_compiling(path)
     string name = get_file_name(path)
     print "Compiling: "
     print name
-end
+end func
 
-function create_object_name(source_path) then
+func create_object_name(source_path)
     string name = get_file_name(source_path)
     -- Replace extension
     string base = get_file_basename(name)
     return string_concat(base, ".o")
-end
+end func
 ```
 
 **Edge Cases**:
@@ -208,9 +208,9 @@ get_file_name("")                       -- ""
 
 **Signature**:
 ```mlp
-function get_directory(path) then
+func get_directory(path)
     -- Returns directory portion of path
-end
+end func
 ```
 
 **Parameters**:
@@ -228,7 +228,7 @@ end
 
 **Example**:
 ```mlp
-function ensure_output_directory(output_path) then
+func ensure_output_directory(output_path)
     string dir = get_directory(output_path)
 
     if string_length(dir) > 0 then
@@ -236,13 +236,13 @@ function ensure_output_directory(output_path) then
             create_directory(dir)
         end
     end
-end
+end func
 
-function process_in_same_directory(source_path) then
+func process_in_same_directory(source_path)
     string dir = get_directory(source_path)
     string output_path = join_path_2(dir, "output.txt")
     write_file(output_path, "processed")
-end
+end func
 ```
 
 **Edge Cases**:
@@ -264,9 +264,9 @@ get_directory("/")                      -- ""
 
 **Signature**:
 ```mlp
-function get_file_basename(path) then
+func get_file_basename(path)
     -- Returns filename without extension
-end
+end func
 ```
 
 **Example**:
@@ -282,9 +282,9 @@ get_file_basename("/home/user/doc.pdf") -- "doc"
 
 **Signature**:
 ```mlp
-function is_absolute_path(path) then
+func is_absolute_path(path)
     -- Returns 1 if absolute, 0 if relative
-end
+end func
 ```
 
 **Example**:
@@ -300,9 +300,9 @@ is_absolute_path("./file.txt")          -- 0
 
 **Signature**:
 ```mlp
-function normalize_path(path) then
+func normalize_path(path)
     -- Returns normalized path
-end
+end func
 ```
 
 **Example**:
@@ -480,16 +480,16 @@ call mlp_get_file_extension
 ### 4.1 Build System Paths
 
 ```mlp
-function get_object_path(source_path, build_dir) then
+func get_object_path(source_path, build_dir)
     -- source: "src/main.mlp" -> "build/obj/main.o"
     string name = get_file_name(source_path)
     string base = get_file_basename(name)
     string obj_name = string_concat(base, ".o")
 
     return join_path_3(build_dir, "obj", obj_name)
-end
+end func
 
-function setup_build_paths() then
+func setup_build_paths()
     string src = "src/compiler/parser.mlp"
 
     string dir = get_directory(src)
@@ -507,13 +507,13 @@ function setup_build_paths() then
     string obj = get_object_path(src, "build")
     print "Object path: "
     print obj
-end
+end func
 ```
 
 ### 4.2 Source Tree Traversal
 
 ```mlp
-function find_all_sources(dir, extension) then
+func find_all_sources(dir, extension)
     list[string] sources = list()
     list[string] entries = list_directory(dir)
 
@@ -538,13 +538,13 @@ function find_all_sources(dir, extension) then
 
     list_destroy(entries)
     return sources
-end
+end func
 ```
 
 ### 4.3 Output File Generation
 
 ```mlp
-function generate_output_paths(input_path) then
+func generate_output_paths(input_path)
     string dir = get_directory(input_path)
     string base = get_file_basename(get_file_name(input_path))
 
@@ -558,7 +558,7 @@ function generate_output_paths(input_path) then
     print obj_path
     print "Executable: "
     print exe_path
-end
+end func
 ```
 
 ---
@@ -568,7 +568,7 @@ end
 ### 5.1 Path Validation
 
 ```mlp
-function validate_path(path) then
+func validate_path(path)
     if string_length(path) == 0 then
         print "Error: Empty path"
         return 0
@@ -590,13 +590,13 @@ function validate_path(path) then
     end
 
     return 1
-end
+end func
 ```
 
 ### 5.2 Safe Path Operations
 
 ```mlp
-function safe_join_path(base, user_input) then
+func safe_join_path(base, user_input)
     -- Validate user input
     if string_find(user_input, "..") >= 0 then
         print "Error: Path traversal not allowed"
@@ -609,7 +609,7 @@ function safe_join_path(base, user_input) then
     end
 
     return join_path_2(base, user_input)
-end
+end func
 ```
 
 ---
@@ -619,7 +619,7 @@ end
 ### 6.1 Unit Tests
 
 ```mlp
-function test_join_path() then
+func test_join_path()
     string result = join_path_2("dir", "file.txt")
     assert(result == "dir/file.txt", "Basic join failed")
 
@@ -630,9 +630,9 @@ function test_join_path() then
     assert(result == "dir/file", "Trailing slash failed")
 
     print "test_join_path: PASSED"
-end
+end func
 
-function test_get_file_extension() then
+func test_get_file_extension()
     string ext = get_file_extension("file.txt")
     assert(ext == ".txt", "Basic extension failed")
 
@@ -643,9 +643,9 @@ function test_get_file_extension() then
     assert(string_length(ext) == 0, "No extension failed")
 
     print "test_get_file_extension: PASSED"
-end
+end func
 
-function test_get_file_name() then
+func test_get_file_name()
     string name = get_file_name("/home/user/file.txt")
     assert(name == "file.txt", "Absolute path failed")
 
@@ -653,9 +653,9 @@ function test_get_file_name() then
     assert(name == "file.txt", "Simple name failed")
 
     print "test_get_file_name: PASSED"
-end
+end func
 
-function test_get_directory() then
+func test_get_directory()
     string dir = get_directory("/home/user/file.txt")
     assert(dir == "/home/user", "Absolute path failed")
 
@@ -663,7 +663,7 @@ function test_get_directory() then
     assert(dir == ".", "No directory failed")
 
     print "test_get_directory: PASSED"
-end
+end func
 ```
 
 ---

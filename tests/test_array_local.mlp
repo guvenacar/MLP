@@ -1,0 +1,9 @@
+-- Test: Array literal in function (local scope)
+function test() then
+    numeric arr[] = [1, 2, 3]
+    print arr[0]
+    return 0
+end
+
+numeric x = test()
+print x

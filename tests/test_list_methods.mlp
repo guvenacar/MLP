@@ -1,0 +1,9 @@
+numeric items() = (10, 20, 30)
+
+print items.size()
+
+items.add(40)
+print items.size()
+
+print items.get(0)
+print items.get(3)

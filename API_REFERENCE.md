@@ -411,11 +411,11 @@ end
 ### Functions
 
 ```mlp
-function add(a, b) then
+func add(numeric a, numeric b)
     return a + b
-end
+end func
 
-int result = add(5, 3);
+numeric result = add(5, 3)
 ```
 
 ---

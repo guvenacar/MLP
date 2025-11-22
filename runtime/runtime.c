@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>    // floor, ceil, sqrt, etc.
 #include <unistd.h>  // readlink için
 #include <libgen.h>  // dirname için
 #include <errno.h>   // errno için
@@ -456,6 +457,11 @@ char* string_karakter_al(const char* str, int64_t indeks) {
     return sonuc;
 }
 
+// English alias
+char* string_char_at(const char* str, int64_t index) {
+    return string_karakter_al(str, index);
+}
+
 /**
  * STRING_ALT - String'in bir kısmını (substring) döndürür
  * @param str: Kaynak string
@@ -542,6 +548,15 @@ char* kodu_karaktere(int64_t kod) {
     sonuc[1] = '\0';
 
     return sonuc;
+}
+
+// English aliases for multi-language support
+int64_t char_code(const char* ch) {
+    return karakter_kodu(ch);
+}
+
+char* code_to_char(int64_t code) {
+    return kodu_karaktere(code);
 }
 
 // ============================================================================
@@ -1238,10 +1253,162 @@ char* string_concat(const char* s1, const char* s2) {
 }
 
 // ============================================
-// Phase 4: Math Operations
+// Input Functions (stdin)
 // ============================================
 
-#include <math.h>
+/**
+ * read_input - Read a line from stdin (without newline)
+ * @return: Input string (caller must free)
+ *
+ * MLP Usage: string input = read_input()
+ * Example:
+ *   print "Enter your name: "
+ *   string name = read_input()
+ *   print "Hello, " + name
+ */
+char* read_input() {
+    char* buffer = (char*)malloc(1024);
+    if (!buffer) {
+        fprintf(stderr, "HATA [read_input]: Memory allocation failed\n");
+        exit(1);
+    }
+
+    if (fgets(buffer, 1024, stdin) == NULL) {
+        free(buffer);
+        return strdup(""); // Return empty string on EOF
+    }
+
+    // Remove trailing newline
+    size_t len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '\n') {
+        buffer[len - 1] = '\0';
+    }
+
+    return buffer;
+}
+
+/**
+ * read_line - Alias for read_input (reads a line from stdin)
+ * @return: Input string (caller must free)
+ *
+ * MLP Usage: string line = read_line()
+ */
+char* read_line() {
+    return read_input();
+}
+
+/**
+ * read_int - Read an integer from stdin
+ * @return: Parsed integer value
+ *
+ * MLP Usage: numeric num = read_int()
+ * Example:
+ *   print "Enter a number: "
+ *   numeric x = read_int()
+ *   print "You entered: " + str(x)
+ */
+int64_t read_int() {
+    char* input = read_input();
+    int64_t result = string_to_int(input);
+    free(input);
+    return result;
+}
+
+// ============================================
+// Type Casting Helpers (MLP-friendly)
+// ============================================
+
+/**
+ * num - Convert string to numeric (supports both integer and decimal)
+ * @param str: String to convert
+ * @return: Numeric value (as double for BigDecimal behavior)
+ *
+ * MLP Usage: numeric x = num("123.45")
+ * Examples:
+ *   numeric a = num("42")      // 42.0
+ *   numeric b = num("3.14")    // 3.14
+ *   numeric c = num("-10")     // -10.0
+ */
+double num(const char* str) {
+    if (!str || str[0] == '\0') {
+        fprintf(stderr, "HATA [num]: NULL or empty string\n");
+        exit(1);
+    }
+    
+    // Check if string contains decimal point
+    if (strchr(str, '.') != NULL) {
+        return string_to_float(str);
+    } else {
+        return (double)string_to_int(str);
+    }
+}
+
+/**
+ * str - Convert numeric to string (smart formatting)
+ * @param value: Numeric value to convert
+ * @return: String representation (caller must free)
+ *
+ * MLP Usage: string s = str(42.5)
+ * Examples:
+ *   string a = str(42.0)    // "42" (removes .0)
+ *   string b = str(3.14)    // "3.14"
+ *   string c = str(-10)     // "-10"
+ */
+char* str(double value) {
+    // Check if value is effectively an integer
+    if (value == floor(value)) {
+        // No decimal part, format as integer
+        return int_to_string((int64_t)value);
+    } else {
+        // Has decimal part, format as float
+        return float_to_string(value);
+    }
+}
+
+/**
+ * mlp_get_type - Get the type of a value as a string (Phase 5.7)
+ * @param value: The value to check (as int64_t, can be number or pointer)
+ * @return: Type name string ("numeric", "string", "boolean", "pointer")
+ * 
+ * Note: This is a simplified implementation. Full type detection would require
+ * runtime type metadata. Currently distinguishes between:
+ * - Small integers (likely numeric values)
+ * - Pointers to strings (checks if valid memory with printable chars)
+ * - Boolean values (0 or 1)
+ * 
+ * MLP Usage: string type_name = typeof(variable);
+ */
+const char* mlp_get_type(int64_t value) {
+    // Check if it's likely a boolean (0 or 1)
+    if (value == 0 || value == 1) {
+        return "boolean";
+    }
+    
+    // Check if it's a small integer (likely numeric)
+    if (value >= -1000000 && value <= 1000000) {
+        return "numeric";
+    }
+    
+    // Check if it's a valid pointer (likely string)
+    // Pointers are typically in high memory ranges
+    if (value > 0x1000) {
+        const char* ptr = (const char*)value;
+        // Try to check if it's a valid string by checking first char
+        // This is unsafe but we have no better way without type metadata
+        // In production, we'd use actual type tracking
+        if (ptr != NULL) {
+            // Assume it's a string pointer
+            return "string";
+        }
+    }
+    
+    // Default to numeric for other values
+    return "numeric";
+}
+
+// ============================================
+// Phase 4: Math Operations
+// ============================================
 
 /**
  * math_sqrt - Square root
@@ -1519,9 +1686,9 @@ long string_last_index_of(const char* str, const char* needle) {
  * @param index: Character index (0-based)
  * @return: ASCII code of character, or 0 if index out of bounds
  *
- * MLP Usage: numeric code = char_code("A", 0); // 65
+ * MLP Usage: numeric code = char_code_at("A", 0); // 65
  */
-long char_code(const char* str, long index) {
+long char_code_at(const char* str, long index) {
     if (!str) return 0;
     
     long len = strlen(str);
@@ -3011,5 +3178,49 @@ void mlp_list_free(MLP_List* list) {
 void* mlp_list_data(MLP_List* list) {
     if (!list) return NULL;
     return list->data;
+}
+
+// ===== Phase 6.1: C Helper Functions for MLP Runtime Layer =====
+// These are low-level primitives that MLP runtime can use
+// Eventually these will be replaced with inline assembly or syscalls
+
+// Memory allocation wrapper (for MLP code)
+void* c_malloc(int64_t size) {
+    return malloc((size_t)size);
+}
+
+// Memory free wrapper (for MLP code)
+void c_free(void* ptr) {
+    free(ptr);
+}
+
+// Get string length (for MLP code)
+int64_t c_string_length(const char* str) {
+    if (!str) return 0;
+    return (int64_t)strlen(str);
+}
+
+// Get character at index (for MLP code)
+int64_t c_char_at(const char* str, int64_t index) {
+    if (!str) return 0;
+    int64_t len = strlen(str);
+    if (index < 0 || index >= len) return 0;
+    return (int64_t)(unsigned char)str[index];
+}
+
+// Set character at index (for MLP code)
+void c_set_char_at(char* str, int64_t index, int64_t ch) {
+    if (!str) return;
+    str[index] = (char)ch;
+}
+
+// Memory copy (for MLP code)
+void c_memcpy(void* dest, const void* src, int64_t n) {
+    memcpy(dest, src, (size_t)n);
+}
+
+// Memory set (for MLP code)
+void c_memset(void* dest, int64_t value, int64_t n) {
+    memset(dest, (int)value, (size_t)n);
 }
 

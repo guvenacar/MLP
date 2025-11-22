@@ -32,9 +32,9 @@ This document specifies process control functions for MLP, enabling programs to 
 
 **Signature**:
 ```mlp
-function execute_command(cmd) then
+func execute_command(cmd)
     -- Executes command, returns exit code
-end
+end func
 ```
 
 **Parameters**:
@@ -52,7 +52,7 @@ end
 
 **Example**:
 ```mlp
-function compile_assembly(source, output) then
+func compile_assembly(source, output)
     string cmd = "nasm -f elf64 "
     cmd = string_concat(cmd, source)
     cmd = string_concat(cmd, " -o ")
@@ -66,7 +66,7 @@ function compile_assembly(source, output) then
 
     print "Assembly compiled successfully"
     return 1
-end
+end func
 ```
 
 **Common Exit Codes**:
@@ -90,9 +90,9 @@ end
 
 **Signature**:
 ```mlp
-function get_command_output(cmd) then
+func get_command_output(cmd)
     -- Executes command, returns stdout as string
-end
+end func
 ```
 
 **Parameters**:
@@ -110,7 +110,7 @@ end
 
 **Example**:
 ```mlp
-function get_git_branch() then
+func get_git_branch()
     string output = get_command_output("git branch --show-current")
 
     if string_length(output) == 0 then
@@ -121,9 +121,9 @@ function get_git_branch() then
     -- Remove trailing newline
     string branch = string_trim(output)
     return branch
-end
+end func
 
-function show_git_status() then
+func show_git_status()
     string branch = get_git_branch()
     if string_length(branch) > 0 then
         print "Current branch: "
@@ -137,7 +137,7 @@ function show_git_status() then
     else
         print "Working directory clean"
     end
-end
+end func
 ```
 
 **Output Handling**:
@@ -153,9 +153,9 @@ end
 
 **Signature**:
 ```mlp
-function get_process_id() then
+func get_process_id()
     -- Returns PID of current process
-end
+end func
 ```
 
 **Parameters**: None
@@ -169,7 +169,7 @@ end
 
 **Example**:
 ```mlp
-function create_temp_filename(prefix) then
+func create_temp_filename(prefix)
     int pid = get_process_id()
     string pid_str = int_to_string(pid)
 
@@ -178,15 +178,15 @@ function create_temp_filename(prefix) then
     filename = string_concat(filename, ".tmp")
 
     return filename
-end
+end func
 
-function log_with_pid(message) then
+func log_with_pid(message)
     int pid = get_process_id()
     print "["
     print pid
     print "] "
     print message
-end
+end func
 ```
 
 ---
@@ -197,9 +197,9 @@ end
 
 **Signature**:
 ```mlp
-function get_parent_process_id() then
+func get_parent_process_id()
     -- Returns PPID of current process
-end
+end func
 ```
 
 **Parameters**: None
@@ -213,22 +213,22 @@ end
 
 **Example**:
 ```mlp
-function check_interactive() then
+func check_interactive()
     int ppid = get_parent_process_id()
 
     -- Check if running from shell (simplified)
     print "Parent PID: "
     print ppid
-end
+end func
 
-function is_daemon() then
+func is_daemon()
     int ppid = get_parent_process_id()
     -- Process adopted by init (PID 1) is likely a daemon
     if ppid == 1 then
         return 1
     end
     return 0
-end
+end func
 ```
 
 ---
@@ -359,7 +359,7 @@ call mlp_get_process_id
 ### 3.1 Build System Integration
 
 ```mlp
-function build_project() then
+func build_project()
     print "Building project..."
     int pid = get_process_id()
     print "[PID: "
@@ -384,13 +384,13 @@ function build_project() then
 
     print "Build successful!"
     return 1
-end
+end func
 ```
 
 ### 3.2 Git Integration
 
 ```mlp
-function git_commit(message) then
+func git_commit(message)
     -- Check for changes
     string status = get_command_output("git status --porcelain")
     if string_length(status) == 0 then
@@ -419,13 +419,13 @@ function git_commit(message) then
     print "Committed: "
     print message
     return 1
-end
+end func
 ```
 
 ### 3.3 System Information
 
 ```mlp
-function show_system_info() then
+func show_system_info()
     print "=== System Information ==="
 
     -- Hostname
@@ -448,13 +448,13 @@ function show_system_info() then
     print get_process_id()
     print "Parent PID: "
     print get_parent_process_id()
-end
+end func
 ```
 
 ### 3.4 External Tool Invocation
 
 ```mlp
-function run_tests() then
+func run_tests()
     print "Running tests..."
 
     -- Run test executable
@@ -474,7 +474,7 @@ function run_tests() then
 
         return 0
     end
-end
+end func
 ```
 
 ---
@@ -485,18 +485,18 @@ end
 
 **Dangerous Pattern (DO NOT USE)**:
 ```mlp
-function dangerous_search(user_input) then
+func dangerous_search(user_input)
     -- DANGEROUS: user_input could be "; rm -rf /"
     string cmd = "grep "
     cmd = string_concat(cmd, user_input)
     cmd = string_concat(cmd, " file.txt")
     execute_command(cmd)  -- VULNERABLE!
-end
+end func
 ```
 
 **Safe Pattern**:
 ```mlp
-function safe_search(pattern) then
+func safe_search(pattern)
     -- Validate input: only allow alphanumeric
     int i = 0
     while i < string_length(pattern)
@@ -516,19 +516,19 @@ function safe_search(pattern) then
     cmd = string_concat(cmd, "' file.txt")
     execute_command(cmd)
     return 1
-end
+end func
 ```
 
 ### 4.2 Path Quoting
 
 ```mlp
-function compile_file(path) then
+func compile_file(path)
     -- Quote path to handle spaces
     string cmd = "nasm -f elf64 \""
     cmd = string_concat(cmd, path)
     cmd = string_concat(cmd, "\" -o output.o")
     return execute_command(cmd)
-end
+end func
 ```
 
 ### 4.3 Shell Metacharacter Escape
@@ -544,7 +544,7 @@ Consider implementing `shell_escape()` function for safety.
 ### 5.1 Command Execution Errors
 
 ```mlp
-function run_with_error_handling(cmd) then
+func run_with_error_handling(cmd)
     int result = execute_command(cmd)
 
     if result == -1 then
@@ -569,13 +569,13 @@ function run_with_error_handling(cmd) then
     end
 
     return 1
-end
+end func
 ```
 
 ### 5.2 Output Capture Errors
 
 ```mlp
-function safe_get_output(cmd) then
+func safe_get_output(cmd)
     string output = get_command_output(cmd)
     int exit_code = get_error_code()
 
@@ -589,7 +589,7 @@ function safe_get_output(cmd) then
     end
 
     return output
-end
+end func
 ```
 
 ---
@@ -618,7 +618,7 @@ end
 ### 7.1 Unit Tests
 
 ```mlp
-function test_execute_command() then
+func test_execute_command()
     -- Test successful command
     int result = execute_command("true")
     assert(result == 0, "true should return 0")
@@ -632,9 +632,9 @@ function test_execute_command() then
     assert(result == 42, "exit 42 should return 42")
 
     print "test_execute_command: PASSED"
-end
+end func
 
-function test_get_command_output() then
+func test_get_command_output()
     -- Test simple output
     string output = get_command_output("echo hello")
     output = string_trim(output)
@@ -646,9 +646,9 @@ function test_get_command_output() then
     assert(string_find(output, "line2") >= 0, "Should contain line2")
 
     print "test_get_command_output: PASSED"
-end
+end func
 
-function test_process_ids() then
+func test_process_ids()
     int pid = get_process_id()
     assert(pid > 0, "PID should be positive")
 
@@ -657,7 +657,7 @@ function test_process_ids() then
     assert(ppid != pid, "PPID should differ from PID")
 
     print "test_process_ids: PASSED"
-end
+end func
 ```
 
 ### 7.2 Integration Tests

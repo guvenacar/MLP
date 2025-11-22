@@ -148,12 +148,12 @@ Native Binary
 
 #### MLP Kodu:
 ```mlp
-function test() then
+func test()
     int x = 5;
     list<int> numbers = list<int>();
     numbers.add(x);
     print numbers.get(0)
-end
+end func
 ```
 
 #### Üretilecek C Kodu:
@@ -320,10 +320,10 @@ int main() {
 
 **MLP:**
 ```mlp
-function test() then
+func test()
     list<int> nums = list<int>();
     nums.add(42);
-end
+end func
 ```
 
 **C:**
@@ -364,7 +364,7 @@ def generate_function_body(ast_node):
 
 **MLP:**
 ```mlp
-function search(x) then
+func search(x)
     list<int> temp = list<int>();
     
     if x < 0 then
@@ -372,7 +372,7 @@ function search(x) then
     end
     
     return 0
-end
+end func
 ```
 
 **Yanlış C:**
@@ -427,7 +427,7 @@ def generate_function_with_cleanup(ast_node):
 
 **MLP:**
 ```mlp
-function test() then
+func test()
     list<int> outer = list<int>();
     
     if true then
@@ -436,7 +436,7 @@ function test() then
     end
     
     -- outer burada ölmeli
-end
+end func
 ```
 
 **C:**
@@ -491,12 +491,12 @@ time ./mlpc_c test.mlp && time ./test
 
 ### MLP Kaynak Kodu
 ```mlp
-function fibonacci(n) then
+func fibonacci(n)
     if n <= 1 then
         return n
     end
     return fibonacci(n - 1) + fibonacci(n - 2)
-end
+end func
 
 int result = fibonacci(10);
 print result
@@ -612,7 +612,7 @@ int main() {
 
 ```mlp
 -- c_backend.mlp
-function generate_c_code(ast) then
+func generate_c_code(ast)
     list<string> output = list<string>();
     
     for node in ast do
@@ -622,7 +622,7 @@ function generate_c_code(ast) then
     end
     
     return output
-end
+end func
 ```
 
 ---
