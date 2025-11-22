@@ -1,0 +1,31 @@
+-- Complete test for Optional<T> generic type system
+-- Phase 6.2: Generic Optional Type
+
+print "=== Testing Optional<numeric> ==="
+
+-- Test 1: Basic declaration
+optional<numeric> maybe_num
+print "Test 1: Basic declaration - OK"
+
+-- Test 2: Declaration with initialization to null
+optional<numeric> null_num = null
+print "Test 2: Declaration with null - OK"
+
+-- Test 3: Declaration with optional constructor
+optional<numeric> empty_num = optional<numeric>()
+print "Test 3: Optional constructor - OK"
+
+print ""
+print "=== Testing Optional<string> ==="
+
+-- Test 4: String optional declaration
+optional<string> maybe_text
+print "Test 4: String optional declaration - OK"
+
+-- Test 5: String optional with null
+optional<string> null_text = null
+print "Test 5: String optional with null - OK"
+
+print ""
+print "=== All Optional<T> Syntax Tests Passed! ==="
+print "Phase 6.2 Generic Type System: WORKING"

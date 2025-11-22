@@ -34,16 +34,26 @@ class Widget {
 
   // Widget içeriğini render et
   renderWidgetContent(element) {
+    // İçerik için wrapper div oluştur (pointer events için)
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'widget-content';
+    contentWrapper.style.pointerEvents = 'none';
+    contentWrapper.style.width = '100%';
+    contentWrapper.style.height = '100%';
+    contentWrapper.style.display = 'flex';
+    contentWrapper.style.alignItems = 'center';
+    contentWrapper.style.justifyContent = 'center';
+
     switch (this.type) {
       case 'button':
-        element.textContent = this.properties.text;
+        contentWrapper.textContent = this.properties.text;
         element.style.backgroundColor = this.properties.backgroundColor;
         element.style.color = this.properties.textColor;
         element.style.fontSize = this.properties.fontSize + 'px';
         break;
 
       case 'label':
-        element.textContent = this.properties.text;
+        contentWrapper.textContent = this.properties.text;
         element.style.color = this.properties.textColor;
         element.style.fontSize = this.properties.fontSize + 'px';
         element.style.backgroundColor = this.properties.backgroundColor;
@@ -53,11 +63,11 @@ class Widget {
         element.style.backgroundColor = this.properties.backgroundColor;
         element.style.color = this.properties.textColor;
         element.style.fontSize = this.properties.fontSize + 'px';
-        element.textContent = this.properties.text || this.properties.placeholder;
+        contentWrapper.textContent = this.properties.text || this.properties.placeholder;
         break;
 
       case 'checkbox':
-        element.textContent = this.properties.text;
+        contentWrapper.textContent = this.properties.text;
         element.style.color = this.properties.textColor;
         element.style.fontSize = this.properties.fontSize + 'px';
         if (this.properties.checked) {
@@ -66,7 +76,7 @@ class Widget {
         break;
 
       case 'radio':
-        element.textContent = this.properties.text;
+        contentWrapper.textContent = this.properties.text;
         element.style.color = this.properties.textColor;
         element.style.fontSize = this.properties.fontSize + 'px';
         if (this.properties.checked) {
@@ -77,6 +87,7 @@ class Widget {
       case 'panel':
         element.style.backgroundColor = this.properties.backgroundColor;
         element.style.borderColor = this.properties.borderColor;
+        contentWrapper.textContent = ''; // Panel boş
         break;
 
       case 'groupbox':
@@ -84,6 +95,7 @@ class Widget {
         element.style.color = this.properties.textColor;
         element.style.fontSize = this.properties.fontSize + 'px';
         element.dataset.title = this.properties.text;
+        contentWrapper.textContent = ''; // GroupBox başlığı CSS ile gösterilir
         break;
 
       case 'listbox':
@@ -91,12 +103,16 @@ class Widget {
         element.style.color = this.properties.textColor;
         element.style.fontSize = this.properties.fontSize + 'px';
         if (this.properties.items && this.properties.items.length > 0) {
-          element.innerHTML = this.properties.items.map(item =>
+          contentWrapper.innerHTML = this.properties.items.map(item =>
             `<div style="padding: 4px;">${item}</div>`
           ).join('');
         } else {
-          element.innerHTML = '<div style="padding: 4px; color: #666;">(Liste boş)</div>';
+          contentWrapper.innerHTML = '<div style="padding: 4px; color: #666;">(Liste boş)</div>';
         }
+        contentWrapper.style.flexDirection = 'column';
+        contentWrapper.style.alignItems = 'flex-start';
+        contentWrapper.style.justifyContent = 'flex-start';
+        contentWrapper.style.overflow = 'auto';
         break;
 
       case 'combobox':
@@ -106,7 +122,7 @@ class Widget {
         const selectedItem = this.properties.items && this.properties.selectedIndex >= 0
           ? this.properties.items[this.properties.selectedIndex]
           : '(Seçiniz)';
-        element.textContent = selectedItem;
+        contentWrapper.textContent = selectedItem;
         break;
     }
 
@@ -114,6 +130,9 @@ class Widget {
     if (!this.properties.visible) {
       element.style.opacity = '0.3';
     }
+
+    // Content wrapper'ı element'e ekle
+    element.appendChild(contentWrapper);
   }
 
   // Resize handle'ları ekle

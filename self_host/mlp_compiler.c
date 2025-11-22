@@ -4461,7 +4461,14 @@ ASTNode* optional_tanimlama_parse() {
     degisken_adi->value = strdup(current_token->value);
     consume(TOKEN_IDENTIFIER);
 
-    // Expect =
+    // Optional: = initialization
+    // If no =, create default (none/empty optional)
+    if (current_token->type != TOKEN_ASSIGN) {
+        // No initialization - create empty optional
+        ASTNode* optional_node = createAST_OptionalTanimlama(element_tip, degisken_adi);
+        return optional_node;
+    }
+    
     consume(TOKEN_ASSIGN);
 
     // Two options:
@@ -8389,17 +8396,176 @@ Backend* get_c_backend(void) {
 // ===== Phase 6.2: Optional<T> Visitor Stubs (Temporary) =====
 
 void visit_OptionalTanimlama(ASTNode* node) {
-    asm_append(&text_section, "    ; Optional<T> not yet implemented");
+    // Phase 6.2: Generic Optional<T> → Struct-based implementation
+    // optional<numeric> x → OptionalNumeric x
+    // optional<string> y → OptionalString y
+    
+    Token* element_tip = node->optional_tanimlama_data.element_tipi;
+    Token* degisken_adi = node->optional_tanimlama_data.degisken_adi;
+    
+    // Determine struct name based on type
+    char struct_name[64];
+    if (strcmp(element_tip->value, "numeric") == 0) {
+        strcpy(struct_name, "OptionalNumeric");
+    } else if (strcmp(element_tip->value, "string") == 0) {
+        strcpy(struct_name, "OptionalString");
+    } else if (strcmp(element_tip->value, "boolean") == 0) {
+        strcpy(struct_name, "OptionalBoolean");
+    } else {
+        // Custom type
+        sprintf(struct_name, "Optional%s", element_tip->value);
+    }
+    
+    // Generate struct variable declaration
+    char buffer[256];
+    sprintf(buffer, "    ; Optional<%s> %s -> %s %s", 
+            element_tip->value, degisken_adi->value,
+            struct_name, degisken_adi->value);
+    asm_append(&text_section, buffer);
+    
+    // Allocate space on stack for struct (2 fields: value + has_value)
+    // numeric/string = 8 bytes, boolean = 8 bytes (aligned)
+    // Total: 16 bytes per optional
+    kapsam_yigin_ofseti += 16;
+    sprintf(buffer, "    sub rsp, 16  ; Allocate space for %s", struct_name);
+    asm_append(&text_section, buffer);
+    
+    // Initialize has_value = false (0) - second field
+    sprintf(buffer, "    mov qword [rbp - %d], 0  ; has_value = false", 
+            kapsam_yigin_ofseti);
+    asm_append(&text_section, buffer);
+    
+    // Initialize value = 0 (default) - first field
+    sprintf(buffer, "    mov qword [rbp - %d], 0  ; value = 0 (default)", 
+            kapsam_yigin_ofseti - 8);
+    asm_append(&text_section, buffer);
+    
+    // Register variable in symbol table
+    Degisken degisken;
+    degisken.ad = strdup(degisken_adi->value);
+    sprintf(buffer, "[rbp - %d]", kapsam_yigin_ofseti - 8);
+    degisken.asm_adresi = strdup(buffer);
+    degisken.tip = strdup(struct_name);
+    degisken.scope_level = current_scope_level;
+    degisken.is_global = false;
+    degisken.is_const = false;
+    degisken.array_boyut = 0;
+    kapsam_haritasi[kapsam_degisken_sayisi++] = degisken;
 }
 
 void visit_OptionalHasValue(ASTNode* node) {
-    asm_append(&text_section, "    mov rax, 0  ; has_value stub");
+    // optional.has_value() → check has_value field
+    Token* optional_adi = node->optional_has_value_data.optional_adi;
+    
+    // Find variable in symbol table
+    int found = 0;
+    int offset = 0;
+    for (int i = kapsam_degisken_sayisi - 1; i >= 0; i--) {
+        if (strcmp(kapsam_haritasi[i].ad, optional_adi->value) == 0) {
+            // Extract offset from "[rbp - X]"
+            sscanf(kapsam_haritasi[i].asm_adresi, "[rbp - %d]", &offset);
+            found = 1;
+            break;
+        }
+    }
+    
+    if (!found) {
+        char buffer[256];
+        sprintf(buffer, "    ; ERROR: Variable not found: %s", optional_adi->value);
+        asm_append(&text_section, buffer);
+        asm_append(&text_section, "    mov rax, 0");
+        return;
+    }
+    
+    // Load has_value field (offset + 8 from value field)
+    char buffer[256];
+    sprintf(buffer, "    mov rax, [rbp - %d]  ; %s.has_value", offset + 8, optional_adi->value);
+    asm_append(&text_section, buffer);
 }
 
 void visit_OptionalValue(ASTNode* node) {
-    asm_append(&text_section, "    mov rax, 0  ; value stub");
+    // optional.value() → return value field
+    Token* optional_adi = node->optional_value_data.optional_adi;
+    
+    // Find variable in symbol table
+    int found = 0;
+    int offset = 0;
+    for (int i = kapsam_degisken_sayisi - 1; i >= 0; i--) {
+        if (strcmp(kapsam_haritasi[i].ad, optional_adi->value) == 0) {
+            // Extract offset from "[rbp - X]"
+            sscanf(kapsam_haritasi[i].asm_adresi, "[rbp - %d]", &offset);
+            found = 1;
+            break;
+        }
+    }
+    
+    if (!found) {
+        char buffer[256];
+        sprintf(buffer, "    ; ERROR: Variable not found: %s", optional_adi->value);
+        asm_append(&text_section, buffer);
+        asm_append(&text_section, "    mov rax, 0");
+        return;
+    }
+    
+    // Load value field
+    char buffer[256];
+    sprintf(buffer, "    mov rax, [rbp - %d]  ; %s.value", offset, optional_adi->value);
+    asm_append(&text_section, buffer);
 }
 
 void visit_OptionalValueOr(ASTNode* node) {
-    asm_append(&text_section, "    mov rax, 0  ; value_or stub");
+    // optional.value_or(default) → return value if has_value, else default
+    Token* optional_adi = node->optional_value_or_data.optional_adi;
+    ASTNode* default_deger = node->optional_value_or_data.default_deger;
+    
+    // Find variable in symbol table
+    int found = 0;
+    int offset = 0;
+    for (int i = kapsam_degisken_sayisi - 1; i >= 0; i--) {
+        if (strcmp(kapsam_haritasi[i].ad, optional_adi->value) == 0) {
+            // Extract offset from "[rbp - X]"
+            sscanf(kapsam_haritasi[i].asm_adresi, "[rbp - %d]", &offset);
+            found = 1;
+            break;
+        }
+    }
+    
+    if (!found) {
+        char buffer[256];
+        sprintf(buffer, "    ; ERROR: Variable not found: %s", optional_adi->value);
+        asm_append(&text_section, buffer);
+        asm_append(&text_section, "    mov rax, 0");
+        return;
+    }
+    
+    // Check has_value
+    char buffer[256];
+    sprintf(buffer, "    mov rax, [rbp - %d]  ; Load has_value", offset + 8);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    test rax, rax");
+    
+    // Generate unique labels
+    static int value_or_counter = 0;
+    char label_has_value[64], label_end[64];
+    sprintf(label_has_value, ".optional_has_value_%d", value_or_counter);
+    sprintf(label_end, ".optional_value_or_end_%d", value_or_counter);
+    value_or_counter++;
+    
+    sprintf(buffer, "    jnz %s  ; Jump if has_value == true", label_has_value);
+    asm_append(&text_section, buffer);
+    
+    // No value: evaluate and return default
+    asm_append(&text_section, "    ; Return default value");
+    visit(default_deger);  // Result in RAX
+    sprintf(buffer, "    jmp %s", label_end);
+    asm_append(&text_section, buffer);
+    
+    // Has value: return value field
+    sprintf(buffer, "%s:", label_has_value);
+    asm_append(&text_section, buffer);
+    sprintf(buffer, "    mov rax, [rbp - %d]  ; Return actual value", offset);
+    asm_append(&text_section, buffer);
+    
+    sprintf(buffer, "%s:", label_end);
+    asm_append(&text_section, buffer);
 }

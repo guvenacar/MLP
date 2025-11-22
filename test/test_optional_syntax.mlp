@@ -1,0 +1,19 @@
+-- Test Optional<T> syntax support
+-- Phase 6.2: Generic Optional Type
+
+-- Test 1: Optional<numeric> declaration
+print "Test 1: Optional numeric declaration"
+optional<numeric> maybe_number
+print "Declaration OK"
+
+-- Test 2: Optional<string> declaration
+print "Test 2: Optional string declaration"
+optional<string> maybe_text
+print "Declaration OK"
+
+-- Test 3: Check methods (if implemented)
+-- maybe_number.has_value()
+-- maybe_number.value()
+-- maybe_number.value_or(42)
+
+print "All optional syntax tests completed"
