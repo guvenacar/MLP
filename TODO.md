@@ -248,32 +248,41 @@ numeric n = num("123")     -- 123
 - `int_to_string()` - Mevcut ✅
 - `string_to_int()` - Mevcut ✅
 
-### 3. ⚠️ Default Parameters - KISMEN TAMAMLANDI (22 Kasım 2025)
-**Öncelik: DÜŞÜK - Syntax desteği var, runtime tam değil**
+### 3. ✅ Default Parameters - TAMAMLANDI! (22 Kasım 2025)
+**Öncelik: DÜŞÜK - TAMAMLANDI**
 
 ```mlp
-function greet(name = "World")
-    return "Hello " + name
+function add(a = 10, b = 20)
+    print a + b
 end function
+
+add()      -- Output: 30 (uses both defaults)
+add(5)     -- Output: 25 (5 + 20)
+add(5, 7)  -- Output: 12 (5 + 7)
 ```
 
-**Durum: %50 TAMAMLANDI** ⚠️
-- ✅ Syntax parsing: `param = value` destekleniyor (then keyword kaldırıldı)
+**Durum: TAMAMLANDI** ✅
+- ✅ Syntax parsing: `param = value` destekleniyor
 - ✅ AST'de default değerler saklanıyor
-- ❌ Runtime: Eksik parametreleri default değerle doldurma YOK
-- ❌ Function registry: Fonksiyon tanımlarını runtime'da bulmak için sistem gerekli
+- ✅ Function registry: İki geçişli (two-pass) derleme sistemi
+- ✅ Runtime: Eksik parametreler otomatik olarak default değerlerle doldurulur
+- ✅ Test: `test/test_default_params_extended.mlp` ✅
 
-**Workaround:** Manuel if kontrolü ile simüle edilebilir:
-```mlp
-function greet(name)
-    if name == null then
-        name = "World"
-    end if
-    return "Hello " + name
-end function
+**İmplementasyon:**
+- **Two-pass compilation**: Pre-scan → Register functions → Generate code
+- **Function registry**: HashMap ile tüm fonksiyon imzaları saklanır
+- **Default handling**: Eksik parametreler için default AST node'ları kullanılır
+- **Forward reference**: Pre-scan sayesinde fonksiyon tanımları çağrılardan önce kaydedilir
+
+**Test Sonuçları:**
 ```
-
-**Not:** Tam implementasyon için function registry ve compile-time/runtime parametre matching gerekiyor. Self-hosting için kritik değil.
+Test 1: add() -> should be 30
+30
+Test 2: add(5) -> should be 25
+25
+Test 3: add(5, 7) -> should be 12
+12
+```
 
 ---
 

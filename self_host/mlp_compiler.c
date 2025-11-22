@@ -12,6 +12,34 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <libgen.h>
+
+#include "../runtime/hashmap.h"  // HashMap support for function registry
+
+// ========== Function Registry Structures ==========
+
+// Forward declaration (ASTNode will be defined later)
+typedef struct ASTNode ASTNode;
+
+// Parameter information
+typedef struct {
+    char* name;             // Parameter name ("b")
+    ASTNode* default_value; // Default value AST node (NULL if no default)
+} ParameterInfo;
+
+// Function signature
+typedef struct {
+    char* name;             // Function name ("add")
+    int param_count;        // Total parameter count
+    ParameterInfo* params;  // Parameter details array
+} FunctionSignature;
+
+// Global Function Registry (HashMap)
+HashMap* function_registry = NULL;
+
+// Forward declarations for registry functions (implemented after ASTNode definition)
+void register_function_signature(ASTNode* node);
+void pre_scan_functions(ASTNode* root);
+
 // ========== c_lexer.h ==========
 // c_compiler/c_lexer.h
 
@@ -824,6 +852,57 @@ typedef struct {
  */
 char* generate_asm(ASTNode* root);
 
+// ========== Function Registry Implementation ==========
+
+// Register a function signature into the registry (without generating assembly)
+void register_function_signature(ASTNode* node) {
+    if (node->type != AST_FUNCTION_DECLARATION) return;
+
+    char* func_name = node->islec_tanimlama_data.ad->value;
+    
+    // Check if already registered (avoid duplicate definitions)
+    if (hashmap_get(function_registry, func_name) != NULL) {
+        fprintf(stderr, "WARNING: Function '%s' already registered, skipping duplicate\n", func_name);
+        return;
+    }
+
+    FunctionSignature* sig = (FunctionSignature*)malloc(sizeof(FunctionSignature));
+    sig->name = strdup(func_name);
+    sig->param_count = node->islec_tanimlama_data.parametre_sayisi;
+    sig->params = (ParameterInfo*)malloc(sizeof(ParameterInfo) * sig->param_count);
+
+    for (int i = 0; i < sig->param_count; i++) {
+        sig->params[i].name = strdup(node->islec_tanimlama_data.parametreler[i]->value);
+        
+        // Check for default value in AST
+        if (node->islec_tanimlama_data.parametre_default_degerleri && 
+            node->islec_tanimlama_data.parametre_default_degerleri[i] != NULL) {
+            sig->params[i].default_value = node->islec_tanimlama_data.parametre_default_degerleri[i];
+        } else {
+            sig->params[i].default_value = NULL;
+        }
+    }
+
+    hashmap_put(function_registry, sig->name, sig);
+}
+
+// Pre-scan AST to register all function signatures before code generation
+void pre_scan_functions(ASTNode* root) {
+    if (!root) return;
+
+    if (root->type == AST_BLOK) {
+        // Scan top-level statements for function declarations
+        for (int i = 0; i < root->blok_data.sayisi; i++) {
+            ASTNode* stmt = root->blok_data.komutlar[i];
+            if (stmt && stmt->type == AST_FUNCTION_DECLARATION) {
+                register_function_signature(stmt);
+            }
+        }
+    }
+}
+
+// ==========================================================
+
 #endif // C_GENERATOR_H
 // ========== c_backend.h ==========
 // c_backend.h
@@ -962,6 +1041,9 @@ const char* get_base_dir() {
 }
 
 int main(int argc, char* argv[]) {
+    // Initialize function registry
+    function_registry = hashmap_create(128);
+    
     if (argc < 3) {
         fprintf(stderr, "Kullanım: %s <girdi_dosyasi.tyd> <cikti_dosyasi.asm>\n", argv[0]);
         return 1;
@@ -1018,7 +1100,10 @@ int main(int argc, char* argv[]) {
 
     fprintf(stderr, "Ayrıştırma Başarılı. Şimdi Assembly Üretiliyor...\n");
 
-    // 2. Generator'ı Çalıştır
+    // 2. Pre-scan: Register all function signatures before code generation
+    pre_scan_functions(root);
+
+    // 3. Generator'ı Çalıştır (now with full function registry)
     char* asm_code = generate_asm(root);
 
     // --- Dosyaya Yazma ---
@@ -5875,6 +5960,11 @@ void visit_IslecTanimlama(ASTNode* node) {
     char* islec_adi = node->islec_tanimlama_data.ad->value;
     char buffer[128];
 
+    // NOTE: Function signature already registered in pre-scan phase
+    // No need to register here again
+
+    // ===== Generate assembly code for function =====
+
     // Fonksiyon için yeni kapsam aç
     int onceki_degisken_sayisi = kapsam_degisken_sayisi;
     int onceki_yigin_ofseti = kapsam_yigin_ofseti;
@@ -5925,7 +6015,13 @@ void visit_IslecTanimlama(ASTNode* node) {
     // 4. Fonksiyon Gövdesi
     visit(node->islec_tanimlama_data.govde);
 
-    // 5. Önceki kapsamı geri yükle
+    // 5. Implicit return if no explicit return (function epilog)
+    asm_append(&text_section, "    ; --- Implicit Return (Function Epilog) ---");
+    asm_append(&text_section, "    mov rsp, rbp");
+    asm_append(&text_section, "    pop rbp");
+    asm_append(&text_section, "    ret");
+
+    // 6. Önceki kapsamı geri yükle
     kapsam_degisken_sayisi = onceki_degisken_sayisi;
     kapsam_yigin_ofseti = onceki_yigin_ofseti;
 }
@@ -6122,19 +6218,57 @@ void visit_IslecCagirma(ASTNode* node) {
     }
 
     // ===== KULLANICI TANIMLI FONKSİYONLAR =====
-    // 1. Argümanları hesapla ve yığına (stack) it
-    for (int i = 0; i < arg_sayisi; i++) {
-        visit(node->islec_cagirma_data.argumanlar[i]);
-        asm_append(&text_section, "    push rax");
+    
+    // Check if function is in registry
+    FunctionSignature* sig = (FunctionSignature*)hashmap_get(function_registry, islec_adi);
+
+    if (sig) {
+        // Function found in registry - apply default parameter logic
+        
+        // Process ALL parameters (not just provided ones)
+        // Push from right to left for stack convention
+        for (int i = sig->param_count - 1; i >= 0; i--) {
+            if (i < arg_sayisi) {
+                // User provided this argument - use it
+                visit(node->islec_cagirma_data.argumanlar[i]);
+            } else {
+                // User didn't provide this argument - check for default value
+                if (sig->params[i].default_value != NULL) {
+                    // Generate code for default value (e.g., mov rax, 20)
+                    visit(sig->params[i].default_value);
+                } else {
+                    // Missing required parameter
+                    fprintf(stderr, "ERROR: Function '%s' parameter '%s' is missing and has no default value!\n", 
+                            islec_adi, sig->params[i].name);
+                    exit(1);
+                }
+            }
+            asm_append(&text_section, "    push rax");
+        }
+        
+        // Pop arguments to registers (now in correct order: forward)
+        for (int i = 0; i < sig->param_count; i++) {
+            sprintf(buffer, "    pop %s", arg_registerleri[i]);
+            asm_append(&text_section, buffer);
+        }
+    } else {
+        // Function not in registry (might be built-in or undefined)
+        // Use old behavior: just push provided arguments
+        
+        // 1. Push arguments to stack
+        for (int i = 0; i < arg_sayisi; i++) {
+            visit(node->islec_cagirma_data.argumanlar[i]);
+            asm_append(&text_section, "    push rax");
+        }
+
+        // 2. Pop arguments to registers (reverse order)
+        for (int i = arg_sayisi - 1; i >= 0; i--) {
+            sprintf(buffer, "    pop %s", arg_registerleri[i]);
+            asm_append(&text_section, buffer);
+        }
     }
 
-    // 2. Argümanları yığından register'lara çek (ters sırada)
-    for (int i = arg_sayisi - 1; i >= 0; i--) {
-        sprintf(buffer, "    pop %s", arg_registerleri[i]);
-        asm_append(&text_section, buffer);
-    }
-
-    // 3. Fonksiyonu çağır
+    // 3. Call the function
     sprintf(buffer, "    call %s", islec_adi);
     asm_append(&text_section, buffer);
 }
