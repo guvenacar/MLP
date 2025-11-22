@@ -1513,6 +1513,194 @@ long string_last_index_of(const char* str, const char* needle) {
     return last_found - str;
 }
 
+/**
+ * char_code - Get ASCII/UTF-8 code of character at index
+ * @param str: Input string
+ * @param index: Character index (0-based)
+ * @return: ASCII code of character, or 0 if index out of bounds
+ *
+ * MLP Usage: numeric code = char_code("A", 0); // 65
+ */
+long char_code(const char* str, long index) {
+    if (!str) return 0;
+    
+    long len = strlen(str);
+    if (index < 0 || index >= len) return 0;
+    
+    return (unsigned char)str[index];
+}
+
+/**
+ * char_at - Get character at index as single-char string
+ * @param str: Input string
+ * @param index: Character index (0-based)
+ * @return: Single character string (caller must free), or empty string if out of bounds
+ *
+ * MLP Usage: string ch = char_at("hello", 1); // "e"
+ */
+char* char_at(const char* str, long index) {
+    if (!str) return strdup("");
+    
+    long len = strlen(str);
+    if (index < 0 || index >= len) return strdup("");
+    
+    char* result = (char*)malloc(2);
+    if (!result) {
+        fprintf(stderr, "Memory allocation failed in char_at\n");
+        exit(1);
+    }
+    
+    result[0] = str[index];
+    result[1] = '\0';
+    return result;
+}
+
+// ========================================================================
+// MODERN WRAPPERS - Python/VB.NET Style API
+// ========================================================================
+
+/**
+ * len - Get length of string (Python-style)
+ * @param str: Input string
+ * @return: Length of string
+ *
+ * MLP Usage: numeric length = len("hello")  // 5
+ */
+long len(const char* str) {
+    return string_length(str);
+}
+
+/**
+ * ord - Get ASCII/Unicode code of first character (Python-style)
+ * @param ch: Single character string
+ * @return: ASCII code, or 0 if empty
+ *
+ * MLP Usage: numeric code = ord("A")  // 65
+ */
+long ord(const char* ch) {
+    if (!ch || ch[0] == '\0') return 0;
+    return (unsigned char)ch[0];
+}
+
+/**
+ * chr - Convert ASCII code to single-char string (Python-style)
+ * @param code: ASCII code
+ * @return: Single character string (caller must free)
+ *
+ * MLP Usage: string ch = chr(65)  // "A"
+ */
+char* chr(long code) {
+    if (code < 0 || code > 255) return strdup("");
+    
+    char* result = (char*)malloc(2);
+    if (!result) {
+        fprintf(stderr, "Memory allocation failed in chr\n");
+        exit(1);
+    }
+    
+    result[0] = (char)code;
+    result[1] = '\0';
+    return result;
+}
+
+/**
+ * substring - Extract substring (modern style, simpler params)
+ * @param str: Input string
+ * @param start: Start index
+ * @param length: Number of characters
+ * @return: Substring (caller must free)
+ *
+ * MLP Usage: string sub = substring("hello", 1, 3)  // "ell"
+ */
+char* substring(const char* str, long start, long length) {
+    return string_substring(str, start, length);
+}
+
+/**
+ * mid - VB.NET style substring (alternative name)
+ * @param str: Input string
+ * @param start: Start index (1-based for VB compatibility, converted to 0-based)
+ * @param length: Number of characters
+ * @return: Substring (caller must free)
+ *
+ * MLP Usage: string sub = mid("hello", 2, 3)  // "ell" (1-based)
+ */
+char* mid(const char* str, long start, long length) {
+    // VB.NET uses 1-based indexing, convert to 0-based
+    if (start > 0) start--;
+    return string_substring(str, start, length);
+}
+
+/**
+ * left - Get leftmost N characters (VB.NET style)
+ * @param str: Input string
+ * @param length: Number of characters
+ * @return: Substring (caller must free)
+ *
+ * MLP Usage: string sub = left("hello", 3)  // "hel"
+ */
+char* left(const char* str, long length) {
+    return string_substring(str, 0, length);
+}
+
+/**
+ * right - Get rightmost N characters (VB.NET style)
+ * @param str: Input string
+ * @param length: Number of characters
+ * @return: Substring (caller must free)
+ *
+ * MLP Usage: string sub = right("hello", 3)  // "llo"
+ */
+char* right(const char* str, long length) {
+    if (!str) return strdup("");
+    long str_len = strlen(str);
+    if (length >= str_len) return strdup(str);
+    return string_substring(str, str_len - length, length);
+}
+
+/**
+ * contains - Check if string contains substring (modern style)
+ * @param str: String to search in
+ * @param needle: Substring to find
+ * @return: 1 if found, 0 if not
+ *
+ * MLP Usage: if contains("hello world", "world") then
+ */
+long contains(const char* str, const char* needle) {
+    return string_index_of(str, needle) >= 0 ? 1 : 0;
+}
+
+/**
+ * startswith - Check if string starts with prefix (Python-style)
+ * @param str: String to check
+ * @param prefix: Prefix to look for
+ * @return: 1 if starts with prefix, 0 if not
+ *
+ * MLP Usage: if startswith("hello", "he") then
+ */
+long startswith(const char* str, const char* prefix) {
+    if (!str || !prefix) return 0;
+    size_t prefix_len = strlen(prefix);
+    if (strlen(str) < prefix_len) return 0;
+    return strncmp(str, prefix, prefix_len) == 0 ? 1 : 0;
+}
+
+/**
+ * endswith - Check if string ends with suffix (Python-style)
+ * @param str: String to check
+ * @param suffix: Suffix to look for
+ * @return: 1 if ends with suffix, 0 if not
+ *
+ * MLP Usage: if endswith("hello", "lo") then
+ */
+long endswith(const char* str, const char* suffix) {
+    if (!str || !suffix) return 0;
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
+    if (str_len < suffix_len) return 0;
+    return strcmp(str + str_len - suffix_len, suffix) == 0 ? 1 : 0;
+}
+
 // ========================================================================
 // PHASE 5.2: ERROR HANDLING & MEMORY MANAGEMENT
 // ========================================================================

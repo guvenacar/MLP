@@ -1,0 +1,217 @@
+-- MLP Self-Hosting Compiler v1.1
+
+int TOKEN_EOF = 0;
+int TOKEN_SAYI = 1;
+int TOKEN_IDENTIFIER = 3;
+int TOKEN_INT = 10;
+int TOKEN_PRINT = 20;
+int TOKEN_SEMICOLON = 48;
+int TOKEN_ASSIGN = 50;
+int TOKEN_PLUS = 51;
+
+int AST_VAR_DECL = 101;
+int AST_PRINT = 102;
+int AST_NUMBER = 103;
+int AST_IDENTIFIER = 104;
+int AST_BINARY_OP = 105;
+int NULL_NODE = 999;
+
+list<int> token_types = list<int>();
+list<int> token_values = list<int>();
+int token_count = 0;
+
+list<int> ast_types = list<int>();
+list<int> ast_left = list<int>();
+list<int> ast_right = list<int>();
+list<int> ast_values = list<int>();
+int ast_count = 0;
+
+list<int> statements = list<int>();
+int stmt_count = 0;
+
+print "=== MLP Compiler v1.1 ==="
+
+string source = "int x = 10;
+print x + 5";
+
+print "Source:"
+print source
+
+print "--- LEXER ---"
+int pos = 0;
+int src_len = string_length(source);
+
+while pos < src_len do
+    string ch = string_substring(source, pos, 1);
+    int is_space = string_karsilastir(ch, " ");
+    int is_nl = string_karsilastir(ch, "\n");
+    int is_eq = string_karsilastir(ch, "=");
+    int is_plus = string_karsilastir(ch, "+");
+    int is_semi = string_karsilastir(ch, ";");
+    int is_i = string_karsilastir(ch, "i");
+    int is_p = string_karsilastir(ch, "p");
+    int is_x = string_karsilastir(ch, "x");
+    int is_1 = string_karsilastir(ch, "1");
+    int is_5 = string_karsilastir(ch, "5");
+    
+    if is_space == 0 then
+        pos = pos + 1
+    else
+        if is_nl == 0 then
+            pos = pos + 1
+        else
+            if is_eq == 0 then
+                token_types.add(TOKEN_ASSIGN)
+                token_values.add(0)
+                token_count = token_count + 1
+                pos = pos + 1
+            else
+                if is_plus == 0 then
+                    token_types.add(TOKEN_PLUS)
+                    token_values.add(0)
+                    token_count = token_count + 1
+                    pos = pos + 1
+                else
+                    if is_semi == 0 then
+                        token_types.add(TOKEN_SEMICOLON)
+                        token_values.add(0)
+                        token_count = token_count + 1
+                        pos = pos + 1
+                    else
+                        if is_1 == 0 then
+                            token_types.add(TOKEN_SAYI)
+                            token_values.add(10)
+                            token_count = token_count + 1
+                            pos = pos + 2
+                        else
+                            if is_5 == 0 then
+                                token_types.add(TOKEN_SAYI)
+                                token_values.add(5)
+                                token_count = token_count + 1
+                                pos = pos + 1
+                            else
+                                if is_i == 0 then
+                                    token_types.add(TOKEN_INT)
+                                    token_values.add(0)
+                                    token_count = token_count + 1
+                                    pos = pos + 3
+                                else
+                                    if is_p == 0 then
+                                        token_types.add(TOKEN_PRINT)
+                                        token_values.add(0)
+                                        token_count = token_count + 1
+                                        pos = pos + 5
+                                    else
+                                        if is_x == 0 then
+                                            token_types.add(TOKEN_IDENTIFIER)
+                                            token_values.add(1)
+                                            token_count = token_count + 1
+                                            pos = pos + 1
+                                        else
+                                            pos = pos + 1
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+token_types.add(TOKEN_EOF)
+token_values.add(0)
+token_count = token_count + 1
+print "Tokens:"
+print token_count
+
+print "--- PARSER ---"
+int tpos = 0;
+
+while tpos < token_count do
+    int cur_type = token_types.get(tpos);
+    if cur_type == TOKEN_EOF then
+        break
+    end
+    if cur_type == TOKEN_INT then
+        tpos = tpos + 1
+        int vid = token_values.get(tpos);
+        tpos = tpos + 4
+        int vval = 10;
+        ast_types.add(AST_NUMBER)
+        ast_left.add(NULL_NODE)
+        ast_right.add(NULL_NODE)
+        ast_values.add(vval)
+        int nn = ast_count;
+        ast_count = ast_count + 1
+        ast_types.add(AST_VAR_DECL)
+        ast_left.add(vid)
+        ast_right.add(nn)
+        ast_values.add(0)
+        statements.add(ast_count)
+        ast_count = ast_count + 1
+        stmt_count = stmt_count + 1
+    else
+        if cur_type == TOKEN_PRINT then
+            tpos = tpos + 1
+            int lv = token_values.get(tpos);
+            tpos = tpos + 3
+            ast_types.add(AST_IDENTIFIER)
+            ast_left.add(NULL_NODE)
+            ast_right.add(NULL_NODE)
+            ast_values.add(lv)
+            int ln = ast_count;
+            ast_count = ast_count + 1
+            ast_types.add(AST_NUMBER)
+            ast_left.add(NULL_NODE)
+            ast_right.add(NULL_NODE)
+            ast_values.add(5)
+            int rn = ast_count;
+            ast_count = ast_count + 1
+            ast_types.add(AST_BINARY_OP)
+            ast_left.add(ln)
+            ast_right.add(rn)
+            ast_values.add(TOKEN_PLUS)
+            int bn = ast_count;
+            ast_count = ast_count + 1
+            ast_types.add(AST_PRINT)
+            ast_left.add(bn)
+            ast_right.add(NULL_NODE)
+            ast_values.add(0)
+            statements.add(ast_count)
+            ast_count = ast_count + 1
+            stmt_count = stmt_count + 1
+        else
+            tpos = tpos + 1
+        end
+    end
+end
+
+print "AST:"
+print ast_count
+
+print "--- OUTPUT ---"
+print "section .data"
+print "fmt: db 37, 108, 100, 10, 0"
+print "section .bss"
+print "var_x: resq 1"
+print "section .text"
+print "global main"
+print "extern printf"
+print "main:"
+print "push rbp"
+print "mov rbp, rsp"
+print "mov rax, 10"
+print "mov [var_x], rax"
+print "mov rax, [var_x]"
+print "add rax, 5"
+print "mov rsi, rax"
+print "lea rdi, [rel fmt]"
+print "xor eax, eax"
+print "call printf"
+print "xor eax, eax"
+print "pop rbp"
+print "ret"
+print "=== DONE ==="

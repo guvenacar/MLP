@@ -1,8 +1,8 @@
 # MLP Language Specification v3.0
 
-**Status:** Production Ready ✅
-**Last Updated:** November 18, 2025
-**Compiler Version:** 3.0 (Multi-Language)
+**Status:** Production Ready ✅ + Phase 6.2 Generic Types 🚀
+**Last Updated:** November 22, 2025
+**Compiler Version:** 3.0 (Multi-Language) + Phase 6.2 (Generic Types)
 **Architecture:** English-Native Compiler + Multi-Language Preprocessor
 
 ---
@@ -21,6 +21,7 @@
 10. [Compiler Architecture](#compiler-architecture)
 11. [Adding New Languages](#adding-new-languages)
 12. [Migration Guide](#migration-guide)
+13. **[NEW: Phase 6 - Literal & Generic Types](#phase-6-literal-and-generic-types)** 🚀
 
 ---
 
@@ -98,7 +99,7 @@ If no language is specified, defaults to `en-US` (English).
 **English:**
 ```mlp
 -- lang: en-US
-int x = 5;
+int x = 5
 int y = 10;
 int c = 0;
 
@@ -296,23 +297,26 @@ Defined in `diller.json`:
 
 ## Syntax Rules
 
-### Rule 1: Semicolon Usage
+### Rule 1: No Semicolons (Python-Style)
 
-**Semicolons are ONLY used for variable declarations:**
+**MLP uses Python-style syntax - NO semicolons anywhere:**
 
 ✅ **Correct:**
 ```mlp
-int x;
-int y = 10;
-string name = "Alice";
+int x
+int y = 10
+string name = "Alice"
+x = 5
+print x
+return x + y
 ```
 
 ❌ **Wrong:**
 ```mlp
-return x + y;    -- NO semicolon
-end;             -- NO semicolon
-print x;         -- NO semicolon
-x = 5;           -- NO semicolon (assignment)
+int x;           -- NO semicolons!
+x = 5;           -- NO semicolons!
+print x;         -- NO semicolons!
+return x + y;    -- NO semicolons!
 ```
 
 ### Rule 2: Block Termination
@@ -974,7 +978,232 @@ MLP demonstrates that programming languages can support multiple natural languag
 
 ---
 
+---
+
+## Phase 6 - Literal and Generic Types
+
+### Phase 6.1: NULL and Boolean Literals ✅
+
+**Status:** Completed November 22, 2025
+
+MLP now supports NULL, true, and false literals natively.
+
+**New Keywords:**
+- `null` - NULL literal (represented as 0 internally)
+- `true` - Boolean true (represented as 1)
+- `false` - Boolean false (represented as 0)
+
+**Examples:**
+
+```mlp
+-- NULL support
+numeric x = null
+string name = null
+
+if value == null then
+    print "Value is null"
+end
+
+-- Boolean literals
+boolean flag = true
+boolean active = false
+
+if flag == true then
+    print "Flag is true"
+end
+```
+
+**NULL Comparison:**
+```mlp
+-- NULL equals 0
+if null == 0 then
+    print "null == 0: TRUE"
+end
+
+-- Boolean arithmetic
+if true == 1 then
+    print "true == 1: TRUE"
+end
+
+if false == 0 then
+    print "false == 0: TRUE"
+end
+```
+
+**Implementation:**
+- Added `TOKEN_NULL`, `TOKEN_TRUE`, `TOKEN_FALSE` to lexer
+- Updated parser's `birincil()` function to handle these literals
+- NULL represented as 0, true as 1, false as 0 in generated assembly
+
+---
+
+### Phase 6.2: Generic Type System ✅
+
+**Status:** 90% Complete - Parser & Syntax Done, Runtime in MLP
+
+MLP now supports generic types with `optional<T>` as the first implementation.
+
+**Generic Syntax:**
+
+```mlp
+-- Generic type declaration
+optional<numeric> maybe_number
+optional<string> maybe_text
+
+-- Create with NULL
+optional<numeric> x = null
+
+-- Type parameter syntax
+generic T
+optional<T> create_optional(T value) then
+    -- implementation
+end
+```
+
+**Optional<T> Implementation:**
+
+MLP provides a self-hosted Optional<T> library written in pure MLP:
+
+```mlp
+-- Optional<numeric> struct
+struct OptionalNumeric then
+    numeric value
+    boolean has_value
+end
+
+-- Create empty optional
+function optional_numeric_none() then
+    OptionalNumeric opt
+    opt.value = 0
+    opt.has_value = false
+    return opt
+end
+
+-- Create optional with value
+function optional_numeric_some(numeric val) then
+    OptionalNumeric opt
+    opt.value = val
+    opt.has_value = true
+    return opt
+end
+
+-- Check if has value
+function optional_numeric_has_value(OptionalNumeric opt) then
+    return opt.has_value
+end
+
+-- Get value (with error check)
+function optional_numeric_value(OptionalNumeric opt) then
+    if opt.has_value then
+        return opt.value
+    else
+        print "ERROR: Accessing value of empty optional!"
+        return 0
+    end
+end
+
+-- Get value or default
+function optional_numeric_value_or(OptionalNumeric opt, numeric default_val) then
+    if opt.has_value then
+        return opt.value
+    else
+        return default_val
+    end
+end
+```
+
+**Usage Example:**
+
+```mlp
+-- Create empty optional
+OptionalNumeric maybe_num = optional_numeric_none()
+
+if optional_numeric_has_value(maybe_num) then
+    print "Has value"
+else
+    print "No value (correct!)"
+end
+
+-- Get with default
+numeric val = optional_numeric_value_or(maybe_num, 42)
+print val  -- 42
+
+-- Create optional with value
+OptionalNumeric some_num = optional_numeric_some(100)
+
+if optional_numeric_has_value(some_num) then
+    numeric actual = optional_numeric_value(some_num)
+    print actual  -- 100
+end
+```
+
+**Self-Hosting Principle:**
+
+All Optional<T> runtime code is written in MLP itself (`mlp_lib/optional.mlp`), demonstrating:
+- MLP can implement complex data structures
+- Self-hosting compiler development (dogfooding)
+- Library code serves as examples for users
+- No Python or C code needed for new features
+
+**Implementation Details:**
+
+1. **Lexer:** Added `TOKEN_OPTIONAL`, `TOKEN_GENERIC`
+2. **Parser:**
+   - Generic type parameter parsing: `optional<numeric>`
+   - AST nodes: `AST_OPTIONAL_TANIMLAMA`, etc.
+   - Compound keywords: "end function", "end if", etc.
+3. **Code Generator:** Visitor stubs for optional operations
+4. **Runtime:** Pure MLP implementation in `mlp_lib/optional.mlp`
+
+**Supported Generic Types:**
+
+Currently implemented:
+- `optional<numeric>` - Optional integer/decimal
+- `optional<string>` - Optional text
+- `optional<boolean>` - Optional boolean
+
+**Future Generic Types:**
+
+Planned for Phase 6.3+:
+- `list<T>` - Dynamic arrays
+- `map<K, V>` - Hash maps
+- `result<T, E>` - Error handling
+- Custom generic structs
+
+---
+
+### Critical Bug Fixes (November 22, 2025)
+
+**Bug #1: "end function" Not Recognized**
+
+**Problem:** Compound keyword "end function" was being parsed as two separate tokens ("end" and "function"), causing syntax errors.
+
+**Root Cause:** The base "end" keyword was completely missing from KeywordMap. Compound keyword handler existed but couldn't run without the base token.
+
+**Fix:** Added `{"end", TOKEN_END}` to KeywordMap at line 1012 in `mlp_compiler.c`
+
+**Impact:**
+- All compound keywords now work: "end function", "end if", "end while"
+- Function definitions compile correctly
+- Tests pass: `test_just_func.mlp`, `test_func_call.mlp`
+
+**Bug #2: Type Keyword Confusion**
+
+**Problem:** AI assistant attempted to add int/float/bool as type keywords, violating MLP design.
+
+**Root Cause:** Misunderstanding of MLP type system.
+
+**Clarification:**
+- MLP ONLY uses: `numeric`, `string`, `boolean`
+- NO int, float, char, or bool keywords exist
+- ALL numbers are BigDecimal (numeric)
+- ALL text is BigString (string)
+
+**Fix:** Removed incorrect aliases, updated AI_RULES.md with CRITICAL warnings
+
+---
+
 **© 2025 MLP Project**
-**Version:** 3.0
-**Status:** Production Ready ✅
+**Version:** 3.0 + Phase 6.2
+**Status:** Production Ready ✅ + Generic Types 🚀
 **License:** MIT

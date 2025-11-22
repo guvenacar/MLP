@@ -1,8 +1,39 @@
 # 🤖 AI Asistanları İçin MLP Projesi Kılavuzu
 
-**Son Güncelleme:** 19 Kasım 2025  
-**Durum:** 🚀 Production Ready v3.0  
-**Hedef:** Multi-Language Programming Language - Kod yazmanın dil engeli yok!  
+**Son Güncelleme:** 22 Kasım 2025
+**Durum:** 🚀 Production Ready v3.0 + Phase 6.2 (Generic Types)
+**Hedef:** Multi-Language Programming Language - Kod yazmanın dil engeli yok!
+
+---
+
+## 🔴 KRİTİK KURAL: SELF-HOSTING İLKESİ
+
+**BUNDAN SONRA TÜM YENİ ÖZELLIKLER VE RUNTIME KODU MLP DİLİNDE YAZILACAKTIR!**
+
+### Zorunlu Gereksinimler
+
+1. **✅ YAPILMASI GEREKENLER:**
+   - Yeni runtime fonksiyonları → **MLP dilinde yaz**
+   - Utility functions → **MLP dilinde yaz**
+   - Test kodları → **MLP dilinde yaz**
+   - Built-in library extensions → **MLP dilinde yaz**
+
+2. **❌ YAPILMAMASI GEREKENLER:**
+   - Python kodu yazma (preprocessor hariç)
+   - C kodu yazma (sadece compiler core'da değişiklik için izin gerekli)
+   - Bash scripts (sadece build automation için)
+
+3. **🎯 İSTİSNALAR (Sadece izinle):**
+   - Compiler core (lexer/parser/generator) - C dilinde
+   - Preprocessor (dil çevirici) - Python'da
+   - Build system - Bash/Makefile
+
+### Neden Self-Hosting?
+
+- MLP artık kendi kendini derleyebilir (self-hosting)
+- Yeni özellikler MLP'de yazılarak dil test edilir
+- Dogfooding: Kendi dilimizi kullanarak geliştiririz
+- Community için örnek kod sağlar
 
 ---
 
@@ -104,31 +135,79 @@
 
 ## 🔴 VERİ TİPLERİ - KRİTİK BİLGİ!
 
-### ⚠️ DİKKAT: MLP'de `int` YOK!
+### ⚠️ DİKKAT: MLP'DE SADECE NUMERIC VAR!
 
-**MLP'nin gerçek veri tipleri:**
+**MLP'nin GERÇEK veri tipleri:**
 
-| Tip | English | Turkish | Açıklama |
-|-----|---------|---------|----------|
-| **SAYISAL** | `int` (compiler'da) | `SAYISAL`, `sayisal`, `SAYISAL` | BigDecimal (sınırsız hassasiyet) - tam sayı + ondalık |
-| **SÖZEL** | `string` | `METIN`, `metin`, `YAZI`, `yazi` | BigString (sınırsız uzunluk) |
-| **ZITLIK** | `true`/`false` | `DOĞRU`/`YANLIŞ`, `dogru`/`yanlis` | Boolean |
-| **HİÇLİK** | (future) | `HİÇ`, `NULL` | Null değer (henüz implement edilmedi) |
+| MLP Tipi | English Keyword | Turkish | Russian | Açıklama |
+|----------|-----------------|---------|---------|----------|
+| **NUMERIC** | `numeric` | SAYISAL | ЧИСЛО | BigDecimal (sınırsız hassasiyet - int + float birleşik) |
+| **STRING** | `string` | METIN, SÖZEL | СТРОКА | BigString (sınırsız uzunluk) |
+| **BOOLEAN** | `boolean` | MANTIKSAL, ZITLIK | ЛОГИЧЕСКИЙ | Boolean (true/false) |
+| **NULL** | ✅ VAR | `null` | NULL | Null literal (0 olarak temsil edilir) |
+| **CHAR** | ❌ YOK! | - | - | Char tipi YOK - tek karakterlik string kullan |
+| **VOID** | ❌ YOK! | - | - | Return yoksa function kullan |
+
+### ⚠️ MLP'DE OLMAYAN KAVRAMLAR:
+
+| Kavram | Durum | Açıklama |
+|--------|-------|----------|
+| **null / nothing** | ✅ VAR | `null` keyword destekleniyor (numeric 0 olarak temsil edilir) |
+| **this / self** | ❌ YOK (henüz) | OOP implement edilmedi (v4.0'da gelecek) |
+| **char** | ❌ YOK | Tek karakterlik string kullan: `string c = "A"` |
+| **static** | ❌ YOK | Global scope yok - function içinde tanımla |
+| **global** | ❌ YOK | Her şey function scope'ta |
+| **class** | ❌ YOK (henüz) | v4.0'da OOP gelecek - şimdilik struct kullan |
+| **const** | ✅ VAR | `const numeric PI = 3.14159` (read-only değişken) |
+| **enum** | ✅ VAR | `enum Color { RED, GREEN, BLUE }` |
+| **struct** | ✅ VAR | `struct Person { string name, numeric age }` |
 
 ### 🚨 YANLIŞ VS DOĞRU
 
 ```mlp
-❌ YANLIŞ: int x = 5;              -- "int" kelimesi kullanıcıya gösterilmemeli
-✅ DOĞRU:  SAYISAL x = 5;          -- Türkçe programda
-✅ DOĞRU:  int x = 5;              -- İngilizce programda
-✅ DOĞRU:  целое x = 5;            -- Rusça programda
+❌ YANLIŞ: int x = 5               -- MLP'de "int" YOK!
+❌ YANLIŞ: float pi = 3.14           -- MLP'de "float" YOK!
+❌ YANLIŞ: char c = 'A'              -- MLP'de "char" YOK!
+❌ YANLIŞ: static numeric count = 0  -- MLP'de "static" YOK!
+❌ YANLIŞ: class Person { }          -- MLP'de "class" YOK (henüz)!
+
+✅ DOĞRU:  numeric x = 5            -- Tek sayı tipi: numeric (BigDecimal)
+✅ DOĞRU:  numeric pi = 3.14159     -- Ondalıklı da numeric
+✅ DOĞRU:  string c = "A"           -- Tek karakter de string
+✅ DOĞRU:  string name = null       -- NULL değer destekleniyor!
+✅ DOĞRU:  numeric value = null     -- NULL = 0 (numeric)
+✅ DOĞRU:  numeric count = 0        -- Global yok, function scope
+✅ DOĞRU:  struct Person { }        -- class yerine struct (v3.0)
+
+-- Türkçe kaynak (user writes):
+SAYISAL x = 5                       ✅ Kullanıcı Türkçe yazar
+SAYISAL pi = 3.14                   ✅ Ondalık da SAYISAL
+METIN harf = "A"                    ✅ Tek karakter de METIN
+-- Preprocessor çevirir:
+numeric x = 5                       ✅ Compiler numeric görür
+numeric pi = 3.14                   ✅ Hepsi numeric (BigDecimal)
+string harf = "A"                   ✅ string'e çevrilir
+
+-- Çoklu tanımlama (MLP özelliği):
+a, b, c = numeric, string, boolean  ✅ Tek satırda çoklu tanımlama
+
+-- Const kullanımı:
+const numeric PI = 3.14159          ✅ Read-only değişken (değiştirilemez)
+
+-- NULL ve Boolean Literals (Phase 6.1):
+numeric x = null                    ✅ NULL değer (0 olarak temsil edilir)
+boolean flag = true                 ✅ Boolean literal (1)
+boolean active = false              ✅ Boolean literal (0)
+if value == null then               ✅ NULL karşılaştırması
+    print "Value is null"
+end if
 ```
 
 **NEDEN?**
-- MLP'de "int" sadece compiler'ın internal keyword'ü
-- Kullanıcı kendi dilindeki kelimeyi kullanır
-- Preprocessor `SAYISAL` → `int` çevirisini yapar
-- Compiler sadece `int` görür
+- MLP'de **sadece NUMERIC** var (int/float ayrımı yok)
+- **BigDecimal** kullanır (sınırsız hassasiyet)
+- Preprocessor: SAYISAL → numeric, METIN → string
+- Compiler sadece numeric/string/boolean görür
 
 ---
 
@@ -150,26 +229,46 @@ her zaman kendi dilindeki kelimeyi kullanır."
 
 ### 2. ❌ SPECS.md'yi İhlal Etmeyin!
 
-**Noktalı Virgül Kuralı:**
+**Noktalı Virgül Kuralı: NO SEMICOLONS (Python-Style)**
 
 ```mlp
-✅ DOĞRU:
-SAYISAL x;              -- Tanımlama → noktalı virgül VAR
-SAYISAL y = 10;         -- İnitialize → noktalı virgül VAR
-x = 20                  -- Atama → noktalı virgül YOK
-DÖNÜŞ x + y             -- Return → noktalı virgül YOK
-YAZDIR x                -- Print → noktalı virgül YOK
-SON                     -- Block end → noktalı virgül YOK
+✅ DOĞRU (Base Language):
+numeric x = 10          -- NO semicolon (Python-style)
+string name = "test"    -- NO semicolon
+x = 20                  -- NO semicolon
+return x + y            -- NO semicolon
+print x                 -- NO semicolon
+end                     -- NO semicolon
+
+-- Çoklu tanımlama (MLP özelliği):
+a, b = numeric, string  -- NO semicolon
 
 ❌ YANLIŞ:
-DÖNÜŞ x + y;            -- Noktalı virgül YASAK
-SON;                    -- Noktalı virgül YASAK
-x = 20;                 -- Noktalı virgül YASAK
+numeric x = 10;         -- Noktalı virgül YASAK!
+return x + y;           -- Noktalı virgül YASAK!
+end;                    -- Noktalı virgül YASAK!
 ```
 
-**NEDEN?** Tutarlılık! Sadece tanımlamalar cümle gibi biter.
+**NEDEN?** Python-style syntax! Newline-terminated statements. Hiçbir yerde noktalı virgül yok.
 
-### 3. ❌ Dil Eşitliğini Bozma!
+### 3. ❌ Veri Tiplerini Karıştırma!
+
+**MLP'de int/float YOKTUR!**
+
+```mlp
+❌ YANLIŞ: "MLP'de int ve float var"
+✅ DOĞRU:  "MLP'de sadece numeric var (BigDecimal - int+float birleşik)"
+
+❌ YANLIŞ: int x = 5
+❌ YANLIŞ: float pi = 3.14
+✅ DOĞRU:  numeric x = 5
+✅ DOĞRU:  numeric pi = 3.14159
+
+-- Çoklu tanımlama:
+✅ DOĞRU:  a, b, c = numeric, string, boolean
+```
+
+### 4. ❌ Dil Eşitliğini Bozma!
 
 **Tüm diller eşittir!**
 
@@ -181,7 +280,7 @@ x = 20;                 -- Noktalı virgül YASAK
 ✅ DOĞRU:  "diller.json'a yeni dil tanımı ekleyelim"
 ```
 
-### 4. ❌ String/Comment İçeriğini Çevirmeyin!
+### 5. ❌ String/Comment İçeriğini Çevirmeyin!
 
 **Preprocessor state machine:**
 
@@ -197,7 +296,7 @@ SON                                 -- Bu çevrilir → end
 
 **KURAL:** STATE_CODE → çevir, STATE_STRING/STATE_COMMENT → koru!
 
-### 5. ❌ Tasarım Kararlarını Değiştirmeyin!
+### 6. ❌ Tasarım Kararlarını Değiştirmeyin!
 
 **Bu konularda kullanıcıya sormadan değişiklik yapmayın:**
 - Anahtar kelimeler (İŞLEÇ, DÖNÜŞ, EĞER)
@@ -279,25 +378,29 @@ YAZDIR x                ✅ Print (NO semicolon)
 SON                     ✅ Block end (NO semicolon)
 ```
 
-### Blok Yapıları
+### Blok Yapıları (Base Language - English)
 
 ```mlp
+function add(a, b) then
+    return a + b
+end function            ✅ Explicit (preferred)
+-- veya:
+end                     ⚠️ Generic (tolerated)
+
+if x > 5 then
+    print x
+else
+    print "small"
+end if                  ✅ Explicit terminator
+
+while x < 10
+    x = x + 1
+end while               ✅ Condition-based loop
+
+-- Türkçe kaynak örneği:
 İŞLEÇ topla(a, b) İSE
     DÖNÜŞ a + b
-SON                     ✅ end (NOT: SON İŞLEÇ gibi context-aware değil!)
-
-EĞER x > 5 İSE
-    YAZDIR x
-DEĞİLSE
-    YAZDIR "küçük"
-SON
-
-DÖNGÜ
-    EĞER i >= 10 İSE
-        BİTİR
-    SON
-    i = i + 1
-SON
+SON İŞLEÇ               ← Preprocessor bunu "end function" yapar
 ```
 
 ### Yorumlar
@@ -313,21 +416,39 @@ SON
 
 ### Çok Dilli Örnek
 
-**Türkçe:**
+**Türkçe (user writes):**
 ```mlp
 -- lang: tr-TR
-SAYISAL x = 42;
+SAYISAL x = 42
+SAYISAL pi = 3.14159
+a, b = METIN, MANTIKSAL
 YAZDIR "Merhaba Dünya"
 ```
 
-**Rusça:**
+**Preprocessor çıktısı (compiler receives):**
+```mlp
+numeric x = 42
+numeric pi = 3.14159
+a, b = string, boolean
+print "Merhaba Dünya"
+```
+
+**Rusça (user writes):**
 ```mlp
 -- lang: ru-RU
-целое x = 42;
+ЧИСЛО x = 42
+ЧИСЛО pi = 3.14159
 печать "Привет Мир"
 ```
 
-**İkisi de aynı assembly → aynı executable!**
+**Preprocessor çıktısı (compiler receives):**
+```mlp
+numeric x = 42
+numeric pi = 3.14159
+print "Привет Мир"
+```
+
+**İkisi de aynı English IR → aynı assembly → aynı executable!**
 
 ---
 

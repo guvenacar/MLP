@@ -1,0 +1,21 @@
+-- Test NULL comparison
+
+print "=== NULL Comparison Test ==="
+
+if null == 0 then
+    print "null == 0: TRUE"
+else
+    print "null == 0: FALSE"
+end if
+
+if true == 1 then
+    print "true == 1: TRUE"
+else
+    print "true == 1: FALSE"
+end if
+
+if false == 0 then
+    print "false == 0: TRUE"
+else
+    print "false == 0: FALSE"
+end if

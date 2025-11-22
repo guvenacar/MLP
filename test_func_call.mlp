@@ -1,0 +1,5 @@
+function test() then
+    return 42
+end function
+
+print test()
