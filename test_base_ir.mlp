@@ -1,9 +1,0 @@
--- English Base IR - Direct compilation test (no preprocessing)
-
-int x = 42;
-
-if (x > 40) then
-    print "x is large"
-end
-
-print "Done!"

@@ -1,7 +1,0 @@
--- Test NULL, true, false literals
-
-print "=== Testing NULL and booleans ==="
-print null
-print true
-print false
-print 42

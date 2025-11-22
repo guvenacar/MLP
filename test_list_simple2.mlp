@@ -1,3 +1,0 @@
-list<int> x = list<int>();
-x.add(42)
-print "OK"

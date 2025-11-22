@@ -1,3 +1,0 @@
--- Minimal test
-list<int> x = list<int>()
-print "OK"

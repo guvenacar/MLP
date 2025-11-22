@@ -17,11 +17,14 @@
    - Utility functions → **MLP dilinde yaz**
    - Test kodları → **MLP dilinde yaz**
    - Built-in library extensions → **MLP dilinde yaz**
+   - TODO.md'deki eksikler → **MLP dilinde tamamlanacak**
+   - Tüm çözümler ve implementasyonlar → **MLP dilinde üretilecek**
 
 2. **❌ YAPILMAMASI GEREKENLER:**
    - Python kodu yazma (preprocessor hariç)
    - C kodu yazma (sadece compiler core'da değişiklik için izin gerekli)
    - Bash scripts (sadece build automation için)
+   - TODO.md'deki özellikleri C/Python'da implement etmek
 
 3. **🎯 İSTİSNALAR (Sadece izinle):**
    - Compiler core (lexer/parser/generator) - C dilinde
@@ -34,6 +37,7 @@
 - Yeni özellikler MLP'de yazılarak dil test edilir
 - Dogfooding: Kendi dilimizi kullanarak geliştiririz
 - Community için örnek kod sağlar
+- TODO.md'deki tüm eksikler MLP'de tamamlanarak dilin gücü kanıtlanır
 
 ---
 
