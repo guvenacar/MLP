@@ -520,6 +520,35 @@ func name(param1, param2, ...)
 end func
 ```
 
+### Default Parameters (Phase 5.11) ⭐ NEW
+
+Functions can have default parameter values:
+
+```mlp
+func greet(name = "World")
+    print "Hello, " + name
+end func
+
+greet()           -- Output: Hello, World
+greet("Alice")    -- Output: Hello, Alice
+```
+
+**Multiple defaults:**
+```mlp
+func add(a = 10, b = 20)
+    return a + b
+end func
+
+print add()       -- 30 (10 + 20)
+print add(5)      -- 25 (5 + 20)
+print add(5, 7)   -- 12 (5 + 7)
+```
+
+**Implementation:**
+- Two-pass compilation: functions pre-registered before code generation
+- Missing arguments automatically filled with default values
+- Default values can be any compile-time expression (literals, constants)
+
 ### Examples
 
 **Simple function:**
@@ -1290,6 +1319,52 @@ Planned for Phase 6.3+:
 - `map<K, V>` - Hash maps
 - `result<T, E>` - Error handling
 - Custom generic structs
+
+---
+
+### Phase 5.11: Default Parameters (November 22, 2025) ⭐
+
+**Feature:** Functions can have default parameter values
+
+**Syntax:**
+```mlp
+function add(a = 10, b = 20)
+    print a + b
+end function
+
+add()      -- Output: 30 (uses both defaults)
+add(5)     -- Output: 25 (uses 5 + 20)
+add(5, 7)  -- Output: 12 (uses 5 + 7)
+```
+
+**Implementation:**
+
+1. **Two-Pass Compilation:**
+   - **Pass 1 (Parse):** Create AST with default values stored
+   - **Pass 2 (Pre-scan):** Register all function signatures into registry
+   - **Pass 3 (Generate):** Generate code using populated registry
+
+2. **Function Registry:**
+   - HashMap-based registry stores all function signatures
+   - `FunctionSignature` struct: name + param_count + parameters[]
+   - `ParameterInfo` struct: name + default_value AST node
+
+3. **Code Generation:**
+   - Function calls check registry for signature
+   - Missing arguments filled with default values from AST
+   - Default value expressions evaluated at call-site
+
+**Test Results:**
+```
+Test 1: add() -> should be 30
+30
+Test 2: add(5) -> should be 25
+25
+Test 3: add(5, 7) -> should be 12
+12
+```
+
+**Bug Fix:** Added implicit return (function epilog) for functions without explicit return statements to prevent segmentation faults.
 
 ---
 

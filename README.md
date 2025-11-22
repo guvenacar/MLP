@@ -226,6 +226,8 @@ end func
 ```
 
 ### Functions
+
+**Basic Function:**
 ```mlp
 func fibonacci(n)
     if n <= 1 then
@@ -236,6 +238,16 @@ end func
 
 int result = fibonacci(10);
 print result
+```
+
+**Default Parameters (Phase 5.11 ✅):**
+```mlp
+func greet(name = "World")
+    print "Hello, " + name
+end func
+
+greet()           -- Output: Hello, World
+greet("Alice")    -- Output: Hello, Alice
 ```
 
 ### Built-in Functions
