@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <curl/curl.h>
+#include "gc.h"  // Phase 9: Garbage Collection
 
 // Forward declarations
 void* promise_all_thread(void* arg);
@@ -82,7 +83,8 @@ void async_continuation_wrapper(void* state_ptr) {
 
 // Create a new promise (PENDING state)
 Promise* promise_create() {
-    Promise* p = (Promise*)malloc(sizeof(Promise));
+    Promise* p = (Promise*)gc_malloc(sizeof(Promise), GC_TYPE_PROMISE);
+    if (!p) return NULL;
     p->state = PROMISE_PENDING;
     p->value = NULL;
     p->error = NULL;
@@ -123,7 +125,7 @@ void promise_reject(Promise* p, const char* error) {
     }
     
     p->state = PROMISE_REJECTED;
-    p->error = strdup(error);  // Copy error message
+    p->error = gc_strdup(error);  // Copy error message (GC-managed)
     
     // TODO: Execute error callbacks (future enhancement)
 }
@@ -914,7 +916,7 @@ void promise_reject_with_error(Promise* p, const char* error, int error_code) {
     }
     
     p->state = PROMISE_REJECTED;
-    p->error = strdup(error);
+    p->error = gc_strdup(error);  // GC-managed error string
     p->value = (void*)(long)error_code;  // Store error code in value field
     
     // Execute error callbacks if any

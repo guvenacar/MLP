@@ -255,8 +255,16 @@ void gc_remove_root(void** ptr) {
 void gc_mark_object(void* ptr) {
     if (!ptr) return;
     
+    // Validate pointer before trying to access header
+    // Skip if pointer looks like a small integer (< 4096)
+    if ((unsigned long)ptr < 4096) return;
+    
     GCObjectHeader* header = gc_get_header(ptr);
     if (!header) return;
+    
+    // Verify header is in heap
+    if (!gc_is_heap_pointer(header)) return;
+    
     if (header->marked) return;  // Already marked
     
     header->marked = 1;
@@ -269,16 +277,25 @@ void gc_mark_object(void* ptr) {
     // Type-aware recursive marking
     switch (header->type) {
         case GC_TYPE_PROMISE: {
-            // Promise structure (will be defined in simple_runtime.h)
-            // For now, we'll use a simplified version
-            // In Phase 9.2, we'll integrate with actual Promise struct
+            // Promise structure from simple_runtime.c:
+            // typedef struct Promise {
+            //     PromiseState state;  // 4 bytes (enum)
+            //     void* value;         // 8 bytes (offset +8 due to padding)
+            //     char* error;         // 8 bytes (offset +16)
+            //     ...
+            // } Promise;
             
-            // Assuming Promise has: void* value, char* error
-            void** value_ptr = (void**)ptr;
-            if (*value_ptr) gc_mark_object(*value_ptr);
+            // Mark value field (if it's a GC pointer)
+            void** value_ptr = (void**)((char*)ptr + 8);
+            if (*value_ptr && gc_is_heap_pointer(*value_ptr)) {
+                gc_mark_object(*value_ptr);
+            }
             
-            char** error_ptr = (char**)((char*)ptr + sizeof(void*));
-            if (*error_ptr) gc_mark_object(*error_ptr);
+            // Mark error string (if exists)
+            char** error_ptr = (char**)((char*)ptr + 16);
+            if (*error_ptr && gc_is_heap_pointer(*error_ptr)) {
+                gc_mark_object(*error_ptr);
+            }
             break;
         }
         
