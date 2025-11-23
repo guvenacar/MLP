@@ -147,7 +147,10 @@ void promise_then(Promise* p, void (*callback)(void*)) {
     if (p->callback_count >= p->callback_capacity) {
         // Grow callback array
         int new_capacity = p->callback_capacity == 0 ? 4 : p->callback_capacity * 2;
-        void (**new_callbacks)(void*) = realloc(p->callbacks, new_capacity * sizeof(void(*)(void*)));
+        void (**new_callbacks)(void*) = (void(**)(void*))gc_realloc(p->callbacks, 
+                                                                     new_capacity * sizeof(void(*)(void*)),
+                                                                     GC_TYPE_GENERIC);
+        if (!new_callbacks) return;  // Allocation failed
         p->callbacks = new_callbacks;
         p->callback_capacity = new_capacity;
     }
@@ -174,14 +177,16 @@ void* promise_get_value(Promise* p) {
 }
 
 // Free promise memory
+// NOTE (Phase 9): This function is now DEPRECATED
+// Promises are managed by the garbage collector
+// Keeping this for backward compatibility but it's a no-op
 void promise_free(Promise* p) {
-    if (p->callbacks) {
-        free(p->callbacks);
-    }
-    if (p->error) {
-        free(p->error);
-    }
-    free(p);
+    // GC-managed - no manual free needed
+    // The garbage collector will automatically free:
+    // - Promise struct (gc_malloc)
+    // - callbacks array (if we make it GC-managed)
+    // - error string (gc_strdup)
+    (void)p;  // Suppress unused parameter warning
 }
 
 // Phase 8.8: Promise.all() implementation

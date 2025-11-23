@@ -181,6 +181,34 @@ void* gc_calloc(size_t count, size_t size, GCObjectType type) {
     return ptr;
 }
 
+void* gc_realloc(void* ptr, size_t new_size, GCObjectType type) {
+    if (!ptr) {
+        // NULL pointer - just allocate
+        return gc_malloc(new_size, type);
+    }
+    
+    // Get old size
+    size_t old_size = gc_get_size(ptr);
+    if (old_size == 0) {
+        // Not a GC pointer - error
+        fprintf(stderr, "[GC] gc_realloc called on non-GC pointer\n");
+        return NULL;
+    }
+    
+    // Allocate new memory
+    void* new_ptr = gc_malloc(new_size, type);
+    if (!new_ptr) {
+        return NULL;
+    }
+    
+    // Copy old data
+    size_t copy_size = old_size < new_size ? old_size : new_size;
+    memcpy(new_ptr, ptr, copy_size);
+    
+    // Old memory will be collected by GC (no manual free)
+    return new_ptr;
+}
+
 char* gc_strdup(const char* str) {
     if (!str) return NULL;
     

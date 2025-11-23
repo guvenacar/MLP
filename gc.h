@@ -128,6 +128,16 @@ void* gc_malloc(size_t size, GCObjectType type);
 void* gc_calloc(size_t count, size_t size, GCObjectType type);
 
 /**
+ * Reallocate GC-managed memory
+ * 
+ * @param ptr - Previously allocated pointer (or NULL)
+ * @param new_size - New size in bytes
+ * @param type - Object type
+ * @return Pointer to reallocated memory, or NULL on failure
+ */
+void* gc_realloc(void* ptr, size_t new_size, GCObjectType type);
+
+/**
  * Duplicate a string with GC management
  * Equivalent to strdup() but GC-managed
  */
