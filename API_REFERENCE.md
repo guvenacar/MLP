@@ -9,6 +9,7 @@
 
 | Category | Functions | Status |
 |----------|-----------|--------|
+| **Async/Await** | 27 functions (Phase 8.9) | ✅ Phase 8 |
 | **Command-Line Args** | argc, argv | Phase 5.1 🔄 |
 | **Enhanced String Ops** | 4 new functions | Phase 5.1 🔄 |
 | **File I/O** | 6 functions | Phase 3 ✅ |
@@ -562,6 +563,275 @@ func add(numeric a, numeric b)
 end func
 
 numeric result = add(5, 3)
+```
+
+---
+
+## 🚀 Async/Await Operations (Phase 8)
+
+### Core Promise Functions
+
+#### `promise_create() -> numeric`
+Create a new pending promise.
+- **Returns:** Promise pointer (as numeric)
+- **Example:** `numeric p = promise_create();`
+
+#### `promise_resolve(promise: numeric, value: numeric) -> void`
+Resolve a promise with a value.
+- **Parameters:** Promise pointer, value
+- **Example:** `promise_resolve(p, 42);`
+
+#### `promise_reject(promise: numeric, error: string) -> void`
+Reject a promise with an error message.
+- **Parameters:** Promise pointer, error message
+- **Example:** `promise_reject(p, "Operation failed");`
+
+#### `promise_await_safe(promise: numeric) -> numeric`
+Safely await promise completion (blocking).
+- **Returns:** 0=resolved, -1=rejected, -2=invalid
+- **Example:** `numeric status = promise_await_safe(p);`
+- **Note:** Handles both resolved AND rejected promises (no infinite loop)
+
+#### `promise_is_completed(promise: numeric) -> numeric`
+Check if promise is completed (resolved OR rejected).
+- **Returns:** 1=completed, 0=pending
+- **Example:** `numeric done = promise_is_completed(p);`
+
+#### `promise_free(promise: numeric) -> void`
+Free promise memory.
+- **Parameters:** Promise pointer
+- **Example:** `promise_free(p);`
+
+### Promise State Checks
+
+#### `promise_is_pending(promise: numeric) -> numeric`
+Check if promise is still pending.
+- **Returns:** 1=pending, 0=not pending
+- **Example:** `if promise_is_pending(p) then ... end`
+
+#### `promise_is_resolved(promise: numeric) -> numeric`
+Check if promise is resolved.
+- **Returns:** 1=resolved, 0=not resolved
+- **Example:** `if promise_is_resolved(p) then ... end`
+
+#### `promise_is_rejected(promise: numeric) -> numeric`
+Check if promise is rejected.
+- **Returns:** 1=rejected, 0=not rejected
+- **Example:** `if promise_is_rejected(p) then ... end`
+
+#### `promise_get_state(promise: numeric) -> numeric`
+Get raw promise state.
+- **Returns:** 0=pending, 1=resolved, 2=rejected
+- **Example:** `numeric state = promise_get_state(p);`
+
+### Promise Value Access
+
+#### `promise_get_value(promise: numeric) -> numeric`
+Get value from resolved promise.
+- **Returns:** Promise value or 0
+- **Example:** `numeric val = promise_get_value(p);`
+
+#### `promise_get_numeric_value(promise: numeric) -> numeric`
+Get numeric value from resolved promise.
+- **Returns:** Numeric value or 0
+- **Example:** `numeric num = promise_get_numeric_value(p);`
+
+#### `promise_get_string_value(promise: numeric) -> string`
+Get string value from resolved promise.
+- **Returns:** String value or ""
+- **Example:** `string text = promise_get_string_value(p);`
+
+#### `promise_await_value(promise: numeric) -> numeric`
+Blocking await that returns value directly.
+- **Returns:** Value if resolved, NULL if rejected
+- **Example:** `numeric val = promise_await_value(p);`
+
+### Promise Composition
+
+#### `promise_race(promises: numeric[], count: numeric) -> numeric`
+Return first completed promise (resolved or rejected).
+- **Returns:** First completed promise
+- **Example:** `numeric winner = promise_race(promises, 3);`
+- **Use case:** Timeout patterns, fastest response
+
+#### `promise_race_simple(p1, p2, p3: numeric) -> numeric`
+Race helper for 3 promises (no array needed).
+- **Returns:** First completed promise
+- **Example:** `numeric winner = promise_race_simple(p1, p2, p3);`
+
+#### `promise_any(promises: numeric[], count: numeric) -> numeric`
+Return first **successful** promise (ignores rejections).
+- **Returns:** First resolved promise, or rejected if all fail
+- **Example:** `numeric winner = promise_any(promises, 3);`
+- **Use case:** Fallback strategies
+
+#### `promise_any_simple(p1, p2, p3: numeric) -> numeric`
+Any helper for 3 promises.
+- **Returns:** First resolved promise
+- **Example:** `numeric winner = promise_any_simple(p1, p2, p3);`
+
+#### `promise_allSettled(promises: numeric[], count: numeric) -> numeric`
+Wait for all promises to complete (success or failure).
+- **Returns:** Promise that resolves when all are done
+- **Example:** `numeric result = promise_allSettled(promises, 3);`
+- **Use case:** Batch processing
+
+#### `promise_allSettled_simple(p1, p2, p3: numeric) -> numeric`
+AllSettled helper for 3 promises.
+- **Returns:** Promise when all 3 complete
+- **Example:** `numeric result = promise_allSettled_simple(p1, p2, p3);`
+
+#### `promise_all(promises: numeric[], count: numeric) -> numeric`
+Wait for all promises to resolve (fails if any rejects).
+- **Returns:** Promise that resolves when all succeed
+- **Example:** `numeric result = promise_all(promises, 3);`
+
+#### `promise_all_simple(p1, p2, p3: numeric) -> numeric`
+All helper for 3 promises.
+- **Returns:** Promise when all 3 resolve
+- **Example:** `numeric result = promise_all_simple(p1, p2, p3);`
+
+### Async I/O Primitives
+
+#### `async_sleep(milliseconds: numeric) -> numeric`
+Asynchronous delay (pthread-based).
+- **Returns:** Promise that resolves after delay
+- **Example:** `numeric p = async_sleep(1000);`  // 1 second
+
+#### `async_sleep_promise(milliseconds: numeric) -> numeric`
+Alias for async_sleep.
+- **Returns:** Promise
+- **Example:** `numeric p = async_sleep_promise(500);`
+
+#### `async_delay(milliseconds: numeric) -> numeric`
+Another alias for async_sleep.
+- **Returns:** Promise
+- **Example:** `numeric p = async_delay(2000);`
+
+#### `async_read_file(path: string) -> numeric`
+Asynchronous file reading.
+- **Returns:** Promise that resolves with file content
+- **Example:** `numeric p = async_read_file("data.txt");`
+
+#### `async_write_file(path: string, content: string) -> numeric`
+Asynchronous file writing.
+- **Returns:** Promise that resolves on success
+- **Example:** `numeric p = async_write_file("out.txt", data);`
+
+#### `async_http_get(url: string) -> numeric`
+Asynchronous HTTP GET request (libcurl).
+- **Returns:** Promise that resolves with response
+- **Example:** `numeric p = async_http_get("https://api.example.com");`
+
+### Timeout & Error Handling
+
+#### `async_timeout(promise: numeric, milliseconds: numeric) -> numeric`
+Wrap promise with timeout.
+- **Returns:** New promise that rejects on timeout
+- **Example:** `numeric timed = async_timeout(task, 5000);`  // 5 sec timeout
+- **Behavior:** Rejects if timeout expires before promise resolves
+- **Note:** 0ms timeout immediately rejects (fixed in Phase 8.10)
+
+#### `promise_with_timeout(promise: numeric, ms: numeric) -> numeric`
+Alias for async_timeout.
+- **Returns:** Timeout-wrapped promise
+- **Example:** `numeric timed = promise_with_timeout(p, 3000);`
+
+#### `promise_has_error(promise: numeric) -> numeric`
+Check if promise has error message.
+- **Returns:** 1=has error, 0=no error
+- **Example:** `if promise_has_error(p) then ... end`
+
+#### `promise_get_error(promise: numeric) -> string`
+Get error message from rejected promise.
+- **Returns:** Error string or ""
+- **Example:** `string err = promise_get_error(p);`
+
+### Advanced API (Manual Promise Control)
+
+#### `promise_new() -> numeric`
+Create empty promise (manual control).
+- **Returns:** New promise pointer
+- **Example:** `numeric p = promise_new();`
+
+#### `promise_resolve_numeric(promise: numeric, value: numeric) -> void`
+Manually resolve promise with numeric value.
+- **Example:** `promise_resolve_numeric(p, 123);`
+
+#### `promise_resolve_string(promise: numeric, value: string) -> void`
+Manually resolve promise with string value.
+- **Example:** `promise_resolve_string(p, "Success!");`
+
+#### `promise_reject_with_error(promise: numeric, error: string) -> void`
+Manually reject promise with error.
+- **Example:** `promise_reject_with_error(p, "Failed");`
+
+#### `promise_chain(p1, p2: numeric) -> numeric`
+Chain two promises sequentially.
+- **Returns:** Promise that completes after both
+- **Example:** `numeric chain = promise_chain(first, second);`
+
+#### `promise_finally(promise: numeric, callback: numeric) -> void`
+Register cleanup handler (runs on any completion).
+- **Example:** `promise_finally(p, cleanup_fn);`
+
+### Usage Examples
+
+#### Basic Async/Await
+```mlp
+async function fetch_data()
+    numeric p = async_sleep(1000)
+    numeric status = promise_await_safe(p)
+    if status == 0 then
+        print "Success!"
+    end
+    return 42
+end
+```
+
+#### Parallel Execution
+```mlp
+numeric p1 = async_http_get("https://api1.com")
+numeric p2 = async_http_get("https://api2.com")
+numeric p3 = async_http_get("https://api3.com")
+
+numeric all = promise_all_simple(p1, p2, p3)
+numeric status = promise_await_safe(all)
+print "All requests complete!"
+```
+
+#### Race Pattern (Fastest Wins)
+```mlp
+numeric server1 = async_http_get("https://server1.com")
+numeric server2 = async_http_get("https://server2.com")
+
+numeric winner = promise_race_simple(server1, server2)
+numeric status = promise_await_safe(winner)
+print "Fastest server responded!"
+```
+
+#### Timeout Handling
+```mlp
+numeric task = async_http_get("https://slow-api.com")
+numeric timed = async_timeout(task, 5000)
+
+numeric status = promise_await_safe(timed)
+if status == 0 then
+    print "Success!"
+else
+    print "Timeout or error"
+end
+```
+
+#### Error Handling
+```mlp
+numeric p = async_http_get("https://api.com")
+numeric status = promise_await_safe(p)
+
+if promise_has_error(p) then
+    string error = promise_get_error(p)
+    print "Error: " + error
+end
 ```
 
 ---

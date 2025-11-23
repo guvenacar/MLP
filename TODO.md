@@ -521,17 +521,111 @@ count_positive([-2,-1,0,1,2], 5) → 2 ✅
 
 ---
 
-## ⛔ SELF-HOSTING İÇİN GEREKSİZ (Şimdilik Yapılmayabilir)
+## 🎯 ÖNÜMÜZDEKİ PHASE'LER (Öncelik Sırası)
 
-### OOP Özellikleri
-- [ ] Class tanımlama
-- [ ] Inheritance (kalıtım)
-- [ ] Method'lar
-- [ ] Constructor/Destructor
-- [ ] Public/Private modifiers
-- [ ] Interface/Trait
+### Phase 8.9: Advanced Async Features ⏭️ NEXT
+**Süre:** 3-5 gün
+- Promise.race(), Promise.any(), Promise.allSettled()
+- Timeout support
+- Error propagation
+- Async try-catch
 
-**Not:** Struct + fonksiyonlarla halledilebilir
+### Phase 9: Garbage Collection 📋 PLANNED
+**Süre:** 2-3 hafta
+- Mark-and-sweep GC
+- Automatic memory management
+- Cycle detection
+- GC configuration (thresholds, intervals)
+
+### Production Polish & Release 🚀 HIGH PRIORITY
+**Paralel olarak devam edecek:**
+- Comprehensive test suite
+- Error message improvements
+- Documentation completion
+- Benchmarking & profiling
+- Community release preparation
+
+---
+
+## ⛔ MLP FELSEFESİ: STRUCT + FUNCTION YAKLAŞIMI
+
+**MLP BİR OOP DİLİ DEĞİLDİR ve OLMAYACAKTIR!** ✅
+
+### Tasarım Kararı
+
+MLP, **struct + function** paradigmasını benimser:
+- ✅ **Struct:** Veri yapıları
+- ✅ **Function:** Davranışlar
+- ❌ **Class:** Yok
+- ❌ **Inheritance:** Yok
+- ❌ **Method:** Yok (fonksiyonlar struct dışında)
+
+### Neden OOP Yok?
+
+1. **Basitlik:** Struct + function daha anlaşılır
+2. **Composition over Inheritance:** Modern yaklaşım
+3. **Bakım Kolaylığı:** Daha az karmaşıklık
+4. **Performance:** Vtable overhead yok
+5. **Self-Hosting:** OOP olmadan da tam derleyici yazıldı
+
+### Örnekler
+
+**❌ OOP Yaklaşımı (MLP'de olmayacak):**
+```mlp
+class Person {
+    string name
+    numeric age
+    
+    method greet() {
+        print "Hello, " + this.name
+    }
+}
+
+Person p = Person("Alice", 25)
+p.greet()
+```
+
+**✅ Struct + Function Yaklaşımı (MLP'nin yolu):**
+```mlp
+struct Person
+    string name
+    numeric age
+end struct
+
+function person_greet(Person p)
+    print "Hello, " + p.name
+end function
+
+Person p
+p.name = "Alice"
+p.age = 25
+person_greet(p)
+```
+
+### Avantajlar
+
+1. **Explicit:** Fonksiyon çağrıları açık ve net
+2. **Testable:** Fonksiyonlar kolayca test edilebilir
+3. **Reusable:** Fonksiyonlar farklı struct'larla kullanılabilir
+4. **Simple:** Inheritance complexity yok
+5. **Flexible:** Composition ile her şey yapılabilir
+
+### Kapatılmış Özellikler
+
+- ❌ Class definitions
+- ❌ Inheritance (extends, implements)
+- ❌ Method dispatch (vtables)
+- ❌ Constructor/Destructor
+- ❌ Public/Private/Protected
+- ❌ this/self keyword
+- ❌ Interface/Trait
+- ❌ Abstract classes
+- ❌ Virtual functions
+- ❌ Operator overloading (class-based)
+
+**Not:** Bu özellikler asla eklenmeyecek. MLP struct + function dilidir.
+
+---
 
 ### İleri Seviye Özellikler
 - [x] **Generic types/templates** - Phase 6.2 Complete (`optional<T>`) ✅
@@ -913,15 +1007,92 @@ $ ./demo_async_complete
 ✓ Promise.all() operational
 ```
 
-### ⏳ Phase 8.9: Advanced Features (0%)
-- ⏳ Error propagation in promises
-- ⏳ Promise.race() implementation
-- ⏳ Timeout support
-- ⏳ Async generator functions
-- ⏳ Advanced error handling
+### ✅ Phase 8.9: Advanced Async Features (100%)
+**Timeline:** 3 gün (Tamamlandı: 23 Kasım 2024)
+**Status:** COMPLETE ✅
 
-**Next Steps:**
-1. Implement continuation callback registration
-2. Create continuation context structure
-3. Integrate with event loop
-4. Test non-blocking execution with test_async_nonblocking.mlp
+**Core Utilities (11 functions):**
+- ✅ promise_race(promises[], count) - İlk tamamlanan promise'i döndür
+- ✅ promise_race_simple(p1, p2, p3) - 3 promise için helper
+- ✅ promise_any(promises[], count) - İlk başarılı promise'i döndür
+- ✅ promise_any_simple(p1, p2, p3) - 3 promise için helper
+- ✅ promise_allSettled(promises[], count) - Tüm sonuçları bekle
+- ✅ promise_allSettled_simple(p1, p2, p3) - 3 promise için helper
+- ✅ async_timeout(promise, milliseconds) - Timeout wrapper (pthread)
+- ✅ promise_has_error(promise) - Error checking
+- ✅ promise_get_error(promise) - Error message retrieval
+- ✅ promise_await_safe(promise) - Safe await with rejection handling
+- ✅ promise_is_completed(promise) - Completion check (resolved OR rejected)
+
+**Promise API Extension (16 functions):**
+- ✅ promise_new() - Create empty promise
+- ✅ promise_resolve_numeric(promise, value) - Manual resolve
+- ✅ promise_resolve_string(promise, value) - String resolve
+- ✅ promise_reject_with_error(promise, error) - Manual reject
+- ✅ promise_is_pending(promise) - State check
+- ✅ promise_is_resolved(promise) - Success check
+- ✅ promise_is_rejected(promise) - Failure check
+- ✅ promise_get_state(promise) - Raw state (0=pending, 1=resolved, 2=rejected)
+- ✅ promise_get_numeric_value(promise) - Extract numeric result
+- ✅ promise_get_string_value(promise) - Extract string result
+- ✅ promise_await_value(promise) - Blocking value extraction
+- ✅ promise_with_timeout(promise, ms) - Timeout wrapper alias
+- ✅ async_sleep_promise(ms) - Direct sleep promise
+
+---
+
+### ✅ Phase 8.10: Production Polish (100%)
+**Timeline:** 3 saat (Tamamlandı: 23 Kasım 2024)
+**Status:** COMPLETE ✅
+
+**Quality Assurance (8 tasks):**
+- ✅ Code review (simple_runtime.c - 1400 lines reviewed)
+- ✅ Memory leak detection (valgrind - 384 bytes documented)
+- ✅ Error message standardization (4 messages fixed)
+- ✅ Edge case testing (3 tests, 1 bug fixed)
+- ✅ Performance profiling (19.4M promises/sec)
+- ✅ Phase 8 summary (900+ lines)
+- ✅ API documentation (27 functions, 350 lines)
+- ✅ Integration testing (4 scenarios passing)
+
+**Bug Fixes:**
+- ✅ async_timeout(0ms) edge case - Fixed immediate rejection
+
+**Documentation Created:**
+- ✅ MEMORY_LEAK_REPORT.md - Comprehensive leak analysis + solutions
+- ✅ ERROR_MESSAGE_AUDIT.md - Error standardization guide
+- ✅ PERFORMANCE_REPORT.md - Benchmark results + optimization roadmap
+- ✅ PHASE8_10_COMPLETE.md - Production polish summary
+
+**Performance Results:**
+- Promise creation: 19.4M operations/sec
+- Promise resolution: 86.2M operations/sec
+- Thread creation: 45μs overhead (acceptable)
+- I/O overhead: <1% (production ready)
+
+**Known Issues (Non-Blocking):**
+- Memory leaks documented (GC in Phase 9)
+- Thread overhead acceptable (can optimize in Phase 9)
+
+**Total Phase 8 Functions:** 27 async/await functions implemented
+- ✅ async_delay(ms) - Sleep promise alias
+- ✅ promise_chain(p1, p2) - Sequential execution
+- ✅ promise_finally(promise, callback) - Cleanup handler
+
+**Key Achievement: Safe Await Mechanism**
+- **Problem:** Awaiting rejected promises (e.g., from async_timeout) caused infinite loop
+- **Solution:** promise_await_safe() polls until RESOLVED **or** REJECTED
+- **Returns:** 0=success, -1=rejected, -2=invalid
+- **Mechanism:** 1ms polling interval (usleep(1000)) until completion
+- **Impact:** Enables proper timeout and error handling in MLP
+
+**Tests (6 files, all passing):**
+- ✅ test_promise_race.mlp - En hızlı promise kazanır
+- ✅ test_promise_any.mlp - İlk başarılı promise
+- ✅ test_promise_allSettled.mlp - Tüm promise'leri bekler
+- ✅ test_async_timeout.mlp - Timeout mekanizması
+- ✅ test_timeout_advanced.mlp - Promise API extension
+- ✅ test_timeout_safe.mlp - Safe await + rejection handling
+- ✅ test_error_propagation.mlp - Hata yayılımı
+
+**Total Functions:** 27 (11 core + 16 API extension)

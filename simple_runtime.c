@@ -8,6 +8,11 @@
 
 // Forward declarations
 void* promise_all_thread(void* arg);
+void* promise_race_poll_thread(void* arg);
+void* promise_any_poll_thread(void* arg);
+void* promise_allSettled_poll_thread(void* arg);
+void* timeout_timer_thread(void* arg);
+void* timeout_monitor_thread(void* arg);
 
 // ========== Phase 8: Async/Await - Promise Implementation ==========
 
@@ -522,7 +527,7 @@ Promise* mlp_async_write(const char* path, const char* content) {
     
     FILE* file = fopen(path, "w");
     if (!file) {
-        promise_reject(p, "Cannot write file");
+        promise_reject(p, "Failed to write file");
         return p;
     }
     
@@ -669,7 +674,7 @@ void* async_read_file_thread(void* arg) {
     // Read file content
     char* content = malloc(size + 1);
     if (!content) {
-        promise_reject(args->promise, "Memory allocation failed");
+        promise_reject(args->promise, "Failed to allocate memory");
         fclose(file);
         free(args->filepath);
         free(args);
@@ -896,4 +901,505 @@ Promise* promise_all_simple(Promise* p1, Promise* p2, Promise* p3, int count) {
     
     // promises array will be freed by promise_all_thread
     return result;
+}
+
+// ========== Phase 8.9: Advanced Async Features ==========
+
+// Enhanced error handling functions
+
+// Reject promise with error message and code
+void promise_reject_with_error(Promise* p, const char* error, int error_code) {
+    if (!p || p->state != PROMISE_PENDING) {
+        return;  // Already settled or invalid
+    }
+    
+    p->state = PROMISE_REJECTED;
+    p->error = strdup(error);
+    p->value = (void*)(long)error_code;  // Store error code in value field
+    
+    // Execute error callbacks if any
+    for (int i = 0; i < p->callback_count; i++) {
+        if (p->callbacks[i]) {
+            p->callbacks[i](NULL);  // Pass NULL for errors
+        }
+    }
+    
+    // Clear callbacks
+    if (p->callbacks) {
+        free(p->callbacks);
+        p->callbacks = NULL;
+    }
+    p->callback_count = 0;
+    p->callback_capacity = 0;
+}
+
+// Check if promise has error
+int promise_has_error(Promise* p) {
+    return (p && p->state == PROMISE_REJECTED) ? 1 : 0;
+}
+
+// Get error message from rejected promise
+char* promise_get_error(Promise* p) {
+    if (!p || p->state != PROMISE_REJECTED || !p->error) {
+        return "";
+    }
+    return p->error;
+}
+
+// Get error code from rejected promise
+int promise_get_error_code(Promise* p) {
+    if (!p || p->state != PROMISE_REJECTED) {
+        return 0;
+    }
+    return (int)(long)p->value;  // Error code stored in value field
+}
+
+// promise_race: Returns first settled promise (success or failure)
+
+typedef struct RaceContext {
+    Promise* result;
+    Promise** promises;
+    int count;
+    int settled;
+    pthread_mutex_t mutex;
+} RaceContext;
+
+void race_callback(void* value) {
+    // Note: This simplified version doesn't implement full callback mechanism
+    // Full implementation would require promise_then() integration
+}
+
+Promise* promise_race(Promise** promises, int count) {
+    if (!promises || count <= 0) {
+        return NULL;
+    }
+    
+    Promise* result = promise_create();
+    RaceContext* ctx = (RaceContext*)malloc(sizeof(RaceContext));
+    ctx->result = result;
+    ctx->promises = promises;
+    ctx->count = count;
+    ctx->settled = 0;
+    pthread_mutex_init(&ctx->mutex, NULL);
+    
+    // Simple polling implementation
+    // In a real implementation, this would use callbacks
+    pthread_t thread;
+    pthread_create(&thread, NULL, (void*(*)(void*))promise_race_poll_thread, ctx);
+    pthread_detach(thread);
+    
+    return result;
+}
+
+// Helper thread for promise_race
+void* promise_race_poll_thread(void* arg) {
+    RaceContext* ctx = (RaceContext*)arg;
+    
+    while (1) {
+        pthread_mutex_lock(&ctx->mutex);
+        
+        if (!ctx->settled) {
+            // Check each promise
+            for (int i = 0; i < ctx->count; i++) {
+                Promise* p = ctx->promises[i];
+                
+                if (p->state == PROMISE_RESOLVED) {
+                    ctx->settled = 1;
+                    promise_resolve(ctx->result, p->value);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    pthread_mutex_destroy(&ctx->mutex);
+                    free(ctx);
+                    return NULL;
+                }
+                
+                if (p->state == PROMISE_REJECTED) {
+                    ctx->settled = 1;
+                    promise_reject_with_error(ctx->result, p->error, 
+                        promise_get_error_code(p));
+                    pthread_mutex_unlock(&ctx->mutex);
+                    pthread_mutex_destroy(&ctx->mutex);
+                    free(ctx);
+                    return NULL;
+                }
+            }
+        }
+        
+        pthread_mutex_unlock(&ctx->mutex);
+        
+        if (ctx->settled) {
+            break;
+        }
+        
+        usleep(1000);  // 1ms polling interval
+    }
+    
+    return NULL;
+}
+
+// Helper for 3 promises
+Promise* promise_race_simple(Promise* p1, Promise* p2, Promise* p3) {
+    Promise* arr[3] = {p1, p2, p3};
+    return promise_race(arr, 3);
+}
+
+// promise_any: Returns first successful promise (ignores failures)
+
+typedef struct AnyContext {
+    Promise* result;
+    Promise** promises;
+    int count;
+    int success_count;
+    int failure_count;
+    pthread_mutex_t mutex;
+} AnyContext;
+
+void* promise_any_poll_thread(void* arg) {
+    AnyContext* ctx = (AnyContext*)arg;
+    
+    while (1) {
+        pthread_mutex_lock(&ctx->mutex);
+        
+        int completed = 0;
+        
+        // Check each promise
+        for (int i = 0; i < ctx->count; i++) {
+            Promise* p = ctx->promises[i];
+            
+            if (p->state == PROMISE_RESOLVED && ctx->success_count == 0) {
+                ctx->success_count = 1;
+                promise_resolve(ctx->result, p->value);
+                completed = 1;
+                break;
+            }
+            
+            if (p->state == PROMISE_REJECTED) {
+                ctx->failure_count++;
+            }
+        }
+        
+        // All failed?
+        if (!completed && ctx->failure_count == ctx->count) {
+            promise_reject_with_error(ctx->result, "All promises rejected", -1);
+            completed = 1;
+        }
+        
+        pthread_mutex_unlock(&ctx->mutex);
+        
+        if (completed) {
+            pthread_mutex_destroy(&ctx->mutex);
+            free(ctx);
+            break;
+        }
+        
+        usleep(1000);  // 1ms polling
+    }
+    
+    return NULL;
+}
+
+Promise* promise_any(Promise** promises, int count) {
+    if (!promises || count <= 0) {
+        return NULL;
+    }
+    
+    Promise* result = promise_create();
+    AnyContext* ctx = (AnyContext*)malloc(sizeof(AnyContext));
+    ctx->result = result;
+    ctx->promises = promises;
+    ctx->count = count;
+    ctx->success_count = 0;
+    ctx->failure_count = 0;
+    pthread_mutex_init(&ctx->mutex, NULL);
+    
+    pthread_t thread;
+    pthread_create(&thread, NULL, promise_any_poll_thread, ctx);
+    pthread_detach(thread);
+    
+    return result;
+}
+
+Promise* promise_any_simple(Promise* p1, Promise* p2, Promise* p3) {
+    Promise* arr[3] = {p1, p2, p3};
+    return promise_any(arr, 3);
+}
+
+// promise_allSettled: Wait for all promises (never rejects)
+
+typedef struct AllSettledContext {
+    Promise* result;
+    Promise** promises;
+    int count;
+    int settled_count;
+    pthread_mutex_t mutex;
+} AllSettledContext;
+
+void* promise_allSettled_poll_thread(void* arg) {
+    AllSettledContext* ctx = (AllSettledContext*)arg;
+    
+    while (1) {
+        pthread_mutex_lock(&ctx->mutex);
+        
+        int count = 0;
+        
+        // Count settled promises
+        for (int i = 0; i < ctx->count; i++) {
+            Promise* p = ctx->promises[i];
+            if (p->state != PROMISE_PENDING) {
+                count++;
+            }
+        }
+        
+        // All settled?
+        if (count == ctx->count) {
+            promise_resolve(ctx->result, (void*)1);  // Always resolve
+            pthread_mutex_unlock(&ctx->mutex);
+            pthread_mutex_destroy(&ctx->mutex);
+            free(ctx);
+            break;
+        }
+        
+        pthread_mutex_unlock(&ctx->mutex);
+        usleep(1000);  // 1ms polling
+    }
+    
+    return NULL;
+}
+
+Promise* promise_allSettled(Promise** promises, int count) {
+    if (!promises || count <= 0) {
+        return NULL;
+    }
+    
+    Promise* result = promise_create();
+    AllSettledContext* ctx = (AllSettledContext*)malloc(sizeof(AllSettledContext));
+    ctx->result = result;
+    ctx->promises = promises;
+    ctx->count = count;
+    ctx->settled_count = 0;
+    pthread_mutex_init(&ctx->mutex, NULL);
+    
+    pthread_t thread;
+    pthread_create(&thread, NULL, promise_allSettled_poll_thread, ctx);
+    pthread_detach(thread);
+    
+    return result;
+}
+
+Promise* promise_allSettled_simple(Promise* p1, Promise* p2, Promise* p3) {
+    Promise* arr[3] = {p1, p2, p3};
+    return promise_allSettled(arr, 3);
+}
+
+// async_timeout: Wrap promise with timeout
+
+typedef struct TimeoutContext {
+    Promise* result;
+    Promise* original;
+    int milliseconds;
+    int completed;
+    pthread_mutex_t mutex;
+} TimeoutContext;
+
+void* timeout_timer_thread(void* arg) {
+    TimeoutContext* ctx = (TimeoutContext*)arg;
+    
+    usleep(ctx->milliseconds * 1000);  // Convert ms to microseconds
+    
+    pthread_mutex_lock(&ctx->mutex);
+    
+    if (!ctx->completed) {
+        ctx->completed = 1;
+        promise_reject_with_error(ctx->result, "Operation timed out", -2);
+    }
+    
+    pthread_mutex_unlock(&ctx->mutex);
+    return NULL;
+}
+
+void* timeout_monitor_thread(void* arg) {
+    TimeoutContext* ctx = (TimeoutContext*)arg;
+    
+    // Wait for original promise
+    while (ctx->original->state == PROMISE_PENDING) {
+        usleep(1000);  // 1ms polling
+    }
+    
+    pthread_mutex_lock(&ctx->mutex);
+    
+    if (!ctx->completed) {
+        ctx->completed = 1;
+        
+        if (promise_has_error(ctx->original)) {
+            promise_reject_with_error(ctx->result,
+                promise_get_error(ctx->original),
+                promise_get_error_code(ctx->original));
+        } else {
+            promise_resolve(ctx->result, ctx->original->value);
+        }
+    }
+    
+    pthread_mutex_unlock(&ctx->mutex);
+    pthread_mutex_destroy(&ctx->mutex);
+    free(ctx);
+    
+    return NULL;
+}
+
+Promise* async_timeout(Promise* promise, int milliseconds) {
+    if (!promise) {
+        return NULL;
+    }
+    
+    // Handle immediate timeout (0ms or negative)
+    if (milliseconds <= 0) {
+        Promise* result = promise_create();
+        promise_reject(result, "Operation timed out immediately");
+        return result;
+    }
+    
+    Promise* result = promise_create();
+    TimeoutContext* ctx = (TimeoutContext*)malloc(sizeof(TimeoutContext));
+    ctx->result = result;
+    ctx->original = promise;
+    ctx->milliseconds = milliseconds;
+    ctx->completed = 0;
+    pthread_mutex_init(&ctx->mutex, NULL);
+    
+    // Start timeout timer
+    pthread_t timer_thread;
+    pthread_create(&timer_thread, NULL, timeout_timer_thread, ctx);
+    pthread_detach(timer_thread);
+    
+    // Start monitor thread
+    pthread_t monitor_thread;
+    pthread_create(&monitor_thread, NULL, timeout_monitor_thread, ctx);
+    pthread_detach(monitor_thread);
+    
+    return result;
+}
+
+// ============================================================================
+// PHASE 8.9: Promise API Extension
+// Wrapper functions to expose Promise* directly to MLP
+// ============================================================================
+
+// Get Promise* from async primitive (for advanced usage)
+Promise* promise_from_async(Promise* p) {
+    return p;  // Direct passthrough
+}
+
+// Create a new pending promise (advanced API)
+Promise* promise_new() {
+    return promise_create();
+}
+
+// Resolve a promise with a numeric value
+void promise_resolve_numeric(Promise* p, long value) {
+    promise_resolve(p, (void*)value);
+}
+
+// Resolve a promise with a string value
+void promise_resolve_string(Promise* p, const char* value) {
+    char* copied = strdup(value);
+    promise_resolve(p, copied);
+}
+
+// Check if promise is pending
+int promise_is_pending(Promise* p) {
+    return p ? (p->state == PROMISE_PENDING ? 1 : 0) : 0;
+}
+
+// Get numeric value from resolved promise
+long promise_get_numeric_value(Promise* p) {
+    if (!p || p->state != PROMISE_RESOLVED) {
+        return 0;
+    }
+    return (long)p->value;
+}
+
+// Get string value from resolved promise
+const char* promise_get_string_value(Promise* p) {
+    if (!p || p->state != PROMISE_RESOLVED) {
+        return "";
+    }
+    return (const char*)p->value;
+}
+
+// Async sleep that returns Promise* (for consistency)
+Promise* async_sleep_promise(int milliseconds) {
+    return async_sleep(milliseconds);
+}
+
+// Promise.race with direct Promise* array access
+Promise* promise_race_array(Promise** promises, int count) {
+    return promise_race(promises, count);
+}
+
+// Promise.any with direct Promise* array access
+Promise* promise_any_array(Promise** promises, int count) {
+    return promise_any(promises, count);
+}
+
+// Promise.allSettled with direct Promise* array access
+Promise* promise_allSettled_array(Promise** promises, int count) {
+    return promise_allSettled(promises, count);
+}
+
+// Async timeout with direct Promise* access
+Promise* promise_with_timeout(Promise* promise, int milliseconds) {
+    return async_timeout(promise, milliseconds);
+}
+
+// Manual promise rejection (for testing/debugging)
+void promise_reject_manual(Promise* p, const char* reason) {
+    promise_reject(p, reason);
+}
+
+// Get promise state as integer (0=pending, 1=resolved, 2=rejected)
+int promise_get_state(Promise* p) {
+    if (!p) return -1;
+    return (int)p->state;
+}
+
+// Safe await: Wait for promise completion (resolved or rejected)
+// Returns: 0 for resolved, -1 for rejected, -2 for invalid/null promise
+int promise_await_safe(Promise* p) {
+    if (!p) return -2;
+    
+    // Spin-wait until promise is no longer pending
+    while (p->state == PROMISE_PENDING) {
+        usleep(1000);  // 1ms polling interval
+    }
+    
+    // Return status based on final state
+    if (p->state == PROMISE_RESOLVED) {
+        return 0;  // Success
+    } else if (p->state == PROMISE_REJECTED) {
+        return -1;  // Rejected/Error
+    }
+    
+    return -2;  // Shouldn't happen
+}
+
+// Check if promise is completed (resolved OR rejected)
+int promise_is_completed(Promise* p) {
+    if (!p) return 0;
+    return (p->state == PROMISE_RESOLVED || p->state == PROMISE_REJECTED) ? 1 : 0;
+}
+
+// Wait for promise and get result (blocking)
+// Returns value if resolved, NULL if rejected
+void* promise_await_value(Promise* p) {
+    if (!p) return NULL;
+    
+    // Wait for completion
+    int status = promise_await_safe(p);
+    
+    if (status == 0) {
+        // Resolved - return value
+        return p->value;
+    } else {
+        // Rejected or error - return NULL
+        return NULL;
+    }
 }
