@@ -1,0 +1,16 @@
+# lang: en-US
+# syntax: mlp
+
+enum Status
+    OK
+    ERROR
+    PENDING
+end enum
+
+function main()
+    Status s = OK
+    if s == OK then
+        return 0
+    end if
+    return 1
+end function
