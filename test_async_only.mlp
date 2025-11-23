@@ -1,0 +1,10 @@
+// Phase 8: Async without await test
+
+async function test_async()
+    return 123
+end
+
+function main()
+    print("Test")
+    return 0
+end

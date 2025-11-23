@@ -1,0 +1,41 @@
+// Simple edge case test without string concatenation
+
+function test_null()
+    print "Test 1: Null Promise"
+    numeric s = promise_await_safe(0)
+    print s
+    print ""
+end
+
+function test_double_resolve()
+    print "Test 2: Double Resolve"
+    numeric p = promise_new()
+    promise_resolve_numeric(p, 42)
+    numeric v1 = promise_get_numeric_value(p)
+    promise_resolve_numeric(p, 99)
+    numeric v2 = promise_get_numeric_value(p)
+    print v1
+    print v2
+    print ""
+end
+
+function test_zero_timeout()
+    print "Test 3: Zero Timeout"
+    numeric slow = async_sleep(100)
+    numeric timed = async_timeout(slow, 0)
+    numeric status = promise_await_safe(timed)
+    print status
+    print ""
+end
+
+function main()
+    print "Edge Case Tests - Simple Version"
+    print ""
+    
+    test_null()
+    test_double_resolve()
+    test_zero_timeout()
+    
+    print "Tests Complete"
+    return 0
+end

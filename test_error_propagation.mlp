@@ -1,0 +1,27 @@
+// Test: Promise error handling
+// Phase 8.9 Test 5: Error propagation
+
+async function main()
+    print("╔═══════════════════════════════════════════════╗")
+    print("║  Phase 8.9: Error Handling Testleri         ║")
+    print("╚═══════════════════════════════════════════════╝")
+    print("")
+    
+    print("=== Test: Basit async sleep ile başarılı promise ===")
+    
+    numeric p1 = async_sleep(100)
+    numeric result1 = await p1
+    
+    print("✅ BAŞARILI: Promise hatasız tamamlandı!")
+    
+    print("")
+    print("⚠️  Error handling fonksiyonları runtime'da mevcut:")
+    print("    - promise_reject_with_error()")
+    print("    - promise_has_error()")
+    print("    - promise_get_error()")
+    print("    - promise_get_error_code()")
+    print("")
+    print("Not: MLP'den Promise* erişimi için gelişmiş API gerekli")
+    
+    return 0
+end

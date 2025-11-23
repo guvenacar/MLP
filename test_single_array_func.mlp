@@ -1,0 +1,12 @@
+function double_array(numeric arr[], numeric len)
+    numeric i = 0
+    while i < len
+        arr[i] = arr[i] * 2
+        i = i + 1
+    end
+end
+
+numeric numbers[5] = [1, 2, 3, 4, 5]
+double_array(numbers, 5)
+print(numbers[0])
+print(numbers[4])

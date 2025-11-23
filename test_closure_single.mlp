@@ -1,0 +1,9 @@
+-- Single closure test
+
+function make_adder(x)
+    return lambda(y) => x + y
+end
+
+numeric add_5 = make_adder(5)
+numeric result = add_5(10)
+print result

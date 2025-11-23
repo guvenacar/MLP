@@ -1,0 +1,23 @@
+-- Test: Array Parameters (Phase 7.6)
+-- Simple array sum function
+
+function sum_array(arr[], size)
+    numeric total = 0
+    numeric i = 0
+    while i < size
+        total = total + arr[i]
+        i = i + 1
+    end
+    return total
+end
+
+-- Create array and test
+numeric numbers[5]
+numbers[0] = 10
+numbers[1] = 20
+numbers[2] = 30
+numbers[3] = 40
+numbers[4] = 50
+
+numeric result = sum_array(numbers, 5)
+print(result)  -- Should print 150

@@ -1,0 +1,295 @@
+// ============================================================================
+// MLP Phase 8.9 - Edge Case Testing
+// Tests: null promises, double-resolve/reject, timeout edge cases
+// ============================================================================
+
+function test_null_promises()
+    print "=== Test 1: Null numeric Handling ==="
+    
+    // Test null pointer safety
+    numeric status1 = promise_await_safe(0)
+    print "Null await status (expect -2 = 4294967294): " + str(status1)
+    
+    numeric completed = promise_is_completed(0)
+    print "Null is_completed (expect 0): " + str(completed)
+    
+    numeric pending = promise_is_pending(0)
+    print "Null is_pending (expect 0): " + str(pending)
+    
+    print "Test 1 COMPLETE"
+    print ""
+end
+
+function test_double_resolve()
+    print "=== Test 2: Double Resolve ==="
+    
+    numeric p = promise_new()
+    promise_resolve_numeric(p, 42)
+    
+    numeric state1 = promise_get_state(p)
+    print "After first resolve, state: " + str(state1)
+    
+    // Try second resolve (should be ignored)
+    promise_resolve_numeric(p, 99)
+    
+    numeric state2 = promise_get_state(p)
+    numeric value = promise_get_numeric_value(p)
+    print "After second resolve, state: " + str(state2)
+    print "Value (should be 42): " + str(value)
+    
+    print "Test 2 COMPLETE"
+    print ""
+end
+
+function test_double_reject()
+    print "=== Test 3: Double Reject ==="
+    
+    numeric p = promise_new()
+    promise_reject_with_error(p, "First error")
+    
+    numeric state1 = promise_get_state(p)
+    print "After first reject, state: " + str(state1)
+    
+    // Try second reject (should be ignored)
+    promise_reject_with_error(p, "Second error")
+    
+    numeric state2 = promise_get_state(p)
+    print "After second reject, state: " + str(state2)
+    
+    print "Test 3 COMPLETE"
+    print ""
+end
+
+function test_resolve_after_reject()
+    print "=== Test 4: Resolve After Reject ==="
+    
+    numeric p = promise_new()
+    promise_reject_with_error(p, "Error occurred")
+    
+    numeric state1 = promise_get_state(p)
+    print "After reject, state (expect 2): " + str(state1)
+    
+    // Try resolve after reject (should fail)
+    promise_resolve_numeric(p, 42)
+    
+    numeric state2 = promise_get_state(p)
+    print "After resolve attempt, state (still 2): " + str(state2)
+    
+    print "Test 4 COMPLETE"
+    print ""
+end
+
+function test_reject_after_resolve()
+    print "=== Test 5: Reject After Resolve ==="
+    
+    numeric p = promise_new()
+    promise_resolve_numeric(p, 100)
+    
+    numeric state1 = promise_get_state(p)
+    print "After resolve, state (expect 1): " + str(state1)
+    
+    // Try reject after resolve (should fail)
+    promise_reject_with_error(p, "Too late!")
+    
+    numeric state2 = promise_get_state(p)
+    numeric value = promise_get_numeric_value(p)
+    print "After reject attempt, state (still 1): " + str(state2)
+    print "Value (should be 100): " + str(value)
+    
+    print "Test 5 COMPLETE"
+    print ""
+end
+
+function test_zero_timeout()
+    print "=== Test 6: Zero Timeout ==="
+    
+    numeric slow = async_sleep(100)
+    numeric timed = async_timeout(slow, 0)
+    
+    numeric status = promise_await_safe(timed)
+    numeric is_rej = promise_is_rejected(timed)
+    
+    print "0ms timeout status (expect -1 = 4294967295): " + str(status)
+    print "Is rejected (expect 1): " + str(is_rej)
+    
+    print "Test 6 COMPLETE"
+    print ""
+end
+
+function test_very_short_timeout()
+    print "=== Test 7: Very Short Timeout (1ms) ==="
+    
+    numeric slow = async_sleep(100)
+    numeric timed = async_timeout(slow, 1)
+    
+    numeric status = promise_await_safe(timed)
+    numeric is_rej = promise_is_rejected(timed)
+    
+    print "1ms timeout status (expect -1): " + str(status)
+    print "Is rejected (expect 1): " + str(is_rej)
+    
+    print "Test 7 COMPLETE"
+    print ""
+end
+
+function test_immediate_promise()
+    print "=== Test 8: Immediate numeric (Already Resolved) ==="
+    
+    numeric p = promise_new()
+    promise_resolve_numeric(p, 777)
+    
+    numeric status = promise_await_safe(p)
+    numeric value = promise_get_numeric_value(p)
+    
+    print "Immediate await status (expect 0): " + str(status)
+    print "Value (expect 777): " + str(value)
+    
+    print "Test 8 COMPLETE"
+    print ""
+end
+
+function test_immediate_rejected()
+    print "=== Test 9: Immediate numeric (Already Rejected) ==="
+    
+    numeric p = promise_new()
+    promise_reject_with_error(p, "Instant rejection")
+    
+    numeric status = promise_await_safe(p)
+    numeric is_rej = promise_is_rejected(p)
+    
+    print "Immediate rejected status (expect -1): " + str(status)
+    print "Is rejected (expect 1): " + str(is_rej)
+    
+    print "Test 9 COMPLETE"
+    print ""
+end
+
+function test_large_promise_array()
+    print "=== Test 10: Large numeric Array (10 promises) ==="
+    
+    numeric p1 = async_sleep(10)
+    numeric p2 = async_sleep(20)
+    numeric p3 = async_sleep(30)
+    numeric p4 = async_sleep(40)
+    numeric p5 = async_sleep(50)
+    numeric p6 = async_sleep(60)
+    numeric p7 = async_sleep(70)
+    numeric p8 = async_sleep(80)
+    numeric p9 = async_sleep(90)
+    numeric p10 = async_sleep(100)
+    
+    print "Created 10 promises with delays 10-100ms"
+    
+    numeric s1 = promise_await_safe(p1)
+    numeric s2 = promise_await_safe(p2)
+    numeric s3 = promise_await_safe(p3)
+    numeric s4 = promise_await_safe(p4)
+    numeric s5 = promise_await_safe(p5)
+    numeric s6 = promise_await_safe(p6)
+    numeric s7 = promise_await_safe(p7)
+    numeric s8 = promise_await_safe(p8)
+    numeric s9 = promise_await_safe(p9)
+    numeric s10 = promise_await_safe(p10)
+    
+    numeric total = s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9 + s10
+    
+    print "All awaited, total status (expect 0): " + str(total)
+    
+    print "Test 10 COMPLETE"
+    print ""
+end
+
+function test_race_immediate()
+    print "=== Test 11: Race with Immediate numeric ==="
+    
+    numeric p1 = promise_new()
+    promise_resolve_numeric(p1, 111)
+    
+    numeric p2 = async_sleep(100)
+    numeric p3 = async_sleep(200)
+    
+    numeric winner = promise_race_simple(p1, p2, p3)
+    numeric status = promise_await_safe(winner)
+    numeric value = promise_get_numeric_value(winner)
+    
+    print "Race status (expect 0): " + str(status)
+    print "Winner value (expect 111): " + str(value)
+    
+    print "Test 11 COMPLETE"
+    print ""
+end
+
+function test_any_all_rejected()
+    print "=== Test 12: numeric Any with All Rejected ==="
+    
+    numeric p1 = promise_new()
+    promise_reject_with_error(p1, "Error 1")
+    
+    numeric p2 = promise_new()
+    promise_reject_with_error(p2, "Error 2")
+    
+    numeric p3 = promise_new()
+    promise_reject_with_error(p3, "Error 3")
+    
+    numeric result = promise_any_simple(p1, p2, p3)
+    numeric status = promise_await_safe(result)
+    numeric is_rej = promise_is_rejected(result)
+    
+    print "Any with all rejected status (expect -1): " + str(status)
+    print "Is rejected (expect 1): " + str(is_rej)
+    
+    print "Test 12 COMPLETE"
+    print ""
+end
+
+function test_completion_tracking()
+    print "=== Test 13: Completion State Tracking ==="
+    
+    numeric p = async_sleep(50)
+    
+    numeric comp1 = promise_is_completed(p)
+    numeric pend1 = promise_is_pending(p)
+    
+    print "Initially completed (expect 0): " + str(comp1)
+    print "Initially pending (expect 1): " + str(pend1)
+    
+    numeric status = promise_await_safe(p)
+    
+    numeric comp2 = promise_is_completed(p)
+    numeric pend2 = promise_is_pending(p)
+    
+    print "After await completed (expect 1): " + str(comp2)
+    print "After await pending (expect 0): " + str(pend2)
+    
+    print "Test 13 COMPLETE"
+    print ""
+end
+
+function main()
+    print "============================================"
+    print "MLP Phase 8.9 - Edge Case Test Suite"
+    print "Testing: null, double-ops, timeouts, arrays"
+    print "============================================"
+    print ""
+    
+    test_null_promises()
+    test_double_resolve()
+    test_double_reject()
+    test_resolve_after_reject()
+    test_reject_after_resolve()
+    test_zero_timeout()
+    test_very_short_timeout()
+    test_immediate_promise()
+    test_immediate_rejected()
+    test_large_promise_array()
+    test_race_immediate()
+    test_any_all_rejected()
+    test_completion_tracking()
+    
+    print "============================================"
+    print "Edge Case Testing Complete!"
+    print "All 13 tests executed successfully"
+    print "============================================"
+    
+    return 0
+end

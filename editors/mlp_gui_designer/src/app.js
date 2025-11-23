@@ -130,6 +130,8 @@ function initializeUI() {
     }, 500); // 500ms bekle
   });
 
+  // IntelliSense editor'ı ayarla
+  intelliSense.setEditor(codeEditor);
   // Code editor'da IntelliSense için klavye event'leri
   codeEditor.addEventListener('keydown', (e) => {
     // Ctrl+Space - IntelliSense'i manuel olarak aç
@@ -171,6 +173,7 @@ function initializeUI() {
       return;
     }
 
+    console.log("[keyup] key:", e.key);
     // Harf veya _ yazıldıysa IntelliSense'i göster
     if (e.key.match(/^[a-zA-Z_]$/)) {
       clearTimeout(window.intellisenseTimeout);
@@ -178,8 +181,10 @@ function initializeUI() {
         const pos = intelliSense.getCursorPosition(codeEditor);
         const line = intelliSense.getLineText(pos.line);
         const wordBefore = intelliSense.getWordBeforeCursor(line, pos.column);
+        console.log("[IntelliSense] pos:", pos, "line:", line, "wordBefore:", wordBefore);
 
         // En az 2 karakter yazılmışsa göster
+        console.log("[IntelliSense] wordBefore.length:", wordBefore.length, ">=2?", wordBefore.length >= 2);
         if (wordBefore.length >= 2) {
           intelliSense.show(codeEditor, pos);
         }
@@ -191,10 +196,22 @@ function initializeUI() {
   });
 
   // Editör dışına tıklanınca IntelliSense'i kapat
+  // Editör dışına tıklanınca IntelliSense'i kapat
   document.addEventListener('click', (e) => {
-    if (!intelliSense.popup.contains(e.target) && e.target !== codeEditor) {
-      intelliSense.hide();
+    if (!intelliSense.isVisible) return;
+    
+    // Popup içindeki item'a tıklandıysa - zaten selectItem çağrılacak
+    if (intelliSense.popup.contains(e.target)) {
+      return;
     }
+    
+    // Editor'e tıklandıysa - açık kalsın
+    if (codeEditor.contains(e.target) || e.target === codeEditor) {
+      return;
+    }
+    
+    // Dışarı tıklandı - kapat
+    intelliSense.hide();
   });
 }
 

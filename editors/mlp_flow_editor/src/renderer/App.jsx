@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { ReactFlowProvider } from 'reactflow';
-import FlowCanvas from './components/FlowCanvas';
+import KonvaCanvas from './components/KonvaCanvas';
 import Toolbar from './components/Toolbar';
 import PropertiesPanel from './components/PropertiesPanel';
 import MenuBar from './components/MenuBar';
@@ -8,131 +7,112 @@ import TopToolbar from './components/TopToolbar';
 import './styles/main.css';
 
 function App() {
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
-  const [selectedNode, setSelectedNode] = useState(null);
+  const [widgets, setWidgets] = useState([]);
+  const [selectedWidget, setSelectedWidget] = useState(null);
   const [showToolbox, setShowToolbox] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
   const [projectName, setProjectName] = useState('Yeni Proje');
-  const reactFlowWrapper = useRef(null);
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const canvasRef = useRef(null);
 
-  const onNodesChange = useCallback((changes) => {
-    setNodes((nds) => {
-      // Apply changes to nodes
-      return nds; // React Flow will handle this
-    });
+  const onWidgetSelect = useCallback((widget) => {
+    setSelectedWidget(widget);
   }, []);
 
-  const onEdgesChange = useCallback((changes) => {
-    setEdges((eds) => {
-      // Apply changes to edges
-      return eds;
-    });
-  }, []);
-
-  const onNodeSelect = useCallback((node) => {
-    setSelectedNode(node);
-  }, []);
-
-  const onAddNode = useCallback((nodeType, position) => {
-    const newNode = {
-      id: `node-${Date.now()}`,
-      type: `${nodeType}Node`,
-      position: position || { x: 100, y: 100 },
-      data: { 
-        label: `New ${nodeType}`,
-        width: 120,
-        height: 40,
-        style: {}
-      }
+  const onAddWidget = useCallback((widgetType, position) => {
+    const defaultSizes = {
+      button: { width: 120, height: 40 },
+      label: { width: 100, height: 30 },
+      textbox: { width: 200, height: 30 },
+      checkbox: { width: 150, height: 25 },
+      radio: { width: 150, height: 25 },
+      panel: { width: 300, height: 200 },
+      groupbox: { width: 300, height: 200 },
+      listbox: { width: 200, height: 150 },
+      combobox: { width: 200, height: 30 }
     };
-    setNodes((nds) => [...nds, newNode]);
+
+    const size = defaultSizes[widgetType] || { width: 100, height: 30 };
+    
+    const newWidget = {
+      id: `widget-${Date.now()}`,
+      type: widgetType,
+      x: position?.x || 100,
+      y: position?.y || 100,
+      width: size.width,
+      height: size.height,
+      label: `Yeni ${widgetType}`,
+      backgroundColor: '#007bff',
+      textColor: '#ffffff',
+      fontSize: 14,
+      fontFamily: 'Arial',
+      visible: true
+    };
+    
+    setWidgets((widgets) => [...widgets, newWidget]);
   }, []);
 
-  const onDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+  const onUpdateWidget = useCallback((widgetId, updates) => {
+    setWidgets((widgets) =>
+      widgets.map((widget) =>
+        widget.id === widgetId
+          ? { ...widget, ...updates }
+          : widget
+      )
+    );
   }, []);
 
-  const onDrop = useCallback(
-    (event) => {
-      event.preventDefault();
-
-      const type = event.dataTransfer.getData('application/reactflow');
-
-      if (typeof type === 'undefined' || !type) {
-        return;
-      }
-
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      onAddNode(type, position);
-    },
-    [reactFlowInstance, onAddNode]
-  );
+  const onDeleteWidget = useCallback((widgetId) => {
+    setWidgets((widgets) => widgets.filter(w => w.id !== widgetId));
+    if (selectedWidget?.id === widgetId) {
+      setSelectedWidget(null);
+    }
+  }, [selectedWidget]);
 
   return (
-    <ReactFlowProvider>
-      <div className="app">
-        <div className="top-bar">
-          <MenuBar 
-            projectName={projectName}
-            onToggleToolbox={() => setShowToolbox(!showToolbox)}
-            onToggleProperties={() => setShowProperties(!showProperties)}
+    <div className="app">
+      <div className="top-bar">
+        <MenuBar 
+          projectName={projectName}
+          onToggleToolbox={() => setShowToolbox(!showToolbox)}
+          onToggleProperties={() => setShowProperties(!showProperties)}
+        />
+        <TopToolbar projectName={projectName} />
+      </div>
+      
+      <div className="main-content">
+        {showToolbox && (
+          <div className="left-panel">
+            <div className="panel-header">Widget Araçları</div>
+            <Toolbar onAddWidget={onAddWidget} />
+          </div>
+        )}
+        
+        <div className="center-panel" ref={canvasRef}>
+          <KonvaCanvas
+            widgets={widgets}
+            selectedWidget={selectedWidget}
+            onWidgetSelect={onWidgetSelect}
+            onUpdateWidget={onUpdateWidget}
+            onDeleteWidget={onDeleteWidget}
           />
-          <TopToolbar projectName={projectName} />
         </div>
         
-        <div className="main-content">
-          {showToolbox && (
-            <div className="left-panel">
-              <div className="panel-header">Widget Araçları</div>
-              <Toolbar />
-            </div>
-          )}
-          
-          <div className="center-panel" ref={reactFlowWrapper}>
-            <FlowCanvas
-              nodes={nodes}
-              edges={edges}
-              setNodes={setNodes}
-              setEdges={setEdges}
-              onNodeSelect={onNodeSelect}
-              onInit={setReactFlowInstance}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
+        {showProperties && (
+          <div className="right-panel">
+            <div className="panel-header">Özellikler</div>
+            <PropertiesPanel 
+              selectedWidget={selectedWidget}
+              onUpdateWidget={onUpdateWidget}
             />
           </div>
-          
-          {showProperties && (
-            <div className="right-panel">
-              <div className="panel-header">Özellikler</div>
-              <PropertiesPanel 
-                selectedNode={selectedNode}
-                onUpdateNode={(nodeId, updates) => {
-                  setNodes((nds) =>
-                    nds.map((node) =>
-                      node.id === nodeId
-                        ? { ...node, data: { ...node.data, ...updates } }
-                        : node
-                    )
-                  );
-                }}
-              />
-            </div>
-          )}
-        </div>
-        
-        <div className="status-bar">
-          <span id="status-text">Hazır</span>
-          <span id="widget-count">Widget Sayısı: {nodes.length}</span>
-        </div>
+        )}
       </div>
-    </ReactFlowProvider>
+      
+      <div className="status-bar">
+        <span id="status-text">Hazır | Konva.js Canvas</span>
+        <span id="widget-count">Widget Sayısı: {widgets.length}</span>
+      </div>
+    </div>
   );
 }
 

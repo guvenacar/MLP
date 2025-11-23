@@ -19,12 +19,12 @@ MLP (Multi-Language Programming) is a self-hosting compiler that supports keywor
 | **Phase 2** | Lists | ✅ Complete | 100% |
 | **Phase 3** | File I/O & Strings & Hash Maps | ✅ Complete | 100% |
 | **Phase 4** | Advanced Features | ✅ Complete | 100% |
-| **Phase 5** | Self-Hosting Preparation | 🔄 In Progress | 0% |
-| **Phase 6** | Self-Hosting Compiler | 📋 Planned | 0% |
+| **Phase 5** | Self-Hosting Preparation | ✅ Complete | 100% |
+| **Phase 6** | Self-Hosting Compiler | 🔄 Finalizing | 95% |
 | **Phase 7** | Functional Programming & Closures | ✅ Complete | 100% |
 | **Phase 8** | Async/Await & Concurrency | ✅ Complete | 100% |
 | **Phase 9** | Garbage Collection | ✅ Complete | 100% |
-| **Phase 10** | Performance Optimization | 🔄 In Progress | 0% |
+| **Phase 10** | Performance Optimization | ✅ Complete | 100% |
 
 ---
 
@@ -132,47 +132,25 @@ MLP (Multi-Language Programming) is a self-hosting compiler that supports keywor
 
 ---
 
-## Current Phase
+## Current Focus
 
-### Phase 4: Advanced Features 🔄
-**Goal:** Add type conversions, math utilities, and hash map compiler integration
+### Compiler Migration (Phase 6 Final Step) ⏳
+**Goal:** Port the remaining C bootstrap compiler (`self_host/mlp_compiler.c`) into its MLP counterpart so the entire toolchain is authored in MLP.
 
-**In Progress Features:**
+**Why this matters:**
+- Ensures the production compiler is generated purely from MLP sources.
+- Simplifies future maintenance by having a single-language codebase.
+- Completes the self-hosting story that began in Phase 5.
 
-**Hash Map Compiler Integration:**
-- `map[KeyType:ValueType]` syntax in lexer/parser
-- AST nodes for map operations
-- Code generation for map CRUD
-- Type safety mechanisms
+**Status:**
+- Parser/AST/codegen parity already achieved in the C implementation.
+- Runtime, standard library, async stack, and tooling are fully updated and documented.
+- Only the source migration is pending; no new features are required.
 
-**Type Conversions (6 functions):**
-- `int_to_string()` - Format integers
-- `string_to_int()` - Parse integers
-- `char_code()` - Get character code
-- `char_from_code()` - Create character from code
-- `string_concat()` - String concatenation
-- `string_char_at()` - Character access
-
-**Math Operations (4 functions):**
-- `abs()` - Absolute value
-- `min()` / `max()` - Min/max selection
-- `clamp()` - Value clamping
-
-**Deliverables:**
-- HASHMAP_COMPILER_DESIGN.md (~500 lines) ✅
-- TYPE_CONVERSIONS_DESIGN.md (~320 lines) ✅
-- MATH_OPERATIONS_DESIGN.md (~270 lines) ✅
-- 3 example programs (~700 lines) ✅
-- Updated API_REFERENCE.md ✅
-- ROADMAP.md (this file) ✅
-
-**Current Status:** Documentation complete, implementation in progress
-
-**Remaining Work:**
-- Implement runtime functions in C
-- Update parser for hash map syntax
-- Add code generation for new functions
-- Testing and validation
+**Next Actions:**
+1. Translate `self_host/mlp_compiler.c` to `compiler.mlp`, mirroring the current behavior (including CLI argument capture introduced in Phase 11.2).
+2. Rebuild the bootstrap pipeline using the MLP compiler and verify self-hosted builds.
+3. Tag the release and archive a dated backup branch for reference.
 
 ---
 

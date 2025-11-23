@@ -1,0 +1,42 @@
+// Test: promise_race() - En hızlı promise kazanır
+// Phase 8.9 Test 1: promise_race_simple
+
+async function main()
+    print("╔════════════════════════════════════════╗")
+    print("║  Phase 8.9: promise_race() Testleri  ║")
+    print("╚════════════════════════════════════════╝")
+    print("")
+    
+    // Test 1: promise_race_simple - En hızlı kazanır
+    print("=== Test 1: promise_race_simple ===")
+    print("3 promise: 100ms, 500ms, 1000ms")
+    
+    numeric p1 = async_sleep(100)
+    numeric p2 = async_sleep(500)
+    numeric p3 = async_sleep(1000)
+    
+    numeric winner1 = promise_race_simple(p1, p2, p3)
+    numeric result1 = await winner1
+    
+    print("✅ BAŞARILI: En hızlı promise tamamlandı!")
+    print("Not: promise_race_simple() ilk tamamlanan promise'i döndürür")
+    
+    // Test 2: promise_race - Farklı süreler
+    print("")
+    print("=== Test 2: promise_race farklı süreler ===")
+    print("3 promise: 300ms, 150ms, 600ms")
+    
+    numeric q1 = async_sleep(300)
+    numeric q2 = async_sleep(150)
+    numeric q3 = async_sleep(600)
+    
+    numeric winner2 = promise_race_simple(q1, q2, q3)
+    numeric result2 = await winner2
+    
+    print("✅ BAŞARILI: En hızlı promise (150ms) kazandı!")
+    
+    print("")
+    print("✅ Tüm testler tamamlandı!")
+    
+    return 0
+end

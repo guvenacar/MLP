@@ -1,0 +1,8 @@
+function main()
+    p = promise_new()
+    promise_resolve_numeric(p, 42)
+    v = promise_get_numeric_value(p)
+    print(v)
+    promise_free(p)
+    print("OK")
+end

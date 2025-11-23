@@ -64,8 +64,15 @@ class IntelliSense {
     }));
   }
 
+  // Editor'ı ayarla
+  setEditor(editor) {
+    this.currentEditor = editor;
+    console.log('[IntelliSense] Editor set:', !!editor);
+  }
+
   // IntelliSense'i göster
   show(editor, position) {
+    console.log("IntelliSense.show() called", { line: position?.line, column: position?.column });
     this.currentEditor = editor;
     this.triggerPosition = position;
 
@@ -85,6 +92,7 @@ class IntelliSense {
     this.positionPopup(position);
 
     // Göster
+    console.log("IntelliSense: Showing popup with", this.items.length, "items");
     this.popup.style.display = 'block';
     this.isVisible = true;
     this.selectedIndex = 0;
@@ -113,20 +121,33 @@ class IntelliSense {
 
   // Popup konumlandır
   positionPopup(position) {
-    // Editor'ün pozisyonunu al
-    const editorRect = this.currentEditor.getBoundingClientRect();
+    const selection = window.getSelection();
+    if (!selection.rangeCount) {
+      console.warn('IntelliSense: No selection range');
+      return;
+    }
 
-    // Cursor pozisyonunu tahmin et (yaklaşık)
-    const lineHeight = 18;
-    const charWidth = 8;
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
 
-    const left = editorRect.left + (position.column * charWidth);
-    const top = editorRect.top + ((position.line + 1) * lineHeight);
+    // Eğer rect boşsa (cursor görünmüyorsa), editor'ün koordinatlarını kullan
+    if (rect.width === 0 && rect.height === 0) {
+      const editorRect = this.currentEditor.getBoundingClientRect();
+      this.popup.style.left = `${editorRect.left + 10}px`;
+      this.popup.style.top = `${editorRect.top + 30}px`;
+      console.log('IntelliSense: Using fallback position');
+      return;
+    }
+
+    // Cursor'un gerçek pozisyonunu kullan
+    const left = rect.left;
+    const top = rect.bottom + 2;
 
     this.popup.style.left = `${left}px`;
     this.popup.style.top = `${top}px`;
+    
+    console.log('IntelliSense popup positioned at:', { left, top, items: this.items.length });
   }
-
   // Öğeleri render et
   renderItems() {
     this.popup.innerHTML = '';
@@ -198,25 +219,41 @@ class IntelliSense {
 
   // Tamamlamayı ekle
   insertCompletion(item) {
-    // Basit implementasyon - sadece fonksiyon adını ekle
+    if (!this.currentEditor) return;
+
     const completion = item.name;
-
-    // Editor'e yazdırma işlemi
-    // Not: Bu kısım editor implementasyonuna bağlı
-    if (this.currentEditor && this.currentEditor.textContent !== undefined) {
-      const lines = this.currentEditor.textContent.split('\n');
-      const line = lines[this.triggerPosition.line] || '';
-
-      // Kelimeyi değiştir
-      const before = line.substring(0, this.triggerPosition.column - this.filterText.length);
-      const after = line.substring(this.triggerPosition.column);
-
-      lines[this.triggerPosition.line] = before + completion + after;
-      this.currentEditor.textContent = lines.join('\n');
-
-      // Event tetikle (kod güncelleme için)
-      this.currentEditor.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Selection API kullanarak cursor pozisyonunda ekle
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    // Kelime başlangıcını bul ve sil
+    if (this.filterText.length > 0) {
+      // Geriye doğru filterText uzunluğu kadar sil
+      const textNode = range.startContainer;
+      if (textNode.nodeType === Node.TEXT_NODE) {
+        const offset = range.startOffset;
+        const deleteRange = document.createRange();
+        deleteRange.setStart(textNode, Math.max(0, offset - this.filterText.length));
+        deleteRange.setEnd(textNode, offset);
+        deleteRange.deleteContents();
+      }
     }
+    
+    // Yeni metni ekle
+    const textNode = document.createTextNode(completion);
+    range.insertNode(textNode);
+    
+    // Cursor'u metnin sonuna taşı
+    range.setStartAfter(textNode);
+    range.setEndAfter(textNode);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Event tetikle (kod güncelleme için)
+    this.currentEditor.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   // Gizle
@@ -268,7 +305,16 @@ class IntelliSense {
   // Yardımcı: Satır metnini al
   getLineText(lineNum) {
     if (!this.currentEditor) return '';
-    const lines = this.currentEditor.textContent.split('\n');
+    console.log("[getLineText] currentEditor exists:", !!this.currentEditor);
+    
+    // textContent kullan (innerText satır sayısını bozuyor)
+    const text = this.currentEditor.textContent;  // innerText satır sayısını bozuyor!
+    console.log("[getLineText] text length:", text.length, "first 50:", text.substring(0, 50));
+    
+    const lines = text.split('\n');
+    console.log("[getLineText] total lines:", lines.length, "requested:", lineNum);
+    console.log("[getLineText] line content:", lines[lineNum] || '(undefined)');
+    
     return lines[lineNum] || '';
   }
 
@@ -282,16 +328,25 @@ class IntelliSense {
   // Yardımcı: Cursor pozisyonunu al (editor içinde)
   getCursorPosition(editor) {
     const selection = window.getSelection();
-    if (!selection.rangeCount) return { line: 0, column: 0 };
+    if (!selection.rangeCount) {
+      console.warn('IntelliSense: No selection for cursor position');
+      return { line: 0, column: 0 };
+    }
 
     const range = selection.getRangeAt(0);
-    const textBefore = editor.textContent.substring(0, range.startOffset);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(editor);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    const textBefore = preCaretRange.toString();
     const lines = textBefore.split('\n');
 
-    return {
+    const pos = {
       line: lines.length - 1,
       column: lines[lines.length - 1].length
     };
+    
+    console.log('IntelliSense cursor position:', pos);
+    return pos;
   }
 }
 

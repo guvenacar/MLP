@@ -1,0 +1,44 @@
+// Phase 8.5: Non-blocking async/await test
+// This tests state machine generation with multiple await points
+
+async function fetch_data(id)
+    print("Fetching data for ID:")
+    print(id)
+    
+    // Simulate async I/O - first await point (state 0 -> 1)
+    numeric data = await async_sleep(100)
+    
+    print("Got data, processing...")
+    
+    // Second await point (state 1 -> 2)
+    numeric result = await process_data(data)
+    
+    print("Processing complete, result:")
+    print(result)
+    
+    return result
+end
+
+async function async_sleep(ms)
+    print("Sleeping for ms:")
+    print(ms)
+    return 42
+end
+
+async function process_data(value)
+    print("Processing value:")
+    print(value)
+    return value * 2
+end
+
+function main()
+    print("Starting non-blocking async test...")
+    
+    // Start async operation - should return immediately
+    numeric promise = await fetch_data(123)
+    
+    print("After await - result:")
+    print(promise)
+    
+    return 0
+end

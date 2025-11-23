@@ -1,0 +1,17 @@
+-- Test: Closure with separate print statements
+
+function make_adder(x)
+    return lambda(y) => x + y
+end
+
+numeric add_5 = make_adder(5)
+numeric result1 = add_5(10)
+print result1
+
+numeric add_100 = make_adder(100)
+numeric result2 = add_100(23)
+print result2
+
+numeric add_7 = make_adder(7)
+numeric result3 = add_7(3)
+print result3

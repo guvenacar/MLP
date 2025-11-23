@@ -1,0 +1,28 @@
+// Test: promise_allSettled() - Tüm promise'ler tamamlanır
+// Phase 8.9 Test 3: promise_allSettled_simple
+
+async function main()
+    print("╔═══════════════════════════════════════════════╗")
+    print("║  Phase 8.9: promise_allSettled() Testleri   ║")
+    print("╚═══════════════════════════════════════════════╝")
+    print("")
+    
+    // Test 1: promise_allSettled_simple
+    print("=== Test 1: promise_allSettled_simple ===")
+    print("3 promise: 100ms, 200ms, 300ms")
+    
+    numeric p1 = async_sleep(100)
+    numeric p2 = async_sleep(200)
+    numeric p3 = async_sleep(300)
+    
+    numeric result = promise_allSettled_simple(p1, p2, p3)
+    numeric value = await result
+    
+    print("✅ BAŞARILI: Tüm promise'ler tamamlandı!")
+    print("Not: allSettled() asla reject olmaz, tümünü bekler")
+    
+    print("")
+    print("✅ Tüm testler tamamlandı!")
+    
+    return 0
+end

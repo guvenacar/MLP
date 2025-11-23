@@ -1,0 +1,10 @@
+function test1(x)
+    print(x)
+end
+
+function test2(y)
+    print(y)
+end
+
+test1(42)
+test2(100)

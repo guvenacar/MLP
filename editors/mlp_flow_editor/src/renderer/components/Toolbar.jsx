@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Toolbar() {
+function Toolbar({ onAddWidget }) {
   const widgetTypes = [
     { type: 'button', icon: '🔘', label: 'Button', category: 'Temel Bileşenler' },
     { type: 'label', icon: '🏷️', label: 'Label', category: 'Temel Bileşenler' },
@@ -15,9 +15,13 @@ function Toolbar() {
 
   const categories = [...new Set(widgetTypes.map(w => w.category))];
 
-  const onDragStart = (event, nodeType) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
+  const handleWidgetClick = (widgetType) => {
+    // Canvas'a widget ekle (rastgele pozisyon)
+    const position = {
+      x: Math.random() * 400 + 50,
+      y: Math.random() * 300 + 50
+    };
+    onAddWidget(widgetType, position);
   };
 
   return (
@@ -31,8 +35,8 @@ function Toolbar() {
               <div
                 key={widget.type}
                 className="widget-item"
-                draggable
-                onDragStart={(e) => onDragStart(e, widget.type)}
+                onClick={() => handleWidgetClick(widget.type)}
+                title={`Tıklayarak ${widget.label} ekleyin`}
               >
                 <span className="widget-icon">{widget.icon}</span>
                 <span className="widget-name">{widget.label}</span>

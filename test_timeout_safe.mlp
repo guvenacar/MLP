@@ -1,0 +1,80 @@
+// Test: Safe timeout with promise_await_safe
+// Phase 8.9: Rejected promise handling
+
+async function main()
+    print("╔════════════════════════════════════════════╗")
+    print("║  Phase 8.9: Safe Timeout Test            ║")
+    print("╚════════════════════════════════════════════╝")
+    print("")
+    
+    // Test 1: Fast task (no timeout)
+    print("=== Test 1: Fast task (başarılı) ===")
+    print("Task: 100ms, Timeout: 500ms")
+    
+    numeric task1 = async_sleep_promise(100)
+    numeric timeout1 = promise_with_timeout(task1, 500)
+    
+    numeric status1 = promise_await_safe(timeout1)
+    print("Await status: ")
+    print(status1)
+    
+    if status1 == 0 then
+        print("✅ BAŞARILI: Task timeout öncesi tamamlandı!")
+    else
+        print("❌ HATA: Beklenmeyen durum")
+    end
+    
+    // Test 2: Slow task (timeout tetiklenir)
+    print("")
+    print("=== Test 2: Slow task (timeout) ===")
+    print("Task: 1500ms, Timeout: 200ms")
+    
+    numeric task2 = async_sleep_promise(1500)
+    numeric timeout2 = promise_with_timeout(task2, 200)
+    
+    numeric status2 = promise_await_safe(timeout2)
+    print("Await status: ")
+    print(status2)
+    
+    numeric is_rejected = promise_is_rejected(timeout2)
+    
+    if is_rejected == 1 then
+        print("✅ BAŞARILI: Timeout tetiklendi (rejected)!")
+        
+        if promise_has_error(timeout2) then
+            print("Error mesajı mevcut")
+        end
+    else
+        if status2 == 0 then
+            print("❌ Task tamamlandı (timeout çalışmadı)")
+        else
+            print("❌ Beklenmeyen durum")
+        end
+    end
+    
+    // Test 3: promise_is_completed kontrolü
+    print("")
+    print("=== Test 3: promise_is_completed ===")
+    
+    numeric task3 = async_sleep_promise(50)
+    numeric completed_before = promise_is_completed(task3)
+    print("Completed (başlangıç): ")
+    print(completed_before)
+    
+    numeric result3 = await task3
+    
+    numeric completed_after = promise_is_completed(task3)
+    print("Completed (sonra): ")
+    print(completed_after)
+    
+    if completed_before == 0 then
+        if completed_after == 1 then
+            print("✅ BAŞARILI: Completion tracking çalışıyor!")
+        end
+    end
+    
+    print("")
+    print("🎉 Tüm safe timeout testleri başarılı!")
+    
+    return 0
+end

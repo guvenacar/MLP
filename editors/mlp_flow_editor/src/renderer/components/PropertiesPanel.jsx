@@ -1,7 +1,7 @@
 import React from 'react';
 
-function PropertiesPanel({ selectedNode, onUpdateNode }) {
-  if (!selectedNode) {
+function PropertiesPanel({ selectedWidget, onUpdateWidget }) {
+  if (!selectedWidget) {
     return (
       <div className="properties-container">
         <div className="no-selection">Bir widget seçin</div>
@@ -10,7 +10,7 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
   }
 
   const handleChange = (field, value) => {
-    onUpdateNode(selectedNode.id, { [field]: value });
+    onUpdateWidget(selectedWidget.id, { [field]: value });
   };
 
   return (
@@ -23,7 +23,7 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="text"
             className="property-input"
-            value={selectedNode.id}
+            value={selectedWidget.id}
             disabled
           />
         </div>
@@ -33,7 +33,7 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="text"
             className="property-input"
-            value={selectedNode.type}
+            value={selectedWidget.type}
             disabled
           />
         </div>
@@ -43,7 +43,7 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="text"
             className="property-input"
-            value={selectedNode.data.label || ''}
+            value={selectedWidget.label || ''}
             onChange={(e) => handleChange('label', e.target.value)}
             placeholder="Widget Label"
           />
@@ -58,12 +58,8 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="number"
             className="property-input"
-            value={Math.round(selectedNode.position?.x || 0)}
-            onChange={(e) => {
-              const newNodes = selectedNode;
-              newNodes.position = { ...newNodes.position, x: parseInt(e.target.value) };
-              onUpdateNode(selectedNode.id, {});
-            }}
+            value={Math.round(selectedWidget.x || 0)}
+            onChange={(e) => handleChange('x', parseInt(e.target.value))}
           />
         </div>
 
@@ -72,12 +68,8 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="number"
             className="property-input"
-            value={Math.round(selectedNode.position?.y || 0)}
-            onChange={(e) => {
-              const newNodes = selectedNode;
-              newNodes.position = { ...newNodes.position, y: parseInt(e.target.value) };
-              onUpdateNode(selectedNode.id, {});
-            }}
+            value={Math.round(selectedWidget.y || 0)}
+            onChange={(e) => handleChange('y', parseInt(e.target.value))}
           />
         </div>
 
@@ -86,7 +78,7 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="number"
             className="property-input"
-            value={selectedNode.data.width || 120}
+            value={selectedWidget.width || 120}
             onChange={(e) => handleChange('width', parseInt(e.target.value))}
           />
         </div>
@@ -96,7 +88,7 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="number"
             className="property-input"
-            value={selectedNode.data.height || 40}
+            value={selectedWidget.height || 40}
             onChange={(e) => handleChange('height', parseInt(e.target.value))}
           />
         </div>
@@ -110,11 +102,8 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="color"
             className="property-input"
-            value={selectedNode.data.style?.backgroundColor || '#3c3c3c'}
-            onChange={(e) => handleChange('style', { 
-              ...selectedNode.data.style, 
-              backgroundColor: e.target.value 
-            })}
+            value={selectedWidget.backgroundColor || '#007bff'}
+            onChange={(e) => handleChange('backgroundColor', e.target.value)}
           />
         </div>
 
@@ -123,12 +112,37 @@ function PropertiesPanel({ selectedNode, onUpdateNode }) {
           <input
             type="color"
             className="property-input"
-            value={selectedNode.data.style?.color || '#cccccc'}
-            onChange={(e) => handleChange('style', { 
-              ...selectedNode.data.style, 
-              color: e.target.value 
-            })}
+            value={selectedWidget.textColor || '#ffffff'}
+            onChange={(e) => handleChange('textColor', e.target.value)}
           />
+        </div>
+
+        <div className="property-row">
+          <label className="property-label">Font Size</label>
+          <input
+            type="number"
+            className="property-input"
+            value={selectedWidget.fontSize || 14}
+            onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
+            min="8"
+            max="72"
+          />
+        </div>
+
+        <div className="property-row">
+          <label className="property-label">Font Family</label>
+          <select
+            className="property-input"
+            value={selectedWidget.fontFamily || 'Arial'}
+            onChange={(e) => handleChange('fontFamily', e.target.value)}
+          >
+            <option value="Arial">Arial</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Georgia">Georgia</option>
+          </select>
         </div>
       </div>
     </div>

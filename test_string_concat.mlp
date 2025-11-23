@@ -1,0 +1,13 @@
+-- Test: String concatenation with + operator
+
+numeric x = 42
+string result = "Value: " + str(x)
+print result
+
+numeric a = 10
+numeric b = 20
+string msg = "Sum of " + str(a) + " and " + str(b) + " is " + str(a + b)
+print msg
+
+string greeting = "Hello" + " " + "World"
+print greeting

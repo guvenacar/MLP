@@ -286,6 +286,64 @@ else {
 - **Sınırsız dil desteklenebilir** (diller.json'a eklenerek)
 - Aynı programı farklı dillerde yazabilirsiniz
 
+### 🚫 MLP BİR OOP DİLİ DEĞİLDİR!
+
+**KRİTİK KARAR:** MLP, **ASLA** Object-Oriented Programming dili olmayacaktır.
+
+**MLP = Struct + Function Paradigması** ✅
+
+**MLP'de OLAN:**
+- ✅ Struct (veri yapıları)
+- ✅ Function (davranışlar)
+- ✅ Composition (kompozisyon)
+- ✅ Function pointers
+- ✅ Lambda & closures
+- ✅ Generic types (`optional<T>`)
+
+**MLP'de OLMAYAN ve OLMAYACAK:**
+- ❌ Class (sınıf tanımları)
+- ❌ Inheritance (kalıtım)
+- ❌ Method (struct'a bağlı fonksiyonlar)
+- ❌ this/self keyword
+- ❌ Constructor/Destructor
+- ❌ Public/Private/Protected
+- ❌ Interface/Trait
+- ❌ Virtual functions
+- ❌ Abstract classes
+
+**NEDEN?**
+1. **Basitlik:** Anlaşılır ve öğrenmesi kolay
+2. **Composition > Inheritance:** Modern yaklaşım
+3. **Bakım Kolaylığı:** Daha az karmaşıklık
+4. **Performans:** Vtable overhead yok
+5. **İspat:** Self-hosting derleyici OOP olmadan yazıldı
+6. **Açıklık:** Her şey explicit, gizli davranış yok
+
+**ÖRNEK:**
+
+```mlp
+-- ✅ MLP Yolu (Struct + Function)
+struct Person
+    string name
+    numeric age
+end struct
+
+function person_greet(Person p)
+    print "Hello, " + p.name
+end function
+
+Person alice
+alice.name = "Alice"
+person_greet(alice)  -- Açık ve net
+
+-- ❌ ASLA OLMAYACAK (OOP)
+class Person {
+    method greet() { ... }  -- MLP'de olmayacak!
+}
+```
+
+**Bu karar KESİNDİR ve değişmeyecektir!**
+
 ### Mimari Felsefesi
 
 **🔴 KRİTİK: LEXER ASLA TÜRKÇE/RUSÇA/HİNTÇE GÖRMEZ!**

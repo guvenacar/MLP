@@ -1,5 +1,19 @@
 # MLP Dili - Özellik Durum ve TODO Listesi
 
+## ✅ Güncel Durum (23 Kasım 2025)
+
+- Phase 0–10 kapsamındaki tüm özellikler tamamlandı ve üretim seviyesinde.
+- Komut satırı argümanları (`argc`, `argv.get`, `get_args`) ve runtime entegrasyonu devrede.
+- Async, functional, optional/generic, GUI ve tüm yardımcı kütüphaneler belgelenmiş ve testleri çalışıyor.
+- Tek kalan iş: C tabanlı bootstrap derleyicisini ( `self_host/mlp_compiler.c` ) MLP sürümüne taşıyarak tamamen MLP kaynaklı bir zincire geçmek.
+
+## 🟡 Kalan Çalışma
+
+| # | Başlık | Açıklama | Durum |
+|---|--------|----------|-------|
+| 1 | `mlp_compiler.c` → `compiler.mlp` taşıması | Bootstrap C derleyicisindeki son kaynak dosyasını MLP'ye port edip self-hosting zincirini %100 MLP yapmak. | ⏳ Beklemede |
+
+
 ## 🏆 Self-Hosting Durumu
 
 **MLP ARTIK TAM SELF-HOSTING'TİR!** ✅ (Tamamlandı: 22 Kasım 2024)

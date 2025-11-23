@@ -1,0 +1,6 @@
+function test(numeric arr[], numeric x)
+    print(x)
+end
+
+numeric data[3] = [1, 2, 3]
+test(data, 42)

@@ -376,6 +376,10 @@ typedef enum {
     AST_SWITCH_KOMUTU,      // Switch statement
     AST_CASE_KOMUTU,        // Case clause
 
+    // Phase 11.2: Command-line arguments
+    AST_BUILTIN_ARGC,      // Built-in argc access
+    AST_ARGV_GET,          // argv.get(index)
+
     // Phase 5.8: Control flow & debugging
     AST_TERNARY,            // Ternary operator: condition ? true_val : false_val
     AST_BREAK,              // break keyword
@@ -636,6 +640,11 @@ struct ASTNode {
         struct {
             Token* list_adi;      // List ismi (numbers)
         } list_clear_data;
+
+        // Phase 11.2: argv.get(index)
+        struct {
+            ASTNode* indeks;      // İstenen argüman indeksi
+        } argv_get_data;
 
         // ===== Phase 6.2: Optional<T> - Generic Optional Type =====
 
@@ -2485,6 +2494,21 @@ ASTNode* createAST_ListGet(Token* list_adi, ASTNode* indeks) {
     return node;
 }
 
+ASTNode* createAST_BuiltinArgc() {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_BUILTIN_ARGC;
+    return node;
+}
+
+ASTNode* createAST_ArgvGet(ASTNode* indeks) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    if (node == NULL) return NULL;
+    node->type = AST_ARGV_GET;
+    node->argv_get_data.indeks = indeks;
+    return node;
+}
+
 ASTNode* createAST_ListSize(Token* list_adi) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
@@ -3053,6 +3077,16 @@ ASTNode* birincil() {
         ad_token_kopya.value = strdup(current_token->value);  // Must strdup - lexer will reuse buffer
         consume(TOKEN_IDENTIFIER);
 
+        // Phase 11.2: Built-in argc identifier without explicit declaration
+        if (strcmp(ad_token_kopya.value, "argc") == 0 &&
+            current_token->type != TOKEN_LEFT_PAREN &&
+            current_token->type != TOKEN_LEFT_BRACKET &&
+            current_token->type != TOKEN_DOT) {
+            ASTNode* argc_node = createAST_BuiltinArgc();
+            free(ad_token_kopya.value);
+            return argc_node;
+        }
+
         // Fonksiyon çağrısı mı? (func(args))
         if (current_token->type == TOKEN_LEFT_PAREN) {
             consume(TOKEN_LEFT_PAREN);
@@ -3093,6 +3127,18 @@ ASTNode* birincil() {
             // Check if this is a list method call (has parentheses)
             if (current_token->type == TOKEN_LEFT_PAREN) {
                 consume(TOKEN_LEFT_PAREN);
+
+                // Phase 11.2: argv.get(index) special handling
+                if (strcmp(ad_token_kopya.value, "argv") == 0 &&
+                    strcmp(field_or_method.value, "get") == 0) {
+                    ASTNode* indeks = ifade();
+                    consume(TOKEN_RIGHT_PAREN);
+
+                    ASTNode* argv_node = createAST_ArgvGet(indeks);
+                    free(ad_token_kopya.value);
+                    free(field_or_method.value);
+                    return argv_node;
+                }
 
                 // Phase 6: List methods - add, get, set, remove, insert, length, clear
                 if (strcmp(field_or_method.value, "add") == 0) {
@@ -5082,6 +5128,8 @@ void visit_ListRemove(ASTNode* node);
 void visit_ListInsert(ASTNode* node);
 void visit_ListSize(ASTNode* node);
 void visit_ListClear(ASTNode* node);
+void visit_BuiltinArgc(ASTNode* node);
+void visit_ArgvGet(ASTNode* node);
 
 // Phase 6.2: Optional<T> visitor forward declarations
 void visit_OptionalTanimlama(ASTNode* node);
@@ -6842,6 +6890,13 @@ void visit_IslecCagirma(ASTNode* node) {
         return;
     }
 
+    // Phase 11.2: get_args convenience helper
+    if (strcmp(islec_adi, "get_args") == 0 && arg_sayisi == 0) {
+        asm_append(&text_section, "    ; --- Built-in get_args() ---");
+        asm_append(&text_section, "    call mlp_get_args_list");
+        return;
+    }
+
     // ===== STRING FONKSİYONLARI KONTROLÜ =====
     if (strcmp(islec_adi, "STRLEN") == 0 && arg_sayisi == 1) {
         visit(node->islec_cagirma_data.argumanlar[0]); // String argümanı RAX'e
@@ -7675,6 +7730,19 @@ void visit_ListGet(ASTNode* node) {
     
     // Dereference pointer to get actual value (int64 or pointer)
     asm_append(&text_section, "    mov rax, [rax]  ; Dereference to get value");
+}
+
+void visit_BuiltinArgc(ASTNode* node) {
+    (void)node;  // Unused
+    asm_append(&text_section, "    ; --- Built-in argc ---");
+    asm_append(&text_section, "    call mlp_get_argc");
+}
+
+void visit_ArgvGet(ASTNode* node) {
+    asm_append(&text_section, "    ; --- Built-in argv.get(index) ---");
+    visit(node->argv_get_data.indeks);
+    asm_append(&text_section, "    mov rdi, rax  ; index");
+    asm_append(&text_section, "    call mlp_get_argv");
 }
 
 void visit_ListSet(ASTNode* node) {
@@ -8604,6 +8672,13 @@ void visit(ASTNode* node) {
             visit_ListSet(node);
             break;
 
+        case AST_BUILTIN_ARGC:
+            visit_BuiltinArgc(node);
+            break;
+
+        case AST_ARGV_GET:
+            visit_ArgvGet(node);
+            break;
         case AST_LIST_REMOVE:
             visit_ListRemove(node);
             break;
@@ -8808,6 +8883,10 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern gui_canvas_render");
     asm_append(&data_section, "extern int_to_string");
     asm_append(&data_section, "extern string_to_int");
+    asm_append(&data_section, "extern mlp_set_args");
+    asm_append(&data_section, "extern mlp_get_argc");
+    asm_append(&data_section, "extern mlp_get_argv");
+    asm_append(&data_section, "extern mlp_get_args_list");
 
     // Phase 5.2: Error Handling
     asm_append(&data_section, "extern exit_with_code");
@@ -8898,6 +8977,7 @@ char* generate_asm(ASTNode* root) {
     asm_append(&text_section, "    push rbp");
     asm_append(&text_section, "    mov rbp, rsp");
     asm_append(&text_section, "    sub rsp, 256"); // ✅ Yeterli stack alanı (32 değişkene kadar)
+    asm_append(&text_section, "    call mlp_set_args"); // Phase 11.2: Capture argc/argv
     asm_append(&text_section, "    call tyd_fix_cwd"); // ✅ çalışma dizinini düzelt
 
     // 4. İki geçişli ziyaret

@@ -1,0 +1,3 @@
+function map(numeric x)
+    return x
+end

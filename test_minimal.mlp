@@ -1,0 +1,5 @@
+function test(numeric arr[], numeric x)
+    print(x)
+end
+
+test(0, 42)

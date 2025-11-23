@@ -1,0 +1,4 @@
+function test(numeric x) then
+    print(x)
+end
+test(42)

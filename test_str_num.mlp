@@ -1,0 +1,12 @@
+-- Test str() and num() type conversion
+
+numeric x = 42
+string s = str(x)
+print s
+
+string text = "123"
+numeric n = num(text)
+print n
+
+numeric result = num("100") + num("23")
+print result

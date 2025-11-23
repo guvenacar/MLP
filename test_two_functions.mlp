@@ -1,0 +1,11 @@
+function test1()
+    return 1
+end
+
+function test2()
+    return 2
+end
+
+function main()
+    return 0
+end

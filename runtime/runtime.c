@@ -3158,6 +3158,25 @@ int64_t mlp_list_capacity(MLP_List* list) {
     return list->capacity;
 }
 
+// Phase 11.2: Build a List<string> snapshot of command-line arguments
+MLP_List* mlp_get_args_list(void) {
+    // Each element stores a pointer (char*)
+    MLP_List* list = mlp_list_create(sizeof(char*));
+    if (!list) {
+        return NULL;
+    }
+
+    for (int i = 0; i < mlp_argc; i++) {
+        char* arg_value = mlp_get_argv(i);
+        if (!arg_value) {
+            arg_value = strdup("");
+        }
+        mlp_list_add(list, &arg_value);
+    }
+
+    return list;
+}
+
 // Check if list is empty
 int64_t mlp_list_is_empty(MLP_List* list) {
     if (!list) return 1;

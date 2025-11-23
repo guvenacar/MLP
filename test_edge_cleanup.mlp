@@ -1,0 +1,42 @@
+function test_null_promise() -> numeric
+    result = promise_await_safe(0)
+    print("Test 1: Null Promise")
+    print(result)
+    return result
+end
+
+function test_double_resolve() -> numeric
+    p = promise_new()
+    promise_resolve_numeric(p, 42)
+    v1 = promise_get_numeric_value(p)
+    print("Test 2: Double Resolve")
+    print(v1)
+    promise_resolve_numeric(p, 99)
+    v2 = promise_get_numeric_value(p)
+    print(v2)
+    promise_free(p)
+    return v2
+end
+
+function test_zero_timeout() -> numeric
+    slow = async_sleep(1000)
+    timeout_result = async_timeout(slow, 0)
+    status = promise_await_safe(timeout_result)
+    print("Test 3: Zero Timeout")
+    print(status)
+    promise_free(timeout_result)
+    promise_free(slow)
+    return status
+end
+
+function main()
+    print("Edge Tests With Cleanup")
+    print("")
+    test_null_promise()
+    print("")
+    test_double_resolve()
+    print("")
+    test_zero_timeout()
+    print("")
+    print("Tests Complete")
+end
