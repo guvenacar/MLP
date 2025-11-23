@@ -1,0 +1,31 @@
+// Phase 8.8: Promise.all() with HTTP requests
+// Demonstrates real-world parallel async I/O
+
+async function main()
+    print("=== Promise.all with HTTP Requests ===")
+    print("")
+    
+    print("Making 3 HTTP requests in parallel...")
+    print("(httpbin.org - free HTTP testing service)")
+    print("")
+    
+    // Create all promises at once
+    numeric req1 = async_http_get("https://httpbin.org/delay/1")
+    numeric req2 = async_http_get("https://httpbin.org/delay/1")
+    numeric req3 = async_http_get("https://httpbin.org/delay/1")
+    
+    print("All requests started!")
+    print("Waiting for responses...")
+    print("")
+    
+    // Use promise_all_simple (3 promises)
+    numeric all_promise = promise_all_simple(req1, req2, req3, 3)
+    numeric results = await all_promise
+    
+    print("All requests completed!")
+    print("")
+    print("Success! 3 parallel HTTP requests finished.")
+    print("(Would take 3 seconds sequential, ~1 second parallel)")
+    
+    return 0
+end

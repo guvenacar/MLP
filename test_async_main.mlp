@@ -1,0 +1,26 @@
+// Test: Async main function with state machine
+
+async function get_value(n)
+    return n * 2
+end
+
+async function main()
+    print("Async main starting...")
+    
+    // First await (state 0 -> 1)
+    numeric a = await get_value(5)
+    print("First value:")
+    print(a)
+    
+    // Second await (state 1 -> 2)
+    numeric b = await get_value(10)
+    print("Second value:")
+    print(b)
+    
+    // Compute result
+    numeric result = a + b
+    print("Final result:")
+    print(result)
+    
+    return 0
+end

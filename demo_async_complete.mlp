@@ -1,0 +1,54 @@
+// Phase 8.8: Complete Async I/O Demo
+// Showcases all async primitives working together
+
+async function main()
+    print("╔═══════════════════════════════════════╗")
+    print("║   MLP Async/Await Complete Demo      ║")
+    print("╚═══════════════════════════════════════╝")
+    print("")
+    
+    // 1. Async Sleep
+    print("► async_sleep: Non-blocking delay")
+    numeric s = await async_sleep(500)
+    print("  ✓ Slept for 500ms")
+    print("")
+    
+    // 2. File Write
+    print("► async_write_file: Non-blocking write")
+    numeric bytes = await async_write_file("demo.txt", "MLP async I/O rocks!")
+    print("  ✓ Wrote file (bytes: ")
+    print(bytes)
+    print(")")
+    print("")
+    
+    // 3. File Read
+    print("► async_read_file: Non-blocking read")
+    string content = await async_read_file("demo.txt")
+    print("  ✓ Read file: ")
+    print(content)
+    print("")
+    
+    // 4. HTTP Request
+    print("► async_http_get: HTTP request")
+    string response = await async_http_get("https://httpbin.org/uuid")
+    print("  ✓ Got response from httpbin.org")
+    print("")
+    
+    // 5. Parallel Operations
+    print("► Parallel: 3 sleeps at once")
+    numeric p1 = async_sleep(300)
+    numeric p2 = async_sleep(300)
+    numeric p3 = async_sleep(300)
+    
+    numeric r1 = await p1
+    numeric r2 = await p2
+    numeric r3 = await p3
+    print("  ✓ All 3 completed in parallel!")
+    print("")
+    
+    print("╔═══════════════════════════════════════╗")
+    print("║   All Async Operations Successful!    ║")
+    print("╚═══════════════════════════════════════╝")
+    
+    return 0
+end

@@ -1,0 +1,17 @@
+// Phase 8: Basic async/await test
+
+async function get_number()
+    return 42
+end
+
+function main()
+    print("Testing async function...")
+    
+    // Await the promise immediately (no intermediate variable needed for simple blocking await)
+    numeric result = await get_number()
+    
+    print("Result:")
+    print(result)
+    
+    return 0
+end

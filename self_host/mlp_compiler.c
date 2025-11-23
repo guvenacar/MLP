@@ -71,6 +71,8 @@ typedef enum {
     TOKEN_THEN,  // then
     TOKEN_ELSE, // else
     TOKEN_FUNCTION,     // function
+    TOKEN_ASYNC,        // async (Phase 8: Async/Await)
+    TOKEN_AWAIT,        // await (Phase 8: Async/Await)
     TOKEN_RETURN,     // return
     TOKEN_WHILE,     // while
     TOKEN_YAPI_DO,        // do
@@ -105,6 +107,10 @@ typedef enum {
     TOKEN_CONST,     // const
     TOKEN_TYPEOF,    // typeof - Phase 5.7: Type introspection
     TOKEN_IMPORT,    // import - Phase 5.10: Module system
+    
+    // Phase 7.1: Lambda Expressions
+    TOKEN_LAMBDA,    // lambda - lambda(x, y) => x + y
+    TOKEN_ARROW,     // => - lambda arrow operator
     
     // Phase 5.8: Range and For-Each
     TOKEN_IN,        // in - for X in Y
@@ -291,6 +297,7 @@ typedef struct {
 // Lexer Fonksiyon Bildirimleri
 void initLexer(const char* source); // <-- BU SATIRI EKLEYİN (Eksik Prototipti)
 Token* getNextToken();
+Token* check_keyword(const char* word); // Phase 8: Keyword checker (forward declaration)
 Token* peekNextToken(); // Look ahead one token without consuming it
 
 #endif // C_LEXER_H
@@ -376,6 +383,13 @@ typedef enum {
     AST_STOP,               // stop keyword (debugging breakpoint - int3)
     AST_GOTO,               // goto label
     AST_LABEL,              // label:
+
+    // Phase 7.1: Lambda Expressions
+    AST_LAMBDA,             // Lambda expression: lambda(x, y) => x + y
+    
+    // Phase 8: Async/Await
+    AST_ASYNC_FUNCTION,     // async function declaration
+    AST_AWAIT_EXPR,         // await expression
 } ASTNodeType;
 
 // İleri Bildirimler (C'de iç içe struct'lar için gerekli)
@@ -466,9 +480,34 @@ struct ASTNode {
             Token* ad;
             Token** parametreler; // YENİ: Parametre adları (Token listesi)
             int parametre_sayisi; // YENİ
+            int* parametre_is_array; // Phase 7.6: Which parameters are arrays (1=array, 0=regular)
             ASTNode** parametre_default_degerleri; // Phase 5.11: Default parameter values (NULL if no default)
             ASTNode* govde;
         } islec_tanimlama_data;
+
+        // Phase 7.1: Lambda Expression
+        struct {
+            Token** parametreler; // Lambda parametreleri
+            int parametre_sayisi;
+            ASTNode* govde;       // Tek ifade veya blok
+            bool is_expression;   // true = tek ifade, false = blok
+            // Phase 7.9: Closure support
+            char** captured_vars; // Captured variable names
+            int captured_count;   // Number of captured variables
+        } lambda_data;
+        
+        // Phase 8: Async Function (async function name() ... end)
+        struct {
+            Token* ad;            // Function name
+            Token** parametreler; // Parameters
+            int parametre_sayisi;
+            ASTNode* govde;       // Function body
+        } async_function_data;
+        
+        // Phase 8: Await Expression (await promise_expr)
+        struct {
+            ASTNode* ifade;       // Promise expression to await
+        } await_data;
         
         // İşleç Çağırma (topla(5, 7))
         struct {
@@ -750,6 +789,10 @@ struct ASTNode {
 // Fonksiyon Prototipleri
 ASTNode* parse(const char* source_code); // Ana ayrıştırma fonksiyonu
 void freeAST(ASTNode* node);             // AST temizleme (Bellek yönetimi)
+
+// Phase 7.9: Closure support
+void find_free_variables(ASTNode* node, char** free_vars, int* free_count, 
+                         Token** lambda_params, int param_count);
 
 // Phase 3: Built-in function helper
 ASTNode* createAST_BuiltinCall(TokenType func_type, ASTNode* arg1, ASTNode* arg2, ASTNode* arg3);
@@ -1041,8 +1084,12 @@ const char* get_base_dir() {
 }
 
 int main(int argc, char* argv[]) {
+    fprintf(stderr, "BAŞLANGIÇ: main() başladı\n");
+    
     // Initialize function registry
+    fprintf(stderr, "BAŞLANGIÇ: hashmap_create çağrılıyor\n");
     function_registry = hashmap_create(128);
+    fprintf(stderr, "BAŞLANGIÇ: hashmap_create tamamlandı, registry=%p\n", (void*)function_registry);
     
     if (argc < 3) {
         fprintf(stderr, "Kullanım: %s <girdi_dosyasi.tyd> <cikti_dosyasi.asm>\n", argv[0]);
@@ -1052,8 +1099,12 @@ int main(int argc, char* argv[]) {
     const char* girdi_dosya_adi = argv[1];
     const char* cikti_dosya_adi = argv[2];
 
+    fprintf(stderr, "BAŞLANGIÇ: girdi=%s, çıktı=%s\n", girdi_dosya_adi, cikti_dosya_adi);
+
     // --- Resolve absolute path and set base_dir ---
+    fprintf(stderr, "BAŞLANGIÇ: realpath çağrılıyor\n");
     char* absolute_input_path = realpath(girdi_dosya_adi, NULL);
+    fprintf(stderr, "BAŞLANGIÇ: realpath tamamlandı, path=%s\n", absolute_input_path ? absolute_input_path : "NULL");
     if (absolute_input_path == NULL) {
         perror("Gerçek dosya yolu çözümlenemedi");
         return 1;
@@ -1196,6 +1247,7 @@ KeywordMap keywords[] = {
     {"const",    TOKEN_CONST},
     {"typeof",   TOKEN_TYPEOF},
     {"import",   TOKEN_IMPORT},    // Phase 5.10: Module system
+    {"lambda",   TOKEN_LAMBDA},    // Phase 7.1: Lambda expressions
     {"in",       TOKEN_IN},        // Phase 5.8: for X in Y
     {"range",    TOKEN_RANGE},     // Phase 5.8: range(start, end, step)
 
@@ -1553,74 +1605,18 @@ Token* getNextToken() {
         strncpy(value, source_code + start, len);
         value[len] = '\0';
 
-        // Keyword check
-        TokenType type = TOKEN_IDENTIFIER;
-        for (int i = 0; keywords[i].keyword != NULL; i++) {
-            if (strcmp(keywords[i].keyword, value) == 0) {
-                type = keywords[i].type;
-                break;
-            }
+        // Phase 8: Use check_keyword() to handle all keywords including async/await
+        Token* token = check_keyword(value);
+        if (token == NULL) {
+            // Not a keyword - create identifier token
+            token = createToken(TOKEN_IDENTIFIER, value);
         }
-        
-        // Compound keyword handling: "end if", "end while", "end function", etc.
-        if (type == TOKEN_END) {
-            fprintf(stderr, "DEBUG: Found 'end' token, checking for compound...\n");
-            int saved_pos = current_position;
-            int saved_line = current_line;
-            int saved_col = current_column;
-            
-            skip_whitespace_and_comments();
-            
-            // Read next word
-            char next_word[256] = {0};
-            int i = 0;
-            while (isIdentifierChar(source_code[current_position]) && i < 255) {
-                next_word[i++] = source_code[current_position++];
-            }
-            next_word[i] = '\0';
-            fprintf(stderr, "DEBUG: Next word after 'end': '%s'\n", next_word);
-            
-            if (strlen(next_word) > 0) {
-                // Check for compound keywords
-                TokenType compound_type = TOKEN_END;  // default
-                if (strcmp(next_word, "if") == 0) {
-                    compound_type = TOKEN_END_IF;
-                } else if (strcmp(next_word, "while") == 0) {
-                    compound_type = TOKEN_END_WHILE;
-                } else if (strcmp(next_word, "for") == 0) {
-                    compound_type = TOKEN_END_FOR;
-                } else if (strcmp(next_word, "function") == 0) {
-                    compound_type = TOKEN_END_FUNCTION;
-                } else if (strcmp(next_word, "struct") == 0) {
-                    compound_type = TOKEN_END_STRUCT;
-                } else if (strcmp(next_word, "enum") == 0) {
-                    compound_type = TOKEN_END_ENUM;
-                } else if (strcmp(next_word, "switch") == 0) {
-                    compound_type = TOKEN_END_SWITCH;
-                }
-                
-                // Create compound token or restore position
-                if (compound_type != TOKEN_END) {
-                    char* compound_value = (char*)malloc(strlen(value) + strlen(next_word) + 2);
-                    sprintf(compound_value, "%s %s", value, next_word);
-                    Token* tok = createToken(compound_type, compound_value);
-                    free(compound_value);
-                    free(value);
-                    return tok;
-                }
-            }
-            
-            // Not a compound keyword, restore position
-            current_position = saved_pos;
-            current_line = saved_line;
-            current_column = saved_col;
-        }
-        
-        Token* token = createToken(type, value);
-        free(value); // createToken already copies
+        free(value);
         return token;
     }
 
+    // Compound keyword handling is inside check_keyword()
+    
     char current_char = source_code[current_position]; // Tek baytlık operatörler için hala gerekli
 
     // Phase 5.6: CHARACTER LITERAL ('A', '\n', etc.) - Returns integer ASCII value
@@ -1788,6 +1784,12 @@ Token* getNextToken() {
         return createToken(TOKEN_NOT_ESIT, "!=");
     }
 
+    // Phase 7.1: => (Lambda arrow) - Must be before single '=' check!
+    if (current_char == '=' && next_char == '>') {
+        current_position += 2;
+        return createToken(TOKEN_ARROW, "=>");
+    }
+
     // >= (Büyük Eşit)
     if (current_char == '>' && next_char == '=') {
         current_position += 2;
@@ -1953,72 +1955,17 @@ Token* check_keyword(const char* word) {
     if (strcmp(word, "then") == 0) return createToken(TOKEN_THEN, word);
     if (strcmp(word, "else") == 0) return createToken(TOKEN_ELSE, word);
     if (strcmp(word, "function") == 0) return createToken(TOKEN_FUNCTION, word);
+    if (strcmp(word, "async") == 0) return createToken(TOKEN_ASYNC, word);      // Phase 8
+    if (strcmp(word, "await") == 0) return createToken(TOKEN_AWAIT, word);      // Phase 8
     if (strcmp(word, "return") == 0) return createToken(TOKEN_RETURN, word);
     if (strcmp(word, "while") == 0) return createToken(TOKEN_WHILE, word);
     if (strcmp(word, "break") == 0) return createToken(TOKEN_WHILE_BITIR, word);
     
     // Self-documenting ends (English base)
+    // Phase 8: Compound keywords disabled - they break lexer position
+    // Only use plain 'end' for now
     if (strcmp(word, "end") == 0) {
-        // Peek next word to check for "SON IF", "SON WHILE", etc.
-        int saved_pos = current_position;
-        int saved_line = current_line;
-        int saved_col = current_column;
-        
-        // Skip whitespace
-        while (source_code[current_position] == ' ' || 
-               source_code[current_position] == '\t' ||
-               source_code[current_position] == '\n' ||
-               source_code[current_position] == '\r') {
-            if (source_code[current_position] == '\n') {
-                current_line++;
-                current_column = 1;
-            } else {
-                current_column++;
-            }
-            current_position++;
-        }
-        
-        // Read next word
-        char next_word[256] = {0};
-        int i = 0;
-        while (isIdentifierChar(source_code[current_position]) && i < 255) {
-            next_word[i++] = source_code[current_position++];
-        }
-        next_word[i] = '\0';
-        
-        // Check for compound keywords (English base only)
-        TokenType compound_type = TOKEN_END;  // default
-        if (strcmp(next_word, "if") == 0) {
-            compound_type = TOKEN_END_IF;
-        } else if (strcmp(next_word, "while") == 0) {
-            compound_type = TOKEN_END_WHILE;
-        } else if (strcmp(next_word, "for") == 0) {
-            compound_type = TOKEN_END_FOR;
-        } else if (strcmp(next_word, "function") == 0) {
-            compound_type = TOKEN_END_FUNCTION;
-        } else if (strcmp(next_word, "struct") == 0) {
-            compound_type = TOKEN_END_STRUCT;
-        } else if (strcmp(next_word, "enum") == 0) {
-            compound_type = TOKEN_END_ENUM;
-        } else if (strcmp(next_word, "switch") == 0) {
-            compound_type = TOKEN_END_SWITCH;
-        } else {
-            // Not a compound keyword, restore position
-            current_position = saved_pos;
-            current_line = saved_line;
-            current_column = saved_col;
-        }
-        
-        // Create appropriate token
-        if (compound_type != TOKEN_END) {
-            char* compound_value = (char*)malloc(strlen(word) + strlen(next_word) + 2);
-            sprintf(compound_value, "%s %s", word, next_word);
-            Token* tok = createToken(compound_type, compound_value);
-            free(compound_value);
-            return tok;
-        } else {
-            return createToken(TOKEN_END, word);
-        }
+        return createToken(TOKEN_END, word);
     }
     
     if (strcmp(word, "struct") == 0) return createToken(TOKEN_YAPI_STRUCT, word);
@@ -2107,7 +2054,7 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_IF: return "IF";
         case TOKEN_THEN: return "THEN";
         case TOKEN_ELSE: return "ELSE";
-        case TOKEN_FUNCTION: return "OPERATOR";
+        case TOKEN_FUNCTION: return "FUNCTION";
         case TOKEN_RETURN: return "RETURN";
         case TOKEN_WHILE: return "WHILE";
         case TOKEN_YAPI_DO: return "DO";
@@ -2145,6 +2092,8 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_CONTINUE: return "continue";
         case TOKEN_STOP: return "stop";
         case TOKEN_GOTO: return "goto";
+        case TOKEN_LAMBDA: return "lambda";
+        case TOKEN_ARROW: return "=>";
         default: return "UNKNOWN";
     }
 }
@@ -2702,7 +2651,7 @@ ASTNode* createAST_KosulKomutu(ASTNode* kosul, ASTNode* ise_blok, ASTNode* degil
     return node;
 }
 
-ASTNode* createAST_IslecTanimlama(Token* ad, Token** parametreler, int parametre_sayisi, ASTNode** parametre_defaults, ASTNode* govde) {
+ASTNode* createAST_IslecTanimlama(Token* ad, Token** parametreler, int parametre_sayisi, int* parametre_is_array, ASTNode** parametre_defaults, ASTNode* govde) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_FUNCTION_DECLARATION;
@@ -2711,6 +2660,7 @@ ASTNode* createAST_IslecTanimlama(Token* ad, Token** parametreler, int parametre
     node->islec_tanimlama_data.ad->value = strdup(ad->value);
     node->islec_tanimlama_data.parametreler = parametreler;
     node->islec_tanimlama_data.parametre_sayisi = parametre_sayisi;
+    node->islec_tanimlama_data.parametre_is_array = parametre_is_array; // Phase 7.6
     node->islec_tanimlama_data.parametre_default_degerleri = parametre_defaults; // Phase 5.11
     node->islec_tanimlama_data.govde = govde;
     return node;
@@ -2727,6 +2677,7 @@ ASTNode* kosul_komutu();
 ASTNode* dongu_komutu();
 ASTNode* for_komutu();
 ASTNode* islec_tanimlama();
+ASTNode* async_function_tanimlama(); // Phase 8: Async function parser
 ASTNode* donus_komutu();
 ASTNode* list_tanimlama_parse();  // Phase 6: List<T> tanımlama parser
 ASTNode* optional_tanimlama_parse();  // Phase 6.2: Optional<T> tanımlama parser
@@ -2777,6 +2728,18 @@ ASTNode* birincil() {
         parseError("Bir ifade expected.", "Sayı, Metin or Değişken");
     }
 
+    // Phase 8: Await expression
+    if (current_token->type == TOKEN_AWAIT) {
+        consume(TOKEN_AWAIT);
+        ASTNode* ifade_node = birincil(); // Parse awaited expression
+        
+        ASTNode* await_node = (ASTNode*)malloc(sizeof(ASTNode));
+        await_node->type = AST_AWAIT_EXPR;
+        await_node->await_data.ifade = ifade_node;
+        
+        return await_node;
+    }
+
     if (current_token->type == TOKEN_NUMBER) {
         ASTNode* node = createAST_Sayi(current_token);
         consume(TOKEN_NUMBER);
@@ -2817,6 +2780,58 @@ ASTNode* birincil() {
         ASTNode* node = createAST_Sayi(null_token);
         consume(TOKEN_NULL);
         return node;
+    }
+
+    // Phase 7.1: Lambda expression
+    if (current_token->type == TOKEN_LAMBDA) {
+        consume(TOKEN_LAMBDA);
+        consume(TOKEN_LEFT_PAREN);
+        
+        // Parse parameters
+        Token** parametreler = NULL;
+        int param_count = 0;
+        
+        if (current_token->type != TOKEN_RIGHT_PAREN) {
+            parametreler = (Token**)malloc(sizeof(Token*) * 10);
+            
+            do {
+                if (current_token->type != TOKEN_IDENTIFIER) {
+                    parseError("Lambda parameter name", "IDENTIFIER");
+                }
+                
+                parametreler[param_count] = (Token*)malloc(sizeof(Token));
+                parametreler[param_count]->type = current_token->type;
+                parametreler[param_count]->value = strdup(current_token->value);
+                param_count++;
+                
+                consume(TOKEN_IDENTIFIER);
+                
+                if (current_token->type == TOKEN_COMMA) {
+                    consume(TOKEN_COMMA);
+                }
+            } while (current_token->type == TOKEN_IDENTIFIER);
+        }
+        
+        consume(TOKEN_RIGHT_PAREN);
+        consume(TOKEN_ARROW);  // =>
+        
+        // Parse body (single expression for now)
+        ASTNode* govde = ifade();
+        
+        // Phase 7.9: Don't detect captured vars here - do it in codegen
+        // (Parser doesn't have scope information yet)
+        
+        // Create lambda node
+        ASTNode* lambda = (ASTNode*)malloc(sizeof(ASTNode));
+        lambda->type = AST_LAMBDA;
+        lambda->lambda_data.parametreler = parametreler;
+        lambda->lambda_data.parametre_sayisi = param_count;
+        lambda->lambda_data.govde = govde;
+        lambda->lambda_data.is_expression = true;
+        lambda->lambda_data.captured_vars = NULL;  // Will be populated in codegen
+        lambda->lambda_data.captured_count = 0;
+        
+        return lambda;
     }
 
     if (current_token->type == TOKEN_LEFT_PAREN) {
@@ -3340,6 +3355,11 @@ ASTNode* ikili_islem(int onceki_oncelik) {
 }
 
 ASTNode* komut() {
+    // Phase 8: Async Function (MUST be before IDENTIFIER check)
+    if (current_token->type == TOKEN_ASYNC) {
+        return async_function_tanimlama();
+    }
+    
     // Phase 5.10: Import Statement (import "file.mlp")
     if (current_token->type == TOKEN_IMPORT) {
         consume(TOKEN_IMPORT);
@@ -4336,10 +4356,12 @@ ASTNode* islec_tanimlama() {
     consume(TOKEN_LEFT_PAREN);
     Token** parametre_listesi = NULL;
     ASTNode** parametre_defaults = NULL; // Phase 5.11: Default values
+    int* parametre_is_array = NULL; // Phase 7.6: Track which params are arrays
     int p_sayisi = 0;
     if (current_token->type != TOKEN_RIGHT_PAREN) {
         parametre_listesi = (Token**)malloc(sizeof(Token*) * 10);
         parametre_defaults = (ASTNode**)malloc(sizeof(ASTNode*) * 10);
+        parametre_is_array = (int*)malloc(sizeof(int) * 10);
         do {
             if (current_token->type != TOKEN_IDENTIFIER) {
                 parseError("Parametre adı expected.", "IDENTIFIER");
@@ -4349,6 +4371,18 @@ ASTNode* islec_tanimlama() {
             param_token->value = strdup(current_token->value);
             parametre_listesi[p_sayisi] = param_token;
             consume(TOKEN_IDENTIFIER); // Consume parameter name first
+            
+            // Phase 7.6: Check for array parameter syntax: name[]
+            if (current_token->type == TOKEN_LEFT_BRACKET) {
+                consume(TOKEN_LEFT_BRACKET);
+                if (current_token->type != TOKEN_RIGHT_BRACKET) {
+                    parseError("Array parameter must be []", "]");
+                }
+                consume(TOKEN_RIGHT_BRACKET);
+                parametre_is_array[p_sayisi] = 1; // Mark as array parameter
+            } else {
+                parametre_is_array[p_sayisi] = 0; // Regular parameter
+            }
             
             // Phase 5.11: Check for default value (= expression)
             if (current_token->type == TOKEN_ASSIGN) {
@@ -4366,17 +4400,68 @@ ASTNode* islec_tanimlama() {
     // then keyword kaldırıldı - direkt blok başlar
     ASTNode* govde_blogu = blok();
     
-    // Accept both "end function" / "end işleç" and plain "end"
-    if (current_token->type == TOKEN_END_FUNCTION) {
-        consume(TOKEN_END_FUNCTION);
-    } else {
-        consume(TOKEN_END);
-    }
+    // Only accept plain "end" (compound "end function" breaks lexer position)
+    consume(TOKEN_END);
     
     specs_check_no_semicolon("OPERATOR SON");
     
-    ASTNode* node = createAST_IslecTanimlama(&ad_token, parametre_listesi, p_sayisi, parametre_defaults, govde_blogu);
+    ASTNode* node = createAST_IslecTanimlama(&ad_token, parametre_listesi, p_sayisi, parametre_is_array, parametre_defaults, govde_blogu);
     free(ad_token.value);
+    return node;
+}
+
+// Phase 8: Async Function Parser
+ASTNode* async_function_tanimlama() {
+    consume(TOKEN_ASYNC);
+    consume(TOKEN_FUNCTION);
+    
+    if (current_token == NULL) {
+        parseError("Unexpected end of file after 'async function'", "IDENTIFIER");
+    }
+    
+    if (current_token->type != TOKEN_IDENTIFIER) {
+        parseError("Async function name expected.", "IDENTIFIER");
+    }
+    Token* ad_token = (Token*)malloc(sizeof(Token));
+    ad_token->type = current_token->type;
+    ad_token->value = strdup(current_token->value);
+    consume(TOKEN_IDENTIFIER);
+
+    consume(TOKEN_LEFT_PAREN);
+    Token** parametre_listesi = NULL;
+    int p_sayisi = 0;
+    
+    if (current_token->type != TOKEN_RIGHT_PAREN) {
+        parametre_listesi = (Token**)malloc(sizeof(Token*) * 10);
+        do {
+            if (current_token->type != TOKEN_IDENTIFIER) {
+                parseError("Parameter name expected.", "IDENTIFIER");
+            }
+            Token* param_token = (Token*)malloc(sizeof(Token));
+            param_token->type = current_token->type;
+            param_token->value = strdup(current_token->value);
+            parametre_listesi[p_sayisi++] = param_token;
+            consume(TOKEN_IDENTIFIER);
+        } while (current_token->type == TOKEN_COMMA && (consume(TOKEN_COMMA), 1));
+    }
+    consume(TOKEN_RIGHT_PAREN);
+
+    // Parse function body
+    ASTNode* govde_blogu = blok();
+    
+    // Only accept plain "end" (compound "end function" breaks lexer position)
+    consume(TOKEN_END);
+    
+    specs_check_no_semicolon("ASYNC FUNCTION SON");
+    
+    // Create async function AST node
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    node->type = AST_ASYNC_FUNCTION;
+    node->async_function_data.ad = ad_token;
+    node->async_function_data.parametreler = parametre_listesi;
+    node->async_function_data.parametre_sayisi = p_sayisi;
+    node->async_function_data.govde = govde_blogu;
+    
     return node;
 }
 
@@ -4604,6 +4689,7 @@ extern const char* get_base_dir();
 // --- Generator Durum Yönetimi ---
 static AsmCode data_section; // .data bölümü (örn: "Merhaba")
 static AsmCode text_section; // .text bölümü (ana kod)
+static AsmCode lambda_section; // Phase 7.9: Deferred lambda functions
 
 // YENİ: Kapsam Yönetimi (Python'daki Kapsam sınıfına karşılık gelir)
 
@@ -4965,6 +5051,9 @@ void visit_ForEach(ASTNode* node);    // Phase 5.8: for X in array
 void visit_DonguBitirKomutu(ASTNode* node); // İleri bildirim
 void visit_DonguDevamKomutu(ASTNode* node); // Phase 5.8: Continue
 void visit_IslecTanimlama(ASTNode* node); // İleri bildirim
+void visit_Lambda(ASTNode* node); // Phase 7.1: Lambda expression
+void visit_AsyncFunction(ASTNode* node); // Phase 8: Async function
+void visit_AwaitExpr(ASTNode* node); // Phase 8: Await expression
 void visit_IslecCagirma(ASTNode* node); // İleri bildirim
 void visit_DonusKomutu(ASTNode* node); // İleri bildirim
 void visit_TypeofExpr(ASTNode* node); // Phase 5.7: typeof operator
@@ -5022,13 +5111,7 @@ void visit_Blok(ASTNode* node) {
 
 void visit_Yazdir(ASTNode* node) {
 
-    // 1. İfadeyi ziyaret et (sonuç RAX'e yüklenecek)
-    visit(node->tek_ifade_data.ifade);
-
-    // 2. C 'printf' fonksiyonunu çağır
-    asm_append(&text_section, "    ; --- PRINT Başlangıç ---");
-
-    // İfadenin tipine göre format string seç
+    // İfadenin tipine göre format string seç (ÖNCE tip belirle, sonra visit et)
     bool is_string = false;
 
     if (node->tek_ifade_data.ifade->type == AST_METIN) {
@@ -5050,7 +5133,8 @@ void visit_Yazdir(ASTNode* node) {
     } else if (node->tek_ifade_data.ifade->type == AST_BUILTIN_CALL) {
         // Built-in call ise, string döndüren fonksiyonları kontrol et
         TokenType func_type = node->tek_ifade_data.ifade->builtin_call_data.function_type;
-        if (func_type == TOKEN_BUILTIN_GET_ENV ||
+        if (func_type == TOKEN_BUILTIN_STR ||  // Phase 7.9+: str() returns string
+            func_type == TOKEN_BUILTIN_GET_ENV ||
             func_type == TOKEN_BUILTIN_READ_BINARY ||
             func_type == TOKEN_BUILTIN_GET_FILE_INFO ||
             func_type == TOKEN_BUILTIN_GET_CURRENT_DIR ||
@@ -5062,7 +5146,25 @@ void visit_Yazdir(ASTNode* node) {
             func_type == TOKEN_BUILTIN_GET_DIRECTORY) {
             is_string = true;
         }
+    } else if (node->tek_ifade_data.ifade->type == AST_ISLEC_CAGIRMA) {
+        // Function call - check if it's a string-returning function
+        char* func_name = node->tek_ifade_data.ifade->islec_cagirma_data.hedef_ad->value;
+        if (strcmp(func_name, "str") == 0 ||
+            strcmp(func_name, "SUBSTR") == 0 ||
+            strcmp(func_name, "STRCAT") == 0 ||
+            strcmp(func_name, "STRING_BIRLESTIR") == 0 ||
+            strcmp(func_name, "STRING_KARAKTER_AL") == 0 ||
+            strcmp(func_name, "STRING_ALT") == 0 ||
+            strcmp(func_name, "KODU_KARAKTERE") == 0) {
+            is_string = true;
+        }
     }
+
+    // 1. İfadeyi ziyaret et (sonuç RAX'e yüklenecek)
+    visit(node->tek_ifade_data.ifade);
+
+    // 2. C 'printf' fonksiyonunu çağır
+    asm_append(&text_section, "    ; --- PRINT Başlangıç ---");
 
 
     if (is_string) {
@@ -5997,9 +6099,14 @@ void visit_IslecTanimlama(ASTNode* node) {
     }
     kapsam_degisken_sayisi = global_sayisi;
     kapsam_yigin_ofseti = 0;  // Fonksiyon stack'i sıfırdan başlar
+    
+    // Phase 7.6: Enter function scope so variables are local, not global
+    kapsam_gir();
 
     // 1. Fonksiyon Etiketini Tanımla
-    sprintf(buffer, "%s:", islec_adi);
+    // Special handling for main - rename to mlp_main to avoid conflict with C entry point
+    const char* label_name = (strcmp(islec_adi, "main") == 0) ? "mlp_main" : islec_adi;
+    sprintf(buffer, "%s:", label_name);
     asm_append(&text_section, buffer);
     sprintf(buffer, "    ; --- Islec Tanimlama: %s ---", islec_adi);
     asm_append(&text_section, buffer);
@@ -6013,7 +6120,17 @@ void visit_IslecTanimlama(ASTNode* node) {
     int param_sayisi = node->islec_tanimlama_data.parametre_sayisi;
     for (int i = 0; i < param_sayisi; i++) {
         char* param_adi = node->islec_tanimlama_data.parametreler[i]->value;
-        char* adres = kapsam_degisken_yer_ayir(param_adi, "SAYISAL");
+        
+        // Phase 7.6: Check if this parameter is an array
+        int is_array = 0;
+        if (node->islec_tanimlama_data.parametre_is_array != NULL) {
+            is_array = node->islec_tanimlama_data.parametre_is_array[i];
+        }
+        
+        // Arrays are passed as pointers (already in register)
+        // For array parameters, we store the pointer directly
+        char* tip = is_array ? "ARRAY_SAYISAL" : "SAYISAL";
+        char* adres = kapsam_degisken_yer_ayir(param_adi, tip);
         sprintf(buffer, "    mov %s, %s", adres, arg_registerleri[i]);
         asm_append(&text_section, buffer);
         free(adres);
@@ -6028,15 +6145,702 @@ void visit_IslecTanimlama(ASTNode* node) {
     asm_append(&text_section, "    pop rbp");
     asm_append(&text_section, "    ret");
 
+    // Phase 7.6: Exit function scope
+    kapsam_cik();
+
     // 6. Önceki kapsamı geri yükle
     kapsam_degisken_sayisi = onceki_degisken_sayisi;
     kapsam_yigin_ofseti = onceki_yigin_ofseti;
+}
+
+// Phase 7.1: Lambda Expression Code Generation
+// Lambda counter for generating unique labels
+static int lambda_counter = 0;
+static int await_label_counter = 0; // Phase 8: Await loop labels
+static int in_async_function = 0;   // Phase 8: Flag for async function context
+static char* async_promise_var = NULL; // Phase 8: Current async function's promise variable
+static char* async_function_name = NULL; // Phase 8.7: Current async function name for continuations
+static int async_state_counter = 0;    // Phase 8.5: State machine await counter
+static int async_state_machine_mode = 0; // Phase 8.5: 1 if generating state machine code
+static char* async_state_var = NULL;     // Phase 8.5: Current state variable address
+
+// Phase 7.9: Closure support - Find free variables in AST
+void find_free_variables(ASTNode* node, char** free_vars, int* free_count, 
+                         Token** lambda_params, int param_count) {
+    if (node == NULL) return;
+    
+    // Check if this is a variable reference
+    if (node->type == AST_DEGISKEN) {
+        char* var_name = node->degisken_data.ad->value;
+        
+        // Check if it's a lambda parameter
+        bool is_param = false;
+        for (int i = 0; i < param_count; i++) {
+            if (strcmp(lambda_params[i]->value, var_name) == 0) {
+                is_param = true;
+                break;
+            }
+        }
+        
+        // If not a parameter, check if it's an outer variable
+        if (!is_param) {
+            Degisken* var = kapsam_degisken_bul(var_name);
+            if (var != NULL) {
+                // This is potentially a captured variable!
+                // Check if already in list
+                bool already_captured = false;
+                for (int i = 0; i < *free_count; i++) {
+                    if (strcmp(free_vars[i], var_name) == 0) {
+                        already_captured = true;
+                        break;
+                    }
+                }
+                
+                if (!already_captured) {
+                    free_vars[*free_count] = strdup(var_name);
+                    (*free_count)++;
+                }
+            }
+        }
+        return;
+    }
+    
+    // Recursively traverse AST
+    switch (node->type) {
+        case AST_IKILI_ISLEM:
+            find_free_variables(node->ikili_islem_data.sol, free_vars, free_count, lambda_params, param_count);
+            find_free_variables(node->ikili_islem_data.sag, free_vars, free_count, lambda_params, param_count);
+            break;
+        case AST_ISLEC_CAGIRMA:
+            for (int i = 0; i < node->islec_cagirma_data.arguman_sayisi; i++) {
+                find_free_variables(node->islec_cagirma_data.argumanlar[i], free_vars, free_count, lambda_params, param_count);
+            }
+            break;
+        // Add more cases as needed
+        default:
+            break;
+    }
+}
+
+void visit_Lambda(ASTNode* node) {
+    char buffer[512];
+    
+    // Phase 7.9: Detect captured variables at codegen time (when scope is ready)
+    char** captured_vars = NULL;
+    int captured_count = 0;
+    
+    if (node->lambda_data.captured_vars == NULL) {
+        // Detect captured variables now (first time only)
+        captured_vars = (char**)malloc(sizeof(char*) * 50);
+        find_free_variables(node->lambda_data.govde, captured_vars, &captured_count,
+                           node->lambda_data.parametreler, node->lambda_data.parametre_sayisi);
+        node->lambda_data.captured_vars = captured_vars;
+        node->lambda_data.captured_count = captured_count;
+    } else {
+        // Already detected (use existing values)
+        captured_vars = node->lambda_data.captured_vars;
+        captured_count = node->lambda_data.captured_count;
+    }
+    
+    // Closure struct approach:
+    // If lambda captures variables, we allocate a closure struct on heap
+    // containing the captured variable values, and pass it as hidden parameter
+    // Closure struct approach:
+    // If lambda captures variables, we allocate a closure struct on heap
+    // containing the captured variable values, and pass it as hidden parameter
+    
+    // Generate unique label for this lambda
+    char lambda_label[64];
+    sprintf(lambda_label, "__lambda_%d", lambda_counter++);
+    
+    char closure_label[64];
+    sprintf(closure_label, "__closure_%d", lambda_counter - 1);
+    
+    // =========================
+    // CLOSURE GENERATION (ALWAYS - even for non-capturing lambdas)
+    // =========================
+    // Uniform calling convention: ALL lambdas are closures
+    // Non-capturing lambda = closure with only function pointer
+    sprintf(buffer, "    ; --- Closure Allocation (captures: %d) ---", captured_count);
+    asm_append(&text_section, buffer);
+    
+    // 1. Allocate closure struct on heap
+    // Closure struct layout:
+    //   [0-7]   = function pointer (8 bytes)
+    //   [8-15]  = captured_var_1 (8 bytes)  [only if captured_count > 0]
+    //   [16-23] = captured_var_2 (8 bytes)  [only if captured_count > 0]
+    //   ...
+    int closure_size = 8 + (captured_count * 8);  // function_ptr + vars
+    sprintf(buffer, "    mov rdi, %d  ; Closure size (func_ptr + %d vars)", 
+            closure_size, captured_count);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    call malloc");
+    sprintf(buffer, "    mov [rel %s], rax  ; Save closure base", closure_label);
+    asm_append(&text_section, buffer);
+    
+    // 2. Store function pointer at offset 0
+    sprintf(buffer, "    lea rbx, [rel %s]  ; Get lambda function address", lambda_label);
+    asm_append(&text_section, buffer);
+    sprintf(buffer, "    mov rcx, [rel %s]  ; Load closure base", closure_label);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    mov [rcx], rbx  ; Store function pointer at offset 0");
+    
+    // 3. Copy captured variables into closure struct (starting at offset 8)
+    if (captured_count > 0) {
+        for (int i = 0; i < captured_count; i++) {
+            char* var_name = node->lambda_data.captured_vars[i];
+            Degisken* var = kapsam_degisken_bul(var_name);
+            
+            if (var == NULL) {
+                fprintf(stderr, "ERROR: Captured variable '%s' not found in scope!\n", var_name);
+                exit(1);
+            }
+            
+            sprintf(buffer, "    ; Capture '%s' at offset %d", var_name, 8 + (i * 8));
+            asm_append(&text_section, buffer);
+            
+            sprintf(buffer, "    mov rbx, %s  ; Load variable", var->asm_adresi);
+            asm_append(&text_section, buffer);
+            
+            sprintf(buffer, "    mov rcx, [rel %s]  ; Load closure base", closure_label);
+            asm_append(&text_section, buffer);
+            
+            sprintf(buffer, "    mov [rcx+%d], rbx  ; Store in closure", 8 + (i * 8));
+            asm_append(&text_section, buffer);
+        }
+    }
+    
+    // 4. Return closure pointer (RAX) - ALWAYS (uniform calling convention)
+    sprintf(buffer, "    mov rax, [rel %s]  ; Lambda returns closure pointer", closure_label);
+    asm_append(&text_section, buffer);
+    
+    // DON'T jump - lambda is deferred, not inline!
+    // Lambda function will be appended to lambda_section at the end
+    
+    // =========================
+    // LAMBDA FUNCTION DEFINITION (DEFERRED TO lambda_section)
+    // =========================
+    
+    // Add closure storage to data section (ALWAYS)
+    sprintf(buffer, "%s: dq 0  ; Closure pointer storage", closure_label);
+    asm_append(&data_section, buffer);
+    
+    // Save current scope context
+    int onceki_degisken_sayisi = kapsam_degisken_sayisi;
+    int onceki_yigin_ofseti = kapsam_yigin_ofseti;
+    
+    // Keep globals, reset locals (like normal functions do)
+    int global_sayisi = 0;
+    for (int i = 0; i < kapsam_degisken_sayisi; i++) {
+        if (kapsam_haritasi[i].scope_level == 0) {
+            global_sayisi++;
+        }
+    }
+    
+    // Move globals to beginning
+    int new_idx = 0;
+    for (int i = 0; i < kapsam_degisken_sayisi; i++) {
+        if (kapsam_haritasi[i].scope_level == 0) {
+            if (i != new_idx) {
+                kapsam_haritasi[new_idx] = kapsam_haritasi[i];
+            }
+            new_idx++;
+        }
+    }
+    kapsam_degisken_sayisi = global_sayisi;
+    kapsam_yigin_ofseti = 0;
+    kapsam_gir();
+    
+    // Generate lambda function code in DEFERRED lambda_section
+    sprintf(buffer, "\n%s:", lambda_label);
+    asm_append(&lambda_section, buffer);
+    
+    if (captured_count > 0) {
+        sprintf(buffer, "    ; --- Lambda with Closure (params: %d, captured: %d) ---", 
+                node->lambda_data.parametre_sayisi, captured_count);
+    } else {
+        sprintf(buffer, "    ; --- Lambda Expression (params: %d) ---", 
+                node->lambda_data.parametre_sayisi);
+    }
+    asm_append(&lambda_section, buffer);
+    
+    // Function prolog
+    asm_append(&lambda_section, "    push rbp");
+    asm_append(&lambda_section, "    mov rbp, rsp");
+    asm_append(&lambda_section, "    sub rsp, 256");
+    
+    // Save parameters to stack
+    int param_count = node->lambda_data.parametre_sayisi;
+    
+    // UNIFORM CALLING CONVENTION: First parameter (rdi) is ALWAYS closure pointer
+    // (even for non-capturing lambdas, closure just contains function pointer)
+    int param_offset = 1;  // Always 1 - closure pointer is first param
+    
+    // Save closure pointer (always, even if not used for captured vars)
+    char* closure_var = kapsam_degisken_yer_ayir("__closure", "SAYISAL");
+    sprintf(buffer, "    mov %s, rdi  ; Save closure pointer", closure_var);
+    asm_append(&lambda_section, buffer);
+    free(closure_var);
+    
+    for (int i = 0; i < param_count; i++) {
+        char* param_name = node->lambda_data.parametreler[i]->value;
+        char* adres = kapsam_degisken_yer_ayir(param_name, "SAYISAL");
+        sprintf(buffer, "    mov %s, %s  ; Parameter '%s'", 
+                adres, arg_registerleri[i + param_offset], param_name);
+        asm_append(&lambda_section, buffer);
+        free(adres);
+    }
+    
+    // Add captured variables to scope (from closure struct)
+    if (captured_count > 0) {
+        Degisken* closure_var = kapsam_degisken_bul("__closure");
+        
+        for (int i = 0; i < captured_count; i++) {
+            char* var_name = node->lambda_data.captured_vars[i];
+            
+            // Allocate space for captured variable on stack
+            char* var_addr = kapsam_degisken_yer_ayir(var_name, "SAYISAL");
+            
+            // Load from closure struct (offset 8 + i*8)
+            sprintf(buffer, "    ; Load captured '%s' from closure", var_name);
+            asm_append(&lambda_section, buffer);
+            
+            sprintf(buffer, "    mov rbx, %s  ; Closure pointer", closure_var->asm_adresi);
+            asm_append(&lambda_section, buffer);
+            
+            sprintf(buffer, "    mov rax, [rbx+%d]  ; Load from offset %d", 8 + (i * 8), 8 + (i * 8));
+            asm_append(&lambda_section, buffer);
+            
+            sprintf(buffer, "    mov %s, rax  ; Store locally as '%s'", var_addr, var_name);
+            asm_append(&lambda_section, buffer);
+            
+            free(var_addr);
+        }
+    }
+    
+    // CRITICAL: Swap text_section to lambda_section during body evaluation
+    // This ensures body expression generates code into lambda_section
+    // IMPORTANT: Swap only the pointers/state, not structs (to avoid stale pointers after realloc)
+    
+    // Save text_section state
+    char* saved_text_code = text_section.code;
+    size_t saved_text_size = text_section.size;
+    size_t saved_text_capacity = text_section.capacity;
+    
+    // Move lambda_section state to text_section
+    text_section.code = lambda_section.code;
+    text_section.size = lambda_section.size;
+    text_section.capacity = lambda_section.capacity;
+    
+    // Evaluate body expression (generates into text_section which now points to lambda_section's buffer)
+    visit(node->lambda_data.govde);
+    
+    // Save the updated lambda_section state (text_section may have been reallocated)
+    lambda_section.code = text_section.code;
+    lambda_section.size = text_section.size;
+    lambda_section.capacity = text_section.capacity;
+    
+    // Restore text_section state
+    text_section.code = saved_text_code;
+    text_section.size = saved_text_size;
+    text_section.capacity = saved_text_capacity;
+    
+    // Return value is already in RAX
+    asm_append(&lambda_section, "    ; --- Lambda Return ---");
+    asm_append(&lambda_section, "    mov rsp, rbp");
+    asm_append(&lambda_section, "    pop rbp");
+    asm_append(&lambda_section, "    ret");
+    
+    // No skip label needed - lambda is deferred!
+    
+    // Restore scope
+    kapsam_cik();
+    // DON'T restore kapsam_degisken_sayisi - kapsam_cik() already updated it correctly!
+    // Restoring would make freed pointers in kapsam_haritasi appear valid → double free!
+    // Only restore stack offset
+    kapsam_yigin_ofseti = onceki_yigin_ofseti;
+}
+
+// Phase 8.5: Count await expressions in AST (for state machine)
+int count_awaits_in_node(ASTNode* node) {
+    if (node == NULL) return 0;
+    
+    int count = 0;
+    
+    if (node->type == AST_AWAIT_EXPR) {
+        count = 1;
+    }
+    
+    // Traverse child nodes based on type
+    switch (node->type) {
+        case AST_BLOK:
+            for (int i = 0; i < node->blok_data.sayisi; i++) {
+                count += count_awaits_in_node(node->blok_data.komutlar[i]);
+            }
+            break;
+            
+        case AST_IF_STATEMENT_KOMUTU:
+            count += count_awaits_in_node(node->kosul_data.kosul);
+            count += count_awaits_in_node(node->kosul_data.ise_blok);
+            if (node->kosul_data.degilse_blok) {
+                count += count_awaits_in_node(node->kosul_data.degilse_blok);
+            }
+            break;
+            
+        case AST_WHILE_LOOP_KOMUTU:
+            count += count_awaits_in_node(node->dongu_data.kosul);
+            count += count_awaits_in_node(node->dongu_data.govde);
+            break;
+            
+        case AST_FOR_KOMUTU:
+            if (node->for_data.baslangic) {
+                count += count_awaits_in_node(node->for_data.baslangic);
+            }
+            if (node->for_data.bitis) {
+                count += count_awaits_in_node(node->for_data.bitis);
+            }
+            if (node->for_data.adim) {
+                count += count_awaits_in_node(node->for_data.adim);
+            }
+            count += count_awaits_in_node(node->for_data.govde);
+            break;
+            
+        case AST_RETURN_STATEMENT_KOMUTU:
+            if (node->tek_ifade_data.ifade) {
+                count += count_awaits_in_node(node->tek_ifade_data.ifade);
+            }
+            break;
+            
+        case AST_IKILI_ISLEM:
+            count += count_awaits_in_node(node->ikili_islem_data.sol);
+            count += count_awaits_in_node(node->ikili_islem_data.sag);
+            break;
+            
+        case AST_AWAIT_EXPR:
+            count++;  // Count this await
+            count += count_awaits_in_node(node->await_data.ifade);
+            break;
+            
+        case AST_ISLEC_CAGIRMA:
+            for (int i = 0; i < node->islec_cagirma_data.arguman_sayisi; i++) {
+                count += count_awaits_in_node(node->islec_cagirma_data.argumanlar[i]);
+            }
+            break;
+            
+        case AST_VARIABLE_DECLARATION:
+            if (node->tanimlama_data.ifade) {
+                count += count_awaits_in_node(node->tanimlama_data.ifade);
+            }
+            break;
+            
+        case AST_ASSIGNMENT_KOMUTU:
+            count += count_awaits_in_node(node->atama_data.ifade);
+            break;
+            
+        default:
+            // Leaf nodes or nodes without await children
+            break;
+    }
+    
+    return count;
+}
+
+// Phase 8: Async Function Code Generation
+void visit_AsyncFunction(ASTNode* node) {
+    char buffer[256];
+    char* func_name = node->async_function_data.ad->value;
+    int param_count = node->async_function_data.parametre_sayisi;
+    
+    // Enter function scope
+    int onceki_degisken_sayisi = kapsam_degisken_sayisi;
+    int onceki_yigin_ofseti = kapsam_yigin_ofseti;
+    
+    // Keep globals, reset locals
+    int global_sayisi = 0;
+    for (int i = 0; i < kapsam_degisken_sayisi; i++) {
+        if (kapsam_haritasi[i].scope_level == 0) {
+            global_sayisi++;
+        }
+    }
+    int new_idx = 0;
+    for (int i = 0; i < kapsam_degisken_sayisi; i++) {
+        if (kapsam_haritasi[i].scope_level == 0) {
+            if (i != new_idx) {
+                kapsam_haritasi[new_idx] = kapsam_haritasi[i];
+            }
+            new_idx++;
+        }
+    }
+    kapsam_degisken_sayisi = global_sayisi;
+    kapsam_yigin_ofseti = 0;
+    kapsam_gir();
+    
+    // Special handling for main - rename to mlp_main
+    const char* label_name = (strcmp(func_name, "main") == 0) ? "mlp_main" : func_name;
+    sprintf(buffer, "\n%s:", label_name);
+    asm_append(&text_section, buffer);
+    sprintf(buffer, "    ; --- Async Function '%s' (params: %d) ---", func_name, param_count);
+    asm_append(&text_section, buffer);
+    
+    // Function prolog
+    asm_append(&text_section, "    push rbp");
+    asm_append(&text_section, "    mov rbp, rsp");
+    asm_append(&text_section, "    sub rsp, 256");
+    
+    // Save parameters to stack
+    for (int i = 0; i < param_count && i < 6; i++) {
+        char* param_name = node->async_function_data.parametreler[i]->value;
+        char* adres = kapsam_degisken_yer_ayir(param_name, "SAYISAL");
+        sprintf(buffer, "    mov %s, %s  ; Parameter '%s'", 
+                adres, arg_registerleri[i], param_name);
+        asm_append(&text_section, buffer);
+        free(adres);
+    }
+    
+    // Create promise at start of async function
+    asm_append(&text_section, "    ; Create promise for async function");
+    asm_append(&text_section, "    call promise_create");
+    
+    // Save promise pointer
+    char* promise_var = kapsam_degisken_yer_ayir("__promise", "SAYISAL");
+    sprintf(buffer, "    mov %s, rax  ; Save promise pointer", promise_var);
+    asm_append(&text_section, buffer);
+    
+    // Phase 8.5: Check if state machine is needed (has await expressions)
+    int await_count = count_awaits_in_node(node->async_function_data.govde);
+    
+    if (await_count == 0) {
+        // No awaits - simple synchronous async function
+        asm_append(&text_section, "    ; No await points - synchronous execution");
+        
+        // Set async context flags
+        in_async_function = 1;
+        async_promise_var = promise_var;
+        
+        // Execute function body
+        visit(node->async_function_data.govde);
+        
+        // Clear async context
+        in_async_function = 0;
+        async_promise_var = NULL;
+        
+        // Fallthrough case handled below
+    } else {
+        // Has awaits - use blocking await (Phase 8.6)
+        sprintf(buffer, "    ; Async function with %d await point(s) - blocking await", await_count);
+        asm_append(&text_section, buffer);
+        
+        // Phase 8.6: Use simple blocking await for now
+        // State machine infrastructure ready but waiting for event loop integration
+        asm_append(&text_section, "    ; PHASE 8.7: Infrastructure ready, using blocking await");
+        
+        // Set async context flags
+        in_async_function = 1;
+        async_promise_var = promise_var;
+        async_function_name = strdup(label_name);  // PHASE 8.7: Track function name
+        async_state_counter = 0;
+        async_state_machine_mode = 0;  // PHASE 8.7: Disabled - using blocking await
+        
+        // Execute function body with blocking await
+        visit(node->async_function_data.govde);
+        
+        // Clear async context
+        in_async_function = 0;
+        async_promise_var = NULL;
+        if (async_function_name) {
+            free(async_function_name);
+            async_function_name = NULL;
+        }
+    }
+    
+    // Fallthrough (no explicit return)
+    // Resolve promise with implicit return value (RAX may be undefined)
+    asm_append(&text_section, "    ; Fallthrough: Resolve promise with implicit return");
+    asm_append(&text_section, "    xor rax, rax  ; Implicit return value = 0");
+    sprintf(buffer, "    mov rdi, %s  ; Promise pointer", promise_var);
+    asm_append(&text_section, buffer);
+    asm_append(&text_section, "    mov rsi, rax  ; Return value");
+    asm_append(&text_section, "    call promise_resolve");
+    
+    // Return promise pointer
+    sprintf(buffer, "    mov rax, %s  ; Return promise", promise_var);
+    asm_append(&text_section, buffer);
+    free(promise_var);
+    
+    // Exit scope
+    kapsam_cik();
+    
+    // Function epilog
+    asm_append(&text_section, "    mov rsp, rbp");
+    asm_append(&text_section, "    pop rbp");
+    asm_append(&text_section, "    ret");
+    
+    // PHASE 8.7: Generate continuation trampolines for non-blocking await
+    if (await_count > 0 && async_state_machine_mode) {
+        asm_append(&text_section, "");
+        sprintf(buffer, "    ; --- Continuation trampolines for %s ---", func_name);
+        asm_append(&text_section, buffer);
+        
+        for (int state = 1; state < await_count; state++) {
+            // Trampoline function: func_name_continue_N
+            sprintf(buffer, "%s_continue_%d:", label_name, state);
+            asm_append(&text_section, buffer);
+            sprintf(buffer, "    ; Continuation for state %d", state);
+            asm_append(&text_section, buffer);
+            
+            // Prolog
+            asm_append(&text_section, "    push rbp");
+            asm_append(&text_section, "    mov rbp, rsp");
+            
+            // RDI contains the promise value (callback argument)
+            // Save it for later retrieval
+            sprintf(buffer, "    push rdi  ; Save promise value");
+            asm_append(&text_section, buffer);
+            
+            // PHASE 8.7: Get AsyncState from global and update state
+            asm_append(&text_section, "    mov rax, [rel global_async_state_ptr]  ; Load AsyncState");
+            sprintf(buffer, "    mov qword [rax+0], %d  ; Set state_number = %d", state, state);
+            asm_append(&text_section, buffer);
+            
+            // Call main async function to resume
+            sprintf(buffer, "    call %s  ; Resume async function", label_name);
+            asm_append(&text_section, buffer);
+            
+            // Epilog
+            asm_append(&text_section, "    pop rbp");
+            asm_append(&text_section, "    ret");
+            asm_append(&text_section, "");
+        }
+    }
+    
+    asm_append(&text_section, "");
+}
+
+// Phase 8: Await Expression Code Generation
+void visit_AwaitExpr(ASTNode* node) {
+    char buffer[256];
+    
+    asm_append(&text_section, "    ; --- Await Expression ---");
+    
+    // Evaluate the awaited expression (should be a promise)
+    visit(node->await_data.ifade);
+    
+    // Promise pointer is now in RAX
+    asm_append(&text_section, "    mov rbx, rax  ; Save promise pointer");
+    
+    // Phase 8.5: Check if we're in state machine mode
+    if (async_state_machine_mode) {
+        // PHASE 8.7: True non-blocking await with continuation callbacks
+        async_state_counter++;  // Increment to next state
+        int current_state = async_state_counter - 1;
+        int next_state = async_state_counter;
+        
+        sprintf(buffer, "    ; PHASE 8.7: Non-blocking await - state %d -> %d", current_state, next_state);
+        asm_append(&text_section, buffer);
+        
+        // Get AsyncState pointer
+        // Problem: We need to access __async_state local variable!
+        // It's stored at a specific stack offset, need to track it
+        
+        // For now, use a global pointer (will fix with proper context later)
+        asm_append(&text_section, "    ; TODO: Get AsyncState from proper context");
+        asm_append(&text_section, "    ; For now: register continuation callback");
+        
+        // Register continuation callback
+        // promise_then(promise, callback_function)
+        asm_append(&text_section, "    mov rdi, rbx  ; Promise pointer");
+        
+        // Get continuation function address
+        sprintf(buffer, "    lea rsi, [rel %s_continue_%d]  ; Continuation function", 
+                async_function_name ? async_function_name : "unknown", next_state);
+        asm_append(&text_section, buffer);
+        
+        asm_append(&text_section, "    call promise_then  ; Register continuation");
+        
+        // Update AsyncState to next state (would need proper context access)
+        asm_append(&text_section, "    ; TODO: Update AsyncState->state_number to next state");
+        
+        // Return from async function (yield control)
+        sprintf(buffer, "    mov rax, %s  ; Return promise", async_promise_var);
+        asm_append(&text_section, buffer);
+        asm_append(&text_section, "    mov rsp, rbp");
+        asm_append(&text_section, "    pop rbp");
+        asm_append(&text_section, "    ret  ; Yield - will resume at continuation");
+        
+        // State label for resumption
+        sprintf(buffer, "__state_%d:", next_state);
+        asm_append(&text_section, buffer);
+        sprintf(buffer, "    ; Resumed after await (state %d)", next_state);
+        asm_append(&text_section, buffer);
+        
+        // Extract value from resolved promise
+        asm_append(&text_section, "    mov rdi, rbx  ; Promise pointer");
+        asm_append(&text_section, "    call promise_get_value");
+        asm_append(&text_section, "    ; Result now in RAX");
+        
+        await_label_counter++;
+    } else {
+        // Simple blocking wait: check if promise is resolved
+        sprintf(buffer, "__await_loop_%d:", await_label_counter);
+        asm_append(&text_section, buffer);
+        
+        asm_append(&text_section, "    mov rdi, rbx  ; Promise pointer");
+        asm_append(&text_section, "    call promise_is_resolved");
+        asm_append(&text_section, "    test rax, rax");
+        sprintf(buffer, "    jz __await_loop_%d  ; Loop until resolved", await_label_counter);
+        asm_append(&text_section, buffer);
+        
+        // Promise resolved - extract value
+        asm_append(&text_section, "    mov rdi, rbx  ; Promise pointer");
+        asm_append(&text_section, "    call promise_get_value");
+        asm_append(&text_section, "    ; Result now in RAX");
+        
+        await_label_counter++;
+    }
 }
 
 void visit_IslecCagirma(ASTNode* node) {
     char* islec_adi = node->islec_cagirma_data.hedef_ad->value;
     int arg_sayisi = node->islec_cagirma_data.arguman_sayisi;
     char buffer[128];
+
+    // Phase 7.2: Check if this is a lambda/function pointer variable
+    // If islec_adi is a variable (not in function registry), treat as indirect call
+    Degisken* var = kapsam_degisken_bul(islec_adi);
+    if (var != NULL) {
+        // It's a variable holding a function pointer or closure pointer
+        sprintf(buffer, "    ; --- Indirect Call: %s(args) ---", islec_adi);
+        asm_append(&text_section, buffer);
+        
+        // Load pointer (could be function pointer or closure pointer)
+        sprintf(buffer, "    mov r10, %s  ; Load pointer", var->asm_adresi);
+        asm_append(&text_section, buffer);
+        
+        // Phase 7.9: Closure struct layout:
+        //   [r10+0]  = function pointer
+        //   [r10+8]  = captured_var_1
+        //   [r10+16] = captured_var_2
+        //   ...
+        
+        // Extract function pointer from closure (offset 0)
+        asm_append(&text_section, "    mov r11, [r10]  ; Extract function pointer");
+        
+        // Prepare arguments
+        // rdi = closure pointer (r10)
+        sprintf(buffer, "    mov rdi, r10  ; First arg = closure pointer");
+        asm_append(&text_section, buffer);
+        
+        // Shift actual arguments to rsi, rdx, rcx, r8, r9
+        for (int i = 0; i < arg_sayisi && i < 5; i++) {
+            visit(node->islec_cagirma_data.argumanlar[i]);
+            sprintf(buffer, "    mov %s, rax", arg_registerleri[i + 1]);
+            asm_append(&text_section, buffer);
+        }
+        
+        // Indirect call through r11 (function pointer)
+        asm_append(&text_section, "    call r11  ; Indirect call via function pointer");
+        return;
+    }
 
     // ===== STRING FONKSİYONLARI KONTROLÜ =====
     if (strcmp(islec_adi, "STRLEN") == 0 && arg_sayisi == 1) {
@@ -6224,6 +7028,27 @@ void visit_IslecCagirma(ASTNode* node) {
         return; // Sonuç RAX'te (1 = eşit, 0 = farklı)
     }
 
+    // ===== TYPE CONVERSION UTILITIES =====
+    // Phase 7.9+: Simplified type conversion wrappers
+    
+    else if (strcmp(islec_adi, "str") == 0 && arg_sayisi == 1) {
+        // str(numeric) - Convert numeric to string
+        // Wrapper for int_to_string()
+        visit(node->islec_cagirma_data.argumanlar[0]);
+        asm_append(&text_section, "    mov rdi, rax  ; Numeric value to convert");
+        asm_append(&text_section, "    call int_to_string  ; Convert to string");
+        return; // Result in RAX (string pointer)
+    }
+    
+    else if (strcmp(islec_adi, "num") == 0 && arg_sayisi == 1) {
+        // num(string) - Convert string to numeric
+        // Wrapper for string_to_int()
+        visit(node->islec_cagirma_data.argumanlar[0]);
+        asm_append(&text_section, "    mov rdi, rax  ; String to convert");
+        asm_append(&text_section, "    call string_to_int  ; Convert to numeric");
+        return; // Result in RAX (numeric value)
+    }
+
     // ===== KULLANICI TANIMLI FONKSİYONLAR =====
     
     // Check if function is in registry
@@ -6392,9 +7217,26 @@ void visit_ArrayErisim(ASTNode* node) {
 
     // Array base adresini bul
     char* array_base = kapsam_degisken_adresi_bul(array_adi);
-
-    // Base + offset hesapla
-    sprintf(buffer, "    lea rbx, %s  ; Array base adresi", array_base);
+    
+    // Check if this is an array parameter (pointer) or local array
+    Degisken* var = NULL;
+    for (int i = 0; i < kapsam_degisken_sayisi; i++) {
+        if (strcmp(kapsam_haritasi[i].ad, array_adi) == 0) {
+            var = &kapsam_haritasi[i];
+            break;
+        }
+    }
+    
+    // Array parameters (pointers) need mov, local arrays need lea
+    int is_pointer = (var && var->tip && strncmp(var->tip, "ARRAY_", 6) == 0);
+    
+    if (is_pointer) {
+        // Array parameter - load pointer value
+        sprintf(buffer, "    mov rbx, %s  ; Load array pointer", array_base);
+    } else {
+        // Local array - compute address
+        sprintf(buffer, "    lea rbx, %s  ; Array base adresi", array_base);
+    }
     asm_append(&text_section, buffer);
     free(array_base);
     asm_append(&text_section, "    pop rax  ; offset'i geri al");
@@ -6424,9 +7266,27 @@ void visit_ArrayAtama(ASTNode* node) {
 
     // Array base adresini bul
     char* array_base = kapsam_degisken_adresi_bul(array_adi);
+    
+    // Check if this is an array parameter (pointer) or local array
+    Degisken* var = NULL;
+    for (int i = 0; i < kapsam_degisken_sayisi; i++) {
+        if (strcmp(kapsam_haritasi[i].ad, array_adi) == 0) {
+            var = &kapsam_haritasi[i];
+            break;
+        }
+    }
+    
+    // Array parameters (pointers) need mov, local arrays need lea
+    int is_pointer = (var && var->tip && strncmp(var->tip, "ARRAY_", 6) == 0);
 
     // Base + offset hesapla
-    sprintf(buffer, "    lea rcx, %s  ; Array base adresi", array_base);
+    if (is_pointer) {
+        // Array parameter - load pointer value
+        sprintf(buffer, "    mov rcx, %s  ; Load array pointer", array_base);
+    } else {
+        // Local array - compute address
+        sprintf(buffer, "    lea rcx, %s  ; Array base adresi", array_base);
+    }
     asm_append(&text_section, buffer);
     free(array_base);
     asm_append(&text_section, "    add rcx, rbx  ; base + offset");
@@ -7331,7 +8191,30 @@ void visit_DonusKomutu(ASTNode* node) {
     // 1. Döndürülecek ifadeyi hesapla (Sonuç RAX'e yüklenir)
     visit(node->tek_ifade_data.ifade);
 
-    // 2. Fonksiyon Çıkışını (Epilog) üret
+    // Phase 8: In async function, resolve promise and jump to end
+    if (in_async_function && async_promise_var != NULL) {
+        char buffer[256];
+        // Save return value
+        asm_append(&text_section, "    mov rbx, rax  ; Save return value");
+        
+        // Resolve promise
+        sprintf(buffer, "    mov rdi, %s  ; Promise pointer", async_promise_var);
+        asm_append(&text_section, buffer);
+        asm_append(&text_section, "    mov rsi, rbx  ; Return value");
+        asm_append(&text_section, "    call promise_resolve");
+        
+        // Return promise pointer (not the value!)
+        sprintf(buffer, "    mov rax, %s  ; Return promise", async_promise_var);
+        asm_append(&text_section, buffer);
+        
+        // Epilog and return
+        asm_append(&text_section, "    mov rsp, rbp");
+        asm_append(&text_section, "    pop rbp");
+        asm_append(&text_section, "    ret");
+        return;
+    }
+
+    // 2. Normal function: Fonksiyon Çıkışını (Epilog) üret
     asm_append(&text_section, "    mov rsp, rbp");
     asm_append(&text_section, "    pop rbp");
     asm_append(&text_section, "    ret");
@@ -7342,6 +8225,66 @@ void visit_DonusKomutu(ASTNode* node) {
  * Sonuç her zaman RAX register'ında kalır.
  */
 void visit_IkiliIslem(ASTNode* node) {
+    // Phase 7.9+: String concatenation için + operatörünü özel olarak handle et
+    if (node->ikili_islem_data.operator_type == TOKEN_PLUS) {
+        // Sol ve sağ tarafın string olup olmadığını kontrol et
+        bool sol_is_string = false;
+        bool sag_is_string = false;
+        
+        // Sol taraf string mi?
+        if (node->ikili_islem_data.sol->type == AST_METIN) {
+            sol_is_string = true;
+        } else if (node->ikili_islem_data.sol->type == AST_BUILTIN_CALL) {
+            TokenType func_type = node->ikili_islem_data.sol->builtin_call_data.function_type;
+            if (func_type == TOKEN_BUILTIN_STR) {
+                sol_is_string = true;
+            }
+        } else if (node->ikili_islem_data.sol->type == AST_ISLEC_CAGIRMA) {
+            char* func_name = node->ikili_islem_data.sol->islec_cagirma_data.hedef_ad->value;
+            if (strcmp(func_name, "str") == 0) {
+                sol_is_string = true;
+            }
+        } else if (node->ikili_islem_data.sol->type == AST_IKILI_ISLEM) {
+            // Nested + operation (chained concatenation) - assume string concat
+            if (node->ikili_islem_data.sol->ikili_islem_data.operator_type == TOKEN_PLUS) {
+                sol_is_string = true;
+            }
+        }
+        
+        // Sağ taraf string mi?
+        if (node->ikili_islem_data.sag->type == AST_METIN) {
+            sag_is_string = true;
+        } else if (node->ikili_islem_data.sag->type == AST_BUILTIN_CALL) {
+            TokenType func_type = node->ikili_islem_data.sag->builtin_call_data.function_type;
+            if (func_type == TOKEN_BUILTIN_STR) {
+                sag_is_string = true;
+            }
+        } else if (node->ikili_islem_data.sag->type == AST_ISLEC_CAGIRMA) {
+            char* func_name = node->ikili_islem_data.sag->islec_cagirma_data.hedef_ad->value;
+            if (strcmp(func_name, "str") == 0) {
+                sag_is_string = true;
+            }
+        }
+        
+        // Eğer en az biri string ise string_concat kullan
+        if (sol_is_string || sag_is_string) {
+            // 1. Sol tarafı hesapla
+            visit(node->ikili_islem_data.sol);
+            asm_append(&text_section, "    push rax"); // Sol sonucu stack'e
+            
+            // 2. Sağ tarafı hesapla
+            visit(node->ikili_islem_data.sag);
+            asm_append(&text_section, "    mov rsi, rax"); // Sağ -> RSI (2. parametre)
+            asm_append(&text_section, "    pop rdi");       // Sol -> RDI (1. parametre)
+            
+            // 3. string_concat çağır
+            asm_append(&text_section, "    call string_concat");
+            // Sonuç RAX'te (birleştirilmiş string)
+            return;
+        }
+    }
+    
+    // Normal numeric işlemler için eski kod
     // 1. Sağ tarafı (ifade 2) hesapla ve yığına (stack) it
     visit(node->ikili_islem_data.sag);
     asm_append(&text_section, "    push rax"); // Sağ tarafın sonucunu yığına kaydet
@@ -7558,6 +8501,20 @@ void visit(ASTNode* node) {
             visit_Ternary(node);
             break;
 
+        // Phase 7.1: Lambda expression
+        case AST_LAMBDA:
+            visit_Lambda(node);
+            break;
+
+        // Phase 8: Async/Await
+        case AST_ASYNC_FUNCTION:
+            visit_AsyncFunction(node);
+            break;
+            
+        case AST_AWAIT_EXPR:
+            visit_AwaitExpr(node);
+            break;
+
         // YENİ: İşleç Tanımlama
         case AST_FUNCTION_DECLARATION:
             visit_IslecTanimlama(node);
@@ -7737,7 +8694,10 @@ void visit(ASTNode* node) {
 
 // AsmCode yapısı için ayrılan belleği serbest bırakır
 void free_asm_code(AsmCode* section) {
-    free(section->code);
+    if (section->code != NULL) {
+        free(section->code);
+        section->code = NULL;
+    }
 }
 
 char* generate_asm(ASTNode* root) {
@@ -7756,9 +8716,15 @@ char* generate_asm(ASTNode* root) {
     text_section.code = NULL;
     text_section.size = 0;
     text_section.capacity = 0;
+    
+    lambda_section.code = NULL;
+    lambda_section.size = 0;
+    lambda_section.capacity = 0;
 
     // 1. .data bölümü
     asm_append(&data_section, "extern printf");
+    asm_append(&data_section, "extern malloc");      // Phase 7.9: Heap allocation for closures
+    asm_append(&data_section, "extern free");        // PHASE 8.7: Free AsyncState
     asm_append(&data_section, "extern strlen");      // ✅ Ekle
     asm_append(&data_section, "extern strcmp");      // ✅ Ekle
     asm_append(&data_section, "extern strstr");      // ✅ Ekle
@@ -7775,6 +8741,28 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern runtime_dizin_al");
     asm_append(&data_section, "extern runtime_dizin_al"); // Self-host için eklendi
     asm_append(&data_section, "extern tyd_fix_cwd"); // ✅ yeni
+
+    // Phase 8: Promise and Event Loop functions (simple_runtime.c)
+    asm_append(&data_section, "extern promise_create");
+    asm_append(&data_section, "extern promise_resolve");
+    asm_append(&data_section, "extern promise_reject");
+    asm_append(&data_section, "extern promise_then");
+    asm_append(&data_section, "extern promise_is_resolved");
+    asm_append(&data_section, "extern promise_get_value");
+    asm_append(&data_section, "extern promise_free");
+    asm_append(&data_section, "extern event_loop_create");
+    asm_append(&data_section, "extern event_loop_push_task");
+    asm_append(&data_section, "extern event_loop_pop_task");
+    asm_append(&data_section, "extern event_loop_run");
+    asm_append(&data_section, "extern event_loop_stop");
+    
+    // Phase 8.8: Async I/O Primitives
+    asm_append(&data_section, "extern async_sleep");
+    asm_append(&data_section, "extern async_read_file");
+    asm_append(&data_section, "extern async_write_file");
+    asm_append(&data_section, "extern async_http_get");
+    asm_append(&data_section, "extern promise_all");
+    asm_append(&data_section, "extern promise_all_simple");
 
     // String fonksiyonları (runtime.c'deki wrapperlar)
     asm_append(&data_section, "extern string_birlestir");
@@ -7819,6 +8807,7 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "extern gui_canvas_draw_circle");
     asm_append(&data_section, "extern gui_canvas_render");
     asm_append(&data_section, "extern int_to_string");
+    asm_append(&data_section, "extern string_to_int");
 
     // Phase 5.2: Error Handling
     asm_append(&data_section, "extern exit_with_code");
@@ -7896,6 +8885,9 @@ char* generate_asm(ASTNode* root) {
     asm_append(&data_section, "section .data");
     asm_append(&data_section, "    format_sayi db \"%ld\", 10, 0"); // %d -> %ld
     asm_append(&data_section, "    format_metin db \"%s\", 10, 0");
+    // Phase 8.6: Global event loop pointer for async main
+    asm_append(&data_section, "    global_event_loop_ptr: dq 0");
+    asm_append(&data_section, "    global_async_state_ptr: dq 0  ; PHASE 8.7: Current AsyncState for continuations");
 
     // 2. .text bölümü başlangıcı
     asm_append(&text_section, "section .text");
@@ -7913,10 +8905,51 @@ char* generate_asm(ASTNode* root) {
     if (blok->type == AST_BLOK) {
         // İlk geçiş: Ana program komutları (fonksiyon tanımları hariç)
         asm_append(&text_section, "    ; --- Ana Program Akışı ---");
+        
+        // Check if there's a main function - if yes, call it
+        int has_main = 0;
+        int main_is_async = 0;
         for (int i = 0; i < blok->blok_data.sayisi; i++) {
             ASTNode* node = blok->blok_data.komutlar[i];
-            if (node->type != AST_FUNCTION_DECLARATION) {
-                visit(node);
+            if ((node->type == AST_FUNCTION_DECLARATION || node->type == AST_ASYNC_FUNCTION)) {
+                char* func_name = (node->type == AST_FUNCTION_DECLARATION) 
+                    ? node->islec_tanimlama_data.ad->value 
+                    : node->async_function_data.ad->value;
+                if (strcmp(func_name, "main") == 0) {
+                    has_main = 1;
+                    main_is_async = (node->type == AST_ASYNC_FUNCTION);
+                    break;
+                }
+            }
+        }
+        
+        if (has_main) {
+            if (main_is_async) {
+                // Phase 8.6: Async main with blocking await
+                // Note: Currently using blocking await in state machine
+                // Future: Will use event loop for true non-blocking
+                asm_append(&text_section, "    ; Async main (blocking await for now)");
+                asm_append(&text_section, "    call mlp_main");
+                asm_append(&text_section, "    ; Wait for promise resolution (blocking)");
+                asm_append(&text_section, "    mov rbx, rax  ; Save promise");
+                asm_append(&text_section, "__main_wait:");
+                asm_append(&text_section, "    mov rdi, rbx");
+                asm_append(&text_section, "    call promise_is_resolved");
+                asm_append(&text_section, "    test rax, rax");
+                asm_append(&text_section, "    jz __main_wait  ; Wait until resolved");
+                asm_append(&text_section, "    mov rdi, rbx");
+                asm_append(&text_section, "    call promise_get_value");
+            } else {
+                // Regular synchronous main
+                asm_append(&text_section, "    call mlp_main");
+            }
+        } else {
+            // No main - execute top level commands
+            for (int i = 0; i < blok->blok_data.sayisi; i++) {
+                ASTNode* node = blok->blok_data.komutlar[i];
+                if (node->type != AST_FUNCTION_DECLARATION && node->type != AST_ASYNC_FUNCTION) {
+                    visit(node);
+                }
             }
         }
     } else {
@@ -7936,7 +8969,7 @@ char* generate_asm(ASTNode* root) {
         asm_append(&text_section, "; === Fonksiyon Tanımları ===");
         for (int i = 0; i < blok->blok_data.sayisi; i++) {
             ASTNode* node = blok->blok_data.komutlar[i];
-            if (node->type == AST_FUNCTION_DECLARATION) {
+            if (node->type == AST_FUNCTION_DECLARATION || node->type == AST_ASYNC_FUNCTION) {
                 visit(node);
             }
         }
@@ -7944,7 +8977,8 @@ char* generate_asm(ASTNode* root) {
 
     // 7. Tüm bölümleri birleştir
     size_t stack_section_size = strlen("\nsection .note.GNU-stack noalloc noexec nowrite progbits\n\ndb 0\n");
-    size_t total_size = data_section.size + text_section.size + stack_section_size + 2;
+    size_t lambda_size = (lambda_section.code != NULL) ? lambda_section.size : 0;
+    size_t total_size = data_section.size + text_section.size + lambda_size + stack_section_size + 50;  // +50 for safety
     char* final_code = (char*)malloc(total_size);
     if (final_code == NULL) {
         perror("Hafıza ayırma hatası (final assembly)");
@@ -7954,6 +8988,12 @@ char* generate_asm(ASTNode* root) {
     strcpy(final_code, data_section.code);
     strcat(final_code, "\n");
     strcat(final_code, text_section.code);
+    
+    // Phase 7.9: Append deferred lambda functions
+    if (lambda_section.code != NULL && lambda_section.size > 0) {
+        strcat(final_code, "\n; === Lambda Functions ===\n");
+        strcat(final_code, lambda_section.code);
+    }
 
     // ✅ NASM uyumlu stack notu + 1 byte içerik ekle (boş bölüm strip olmasın)
     strcat(final_code, "\nsection .note.GNU-stack noalloc noexec nowrite progbits\n");
@@ -7961,6 +9001,7 @@ char* generate_asm(ASTNode* root) {
 
     free_asm_code(&data_section);
     free_asm_code(&text_section);
+    free_asm_code(&lambda_section);
     kapsam_temizle();
 
     return final_code;

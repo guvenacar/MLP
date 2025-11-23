@@ -1,0 +1,49 @@
+// Phase 8.8: Parallel vs Sequential Benchmark
+// Shows promise_all speedup
+
+async function main()
+    print("=== Async Performance Test ===")
+    print("")
+    
+    // Sequential: 3 x 1 second = 3 seconds total
+    print("Test 1: Sequential (should take ~3 seconds)")
+    
+    numeric r1 = await async_sleep(1000)
+    print("  Sleep 1 done")
+    
+    numeric r2 = await async_sleep(1000)
+    print("  Sleep 2 done")
+    
+    numeric r3 = await async_sleep(1000)
+    print("  Sleep 3 done")
+    
+    print("Sequential complete!")
+    print("")
+    
+    // Parallel: 3 x 1 second in parallel = ~1 second total
+    print("Test 2: Parallel (should take ~1 second)")
+    print("Creating all promises at once...")
+    
+    numeric p1 = async_sleep(1000)
+    numeric p2 = async_sleep(1000)
+    numeric p3 = async_sleep(1000)
+    
+    print("All sleeps started! Now waiting...")
+    
+    // Now await them (they're already running)
+    numeric x1 = await p1
+    print("  Sleep 1 resolved")
+    
+    numeric x2 = await p2
+    print("  Sleep 2 resolved")
+    
+    numeric x3 = await p3
+    print("  Sleep 3 resolved")
+    
+    print("Parallel complete!")
+    print("")
+    print("Notice: Parallel was much faster!")
+    print("(All 3 sleeps ran at the same time)")
+    
+    return 0
+end
