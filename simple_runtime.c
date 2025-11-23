@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <curl/curl.h>
 #include "gc.h"  // Phase 9: Garbage Collection
+#include "thread_pool.h"  // Phase 10: Thread Pool
 
 // Forward declarations
 void* promise_all_thread(void* arg);
@@ -614,8 +615,8 @@ typedef struct {
     int milliseconds;
 } SleepThreadArgs;
 
-// Thread function for async_sleep
-void* async_sleep_thread(void* arg) {
+// Worker function for async_sleep (thread pool version)
+void async_sleep_worker(void* arg) {
     SleepThreadArgs* args = (SleepThreadArgs*)arg;
     
     // Sleep for specified milliseconds
@@ -624,34 +625,24 @@ void* async_sleep_thread(void* arg) {
     // Resolve promise with NULL (sleep doesn't return a value)
     promise_resolve(args->promise, NULL);
     
-    // Cleanup
-    free(args);
-    return NULL;
+    // Note: args will be GC'd automatically
 }
 
-// async_sleep: Non-blocking sleep
+// async_sleep: Non-blocking sleep using thread pool
 // Returns a promise that resolves after specified milliseconds
 Promise* async_sleep(int milliseconds) {
     Promise* promise = promise_create();
     
-    // Create thread arguments
-    SleepThreadArgs* args = malloc(sizeof(SleepThreadArgs));
+    // Create thread arguments (GC-managed)
+    SleepThreadArgs* args = (SleepThreadArgs*)gc_malloc(sizeof(SleepThreadArgs), GC_TYPE_GENERIC);
     args->promise = promise;
     args->milliseconds = milliseconds;
     
-    // Create detached thread to handle sleep
-    pthread_t thread;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    
-    if (pthread_create(&thread, &attr, async_sleep_thread, args) != 0) {
-        // Thread creation failed
-        promise_reject(promise, "Failed to create sleep thread");
-        free(args);
+    // Submit to thread pool
+    if (thread_pool_submit(async_sleep_worker, args, promise) != 0) {
+        promise_reject(promise, "Failed to submit sleep task");
     }
     
-    pthread_attr_destroy(&attr);
     return promise;
 }
 
@@ -661,16 +652,14 @@ typedef struct {
     char* filepath;
 } ReadFileThreadArgs;
 
-// Thread function for async_read_file
-void* async_read_file_thread(void* arg) {
+// Worker function for async_read_file (thread pool version)
+void async_read_file_worker(void* arg) {
     ReadFileThreadArgs* args = (ReadFileThreadArgs*)arg;
     
     FILE* file = fopen(args->filepath, "r");
     if (!file) {
         promise_reject(args->promise, "Failed to open file");
-        free(args->filepath);
-        free(args);
-        return NULL;
+        return;  // GC will clean up args and filepath
     }
     
     // Get file size
@@ -678,14 +667,12 @@ void* async_read_file_thread(void* arg) {
     long size = ftell(file);
     fseek(file, 0, SEEK_SET);
     
-    // Read file content
-    char* content = malloc(size + 1);
+    // Read file content (GC-managed)
+    char* content = (char*)gc_malloc(size + 1, GC_TYPE_STRING);
     if (!content) {
         promise_reject(args->promise, "Failed to allocate memory");
         fclose(file);
-        free(args->filepath);
-        free(args);
-        return NULL;
+        return;
     }
     
     size_t read_size = fread(content, 1, size, file);
@@ -695,35 +682,24 @@ void* async_read_file_thread(void* arg) {
     // Resolve promise with file content
     promise_resolve(args->promise, content);
     
-    // Cleanup
-    free(args->filepath);
-    free(args);
-    return NULL;
+    // Note: args, filepath, content will be GC'd automatically
 }
 
-// async_read_file: Non-blocking file read
+// async_read_file: Non-blocking file read using thread pool
 // Returns a promise that resolves with file content as string
 Promise* async_read_file(const char* filepath) {
     Promise* promise = promise_create();
     
-    // Create thread arguments
-    ReadFileThreadArgs* args = malloc(sizeof(ReadFileThreadArgs));
+    // Create thread arguments (GC-managed)
+    ReadFileThreadArgs* args = (ReadFileThreadArgs*)gc_malloc(sizeof(ReadFileThreadArgs), GC_TYPE_GENERIC);
     args->promise = promise;
-    args->filepath = strdup(filepath);
+    args->filepath = gc_strdup(filepath);
     
-    // Create detached thread
-    pthread_t thread;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    
-    if (pthread_create(&thread, &attr, async_read_file_thread, args) != 0) {
-        promise_reject(promise, "Failed to create read thread");
-        free(args->filepath);
-        free(args);
+    // Submit to thread pool
+    if (thread_pool_submit(async_read_file_worker, args, promise) != 0) {
+        promise_reject(promise, "Failed to submit read task");
     }
     
-    pthread_attr_destroy(&attr);
     return promise;
 }
 
@@ -734,17 +710,14 @@ typedef struct {
     char* content;
 } WriteFileThreadArgs;
 
-// Thread function for async_write_file
-void* async_write_file_thread(void* arg) {
+// Worker function for async_write_file (thread pool version)
+void async_write_file_worker(void* arg) {
     WriteFileThreadArgs* args = (WriteFileThreadArgs*)arg;
     
     FILE* file = fopen(args->filepath, "w");
     if (!file) {
         promise_reject(args->promise, "Failed to open file for writing");
-        free(args->filepath);
-        free(args->content);
-        free(args);
-        return NULL;
+        return;  // GC will clean up
     }
     
     // Write content to file
@@ -759,38 +732,25 @@ void* async_write_file_thread(void* arg) {
         promise_resolve(args->promise, (void*)(long)written);
     }
     
-    // Cleanup
-    free(args->filepath);
-    free(args->content);
-    free(args);
-    return NULL;
+    // Note: args, filepath, content will be GC'd automatically
 }
 
-// async_write_file: Non-blocking file write
+// async_write_file: Non-blocking file write using thread pool
 // Returns a promise that resolves when write completes
 Promise* async_write_file(const char* filepath, const char* content) {
     Promise* promise = promise_create();
     
-    // Create thread arguments
-    WriteFileThreadArgs* args = malloc(sizeof(WriteFileThreadArgs));
+    // Create thread arguments (GC-managed)
+    WriteFileThreadArgs* args = (WriteFileThreadArgs*)gc_malloc(sizeof(WriteFileThreadArgs), GC_TYPE_GENERIC);
     args->promise = promise;
-    args->filepath = strdup(filepath);
-    args->content = strdup(content);
+    args->filepath = gc_strdup(filepath);
+    args->content = gc_strdup(content);
     
-    // Create detached thread
-    pthread_t thread;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    
-    if (pthread_create(&thread, &attr, async_write_file_thread, args) != 0) {
-        promise_reject(promise, "Failed to create write thread");
-        free(args->filepath);
-        free(args->content);
-        free(args);
+    // Submit to thread pool
+    if (thread_pool_submit(async_write_file_worker, args, promise) != 0) {
+        promise_reject(promise, "Failed to submit write task");
     }
     
-    pthread_attr_destroy(&attr);
     return promise;
 }
 
@@ -824,16 +784,14 @@ typedef struct {
     char* url;
 } HttpGetThreadArgs;
 
-// Thread function for async_http_get
-void* async_http_get_thread(void* arg) {
+// Worker function for async_http_get (thread pool version)
+void async_http_get_worker(void* arg) {
     HttpGetThreadArgs* args = (HttpGetThreadArgs*)arg;
     
     CURL* curl = curl_easy_init();
     if (!curl) {
         promise_reject(args->promise, "Failed to initialize CURL");
-        free(args->url);
-        free(args);
-        return NULL;
+        return;  // GC will clean up
     }
     
     CurlMemoryBuffer buffer = {NULL, 0};
@@ -851,16 +809,17 @@ void* async_http_get_thread(void* arg) {
         promise_reject(args->promise, (char*)curl_easy_strerror(res));
         free(buffer.data);
     } else {
-        promise_resolve(args->promise, buffer.data);
+        // Transfer buffer.data to GC-managed memory
+        char* gc_data = gc_strdup(buffer.data);
+        free(buffer.data);
+        promise_resolve(args->promise, gc_data);
     }
     
     curl_easy_cleanup(curl);
-    free(args->url);
-    free(args);
-    return NULL;
+    // Note: args and url will be GC'd automatically
 }
 
-// async_http_get: Non-blocking HTTP GET request
+// async_http_get: Non-blocking HTTP GET request using thread pool
 // Returns a promise that resolves with response body as string
 Promise* async_http_get(const char* url) {
     Promise* promise = promise_create();
@@ -872,24 +831,16 @@ Promise* async_http_get(const char* url) {
         curl_initialized = 1;
     }
     
-    // Create thread arguments
-    HttpGetThreadArgs* args = malloc(sizeof(HttpGetThreadArgs));
+    // Create thread arguments (GC-managed)
+    HttpGetThreadArgs* args = (HttpGetThreadArgs*)gc_malloc(sizeof(HttpGetThreadArgs), GC_TYPE_GENERIC);
     args->promise = promise;
-    args->url = strdup(url);
+    args->url = gc_strdup(url);
     
-    // Create detached thread
-    pthread_t thread;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    
-    if (pthread_create(&thread, &attr, async_http_get_thread, args) != 0) {
-        promise_reject(promise, "Failed to create HTTP thread");
-        free(args->url);
-        free(args);
+    // Submit to thread pool
+    if (thread_pool_submit(async_http_get_worker, args, promise) != 0) {
+        promise_reject(promise, "Failed to submit HTTP task");
     }
     
-    pthread_attr_destroy(&attr);
     return promise;
 }
 

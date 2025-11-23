@@ -1,13 +1,14 @@
 /**
  * test_gc_async_ops.c - Test GC with Real Async Operations
  * 
- * Phase 9.4: Test async operations with GC
+ * Phase 9.4 + 10: Test async operations with GC and Thread Pool
  * Date: 23 Kasım 2025
  */
 
 #include <stdio.h>
 #include <unistd.h>
 #include "gc.h"
+#include "thread_pool.h"
 
 // Forward declarations
 typedef struct Promise Promise;
@@ -23,13 +24,17 @@ extern Promise* async_timeout(Promise* task, int timeout_ms);
 
 int main() {
     printf("╔════════════════════════════════════════════════════════════╗\n");
-    printf("║     GC with Real Async Operations - Integration Test      ║\n");
-    printf("║                    Phase 9.4 - Day 4-5                     ║\n");
+    printf("║  GC + Thread Pool - Real Async Operations Integration     ║\n");
+    printf("║              Phase 9.4 + Phase 10.1 - Day 5                ║\n");
     printf("╚════════════════════════════════════════════════════════════╝\n\n");
     
     // Initialize GC
     gc_init();
-    printf("[GC] Initialized for async testing\n\n");
+    printf("[GC] Initialized for async testing\n");
+    
+    // Initialize Thread Pool
+    thread_pool_init(4);
+    printf("[ThreadPool] Initialized with 4 workers\n\n");
     
     // Test 1: async_sleep with GC
     printf("--- Test 1: async_sleep(50ms) with GC ---\n");
@@ -102,9 +107,12 @@ int main() {
     gc_print_stats();
     printf("╚════════════════════════════════════════════════════════════╝\n\n");
     
-    // Shutdown
+    // Shutdown thread pool
+    thread_pool_shutdown();
+    
+    // Shutdown GC
     gc_shutdown();
     
-    printf("🎉 All async operations work correctly with GC!\n\n");
+    printf("🎉 All async operations work correctly with GC + Thread Pool!\n\n");
     return 0;
 }
