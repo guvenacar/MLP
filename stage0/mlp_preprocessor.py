@@ -295,6 +295,12 @@ class MLPPreprocessor:
             if re.match(r'\bif\b.*\bthen\b', stripped):
                 result_lines.append(line)
                 block_stack.append(('if', indent_level))
+            elif re.match(r'\benum\b', stripped):
+                result_lines.append(line)
+                block_stack.append(('enum', indent_level))
+            elif re.match(r'\bstruct\b', stripped):
+                result_lines.append(line)
+                block_stack.append(('struct', indent_level))
             elif re.match(r'\bfor\b.*\bto\b', stripped):
                 result_lines.append(line)
                 block_stack.append(('for', indent_level))
