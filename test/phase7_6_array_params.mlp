@@ -1,0 +1,51 @@
+// Phase 7.6: Array Parameters Test
+// Tests passing arrays to functions as pointers
+
+// Test 1: Sum array elements
+function sum_array(arr[], size)
+    numeric total = 0
+    numeric i = 0
+    while i < size
+        total = total + arr[i]
+        i = i + 1
+    end
+    return total
+end
+
+// Test 2: Modify array elements (pass by reference)
+function double_array(arr[], size)
+    numeric i = 0
+    while i < size
+        arr[i] = arr[i] * 2
+        i = i + 1
+    end
+end
+
+// Test 3: Find maximum
+function find_max(arr[], size)
+    numeric max = arr[0]
+    numeric i = 1
+    while i < size
+        if arr[i] > max then
+            max = arr[i]
+        end
+        i = i + 1
+    end
+    return max
+end
+
+// Main tests
+numeric numbers[] = [10, 20, 30, 40, 50]
+
+// Test sum
+numeric total = sum_array(numbers, 5)
+print(total)  // Should print 150
+
+// Test modification
+double_array(numbers, 5)
+total = sum_array(numbers, 5)
+print(total)  // Should print 300
+
+// Test max
+numeric maximum = find_max(numbers, 5)
+print(maximum)  // Should print 100

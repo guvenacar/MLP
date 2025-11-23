@@ -1,0 +1,58 @@
+// Phase 7.4: Map/Filter/Reduce with Lambdas
+
+// Map function - applies fn to each element
+function map_transform(arr[], size, fn)
+    numeric i = 0
+    while i < size
+        arr[i] = fn(arr[i])
+        i = i + 1
+    end
+end
+
+// Filter function - counts elements matching predicate
+function count_matching(arr[], size, predicate)
+    numeric count = 0
+    numeric i = 0
+    while i < size
+        if predicate(arr[i]) then
+            count = count + 1
+        end
+        i = i + 1
+    end
+    return count
+end
+
+// Reduce function - combines elements
+function reduce(arr[], size, fn, initial)
+    numeric result = initial
+    numeric i = 0
+    while i < size
+        result = fn(result, arr[i])
+        i = i + 1
+    end
+    return result
+end
+
+// Test data
+numeric numbers[] = [1, 2, 3, 4, 5]
+
+// Test 1: Map with lambda - double all elements
+map_transform(numbers, 5, lambda(x) => x * 2)
+print numbers[0]  // 2
+print numbers[2]  // 6
+print numbers[4]  // 10
+
+// Reset array
+numbers[0] = 1
+numbers[1] = 2
+numbers[2] = 3
+numbers[3] = 4
+numbers[4] = 5
+
+// Test 2: Filter with lambda - count even numbers
+numeric even_count = count_matching(numbers, 5, lambda(x) => x % 2 == 0)
+print even_count  // 2 (2 and 4 are even)
+
+// Test 3: Reduce with lambda - sum all
+numeric sum = reduce(numbers, 5, lambda(acc, x) => acc + x, 0)
+print sum  // 15

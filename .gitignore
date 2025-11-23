@@ -99,6 +99,11 @@ test_russian
 test_chinese
 test_hindi
 test_check
+test_*
+!test_*.mlp
+!test/*.mlp
+demo_*
+!demo_*.mlp
 
 # Benchmark binaries
 bench_*
@@ -118,3 +123,20 @@ lexer_tr
 # MLP Preprocessor
 mlp_preprocessor
 runtime/test_list
+node_modules
+
+# Temporary build files
+mlpc_fixed
+mlpc_test
+mlpc.backup
+-o
+Open
+
+# Phase documents (keep important ones tracked)
+# PHASE*.md files should be tracked
+
+# Backup files
+*.backup
+*.broken
+self_host/*.backup
+self_host/*.broken

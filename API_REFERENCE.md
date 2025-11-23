@@ -1,7 +1,7 @@
 # MLP API Reference
 
-**Version:** Phase 5.3
-**Last Updated:** November 21, 2025
+**Version:** Phase 7.9+
+**Last Updated:** November 23, 2025
 
 ---
 
@@ -18,7 +18,7 @@
 | **Time Utilities** | 4 functions | Phase 5.3 🔄 |
 | **Path Utilities** | 4 functions | Phase 5.3 🔄 |
 | **String Ops** | 15 functions (6 existing + 9 new) | Phase 3 ✅ |
-| **Type Conversions** | 6 functions | Phase 4 ✅ |
+| **Type Conversions** | 8 functions (str, num + 6 existing) | Phase 7.9+ ✅ |
 | **Math Operations** | 4 functions | Phase 4 ✅ |
 | **Lists** | 7 functions | Phase 2 ✅ |
 | **Hash Maps** | 8 functions | Phase 3 ✅ |
@@ -307,7 +307,19 @@ Free memory.
 
 ---
 
-## 🔄 Type Conversions (Phase 4) 🔄
+## 🔄 Type Conversions (Phase 4) ✅
+
+### `str(value: numeric) -> string` **⭐ NEW (Phase 7.9+)**
+Convert numeric value to string (wrapper for int_to_string).
+- **Returns:** String representation (e.g., `42` → `"42"`)
+- **Example:** `print "Value: " + str(42);  -- "Value: 42"`
+- **Use Case:** Clean syntax for type conversion in expressions
+
+### `num(text: string) -> numeric` **⭐ NEW (Phase 7.9+)**
+Parse numeric value from string (wrapper for string_to_int).
+- **Returns:** Parsed number or `0` on error
+- **Example:** `numeric value = num("123");  -- 123`
+- **Use Case:** User input parsing, config file reading
 
 ### `int_to_string(num: int) -> string`
 Convert integer to string.
@@ -333,6 +345,7 @@ Create single-character string from code point.
 Concatenate two strings (alternative to `+` operator).
 - **Returns:** New concatenated string
 - **Example:** `string result = string_concat("Hello", "World");`
+- **Note:** The `+` operator now works for string concatenation: `"Hello" + " World"`
 
 ### `string_char_at(str: string, index: int) -> string`
 Get character at index.

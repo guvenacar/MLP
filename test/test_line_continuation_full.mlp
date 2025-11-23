@@ -1,0 +1,57 @@
+-- Test: Comprehensive Line Continuation Support
+-- Phase 6.3: Backslash line continuation (Python-style)
+
+print "=== Line Continuation Tests ==="
+
+-- Test 1: Long arithmetic expression
+numeric result = 100 + \
+                 200 + \
+                 300 + \
+                 400
+
+print "Test 1 - Long expression: 100+200+300+400"
+print result
+
+-- Test 2: Long function call with multiple arguments
+function add_five(a, b, c, d, e)
+    return a + b + c + d + e
+end function
+
+numeric sum = add_five(10, \
+                       20, \
+                       30, \
+                       40, \
+                       50)
+
+print "Test 2 - Function with 5 args: 10+20+30+40+50"
+print sum
+
+-- Test 3: Long string concatenation
+string message = "This is a very long " + \
+                 "message that spans " + \
+                 "multiple lines using " + \
+                 "line continuation"
+
+print "Test 3 - Multi-line string concat:"
+print message
+
+-- Test 4: Long condition
+numeric x = 100
+numeric y = 200
+
+if x > 50 and \
+   y > 100 and \
+   x + y == 300 then
+    print "Test 4 - Multi-line condition: PASSED"
+end if
+
+-- Test 5: Complex expression with operators
+numeric complex = (10 + 20) * \
+                  (30 + 40) / \
+                  (5 + 5)
+
+print "Test 5 - Complex: (10+20)*(30+40)/(5+5)"
+print complex
+
+print ""
+print "=== All Line Continuation Tests Completed! ==="

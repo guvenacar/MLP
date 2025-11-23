@@ -1,0 +1,37 @@
+function double_array(numeric arr[], numeric len)
+    numeric i = 0
+    while i < len
+        arr[i] = arr[i] * 2
+        i = i + 1
+    end
+end
+
+function sum_array(numeric arr[], numeric len)
+    numeric total = 0
+    numeric i = 0
+    while i < len
+        total = total + arr[i]
+        i = i + 1
+    end
+    return total
+end
+
+function map_array(numeric arr[], numeric len, function f)
+    numeric i = 0
+    while i < len
+        arr[i] = f(arr[i])
+        i = i + 1
+    end
+end
+
+numeric numbers[5] = [1, 2, 3, 4, 5]
+
+print(sum_array(numbers, 5))
+
+double_array(numbers, 5)
+print(numbers[0])
+print(numbers[4])
+
+map_array(numbers, 5, lambda(x) => x + 10)
+print(numbers[0])
+print(numbers[4])

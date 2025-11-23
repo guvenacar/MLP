@@ -1,0 +1,32 @@
+// Phase 7.8: Function factory patterns (without closure)
+// Test various lambda return scenarios
+
+// 1. Simple lambda return
+function make_doubler()
+    return lambda(n) => n * 2
+end
+
+// 2. Lambda with multiple parameters
+function make_adder()
+    return lambda(x, y) => x + y
+end
+
+// 3. Lambda returning lambda (nested)
+function make_multiplier()
+    return lambda(a) => a * 10
+end
+
+// Test 1: Simple doubler
+numeric doubler = make_doubler()
+numeric r1 = doubler(5)
+print r1  // 10
+
+// Test 2: Adder with two params
+numeric adder = make_adder()
+numeric r2 = adder(3, 7)
+print r2  // 10
+
+// Test 3: Multiplier
+numeric multiplier = make_multiplier()
+numeric r3 = multiplier(4)
+print r3  // 40

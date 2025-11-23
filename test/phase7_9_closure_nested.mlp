@@ -1,0 +1,16 @@
+-- Phase 7.9: Nested Closure Test
+-- Lambda returns another lambda, both capturing variables
+
+function make_multiplier(x)
+    -- First lambda captures 'x'
+    return lambda(y) => {
+        -- Second lambda captures both 'x' and 'y'
+        return lambda(z) => x * y * z
+    }
+end
+
+numeric mult_2 = make_multiplier(2)
+numeric mult_2_3 = mult_2(3)
+numeric result = mult_2_3(4)  -- Should be 24 (2 * 3 * 4)
+
+print "Nested closure result: " + str(result)

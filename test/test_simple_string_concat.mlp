@@ -1,0 +1,8 @@
+-- Test: Simple string concatenation without line continuation
+-- This is to isolate the bug
+
+string hello = "Hello"
+string world = " World"
+string result = hello + world
+
+print result

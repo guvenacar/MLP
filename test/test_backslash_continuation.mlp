@@ -1,0 +1,10 @@
+-- Test: Line continuation with backslash
+-- Testing if backslash allows continuing to next line
+
+-- Test 1: Try backslash continuation (Python-style)
+numeric x = 100 + \
+            200 + \
+            300
+
+print "X should be 600:"
+print x

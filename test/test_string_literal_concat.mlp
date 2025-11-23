@@ -1,0 +1,8 @@
+-- Test: String literal concatenation
+print "=== String Literal Concatenation Test ==="
+
+-- Test 1: Direct string literal concatenation
+string msg = "Hello" + " " + "World"
+print msg
+
+print "Test passed!"

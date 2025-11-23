@@ -1,0 +1,4 @@
+// Simple lambda call test
+numeric double_fn = lambda(n) => n * 2
+numeric result = double_fn(5)
+print result

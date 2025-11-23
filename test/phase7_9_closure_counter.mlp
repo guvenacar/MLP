@@ -1,0 +1,25 @@
+-- Phase 7.9: Closure Counter Test
+-- Closure maintains state across calls
+
+function make_counter()
+    numeric count = 0
+    
+    -- Lambda captures 'count' and modifies it
+    return lambda() => {
+        count = count + 1
+        return count
+    }
+end
+
+numeric counter1 = make_counter()
+print "Counter 1 call 1: " + str(counter1())  -- 1
+print "Counter 1 call 2: " + str(counter1())  -- 2
+print "Counter 1 call 3: " + str(counter1())  -- 3
+
+-- Each counter has its own state
+numeric counter2 = make_counter()
+print "Counter 2 call 1: " + str(counter2())  -- 1
+print "Counter 2 call 2: " + str(counter2())  -- 2
+
+-- counter1 should still maintain its state
+print "Counter 1 call 4: " + str(counter1())  -- 4

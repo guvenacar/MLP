@@ -1,0 +1,227 @@
+// Phase 7.7: Functional Programming - Map/Filter/Reduce
+// Higher-order array functions using array parameters
+
+// ============================================================================
+// MAP - Apply function to each element, return new array
+// ============================================================================
+
+// map_double: Double each element
+function map_double(arr[], size)
+    numeric result[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // Max 10 elements for now
+    numeric i = 0
+    while i < size
+        result[i] = arr[i] * 2
+        i = i + 1
+    end
+    return result
+end
+
+// map_square: Square each element  
+function map_square(arr[], size)
+    numeric result[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    numeric i = 0
+    while i < size
+        result[i] = arr[i] * arr[i]
+        i = i + 1
+    end
+    return result
+end
+
+// map_increment: Add 1 to each element
+function map_increment(arr[], size)
+    numeric result[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    numeric i = 0
+    while i < size
+        result[i] = arr[i] + 1
+        i = i + 1
+    end
+    return result
+end
+
+// ============================================================================
+// FILTER - Keep elements that pass predicate
+// ============================================================================
+
+// filter_positive: Keep only positive numbers
+function filter_positive(arr[], size, out_size)
+    numeric result[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    numeric count = 0
+    numeric i = 0
+    
+    while i < size
+        if arr[i] > 0 then
+            result[count] = arr[i]
+            count = count + 1
+        end
+        i = i + 1
+    end
+    
+    // Store output size in the parameter (pass by reference would be better)
+    // For now, caller needs to check how many elements were actually added
+    return result
+end
+
+// filter_even: Keep only even numbers
+function filter_even(arr[], size, out_size)
+    numeric result[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    numeric count = 0
+    numeric i = 0
+    
+    while i < size
+        numeric remainder = arr[i] - ((arr[i] / 2) * 2)  // modulo via division
+        if remainder == 0 then
+            result[count] = arr[i]
+            count = count + 1
+        end
+        i = i + 1
+    end
+    
+    return result
+end
+
+// filter_greater_than_10: Keep elements > 10
+function filter_greater_than_10(arr[], size)
+    numeric result[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    numeric count = 0
+    numeric i = 0
+    
+    while i < size
+        if arr[i] > 10 then
+            result[count] = arr[i]
+            count = count + 1
+        end
+        i = i + 1
+    end
+    
+    return result
+end
+
+// ============================================================================
+// REDUCE - Combine all elements into single value
+// ============================================================================
+
+// reduce_sum: Sum all elements
+function reduce_sum(arr[], size)
+    numeric accumulator = 0
+    numeric i = 0
+    
+    while i < size
+        accumulator = accumulator + arr[i]
+        i = i + 1
+    end
+    
+    return accumulator
+end
+
+// reduce_product: Multiply all elements
+function reduce_product(arr[], size)
+    numeric accumulator = 1
+    numeric i = 0
+    
+    while i < size
+        accumulator = accumulator * arr[i]
+        i = i + 1
+    end
+    
+    return accumulator
+end
+
+// reduce_max: Find maximum element
+function reduce_max(arr[], size)
+    if size == 0 then
+        return 0
+    end
+    
+    numeric max_val = arr[0]
+    numeric i = 1
+    
+    while i < size
+        if arr[i] > max_val then
+            max_val = arr[i]
+        end
+        i = i + 1
+    end
+    
+    return max_val
+end
+
+// reduce_min: Find minimum element
+function reduce_min(arr[], size)
+    if size == 0 then
+        return 0
+    end
+    
+    numeric min_val = arr[0]
+    numeric i = 1
+    
+    while i < size
+        if arr[i] < min_val then
+            min_val = arr[i]
+        end
+        i = i + 1
+    end
+    
+    return min_val
+end
+
+// ============================================================================
+// UTILITY - Helper functions
+// ============================================================================
+
+// count_if: Count elements matching condition
+function count_if_positive(arr[], size)
+    numeric count = 0
+    numeric i = 0
+    
+    while i < size
+        if arr[i] > 0 then
+            count = count + 1
+        end
+        i = i + 1
+    end
+    
+    return count
+end
+
+// any: Check if any element matches
+function any_positive(arr[], size)
+    numeric i = 0
+    
+    while i < size
+        if arr[i] > 0 then
+            return 1  // true
+        end
+        i = i + 1
+    end
+    
+    return 0  // false
+end
+
+// all: Check if all elements match
+function all_positive(arr[], size)
+    numeric i = 0
+    
+    while i < size
+        if arr[i] <= 0 then
+            return 0  // false
+        end
+        i = i + 1
+    end
+    
+    return 1  // true
+end
+
+// print_array: Helper to display array
+function print_array(arr[], size)
+    print(91)  // ASCII for '['
+    numeric i = 0
+    while i < size
+        print(arr[i])
+        if i < size - 1 then
+            print(44)  // ASCII for ','
+            print(32)  // ASCII for ' '
+        end
+        i = i + 1
+    end
+    print(93)  // ASCII for ']'
+end

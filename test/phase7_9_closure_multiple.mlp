@@ -1,0 +1,26 @@
+-- Phase 7.9: Multiple Variable Capture Test
+-- Lambda captures multiple variables from outer scope
+
+function make_calculator(a, b)
+    -- Lambda captures both 'a' and 'b'
+    return lambda(op) => {
+        if op == 1 then
+            return a + b
+        else if op == 2 then
+            return a - b
+        else if op == 3 then
+            return a * b
+        else if op == 4 then
+            return a / b
+        else
+            return 0
+        end
+    }
+end
+
+numeric calc = make_calculator(20, 4)
+
+print "Add: " + str(calc(1))      -- 24 (20 + 4)
+print "Subtract: " + str(calc(2)) -- 16 (20 - 4)
+print "Multiply: " + str(calc(3)) -- 80 (20 * 4)
+print "Divide: " + str(calc(4))   -- 5 (20 / 4)

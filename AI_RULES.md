@@ -1,8 +1,81 @@
 # 🤖 AI Asistanları İçin MLP Projesi Kılavuzu
 
-**Son Güncelleme:** 22 Kasım 2025
-**Durum:** 🚀 Production Ready v3.0 + Phase 6.2 Complete (Generic Types) ✅
+**Son Güncelleme:** 23 Kasım 2025
+**Durum:** 🚀 Production Ready v3.0 + Phase 7.9 Complete (Closures & Lambda) ✅
 **Hedef:** Multi-Language Programming Language - Kod yazmanın dil engeli yok!
+
+---
+
+## 🔴🔴🔴 ZORUNLU İLK ADIM: BELGE OKUMA KURALI 🔴🔴🔴
+
+**⚠️ HERHANGİ BİR GÖREV YAPMADAN ÖNCE MUTLAKA AŞAĞIDA BELGELERE BAKMANIZ GEREKİR!**
+
+### 📚 Zorunlu Okuma Listesi (SIRALAMA ÖNEMLİ!)
+
+Herhangi bir kod değişikliği, özellik ekleme, bug fix veya dokümantasyon güncellemesi yapmadan önce **MUTLAKA ŞU SIRAYLA** bu belgeleri okuyun:
+
+```bash
+# 1. AI_RULES.md (Bu dosya - Türkçe kurallar)
+cat /home/pardus/projeler/tyd-lang/MLP/AI_RULES.md
+
+# 2. AI_GUIDELINES.md (İngilizce teknik kurallar)
+cat /home/pardus/projeler/tyd-lang/MLP/AI_GUIDELINES.md
+
+# 3. TODO.md (Tamamlanan ve bekleyen özellikler)
+cat /home/pardus/projeler/tyd-lang/MLP/TODO.md
+
+# 4. ROADMAP.md (Proje yol haritası ve phase durumu)
+cat /home/pardus/projeler/tyd-lang/MLP/ROADMAP.md
+
+# 5. SPECS.md (Dil spesifikasyonu - KİLİTLİ BELGE)
+cat /home/pardus/projeler/tyd-lang/MLP/SPECS.md
+```
+
+### ⚠️ NEDEN BU BELGELER OKUNMALIDIR?
+
+1. **AI_RULES.md** → Türkçe kurallar, self-hosting prensibi, veri tipleri kritik bilgileri
+2. **AI_GUIDELINES.md** → İngilizce teknik kurallar, BigDecimal sistemi, phase dokümantasyonu
+3. **TODO.md** → Hangi özellikler tamamlandı, hangileri eksik? (TEKRAR YAPMAMAK İÇİN!)
+4. **ROADMAP.md** → Hangi phase'deyiz? Öncelikler neler? Planlı özellikler neler?
+5. **SPECS.md** → Dil syntax'ı, kuralları, mimari detayları (KUTSAL KİTAP!)
+
+### 🚫 BU BELGELERİ OKUMADAN KOD YAZARSANIZ:
+
+- ❌ Zaten tamamlanmış özellikleri tekrar implement edersiniz
+- ❌ Yanlış veri tipleri kullanırsınız (int/float yerine numeric!)
+- ❌ SPECS.md'deki kurallara aykırı kod yazarsınız
+- ❌ Self-hosting prensibini ihlal edersiniz
+- ❌ Belgelerin güncellenmesini unutursunuz
+- ❌ Proje felsefesine aykırı değişiklikler yaparsınız
+- ❌ Kullanıcının zamanını ve token'larını boşa harcar sınız
+
+### ✅ GÖREV TAMAMLANDIĞINDA:
+
+Herhangi bir özellik implementasyonu veya bug fix sonrasında **MUTLAKA** şu belgeleri güncelleyin:
+
+1. **TODO.md** → Tamamlanan özellikleri ✅ işaretle, yeni eksikler ekle
+2. **ROADMAP.md** → Phase durumunu güncelle, timeline'ı revize et
+3. **SPECS.md** → Yeni syntax eklediyseniz (kullanıcı onayıyla!)
+4. **AI_RULES.md** → Yeni kritik kurallar eklediyseniz
+5. **AI_GUIDELINES.md** → Yeni teknik detaylar eklediyseniz
+
+### 📋 BELGE OKUMA CHECKLİSTİ
+
+Her görev öncesi bu checklist'i tamamlayın:
+
+```markdown
+- [ ] AI_RULES.md okudum (Türkçe kurallar, self-hosting, veri tipleri)
+- [ ] AI_GUIDELINES.md okudum (BigDecimal, phase docs, teknik kurallar)
+- [ ] TODO.md okudum (Tamamlanan özellikler listesi - TEKRAR YAPMAM!)
+- [ ] ROADMAP.md okudum (Şu anki phase, öncelikler, timeline)
+- [ ] SPECS.md okudum (Dil syntax'ı, kurallar, mimari)
+- [ ] Yapacağım özellik TODO.md'de YOK (kontrol ettim)
+- [ ] Yapacağım değişiklik SPECS.md'ye UYGUN
+- [ ] Self-hosting prensibine UYGUN (MLP dilinde yazacağım)
+- [ ] Kullanıcıdan ONAY aldım (gerekirse)
+```
+
+**BU CHECKLİSTİ TAMAMLAMADAN HİÇBİR KOD YAZMAYA BAŞLAMAYIN!**
 
 ---
 

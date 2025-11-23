@@ -1,0 +1,15 @@
+-- Test: String Concatenation with Line Continuation
+-- Minimal test to debug the issue
+
+print "Test: String concat with backslash continuation"
+
+-- First, test simple string concat without continuation
+string simple = "Hello " + "World"
+print simple
+
+-- Now test with continuation
+string multiline = "First " + \
+                   "Second"
+
+print "If you see this, multiline string concat works!"
+print multiline

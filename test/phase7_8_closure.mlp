@@ -1,0 +1,14 @@
+// Phase 7.8: Lambda return with closure (variable capture)
+// This requires capturing 'n' from outer scope
+
+function make_adder(n)
+    return lambda(x) => x + n  // 'n' should be captured!
+end
+
+numeric add5 = make_adder(5)
+numeric result1 = add5(10)  // Should be 15 (10 + 5)
+print result1
+
+numeric add10 = make_adder(10)
+numeric result2 = add10(10)  // Should be 20 (10 + 10)
+print result2

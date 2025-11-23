@@ -1,0 +1,294 @@
+// Phase 7.7: Functional Programming Test
+// Tests map, filter, reduce patterns with array parameters
+
+// Test data
+numeric numbers[] = [1, 2, 3, 4, 5]
+numeric mixed[] = [-2, -1, 0, 1, 2]
+numeric values[] = [5, 10, 15, 20, 25]
+
+// ============================================================================
+// Test MAP functions
+// ============================================================================
+
+print(61)  // '='
+print(61)
+print(61)
+print(32)  // ' '
+print(77)  // 'M'
+print(65)  // 'A'
+print(80)  // 'P'
+print(32)
+print(84)  // 'T'
+print(101) // 'e'
+print(115) // 's'
+print(116) // 't'
+print(115) // 's'
+print(32)
+print(61)
+print(61)
+print(61)
+
+// Test 1: Map double
+numeric doubled[] = map_double(numbers, 5)
+numeric i = 0
+print(68)  // 'D'
+print(111) // 'o'
+print(117) // 'u'
+print(98)  // 'b'
+print(108) // 'l'
+print(101) // 'e'
+print(100) // 'd'
+print(58)  // ':'
+print(32)
+while i < 5
+    print(doubled[i])
+    i = i + 1
+end
+
+// Expected: 2, 4, 6, 8, 10
+
+// Test 2: Map square
+numeric squared[] = map_square(numbers, 5)
+i = 0
+print(83)  // 'S'
+print(113) // 'q'
+print(117) // 'u'
+print(97)  // 'a'
+print(114) // 'r'
+print(101) // 'e'
+print(100) // 'd'
+print(58)
+print(32)
+while i < 5
+    print(squared[i])
+    i = i + 1
+end
+// Expected: 1, 4, 9, 16, 25
+
+// Test 3: Map increment
+numeric incremented[] = map_increment(numbers, 5)
+i = 0
+print(73)  // 'I'
+print(110) // 'n'
+print(99)  // 'c'
+print(114) // 'r'
+print(101) // 'e'
+print(109) // 'm'
+print(101) // 'e'
+print(110) // 'n'
+print(116) // 't'
+print(58)
+print(32)
+while i < 5
+    print(incremented[i])
+    i = i + 1
+end
+// Expected: 2, 3, 4, 5, 6
+
+// ============================================================================
+// Test REDUCE functions
+// ============================================================================
+
+print(61)
+print(61)
+print(61)
+print(32)
+print(82)  // 'R'
+print(69)  // 'E'
+print(68)  // 'D'
+print(85)  // 'U'
+print(67)  // 'C'
+print(69)  // 'E'
+print(32)
+print(84)  // 'T'
+print(101) // 'e'
+print(115) // 's'
+print(116) // 't'
+print(115) // 's'
+print(32)
+print(61)
+print(61)
+print(61)
+
+// Test 4: Sum
+numeric sum = reduce_sum(numbers, 5)
+print(83)  // 'S'
+print(117) // 'u'
+print(109) // 'm'
+print(58)
+print(32)
+print(sum)
+// Expected: 15
+
+// Test 5: Product
+numeric product = reduce_product(numbers, 5)
+print(80)  // 'P'
+print(114) // 'r'
+print(111) // 'o'
+print(100) // 'd'
+print(117) // 'u'
+print(99)  // 'c'
+print(116) // 't'
+print(58)
+print(32)
+print(product)
+// Expected: 120
+
+// Test 6: Max
+numeric maximum = reduce_max(values, 5)
+print(77)  // 'M'
+print(97)  // 'a'
+print(120) // 'x'
+print(58)
+print(32)
+print(maximum)
+// Expected: 25
+
+// Test 7: Min
+numeric minimum = reduce_min(values, 5)
+print(77)  // 'M'
+print(105) // 'i'
+print(110) // 'n'
+print(58)
+print(32)
+print(minimum)
+// Expected: 5
+
+// ============================================================================
+// Test UTILITY functions
+// ============================================================================
+
+print(61)
+print(61)
+print(61)
+print(32)
+print(85)  // 'U'
+print(116) // 't'
+print(105) // 'i'
+print(108) // 'l'
+print(115) // 's'
+print(32)
+print(61)
+print(61)
+print(61)
+
+// Test 8: Count positive
+numeric pos_count = count_if_positive(mixed, 5)
+print(67)  // 'C'
+print(111) // 'o'
+print(117) // 'u'
+print(110) // 'n'
+print(116) // 't'
+print(32)
+print(112) // 'p'
+print(111) // 'o'
+print(115) // 's'
+print(58)
+print(32)
+print(pos_count)
+// Expected: 2 (elements 1, 2)
+
+// Test 9: Any positive
+numeric has_positive = any_positive(mixed, 5)
+print(65)  // 'A'
+print(110) // 'n'
+print(121) // 'y'
+print(32)
+print(112) // 'p'
+print(111) // 'o'
+print(115) // 's'
+print(58)
+print(32)
+print(has_positive)
+// Expected: 1 (true)
+
+// Test 10: All positive
+numeric all_pos = all_positive(numbers, 5)
+print(65)  // 'A'
+print(108) // 'l'
+print(108) // 'l'
+print(32)
+print(112) // 'p'
+print(111) // 'o'
+print(115) // 's'
+print(58)
+print(32)
+print(all_pos)
+// Expected: 1 (true)
+
+numeric all_pos2 = all_positive(mixed, 5)
+print(65)  // 'A'
+print(108) // 'l'
+print(108) // 'l'
+print(32)
+print(112) // 'p'
+print(111) // 'o'
+print(115) // 's'
+print(50)  // '2'
+print(58)
+print(32)
+print(all_pos2)
+// Expected: 0 (false)
+
+// ============================================================================
+// Test chaining operations
+// ============================================================================
+
+print(61)
+print(61)
+print(61)
+print(32)
+print(67)  // 'C'
+print(104) // 'h'
+print(97)  // 'a'
+print(105) // 'i'
+print(110) // 'n'
+print(105) // 'i'
+print(110) // 'n'
+print(103) // 'g'
+print(32)
+print(61)
+print(61)
+print(61)
+
+// Test 11: Double then sum
+numeric doubled_vals[] = map_double(numbers, 5)
+numeric doubled_sum = reduce_sum(doubled_vals, 5)
+print(68)  // 'D'
+print(111) // 'o'
+print(117) // 'u'
+print(98)  // 'b'
+print(108) // 'l'
+print(101) // 'e'
+print(43)  // '+'
+print(83)  // 'S'
+print(117) // 'u'
+print(109) // 'm'
+print(58)
+print(32)
+print(doubled_sum)
+// Expected: 30 (sum of [2,4,6,8,10])
+
+// Test 12: Square then max
+numeric squared_vals[] = map_square(numbers, 5)
+numeric squared_max = reduce_max(squared_vals, 5)
+print(83)  // 'S'
+print(113) // 'q'
+print(117) // 'u'
+print(97)  // 'a'
+print(114) // 'r'
+print(101) // 'e'
+print(43)  // '+'
+print(77)  // 'M'
+print(97)  // 'a'
+print(120) // 'x'
+print(58)
+print(32)
+print(squared_max)
+// Expected: 25 (max of [1,4,9,16,25])
+
+print(68)  // 'D'
+print(111) // 'o'
+print(110) // 'n'
+print(101) // 'e'
+print(33)  // '!'

@@ -1,8 +1,8 @@
 # MLP Language Specification v3.0
 
-**Status:** Production Ready ✅ + Phase 6.2 Generic Types 🚀
-**Last Updated:** November 22, 2025
-**Compiler Version:** 3.0 (Multi-Language) + Phase 6.2 (Generic Types)
+**Status:** Production Ready ✅ + Phase 8 (Async/Await) 🚀
+**Last Updated:** November 23, 2025
+**Compiler Version:** 3.0 + Phase 8.4 (Async/Await Basic Implementation)
 **Architecture:** English-Native Compiler + Multi-Language Preprocessor
 
 ---
@@ -22,6 +22,7 @@
 11. [Adding New Languages](#adding-new-languages)
 12. [Migration Guide](#migration-guide)
 13. **[NEW: Phase 6 - Literal & Generic Types](#phase-6-literal-and-generic-types)** 🚀
+14. **[NEW: Phase 8 - Async/Await & Concurrency](#phase-8-asyncawait--concurrency)** 🚀
 
 ---
 
@@ -1399,7 +1400,918 @@ Test 3: add(5, 7) -> should be 12
 
 ---
 
+### Phase 6.3: Line Continuation (Backslash) ✅
+
+**Status:** 100% Complete (22 Kasım 2025)
+
+MLP now supports Python-style multi-line code using backslash continuation.
+
+**Syntax:**
+
+```mlp
+-- Long arithmetic expression
+numeric x = 100 + \
+            200 + \
+            300
+
+-- Function calls with many arguments
+numeric sum = add_five(10, \
+                       20, \
+                       30, \
+                       40, \
+                       50)
+
+-- Multi-line string concatenation
+string message = "This is a very long " + \
+                 "message that spans " + \
+                 "multiple lines"
+
+-- Complex conditions
+if x > 50 and \
+   y > 100 and \
+   x + y == 300 then
+    print "Condition met!"
+end if
+```
+
+**Implementation:**
+- Lexer detects backslash followed by newline
+- Automatically skips whitespace after continuation
+- Works with all statement types (expressions, function calls, conditions)
+
+**Test Coverage:** `test/test_line_continuation_full.mlp`
+
+---
+
+### Phase 6.4: String Concatenation Operator & Type Inference ✅
+
+**Status:** 100% Complete (22 Kasım 2025)
+
+MLP now features compile-time type inference to support automatic string concatenation with the `+` operator.
+
+**Type Inference System:**
+
+```mlp
+-- Automatic string concatenation
+string hello = "Hello"
+string world = " World"
+string result = hello + world  -- Uses string_concat()
+
+-- Numeric addition (unchanged)
+numeric a = 10
+numeric b = 20
+numeric sum = a + b  -- Uses add instruction
+
+-- String literals
+string msg = "Hello" + " " + "World"  -- Automatically detected as string
+```
+
+**Implementation Details:**
+
+1. **`infer_type()` Function:**
+   - Analyzes AST nodes at compile-time
+   - Returns "string", "numeric", or "unknown"
+   - Checks symbol table for variable types
+
+2. **Smart `+` Operator:**
+   - If either operand is string → calls `string_concat()`
+   - If both operands are numeric → uses `add rax, rbx`
+   - Type decision made at compile-time (zero runtime overhead)
+
+3. **Supported Scenarios:**
+   - String literal + string literal
+   - String variable + string variable
+   - String + numeric (implicit conversion)
+   - Multi-line string concatenation with backslash
+
+**Assembly Generation:**
+
+```asm
+; String concatenation
+mov rdi, rax  ; Sol operand -> arg1
+mov rsi, rbx  ; Sağ operand -> arg2
+call string_concat
+; Sonuç RAX'te
+
+; Numeric addition
+add rax, rbx
+```
+
+**Test Coverage:** `test/test_string_literal_concat.mlp`, `test/test_line_continuation_full.mlp`
+
+---
+
+## Phase 7: Functional Programming
+
+**Status:** Partial ✅ (Phase 7.6-7.7 Complete)
+**Date Added:** November 23, 2025
+**Compiler:** `self_host/mlp_compiler.c`
+
+### 7.6 Array Parameters (Pass-by-Reference) ✅
+
+**Purpose:** Enable functions to accept arrays as parameters with pointer semantics
+
+**Syntax:**
+```mlp
+// Array parameter - brackets after parameter name
+function sum_array(arr[], size)
+    numeric total = 0
+    numeric i = 0
+    while i < size
+        total = total + arr[i]
+        i = i + 1
+    end
+    return total
+end
+
+// Usage
+numeric numbers[] = [10, 20, 30, 40, 50]
+numeric result = sum_array(numbers, 5)  // 150
+```
+
+**Features:**
+- **Pass-by-reference:** Arrays passed as pointers (not copied)
+- **Modification support:** Changes to `arr[i]` affect original array
+- **Size convention:** Array size passed separately (no built-in length)
+- **Type safety:** Compile-time detection of array parameters
+
+**Implementation:**
+
+1. **Parser Changes:**
+   - Detects `[]` tokens after parameter name
+   - Stores array metadata in `parametre_is_array` array
+   - Syntax: `function name(arr[], size)`
+
+2. **AST Structure:**
+   ```c
+   struct {
+       Token* ad;
+       Token** parametreler;
+       int parametre_sayisi;
+       int* parametre_is_array;  // NEW: Phase 7.6
+       ASTNode** parametre_default_degerleri;
+       ASTNode* govde;
+   } islec_tanimlama_data;
+   ```
+
+3. **Code Generation:**
+   - Array parameters use `ARRAY_SAYISAL` type (pointer semantics)
+   - Element access: `mov rbx, [rbp-8]` (load pointer value)
+   - Local arrays: `lea rbx, [rbp-40]` (compute address)
+   - Critical distinction for correct memory access
+
+4. **Scope Management:**
+   - Functions enter scope with `kapsam_gir()`
+   - Exit scope with `kapsam_cik()`
+   - Prevents global variable naming conflicts
+
+**Assembly Example:**
+```asm
+sum_array:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 256
+    mov [rbp-8], rdi     ; Store array pointer (not address!)
+    mov [rbp-16], rsi    ; Store size
+    
+    ; Access arr[i]:
+    mov rax, [rbp-24]    ; Load i
+    imul rax, 8          ; i * 8 (element size)
+    mov rbx, [rbp-8]     ; Load pointer value (mov, not lea!)
+    add rbx, rax         ; base + offset
+    mov rax, [rbx]       ; Read element
+```
+
+**Test Results:**
+```mlp
+sum_array([10,20,30,40,50], 5)     → 150 ✅
+double_array() modifies original    → 300 ✅  
+find_max([20,40,60,80,100], 5)     → 100 ✅
+```
+
+**Documentation:** `docs/PHASE7_6_ARRAY_PARAMETERS.md`
+
+### 7.7 Functional Programming Patterns ✅
+
+**Purpose:** Map, filter, reduce operations on arrays using higher-order patterns
+
+**Implementation:** Pure MLP library functions in `mlp_lib/functional.mlp`
+
+#### Reduce Operations
+
+Combine array elements into single value:
+
+```mlp
+// Sum all elements
+function reduce_sum(arr[], size)
+    numeric accumulator = 0
+    numeric i = 0
+    while i < size
+        accumulator = accumulator + arr[i]
+        i = i + 1
+    end
+    return accumulator
+end
+
+// Product of all elements
+function reduce_product(arr[], size)
+    numeric accumulator = 1
+    numeric i = 0
+    while i < size
+        accumulator = accumulator * arr[i]
+        i = i + 1
+    end
+    return accumulator
+end
+
+// Find maximum
+function reduce_max(arr[], size)
+    numeric max_val = arr[0]
+    numeric i = 1
+    while i < size
+        if arr[i] > max_val then
+            max_val = arr[i]
+        end
+        i = i + 1
+    end
+    return max_val
+end
+
+// Usage
+numeric numbers[] = [1, 2, 3, 4, 5]
+numeric sum = reduce_sum(numbers, 5)        // 15
+numeric product = reduce_product(numbers, 5) // 120
+numeric max = reduce_max(numbers, 5)        // 5
+```
+
+#### Map Operations (In-Place)
+
+Transform each array element:
+
+```mlp
+// Double each element (modifies original)
+function map_double_inplace(arr[], size)
+    numeric i = 0
+    while i < size
+        arr[i] = arr[i] * 2
+        i = i + 1
+    end
+end
+
+// Usage
+numeric data[] = [1, 2, 3, 4, 5]
+map_double_inplace(data, 5)
+// data is now [2, 4, 6, 8, 10]
+```
+
+#### Utility Operations
+
+Predicate-based operations:
+
+```mlp
+// Count elements matching condition
+function count_positive(arr[], size)
+    numeric count = 0
+    numeric i = 0
+    while i < size
+        if arr[i] > 0 then
+            count = count + 1
+        end
+        i = i + 1
+    end
+    return count
+end
+
+// Check if any element matches
+function any_positive(arr[], size)
+    numeric i = 0
+    while i < size
+        if arr[i] > 0 then
+            return 1  // true
+        end
+        i = i + 1
+    end
+    return 0  // false
+end
+
+// Check if all elements match
+function all_positive(arr[], size)
+    numeric i = 0
+    while i < size
+        if arr[i] <= 0 then
+            return 0  // false
+        end
+        i = i + 1
+    end
+    return 1  // true
+end
+```
+
+**Features:**
+- **Pure MLP:** No runtime C dependencies
+- **Composable:** Chain operations together
+- **Efficient:** Direct array access, no overhead
+- **Extensible:** Easy to add custom operations
+
+**Test Results:**
+```
+sum([1,2,3,4,5])          → 15 ✅
+product([1,2,3,4,5])      → 120 ✅
+max([5,10,15,20,25])      → 25 ✅
+min([5,10,15,20,25])      → 5 ✅
+count_positive([-2,0,1,2]) → 2 ✅
+```
+
+**Library:** `mlp_lib/functional.mlp`
+**Tests:** `test/phase7_7_simple.mlp`, `test/phase7_7_map.mlp`
+
+---
+
+## 7 (Phase 7.1-7.4) - Lambda Expressions & Higher-Order Functions ✅
+
+**Status: Complete** (November 23, 2025)
+
+### Overview
+
+Lambda expressions provide anonymous function support with concise syntax. Combined with function pointers and indirect calls, lambdas enable functional programming patterns including map, filter, and reduce operations.
+
+**Phases:**
+- **7.1:** Lambda syntax parsing (`lambda(x) => x * 2`)
+- **7.2-7.3:** Function pointers and indirect calls
+- **7.4:** Higher-order functions (lambdas as parameters)
+
+### 7.1 Lambda Expressions ✅
+
+**Purpose:** Anonymous functions with concise syntax
+
+**Syntax:**
+```mlp
+lambda(parameters) => expression
+```
+
+**Examples:**
+```mlp
+// Simple lambda
+numeric double_fn = lambda(n) => n * 2
+
+// Multiple parameters
+numeric add_fn = lambda(x, y) => x + y
+
+// No parameters
+numeric get_answer = lambda() => 42
+```
+
+**Implementation Details:**
+
+1. **Lexer Tokens:**
+   - `TOKEN_LAMBDA` - Keyword `lambda`
+   - `TOKEN_ARROW` - Operator `=>`
+   - **Critical:** `=>` must be tokenized in multi-char operator section (before single `=`)
+
+2. **Parser:**
+   - Recognized in `birincil()` (primary expression)
+   - Creates `AST_LAMBDA` node
+   - Parses parameter list between `( )`
+   - Parses expression body after `=>`
+
+3. **AST Structure:**
+   ```c
+   struct {
+       Token** parametreler;          // Parameter tokens
+       int parametre_sayisi;          // Parameter count
+       ASTNode* govde;                // Lambda body (expression)
+       bool is_expression;            // Always true for lambda
+   } lambda_data;
+   ```
+
+4. **Code Generation:**
+   - Generates anonymous function with unique label `__lambda_N`
+   - Returns function address: `lea rax, [rel __lambda_N]`
+   - **Critical:** Jump instruction prevents inline execution:
+     ```asm
+     lea rax, [rel __lambda_0]
+     jmp __lambda_0_skip     ; Skip lambda body
+     
+     __lambda_0:
+         push rbp
+         mov rbp, rsp
+         ; ... lambda code ...
+         pop rbp
+         ret
+     
+     __lambda_0_skip:
+         ; Continue main execution
+     ```
+
+**Assembly Example:**
+```asm
+; numeric double_fn = lambda(n) => n * 2
+
+lea rax, [rel __lambda_0]      ; Load function address
+mov [rbp-8], rax               ; Store in double_fn
+jmp __lambda_0_skip            ; Skip lambda body
+
+__lambda_0:                    ; Anonymous function
+    push rbp
+    mov rbp, rsp
+    sub rsp, 256
+    mov [rbp-8], rdi           ; Parameter n
+    mov rax, [rbp-8]           ; n
+    imul rax, 2                ; n * 2
+    mov rsp, rbp
+    pop rbp
+    ret
+
+__lambda_0_skip:               ; Resume main flow
+    ; ... rest of code ...
+```
+
+**Test Results:**
+```mlp
+print lambda(x, y) => x + y    ✅ Compiles successfully
+print lambda(n) => n * 2       ✅ Compiles successfully
+print lambda() => 42           ✅ Compiles successfully
+```
+
+**Test File:** `test/phase7_1_lambda.mlp`
+
+### 7.2-7.3 Lambda Invocation & Function Pointers ✅
+
+**Purpose:** Store and call lambda functions via function pointers
+
+**Syntax:**
+```mlp
+numeric fn = lambda(params) => expression
+numeric result = fn(arguments)
+```
+
+**Implementation Details:**
+
+1. **Function Pointer Storage:**
+   - Lambdas stored as 64-bit addresses in `numeric` variables
+   - `lea rax, [rel __lambda_N]` loads function address
+   - Stored value is executable function pointer
+
+2. **Indirect Function Calls:**
+   - Modified `visit_IslecCagirma()` checks if name is variable
+   - If variable: indirect call mechanism
+   - If function: direct call (existing behavior)
+
+3. **Indirect Call Mechanism:**
+   ```c
+   Degisken* var = kapsam_degisken_bul(islec_adi);
+   if (var != NULL) {
+       // Load function pointer
+       sprintf(buffer, "mov r10, [rbp-%d]", var->rbp_offset);
+       
+       // Prepare arguments in registers (rdi, rsi, rdx, rcx, r8, r9)
+       for (int i = 0; i < islec->islec_cagirma_data.arguman_sayisi; i++) {
+           visit(islec->islec_cagirma_data.argumanlar[i]);
+           const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+           sprintf(buffer, "mov %s, rax", arg_regs[i]);
+       }
+       
+       // Indirect call
+       sprintf(buffer, "call r10");
+   }
+   ```
+   - **Critical:** Use r10 (not rax) to preserve function pointer during arg setup
+
+4. **System V AMD64 ABI:**
+   - First 6 arguments in registers: rdi, rsi, rdx, rcx, r8, r9
+   - Return value in rax
+   - Stack alignment requirements preserved
+
+**Assembly Example:**
+```asm
+; numeric double_fn = lambda(n) => n * 2
+; numeric result = double_fn(5)
+
+; Load function pointer
+mov r10, [rbp-8]           ; double_fn variable
+
+; Prepare argument
+mov rax, 5
+mov rdi, rax               ; First argument in rdi
+
+; Indirect call
+call r10                   ; Call via function pointer
+
+; Store result
+mov [rbp-16], rax          ; result = rax
+```
+
+**Test Results:**
+```mlp
+numeric double_fn = lambda(n) => n * 2
+numeric result = double_fn(5)
+print result                       → 10 ✅
+
+numeric add_fn = lambda(x, y) => x + y
+numeric result2 = add_fn(3, 7)
+print result2                      → 10 ✅
+```
+
+**Test Files:** `test/phase7_2_simple.mlp`, `test/phase7_2_lambda_call.mlp`
+
+### 7.4 Higher-Order Functions ✅
+
+**Purpose:** Pass lambdas as function parameters for functional programming patterns
+
+**Syntax:**
+```mlp
+function apply(fn, value)
+    return fn(value)
+end
+
+numeric result = apply(lambda(n) => n * 2, 5)
+```
+
+**Implementation Details:**
+
+1. **Function Parameters:**
+   - Functions can accept `numeric` parameters (function pointers)
+   - No special syntax needed - existing implementation handles it
+
+2. **Inline Lambda Syntax:**
+   - Lambda expressions can be passed directly as arguments
+   - Parser evaluates lambda → function address → passed as numeric
+
+3. **Indirect Calls:**
+   - Inside called function, parameter is treated as function pointer
+   - Existing indirect call mechanism handles invocation
+
+**Examples:**
+
+**Basic Higher-Order Function:**
+```mlp
+function apply(fn, value)
+    return fn(value)
+end
+
+numeric result = apply(lambda(n) => n * 2, 5)
+print result                                    // 10 ✅
+```
+
+**Multiple Parameters:**
+```mlp
+function apply2(fn, a, b)
+    return fn(a, b)
+end
+
+numeric result = apply2(lambda(x, y) => x + y, 3, 7)
+print result                                    // 10 ✅
+```
+
+**Stored Lambda:**
+```mlp
+numeric square_fn = lambda(x) => x * x
+numeric result = apply(square_fn, 4)
+print result                                    // 16 ✅
+```
+
+**Functional Programming Patterns:**
+
+**Map with Lambda:**
+```mlp
+function map_transform(arr[], size, transform_fn)
+    numeric i = 0
+    while i < size
+        arr[i] = transform_fn(arr[i])
+        i = i + 1
+    end
+end
+
+numeric numbers[] = [1, 2, 3, 4, 5]
+map_transform(numbers, 5, lambda(x) => x * 2)
+print numbers[0]  // 2  ✅
+print numbers[2]  // 6  ✅
+print numbers[4]  // 10 ✅
+```
+
+**Filter with Lambda:**
+```mlp
+function count_matching(arr[], size, predicate_fn)
+    numeric count = 0
+    numeric i = 0
+    while i < size
+        if predicate_fn(arr[i]) == 1 then
+            count = count + 1
+        end
+        i = i + 1
+    end
+    return count
+end
+
+numeric numbers[] = [1, 2, 3, 4, 5]
+numeric even_count = count_matching(numbers, 5, lambda(x) => x % 2 == 0)
+print even_count  // 2 ✅
+```
+
+**Reduce with Lambda:**
+```mlp
+function reduce(arr[], size, reducer_fn, initial)
+    numeric accumulator = initial
+    numeric i = 0
+    while i < size
+        accumulator = reducer_fn(accumulator, arr[i])
+        i = i + 1
+    end
+    return accumulator
+end
+
+numeric numbers[] = [1, 2, 3, 4, 5]
+numeric sum = reduce(numbers, 5, lambda(acc, x) => acc + x, 0)
+print sum  // 15 ✅
+```
+
+**Test Results:**
+```mlp
+apply(lambda(n) => n*2, 5)                     → 10  ✅
+apply2(lambda(a,b) => a+b, 3, 7)               → 10  ✅
+apply(square_fn, 4)                            → 16  ✅
+map_transform(arr, 5, lambda(x) => x*2)        → [2,4,6,8,10] ✅
+count_matching(arr, 5, lambda(x) => x%2==0)    → 2   ✅
+reduce(arr, 5, lambda(acc,x) => acc+x, 0)      → 15  ✅
+```
+
+**Test Files:** `test/phase7_4_higher_order.mlp`, `test/phase7_4_functional.mlp`
+
+**Summary:**
+- ✅ 11/11 tests passing
+- ✅ Lambda syntax parsing working
+- ✅ Function pointers and indirect calls working
+- ✅ Higher-order functions working
+- ✅ All functional programming patterns (map/filter/reduce) with lambdas working
+
+---
+
+### 7.8-7.9 Upcoming Features ⏳
+
+**Phase 7.8: Lambda Return Values**
+- Functions returning lambdas
+- First-class function support
+- Function factory patterns
+
+**Phase 7.9: Closures**
+- Variable capture from outer scope
+- Closure struct generation
+- Memory management for captured variables
+
+---
+
+---
+
+## 🎨 GUI Designer Features
+
+### MLP Functions Documentation
+
+**Status:** ✅ Complete (November 23, 2025)
+
+Comprehensive function reference documentation for help menu and IntelliSense:
+
+**File:** `mlp_gui_designer/mlp_functions.json`
+
+**Categories (7 total, 38+ functions):**
+
+1. **String Operations** (8 functions)
+   - `string_length`, `string_concat`, `string_replace`, `string_split`
+   - `string_substring`, `string_upper`, `string_lower`, `string_trim`
+
+2. **GUI Functions** (7 functions)
+   - `GUI_PENCERE_AC`, `GUI_BUTTON_CREATE`, `GUI_LABEL_CREATE`
+   - `GUI_POLL_EVENT`, `GUI_GET_CLICKED_BUTTON`, `GUI_GUNCELLE`, `GUI_KAPAT`
+
+3. **I/O Operations** (2 functions)
+   - `YAZDIR`, `read_input`
+
+4. **File Operations** (4 functions)
+   - `open_file`, `read_file`, `write_file`, `close_file`
+
+5. **Array/List Operations** (5 functions)
+   - Array literals, `list.add`, `list.get`, `list.size`, `list.remove`
+
+6. **Type Conversions** (2 functions)
+   - `str` (numeric to string), `num` (string to numeric)
+
+7. **Functional Programming** (10 functions) - **NEW Phase 7.6-7.7**
+   - **REDUCE:** `sum_array`, `product_array`, `max_array`, `min_array`
+   - **MAP:** `map_double_inplace`, `map_square_inplace`, `map_increment_inplace`
+   - **UTILITY:** `count_positive`, `any_positive`, `all_positive`
+
+**Function Documentation Format:**
+
+```json
+{
+  "name": "sum_array",
+  "signature": "sum_array(arr[], size: numeric) -> numeric",
+  "description": "Array elemanlarının toplamını hesaplar (REDUCE operation)",
+  "params": [
+    { "name": "arr[]", "type": "numeric[]", "description": "Sayı array'i (pass-by-reference)" },
+    { "name": "size", "type": "numeric", "description": "Array boyutu" }
+  ],
+  "returns": { "type": "numeric", "description": "Toplam değer" },
+  "example": "numeric numbers[] = [1, 2, 3, 4, 5]\nnumeric total = sum_array(numbers, 5)\nYAZDIR(total)  -- 15",
+  "category": "reduce"
+}
+```
+
+**Constants (3 GUI events):**
+
+- `GUI_EVENT_NONE` = 0
+- `GUI_EVENT_QUIT` = 1
+- `GUI_EVENT_BUTTON_CLICK` = 2
+
+### Multi-Language & Multi-Syntax Code Generation
+
+**Status:** ✅ Complete (November 23, 2025)
+
+GUI Designer can generate code in multiple languages and syntax styles:
+
+**Supported Languages:**
+
+- **Turkish (tr-TR):** Native Turkish keywords
+- **English (en-US):** English keywords
+
+**Supported Syntax Styles:**
+
+1. **MLP-default:** Native block keywords
+
+   ```mlp
+   if condition
+       // code
+   end if
+
+   while condition
+       // code
+   end while
+   ```
+
+2. **C-style:** Curly braces
+
+   ```mlp
+   if condition {
+       // code
+   }
+
+   while condition {
+       // code
+   }
+   ```
+
+3. **Python-style:** Colon and indentation
+
+   ```mlp
+   if condition:
+       // code
+
+   while condition:
+       // code
+   ```
+
+**Code Generator Architecture:**
+
+- `getBlockMarkers()` - Returns syntax-appropriate markers (braces, keywords, colons)
+- `translateKeyword()` - Translates keywords based on selected language
+- Event handlers and event loops adapt to selected syntax
+- Integrated with `configLoader` for runtime configuration
+
+**Example Output (C-style):**
+
+```mlp
+-- lang: en-US
+
+func onClick_handler() -> numeric {
+    YAZDIR("Button clicked")
+    return 0
+}
+
+while running == 1 {
+    numeric event
+    event = GUI_POLL_EVENT()
+
+    if event == GUI_EVENT_QUIT {
+        running = 0
+    }
+
+    GUI_GUNCELLE()
+}
+```
+
+---
+
+## Phase 8: Async/Await & Concurrency
+
+**Status:** Phase 8.4 Complete ✅ | Phase 8.5 In Progress 🔄  
+**Version:** MLP 3.0 + Phase 8.4  
+**Released:** November 23, 2025
+
+### Overview
+
+Phase 8 introduces asynchronous programming capabilities to MLP, enabling non-blocking I/O operations and concurrent execution patterns similar to JavaScript's async/await and Python's asyncio.
+
+### Architecture
+
+**Promise-Based Model:**
+- Single-threaded event loop (Node.js style)
+- Promise/Future pattern for async operations
+- State machine transformation for await points
+- Continuation-passing style for resume
+
+**Implementation Phases:**
+1. ✅ Phase 8.1: Design (PHASE8_ASYNC_DESIGN.md)
+2. ✅ Phase 8.2: Promise runtime (7 functions)
+3. ✅ Phase 8.3: Event Loop (8 functions)
+4. ✅ Phase 8.4: Basic async/await syntax (blocking)
+5. 🔄 Phase 8.5: Non-blocking state machines
+
+### Syntax
+
+#### Async Function Declaration
+
+```mlp
+async function fetch_data(id)
+    // Async function body
+    numeric result = await get_from_api(id)
+    return result
+end
+```
+
+**Key Features:**
+- `async function` keyword declares async function
+- Returns a Promise implicitly
+- Can contain `await` expressions
+- Supports all normal function features (params, return, local vars)
+
+#### Await Expression
+
+```mlp
+numeric value = await async_operation()
+```
+
+**Behavior:**
+- **Phase 8.4 (Current):** Blocking wait loop - spins until promise resolves
+- **Phase 8.5 (Planned):** Non-blocking - returns control to event loop
+
+**Restrictions:**
+- Only usable inside `async function`
+- Compiler error if used in sync function
+
+### Examples
+
+#### Basic Async Function (Phase 8.4)
+
+```mlp
+// Simple async function
+async function get_number()
+    return 42
+end
+
+function main()
+    print("Testing async function...")
+    numeric result = await get_number()
+    print("Result:")
+    print(result)  // Prints: 42
+    return 0
+end
+```
+
+**Output:**
+```
+Testing async function...
+Result:
+42
+```
+
+### Implementation Status
+
+**✅ Completed (Phase 8.1-8.4):**
+- Promise struct and state management
+- Event loop with task queue
+- `async function` keyword and parsing
+- `await` expression parsing
+- Promise creation/resolution in async functions
+- Blocking await implementation
+- Return statement async context handling
+
+**🔄 In Progress (Phase 8.5):**
+- AsyncState struct for continuation passing
+- Await point detection (count_awaits_in_node)
+- State machine generation
+- Non-blocking await with event loop integration
+
+**Testing:**
+- `test_async_basic.mlp` - ✅ Passing
+- `test_async_nonblocking.mlp` - 🔄 Prepared
+
+---
+
+**Last Updated:** November 23, 2025  
+**Next Milestone:** Non-blocking state machine generation (Phase 8.5)
+
+---
+
 **© 2025 MLP Project**
-**Version:** 3.0 + Phase 6.2
-**Status:** Production Ready ✅ + Generic Types 🚀
+**Version:** 3.0 + Phase 7.6-7.7
+**Status:** Production Ready ✅ + Array Parameters & Functional Programming 🚀
 **License:** MIT

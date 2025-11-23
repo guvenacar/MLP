@@ -1,0 +1,51 @@
+/* MLP Editors - Shared Theme Variables */
+
+/* Dark Theme (Default) */
+:root {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --bg-quaternary: #3c3c3c;
+  
+  --text-primary: #cccccc;
+  --text-secondary: #969696;
+  --text-tertiary: #858585;
+  
+  --border-color: #3c3c3c;
+  --accent-color: #007acc;
+  --accent-hover: #005a9e;
+  --button-bg: #0e639c;
+  
+  --error-color: #ff4444;
+  --warning-color: #ffaa00;
+  --success-color: #4caf50;
+  --info-color: #4a90e2;
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #e8e8e8;
+  --bg-quaternary: #d4d4d4;
+  
+  --text-primary: #1e1e1e;
+  --text-secondary: #616161;
+  --text-tertiary: #858585;
+  
+  --border-color: #d4d4d4;
+  --accent-color: #007acc;
+  --accent-hover: #005a9e;
+  --button-bg: #007acc;
+  
+  --error-color: #d32f2f;
+  --warning-color: #f57c00;
+  --success-color: #388e3c;
+  --info-color: #1976d2;
+}
+
+/* Theme Toggle Utility */
+.theme-switcher {
+  cursor: pointer;
+  user-select: none;
+}

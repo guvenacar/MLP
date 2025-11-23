@@ -1,0 +1,9 @@
+-- Test: Lambda without closure (no captured vars)
+
+function make_doubler()
+    return lambda(n) => n * 2
+end
+
+numeric double_fn = make_doubler()
+numeric result = double_fn(5)
+print "Result: " + str(result)

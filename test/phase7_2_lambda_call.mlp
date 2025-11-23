@@ -1,0 +1,13 @@
+// Phase 7.2: Lambda Invocation Test
+
+// Store lambda in variable (as function pointer address)
+numeric double_fn = lambda(n) => n * 2
+numeric add_fn = lambda(x, y) => x + y
+
+// Call lambda stored in variable
+// Syntax: variable_name(args)
+numeric result1 = double_fn(5)
+numeric result2 = add_fn(3, 7)
+
+print result1  // Expected: 10
+print result2  // Expected: 10

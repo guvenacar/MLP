@@ -1,0 +1,22 @@
+-- Test: Line continuation support
+-- Can we continue a long statement on the next line?
+
+-- Test 1: Long expression without continuation
+numeric result = 10 + 20 + 30 + 40
+
+print "Test 1 - Single line:"
+print result
+
+-- Test 2: Try continuation with backslash (may not work)
+-- numeric x = 100 + \
+--              200 + \
+--              300
+
+-- Test 3: Long function call
+numeric sum = 5 + 10 + 15
+print "Test 3 - Sum:"
+print sum
+
+-- Test 4: Long string concatenation
+string message = "This is a very long message that we want to write"
+print message
