@@ -149,7 +149,9 @@ function handle_import(ImportContext ctx, ASTNode import_node, LexerState lexer,
     -- Parse the imported file and collect function definitions
     -- They will be emitted BEFORE main() in codegen
     
-    while lexer.current_token.type != TOKEN_EOF do
+    Token lex_token
+    lex_token = lexer.current_token
+    while lex_token.type != TOKEN_EOF do
         ASTNode stmt
         stmt = parse_statement(parser, lexer)
         
@@ -164,6 +166,9 @@ function handle_import(ImportContext ctx, ASTNode import_node, LexerState lexer,
             end if
             -- Skip other statements (variable declarations, etc.)
         end if
+        
+        -- Update token for next iteration
+        lex_token = lexer.current_token
     end while
     
     -- Restore lexer state

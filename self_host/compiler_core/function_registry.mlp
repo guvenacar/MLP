@@ -87,7 +87,7 @@ function function_registry_create()
 end function
 
 function function_registry_register(registry, signature)
-    if registry.signatures.has(signature.name) == 1 then
+    if hashmap_has(registry.signatures, signature.name) == 1 then
         print "WARNING: Function '"
         print signature.name
         print "' already registered, skipping duplicate"
@@ -99,7 +99,7 @@ function function_registry_register(registry, signature)
 end function
 
 function function_registry_lookup(registry, function_name)
-    if registry.signatures.has(function_name) == 0 then
+    if hashmap_has(registry.signatures, function_name) == 0 then
         return null
     end if
 
@@ -107,7 +107,7 @@ function function_registry_lookup(registry, function_name)
 end function
 
 function function_registry_has(registry, function_name)
-    return registry.signatures.has(function_name)
+    return hashmap_has(registry.signatures, function_name)
 end function
 
 function function_registry_size(registry)

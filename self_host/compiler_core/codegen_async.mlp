@@ -78,8 +78,12 @@ function visit_async_function(state, node_id)
     ASTNode node
     node = ast_arena_get(state.arena, node_id)
     
-    string func_name = node.async_function_data.name
-    numeric param_count = node.async_function_data.parameter_count
+    AsyncFunctionData async_data
+    async_data = node.async_function_data
+    string func_name
+    func_name = async_data.name
+    numeric param_count
+    param_count = async_data.parameter_count
     
     -- Save scope context
     numeric saved_var_count = state.scope_var_count
@@ -130,7 +134,9 @@ function visit_async_function(state, node_id)
     
     -- Count await expressions
     numeric await_count
-    await_count = count_awaits_in_node(state, node.async_function_data.body_id)
+    AsyncFunctionData async_data2
+    async_data2 = node.async_function_data
+    await_count = count_awaits_in_node(state, async_data2.body_id)
     
     -- Set async context
     in_async_function = 1
@@ -147,7 +153,9 @@ function visit_async_function(state, node_id)
     end if
     
     -- Execute function body
-    state = visit_block(state, node.async_function_data.body_id)
+    AsyncFunctionData async_data3
+    async_data3 = node.async_function_data
+    state = visit_block(state, async_data3.body_id)
     
     -- Fallthrough (no explicit return)
     state.code = asm_emit_text(state.code, "    ; Fallthrough: Resolve promise with implicit return")
@@ -184,10 +192,13 @@ function visit_await_expression(state, node_id)
     ASTNode node
     node = ast_arena_get(state.arena, node_id)
     
+    AwaitData await_data
+    await_data = node.await_data
+    
     state.code = asm_emit_text(state.code, "    ; --- Await Expression ---")
     
     -- Evaluate awaited expression (should return promise)
-    state = visit_expression(state, node.await_data.expression_id)
+    state = visit_expression(state, await_data.expression_id)
     
     -- Promise pointer in RAX
     state.code = asm_emit_text(state.code, "    mov rbx, rax  ; Save promise pointer")

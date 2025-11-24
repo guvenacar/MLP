@@ -24,15 +24,19 @@ function visit_lambda_expression(state, node_id)
     ASTNode node
     node = ast_arena_get(state.arena, node_id)
     
+    -- Get lambda data once
+    LambdaData lambda_data
+    lambda_data = node.lambda_data
+    
     -- Detect captured variables at codegen time
     list[string] captured_vars = list()
     
-    if mlp_list_length(node.lambda_data.captured_vars) == 0 then
-        state = find_free_variables(state, node.lambda_data.body_id, captured_vars, node.lambda_data.parameters)
-        node.lambda_data.captured_vars = captured_vars
-        node.lambda_data.captured_count = mlp_list_length(captured_vars)
+    if mlp_list_length(lambda_data.captured_vars) == 0 then
+        state = find_free_variables(state, lambda_data.body_id, captured_vars, lambda_data.parameters)
+        lambda_data.captured_vars = captured_vars
+        lambda_data.captured_count = mlp_list_length(captured_vars)
     else
-        captured_vars = node.lambda_data.captured_vars
+        captured_vars = lambda_data.captured_vars
     end if
     
     numeric captured_count
@@ -107,9 +111,9 @@ function visit_lambda_expression(state, node_id)
     lambda_section_code = lambda_section_code + "\n" + lambda_label + ":\n"
     
     if captured_count > 0 then
-        lambda_section_code = lambda_section_code + "    ; --- Lambda with Closure (params: " + numeric_to_string(node.lambda_data.parameter_count) + ", captured: " + numeric_to_string(captured_count) + ") ---\n"
+        lambda_section_code = lambda_section_code + "    ; --- Lambda with Closure (params: " + numeric_to_string(lambda_data.parameter_count) + ", captured: " + numeric_to_string(captured_count) + ") ---\n"
     else
-        lambda_section_code = lambda_section_code + "    ; --- Lambda Expression (params: " + numeric_to_string(node.lambda_data.parameter_count) + ") ---\n"
+        lambda_section_code = lambda_section_code + "    ; --- Lambda Expression (params: " + numeric_to_string(lambda_data.parameter_count) + ") ---\n"
     end if
     
     -- Function prolog
@@ -125,9 +129,9 @@ function visit_lambda_expression(state, node_id)
     -- Save user parameters (rsi, rdx, rcx, ...)
     list[string] arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
     
-    for i = 0 to node.lambda_data.parameter_count - 1 do
+    for i = 0 to lambda_data.parameter_count - 1 do
         Token param
-        param = mlp_list_get(node.lambda_data.parameters, i)
+        param = mlp_list_get(lambda_data.parameters, i)
         string param_name = param.lexeme
         string param_addr
         param_addr = scope_allocate_variable(state, param_name, "SAYISAL")
@@ -159,7 +163,7 @@ function visit_lambda_expression(state, node_id)
     state.code = lambda_section_code
     
     -- Evaluate body expression
-    state = visit_expression(state, node.lambda_data.body_id)
+    state = visit_expression(state, lambda_data.body_id)
     
     -- Save updated lambda section
     lambda_section_code = state.code

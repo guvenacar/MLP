@@ -120,7 +120,7 @@ end function
 -- -----------------------------------------------------------------------------
 
 function scope_register_variable(manager, var_name, type_name, is_param)
-    if manager.variable_map.has(var_name) == 1 then
+    if hashmap_has(manager.variable_map, var_name) == 1 then
         VariableInfo existing
         existing = manager.varimlp_list_get(able_map, var_name)
         if existing.scope_level == manager.current_level then
@@ -173,7 +173,7 @@ end function
 -- -----------------------------------------------------------------------------
 
 function scope_lookup_variable(manager, var_name)
-    if manager.variable_map.has(var_name) == 0 then
+    if hashmap_has(manager.variable_map, var_name) == 0 then
         print "Scope error: Undefined variable: "
         print var_name
         panic("scope_lookup_variable: undefined variable")
@@ -185,7 +185,7 @@ function scope_lookup_variable(manager, var_name)
 end function
 
 function scope_has_variable(manager, var_name)
-    return manager.variable_map.has(var_name)
+    return hashmap_has(manager.variable_map, var_name)
 end function
 
 -- -----------------------------------------------------------------------------
@@ -233,7 +233,7 @@ end function
 -- -----------------------------------------------------------------------------
 
 function scope_mark_captured(manager, var_name)
-    if manager.variable_map.has(var_name) == 0 then
+    if hashmap_has(manager.variable_map, var_name) == 0 then
         print "Scope error: Cannot capture undefined variable: "
         print var_name
         panic("scope_mark_captured: undefined variable")
@@ -250,7 +250,7 @@ end function
 function scope_get_captured_variables(manager)
     list[VariableInfo] captured = list()
     
-    list[string] keys = manager.variable_map.keys()
+    list[string] keys = hashmap_keys(manager.variable_map)
     for i
     i = 0 to mlp_list_length(keys) - 1 do
         string key
@@ -277,7 +277,7 @@ function scope_dump_variables(manager)
     print manager.next_offset
     print ""
     
-    list[string] keys = manager.variable_map.keys()
+    list[string] keys = hashmap_keys(manager.variable_map)
     for i
     i = 0 to mlp_list_length(keys) - 1 do
         string key
