@@ -150,7 +150,7 @@ end function
 
 function ast_node_create(node_type, location, debug_label)
     ASTNode node
-    node.id = -1
+    node.id = 0
     node.type = node_type
     node.location = location
     node.debug_label = debug_label

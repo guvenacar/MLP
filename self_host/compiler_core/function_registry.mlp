@@ -9,7 +9,7 @@
 -- çağrılarda bu kayıtlara bakarak default parametre değerlerini uygular.
 -- -----------------------------------------------------------------------------
 
-import "ast/ast_nodes.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
 
 -- -----------------------------------------------------------------------------
 -- Parametre bilgileri
@@ -77,7 +77,7 @@ end function
 -- -----------------------------------------------------------------------------
 
 struct FunctionRegistry then
-    map[string:FunctionSignature] signatures
+    HashMap signatures
 end struct
 
 function function_registry_create()
@@ -94,7 +94,7 @@ function function_registry_register(registry, signature)
         return registry
     end if
 
-    registry.simlp_list_set(gnatures, signature.name, signature)
+    hashmap_set(registry.signatures, signature.name, signature)
     return registry
 end function
 
@@ -103,7 +103,7 @@ function function_registry_lookup(registry, function_name)
         return null
     end if
 
-    return registry.simlp_list_get(gnatures, function_name)
+    return hashmap_get(registry.signatures, function_name)
 end function
 
 function function_registry_has(registry, function_name)
@@ -111,11 +111,11 @@ function function_registry_has(registry, function_name)
 end function
 
 function function_registry_size(registry)
-    return registry.simlp_list_length(gnatures)
+    return hashmap_size(registry.signatures)
 end function
 
 function function_registry_clear(registry)
-    registry.simlp_list_clear(gnatures)
+    hashmap_clear(registry.signatures)
     return registry
 end function
 
