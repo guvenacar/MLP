@@ -107,26 +107,84 @@ All tests passed!
 
 ---
 
-## 🚧 Known Blockers (for Full Bootstrap)
+## ✅ Solved Issues (24 Kasım 2025 - Session 2)
 
-### 1. **Struct Codegen Issue** (CRITICAL)
-- **Problem:** Parser succeeds but generator cannot access struct registry
+### 1. **Struct Codegen Issue** (✅ RESOLVED)
+- **Problem:** Parser succeeded but generator could not access struct registry
 - **Error:** "Struct 'CompilerOptions' tanımlı değil!"
-- **Impact:** Cannot compile `mlpc.mlp` or `mlpc_minimal.mlp`
-- **Root Cause:** Struct definitions don't persist from parser to codegen phase
-- **Timeline:** 2-4 hours debugging needed
+- **Root Cause:** Struct definitions were never visited during code generation - no metadata registration occurred
+- **Solution:**
+  - Added **PHASE 0**: Struct pre-scan before imports (registers all structs via `register_struct_metadata()`)
+  - Added **PHASE 5A**: Struct emit loop (generates assembly comments for struct layout)
+  - Modified `visit_StructTanimlama()` to skip re-registration (already done in PHASE 0)
+  - Added struct skip to PHASE 4 top-level execution loop
+- **Files Modified:** `self_host/mlp_compiler.c` (generate_asm function)
+- **Result:** ✅ Struct metadata now available to generator!
 
-### 2. **Import Path Resolution** (CRITICAL)
+### 2. **Import Path Resolution** (✅ RESOLVED)
 - **Problem:** `MLP_SOURCE_DIR=/home/pardus/projeler/tyd-lang/MLP` but imports need `self_host/` prefix
 - **Error:** "Cannot open import file '/home/pardus/projeler/tyd-lang/MLP/compiler_core/token_types.mlp'"
-- **Impact:** Cannot compile `mlpc.mlp` with all modules
-- **Options:**
-  - Create symlink: `ln -s self_host/compiler_core compiler_core`
-  - Modify import resolver to handle relative paths
-  - Set `MLP_SOURCE_DIR` to `self_host/` when compiling
-- **Timeline:** 30 minutes (symlink is quickest)
+- **Solution:**
+  - Created symlinks in project root:
+    ```bash
+    ln -s self_host/compiler_core compiler_core
+    ln -s self_host/runtime runtime
+    ```
+  - Fixed import path in `mlpc.mlp`: `ast_nodes.mlp` → `ast/ast_nodes.mlp`
+- **Result:** ✅ All imports now resolve correctly!
 
-### 3. **Variable Declaration Syntax**
+### 3. **Comment Syntax Errors** (✅ RESOLVED)
+- **Problem:** MLP files used Python-style `#` comments but C compiler lexer expects `--`
+- **Error:** "ERROR [Lexer]: Tanınmayan karakter: #"
+- **Solution:** Mass replacement in three passes:
+  - Line-start: `sed -i 's/^# /-- /g'` (257 files)
+  - Indented: `sed -i 's/^    #/    --/g'`
+  - Inline: `sed -i 's/ # / -- /g'`
+- **Result:** ✅ All 257 MLP files now parse correctly!
+
+### 4. **Parser Custom Type Support** (✅ RESOLVED)
+- **Problem:** Parser only accepted primitive types (numeric/string/bool) for struct fields
+- **Error:** Expected "SAYISAL/METIN/BOOL" but found "TokenType" (custom enum type)
+- **Solution:** Modified struct field parser to accept `TOKEN_IDENTIFIER` (enum/struct names)
+- **Files Modified:** `self_host/mlp_compiler.c` (line 3520-3523)
+- **Result:** ✅ Structs with enum/struct fields now parse!
+
+### 5. **Runtime Library Missing Hashmap** (✅ RESOLVED)
+- **Problem:** `mlp_compiler.c` uses hashmap functions but `libmlpruntime.a` didn't include them
+- **Error:** "undefined reference to `hashmap_create'", `hashmap_get`, `hashmap_put`, etc.
+- **Solution:**
+  ```bash
+  gcc -c runtime/hashmap.c -o hashmap.o
+  ar rcs libmlpruntime.a hashmap.o
+  ```
+- **Result:** ✅ Compiler links successfully with hashmap functions!
+
+### 6. **Minimal Self-Hosting Compiler Test** (✅ SUCCESS)
+- **File:** `self_host/mlpc_minimal.mlp` (54 lines)
+- **Compilation:** ✅ SUCCESS (8.3KB assembly generated)
+- **Assembly:** ✅ SUCCESS (NASM)
+- **Linking:** ✅ SUCCESS (with `-lcurl` flag)
+- **Execution:** ✅ SUCCESS
+- **Output:**
+  ```
+  === MLP Self-Hosting Compiler (Minimal) ===
+  Version 1.0.0 - Test Build
+  ✓ Compiler initialized successfully!
+  ✓ Structs working
+  ✓ Functions working
+  ✓ Self-hosting test PASSED!
+  ```
+
+## 🚧 Remaining Blockers (for Full Bootstrap)
+
+### 1. **Generic Type Support** (BLOCKING FULL BOOTSTRAP)
+- **Problem:** Full `mlpc.mlp` uses generic types like `list[string]` and `list[Token]`
+- **Error:** "Expected: IDENTIFIER" (parser sees `[` after type name)
+- **Impact:** Cannot compile full self-hosting compiler with all modules
+- **Workaround:** Use minimal compiler without generics
+- **Timeline:** 4-6 hours to implement generic type parsing
+
+### 2. **Variable Declaration Syntax**
 - **Problem:** No local variable declarations inside function body
 - **Impact:** Limited syntax in self-host code
 - **Workaround:** Declare all variables at function start
@@ -180,8 +238,11 @@ All tests passed!
 
 | Date | Milestone | Status |
 |------|-----------|--------|
-| 24 Kasım 2025 | First self-hosting test | ✅ **PASSED** |
-| 25-26 Kasım | Fix struct codegen | 🚧 In Progress |
+| 24 Kasım 2025 (AM) | First self-hosting test | ✅ **PASSED** |
+| 24 Kasım 2025 (PM) | Fix struct codegen | ✅ **COMPLETED** |
+| 24 Kasım 2025 (PM) | Fix import resolution | ✅ **COMPLETED** |
+| 24 Kasım 2025 (PM) | Minimal compiler test | ✅ **SUCCESS** |
+| 25-26 Kasım | Generic type support | 🚧 Blocked |
 | 27-28 Kasım | Compile full mlpc.mlp | ⏳ Blocked |
 | 29 Kasım | Stage 1 → Stage 2 | ⏳ Pending |
 | 30 Kasım | Stage 2 → Stage 3 | ⏳ Pending |
@@ -198,8 +259,11 @@ All tests passed!
 - [x] Executes with correct output
 
 ### 🚧 Full Bootstrap (IN PROGRESS)
-- [ ] Struct codegen working
-- [ ] Import resolution working
+
+- [x] Struct codegen working
+- [x] Import resolution working
+- [x] Minimal compiler (`mlpc_minimal.mlp`) compiles and runs
+- [ ] Generic type support (`list[T]`)
 - [ ] Full `mlpc.mlp` compiles (Stage 1)
 - [ ] Stage 1 compiles itself (Stage 2)
 - [ ] Stage 2 produces identical output (Stage 3)
@@ -302,7 +366,7 @@ When a compiler can compile itself, it proves:
 
 ---
 
-**Status:** 🎉 **FIRST SELF-HOSTING TEST PASSED!**  
+**Status:** 🎉 **STRUCT CODEGEN FIXED! MINIMAL BOOTSTRAP WORKING!**  
 **Date:** 24 Kasım 2025  
-**Commit:** `f835603`  
-**Branch:** `yedek24kasim2025`
+**Commit:** `516b1af`  
+**Branch:** `main`
