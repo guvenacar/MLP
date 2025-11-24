@@ -136,7 +136,7 @@ function visit_lambda_expression(state, node_id)
         string param_addr = ""
         param_addr = scope_allocate_variable(state, param_name, "SAYISAL")
         string reg = ""
-        reg = arg_regimlp_list_get(sters, i)
+        reg = mlp_list_get(arg_regsters, i)
         lambda_section_code = lambda_section_code + "    mov " + param_addr + ", " + reg + "  ; Parameter '" + param_name + "'\n"
     end for
     
@@ -209,13 +209,13 @@ function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
     list[string] arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
     
     for i
-    i = 0 to argument_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(argument_ds) - 1 do
         numeric arg_id = 0
-        arg_id = argument_imlp_list_get(ds, i)
+        arg_id = mlp_list_get(argument_ds, i)
         state = visit_expression(state, arg_id)
         
         string reg = ""
-        reg = arg_regimlp_list_get(sters, i)
+        reg = mlp_list_get(arg_regsters, i)
         state.code = asm_emit_text(state.code, "    mov " + reg + ", rax  ; Argument " + numeric_to_string(i + 1))
     end for
     

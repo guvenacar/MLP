@@ -85,7 +85,7 @@ function visit_list_literal(state, node_id)
     list[numeric] element_ids = list()
     
     numeric count = 0
-    count = element_imlp_list_length(ds)
+    count = mlp_list_length(element_ds)
     
     state.code = asm_emit_text(state.code, "    ; List literal with " + numeric_to_string(count) + " elements")
     
@@ -96,9 +96,9 @@ function visit_list_literal(state, node_id)
     
     -- Add elements
     for i
-    i = 0 to element_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(element_ds) - 1 do
         numeric elem_id = 0
-        elem_id = element_imlp_list_get(ds, i)
+        elem_id = mlp_list_get(element_ds, i)
         state = visit_expression(state, elem_id)
         
         -- RUNTIME: Call list_add(list, element)
@@ -170,11 +170,11 @@ function visit_hashmap_literal(state, node_id)
     
     -- Insert key-value pairs
     for i
-    i = 0 to key_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(key_ds) - 1 do
         numeric key_id = 0
-        key_id = key_imlp_list_get(ds, i)
+        key_id = mlp_list_get(key_ds, i)
         numeric value_id = 0
-        value_id = value_imlp_list_get(ds, i)
+        value_id = mlp_list_get(value_ds, i)
         
         -- Evaluate key
         state = visit_expression(state, key_id)
@@ -239,9 +239,9 @@ function visit_set_literal(state, node_id)
     
     -- Insert elements
     for i
-    i = 0 to element_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(element_ds) - 1 do
         numeric elem_id = 0
-        elem_id = element_imlp_list_get(ds, i)
+        elem_id = mlp_list_get(element_ds, i)
         
         -- Evaluate element
         state = visit_expression(state, elem_id)
@@ -276,16 +276,16 @@ function visit_struct_instantiation(state, node_id)
     
     -- Allocate struct (assuming 8 bytes per field)
     numeric bytes = 0
-    bytes = fimlp_list_length(eld_names) * 8
+    bytes = mlp_list_length(feld_names) * 8
     state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(bytes))
     state.code = asm_emit_text(state.code, "    call malloc")
     state.code = asm_emit_text(state.code, "    mov rbx, rax")
     
     -- Initialize fields
     for i
-    i = 0 to fimlp_list_length(eld_names) - 1 do
+    i = 0 to mlp_list_length(feld_names) - 1 do
         numeric value_id = 0
-        value_id = field_value_imlp_list_get(ds, i)
+        value_id = mlp_list_get(field_value_ds, i)
         
         -- Evaluate field value
         state = visit_expression(state, value_id)

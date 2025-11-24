@@ -112,15 +112,15 @@ function visit_async_function(state, node_id)
     
     for i = 0 to param_count - 1 do
         Token param
-        param = node.async_functimlp_list_get(on_data.parameters, i)
+        param = node.mlp_list_get(async_functon_data.parameters, i)
         string param_name = param.lexeme
         string param_type = ""
-        param_type = node.async_functimlp_list_get(on_data.parameter_types, i)
+        param_type = node.mlp_list_get(async_functon_data.parameter_types, i)
         
         string param_addr = ""
         param_addr = scope_allocate_variable(state, param_name, param_type)
         string reg = ""
-        reg = arg_regimlp_list_get(sters, i)
+        reg = mlp_list_get(arg_regsters, i)
         state.code = asm_emit_text(state.code, "    mov " + param_addr + ", " + reg + "  ; Parameter '" + param_name + "'")
     end for
     

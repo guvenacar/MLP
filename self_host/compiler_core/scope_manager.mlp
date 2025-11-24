@@ -103,10 +103,10 @@ function scope_exit(manager)
     current = mlp_list_get(manager.scope_stack, scope_index)
     
     for i
-    i = 0 to current.varimlp_list_length(able_names) - 1 do
+    i = 0 to current.mlp_list_length(varable_names) - 1 do
         string var_name = ""
-        var_name = current.varimlp_list_get(able_names, i)
-        manager.varimlp_list_remove(able_map, var_name)
+        var_name = current.mlp_list_get(varable_names, i)
+        manager.mlp_list_remove(varable_map, var_name)
     end for
     
     mlp_list_remove(manager.scope_stack, scope_index)
@@ -122,7 +122,7 @@ end function
 function scope_register_variable(manager, var_name, type_name, is_param)
     if hashmap_has(manager.variable_map, var_name) == 1 then
         VariableInfo existing
-        existing = manager.varimlp_list_get(able_map, var_name)
+        existing = manager.mlp_list_get(varable_map, var_name)
         if existing.scope_level == manager.current_level then
             print "Scope error: Variable already declared in current scope: "
             print var_name
@@ -153,7 +153,7 @@ function scope_register_variable(manager, var_name, type_name, is_param)
     info.size_bytes = size
     
     -- Update manager
-    manager.varimlp_list_set(able_map, var_name, info)
+    manager.mlp_list_set(varable_map, var_name, info)
     manager.next_offset = manager.next_offset + size
     
     -- Add to current scope
@@ -161,7 +161,7 @@ function scope_register_variable(manager, var_name, type_name, is_param)
     scope_index = mlp_list_length(manager.scope_stack) - 1
     ScopeInfo current
     current = mlp_list_get(manager.scope_stack, scope_index)
-    current.varimlp_list_add(able_names, var_name)
+    current.mlp_list_add(varable_names, var_name)
     current.stack_frame_size = current.stack_frame_size + size
     mlp_list_set(manager.scope_stack, scope_index, current)
     
@@ -180,7 +180,7 @@ function scope_lookup_variable(manager, var_name)
     end if
     
     VariableInfo info
-    info = manager.varimlp_list_get(able_map, var_name)
+    info = manager.mlp_list_get(varable_map, var_name)
     return info
 end function
 
@@ -240,9 +240,9 @@ function scope_mark_captured(manager, var_name)
     end if
     
     VariableInfo info
-    info = manager.varimlp_list_get(able_map, var_name)
+    info = manager.mlp_list_get(varable_map, var_name)
     info.is_captured = 1
-    manager.varimlp_list_set(able_map, var_name, info)
+    manager.mlp_list_set(varable_map, var_name, info)
     
     return manager
 end function
@@ -256,7 +256,7 @@ function scope_get_captured_variables(manager)
         string key = ""
         key = mlp_list_get(keys, i)
         VariableInfo info
-        info = manager.varimlp_list_get(able_map, key)
+        info = manager.mlp_list_get(varable_map, key)
         if info.is_captured == 1 then
             mlp_list_add(captured, info)
         end if
@@ -283,7 +283,7 @@ function scope_dump_variables(manager)
         string key = ""
         key = mlp_list_get(keys, i)
         VariableInfo info
-        info = manager.varimlp_list_get(able_map, key)
+        info = manager.mlp_list_get(varable_map, key)
         
         print "Variable: "
         print info.name

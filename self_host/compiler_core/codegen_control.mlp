@@ -52,11 +52,11 @@ function visit_try_catch(state, node_id)
     
     -- Generate catch handlers
     for i
-    i = 0 to catch_block_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(catch_block_ds) - 1 do
         numeric catch_id = 0
-        catch_id = catch_block_imlp_list_get(ds, i)
+        catch_id = mlp_list_get(catch_block_ds, i)
         string exc_type = ""
-        exc_type = exceptimlp_list_get(on_types, i)
+        exc_type = mlp_list_get(excepton_types, i)
         
         string next_catch = ""
         next_catch = codegen_generate_label(state, "catch_next")
@@ -159,11 +159,11 @@ function visit_match(state, node_id)
     
     -- Generate pattern checks
     for i
-    i = 0 to pattern_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(pattern_ds) - 1 do
         numeric pattern_id = 0
-        pattern_id = pattern_imlp_list_get(ds, i)
+        pattern_id = mlp_list_get(pattern_ds, i)
         numeric body_id = 0
-        body_id = body_imlp_list_get(ds, i)
+        body_id = mlp_list_get(body_ds, i)
         
         string next_case = ""
         next_case = codegen_generate_label(state, "match_case")
@@ -237,9 +237,9 @@ function visit_with(state, node_id)
     
     -- Acquire resources
     for i
-    i = 0 to resource_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(resource_ds) - 1 do
         numeric res_id = 0
-        res_id = resource_imlp_list_get(ds, i)
+        res_id = mlp_list_get(resource_ds, i)
         state = visit_expression(state, res_id)
         state.code = asm_emit_text(state.code, "    push rax")
     end for
@@ -261,7 +261,7 @@ function visit_with(state, node_id)
     
     -- Release resources (reverse order)
     for i
-    i = resource_imlp_list_length(ds) - 1 to 0 step -1 do
+    i = mlp_list_length(resource_ds) - 1 to 0 step -1 do
         state.code = asm_emit_text(state.code, "    pop rdi")
         state.code = asm_emit_text(state.code, "    call resource_close")
     end for
@@ -398,11 +398,11 @@ function visit_enum_definition(state, node_id)
     
     -- Generate constants in data section
     for i
-    i = 0 to varimlp_list_length(ant_names) - 1 do
+    i = 0 to mlp_list_length(varant_names) - 1 do
         string var_name = ""
-        var_name = varimlp_list_get(ant_names, i)
+        var_name = mlp_list_get(varant_names, i)
         numeric value = 0
-        value = varimlp_list_get(ant_values, i)
+        value = mlp_list_get(varant_values, i)
         
         string const_name = enum_name + "_" + var_name
         state.code = asm_emit_data(state.code, const_name + ": dq " + numeric_to_string(value))
@@ -447,7 +447,7 @@ function visit_switch_statement(state, node_id)
         numeric case_value = 0
         case_value = mlp_list_get(case_values, i)
         numeric case_block_id = 0
-        case_block_id = case_block_imlp_list_get(ds, i)
+        case_block_id = mlp_list_get(case_block_ds, i)
         
         string case_label = ""
         case_label = ".case_" + numeric_to_string(switch_id) + "_" + numeric_to_string(i)

@@ -55,7 +55,7 @@ function function_signature_create(name)
 end function
 
 function function_signature_add_parameter(sig, param_info)
-    simlp_list_add(g.parameters, param_info)
+    mlp_list_add(sg.parameters, param_info)
     sig.param_count = sig.param_count + 1
     return sig
 end function
@@ -69,7 +69,7 @@ function function_signature_get_parameter(sig, index)
         panic("function_signature_get_parameter: index out of range")
     end if
 
-    return simlp_list_get(g.parameters, index)
+    return mlp_list_get(sg.parameters, index)
 end function
 
 -- -----------------------------------------------------------------------------
@@ -151,12 +151,12 @@ end function
 
 function pre_scan_functions(registry, arena, root_block_data)
     numeric stmt_count = 0
-    stmt_count = root_block_data.statement_imlp_list_length(ds)
+    stmt_count = root_block_data.mlp_list_length(statement_ds)
     numeric i = 0
     
     while i < stmt_count
         numeric stmt_id = 0
-        stmt_id = root_block_data.statement_imlp_list_get(ds, i)
+        stmt_id = root_block_data.mlp_list_get(statement_ds, i)
         ASTNode stmt_node
         stmt_node = ast_arena_get(arena, stmt_id)
         
@@ -185,7 +185,7 @@ function apply_default_parameters(registry, arena, call_data)
     end if
 
     numeric provided_count = 0
-    provided_count = call_data.argument_imlp_list_length(ds)
+    provided_count = call_data.mlp_list_length(argument_ds)
     numeric required_count = sig.param_count
     
     if provided_count >= required_count then
@@ -198,7 +198,7 @@ function apply_default_parameters(registry, arena, call_data)
         param = function_signature_get_parameter(sig, i)
         
         if parameter_info_has_default(param) == 1 then
-            call_data.argument_imlp_list_add(ds, param.default_value_node_id)
+            call_data.mlp_list_add(argument_ds, param.default_value_node_id)
         else
             print "ERROR: Missing required parameter '"
             print param.name

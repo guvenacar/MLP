@@ -31,13 +31,13 @@ function parse_import_statement(state)
         Token alias_token
         alias_token = parser_peek(state)
         state = parser_expect(state, TOKEN_IDENTIFIER)
-        imlp_list_add(mported_symbols, alias_token.lexeme)
+        mlp_list_add(imported_symbols, alias_token.lexeme)
     else if parser_match(state, TOKEN_LEFT_BRACE) == 1 then
         while parser_check(state, TOKEN_RIGHT_BRACE) == 0
             Token symbol_token
             symbol_token = parser_peek(state)
             state = parser_expect(state, TOKEN_IDENTIFIER)
-            imlp_list_add(mported_symbols, symbol_token.lexeme)
+            mlp_list_add(imported_symbols, symbol_token.lexeme)
             
             if parser_match(state, TOKEN_COMMA) == 0 then
                 break
@@ -99,9 +99,9 @@ function parse_try_catch(state)
         catch_block_id = parse_block(state, TOKEN_CATCH, TOKEN_END)
         state = parser_exit_scope(state)
         
-        catch_block_imlp_list_add(ds, catch_block_id)
-        exceptimlp_list_add(on_types, exception_type)
-        exceptimlp_list_add(on_vars, exception_var)
+        mlp_list_add(catch_block_ds, catch_block_id)
+        mlp_list_add(excepton_types, exception_type)
+        mlp_list_add(excepton_vars, exception_var)
     end while
     
     state = parser_expect(state, TOKEN_END)
@@ -194,8 +194,8 @@ function parse_match_statement(state)
         body_id = parse_block(state, TOKEN_CASE, TOKEN_END)
         state = parser_exit_scope(state)
         
-        pattern_imlp_list_add(ds, pattern_id)
-        body_imlp_list_add(ds, body_id)
+        mlp_list_add(pattern_ds, pattern_id)
+        mlp_list_add(body_ds, body_id)
     end while
     
     state = parser_expect(state, TOKEN_END)
@@ -244,7 +244,7 @@ function parse_with_statement(state)
     while 1 == 1
         numeric resource_id = 0
         resource_id = parse_expression(state, 0)
-        resource_imlp_list_add(ds, resource_id)
+        mlp_list_add(resource_ds, resource_id)
         
         if parser_match(state, TOKEN_COMMA) == 0 then
             break
@@ -488,7 +488,7 @@ function parse_switch_statement(state)
             state = parser_exit_scope(state)
             
             mlp_list_add(case_values, case_value)
-            case_block_imlp_list_add(ds, case_block_id)
+            mlp_list_add(case_block_ds, case_block_id)
             
         else if parser_match(state, TOKEN_DEFAULT) == 1 then
             state = parser_expect(state, TOKEN_THEN)

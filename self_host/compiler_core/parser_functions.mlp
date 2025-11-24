@@ -152,7 +152,7 @@ function parse_argument_list(state)
         while 1 == 1
             numeric arg_id = 0
             arg_id = parse_expression(state, 0)
-            argument_imlp_list_add(ds, arg_id)
+            mlp_list_add(argument_ds, arg_id)
             
             if parser_match(state, TOKEN_COMMA) == 0 then
                 break

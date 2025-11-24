@@ -45,17 +45,17 @@ function asm_code_create()
 end function
 
 function asm_emit_data(code, line)
-    code.data_sectimlp_list_add(on, line)
+    code.mlp_list_add(data_secton, line)
     return code
 end function
 
 function asm_emit_text(code, line)
-    code.text_sectimlp_list_add(on, line)
+    code.mlp_list_add(text_secton, line)
     return code
 end function
 
 function asm_emit_lambda(code, line)
-    code.lambda_sectimlp_list_add(on, line)
+    code.mlp_list_add(lambda_secton, line)
     return code
 end function
 
@@ -64,15 +64,15 @@ function asm_to_string(code)
     
     -- Imports
     for i
-    i = 0 to code.imlp_list_length(mports) - 1 do
-        result = result + code.imlp_list_get(mports, i) + "\n"
+    i = 0 to mlp_list_length(code, mports) - 1 do
+        result = result + mlp_list_get(code, mports, i) + "\n"
     end for
     
     -- Data section
     result = result + "\nsection .data\n"
     for i
-    i = 0 to code.data_sectimlp_list_length(on) - 1 do
-        result = result + "    " + code.data_sectimlp_list_get(on, i) + "\n"
+    i = 0 to code.mlp_list_length(data_secton) - 1 do
+        result = result + "    " + code.mlp_list_get(data_secton, i) + "\n"
     end for
     
     -- Text section
@@ -80,16 +80,16 @@ function asm_to_string(code)
     result = result + "    global _start\n\n"
     
     for i
-    i = 0 to code.text_sectimlp_list_length(on) - 1 do
-        result = result + code.text_sectimlp_list_get(on, i) + "\n"
+    i = 0 to code.mlp_list_length(text_secton) - 1 do
+        result = result + code.mlp_list_get(text_secton, i) + "\n"
     end for
     
     -- Lambda section
-    if code.lambda_sectimlp_list_length(on) > 0 then
+    if code.mlp_list_length(lambda_secton) > 0 then
         result = result + "\n; Lambda functions\n"
         for i
-        i = 0 to code.lambda_sectimlp_list_length(on) - 1 do
-            result = result + code.lambda_sectimlp_list_get(on, i) + "\n"
+        i = 0 to code.mlp_list_length(lambda_secton) - 1 do
+            result = result + code.mlp_list_get(lambda_secton, i) + "\n"
         end for
     end if
     
@@ -599,9 +599,9 @@ function visit_block(state, node_id)
     list[numeric] statement_ids = list()
     
     for i
-    i = 0 to statement_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(statement_ds) - 1 do
         numeric stmt_id = 0
-        stmt_id = statement_imlp_list_get(ds, i)
+        stmt_id = mlp_list_get(statement_ds, i)
         state = visit_statement(state, stmt_id)
     end for
     

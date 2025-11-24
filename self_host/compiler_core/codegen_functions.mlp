@@ -108,10 +108,10 @@ function visit_function_call(state, node_id)
     
     -- Evaluate arguments (right to left for stack)
     numeric arg_count = 0
-    arg_count = argument_imlp_list_length(ds)
+    arg_count = mlp_list_length(argument_ds)
     for i = arg_count - 1 to 0 step -1 do
         numeric arg_id = 0
-        arg_id = argument_imlp_list_get(ds, i)
+        arg_id = mlp_list_get(argument_ds, i)
         state = visit_expression(state, arg_id)
         state.code = asm_emit_text(state.code, "    push rax")
     end for
@@ -200,9 +200,9 @@ function visit_block_in_lambda(state, node_id)
     list[numeric] statement_ids = list()
     
     for i
-    i = 0 to statement_imlp_list_length(ds) - 1 do
+    i = 0 to mlp_list_length(statement_ds) - 1 do
         numeric stmt_id = 0
-        stmt_id = statement_imlp_list_get(ds, i)
+        stmt_id = mlp_list_get(statement_ds, i)
         -- TODO: Redirect emit to lambda section
         state = visit_statement(state, stmt_id)
     end for
@@ -230,9 +230,9 @@ function visit_method_call(state, node_id)
     
     -- Evaluate arguments
     for i
-    i = argument_imlp_list_length(ds) - 1 to 0 step -1 do
+    i = mlp_list_length(argument_ds) - 1 to 0 step -1 do
         numeric arg_id = 0
-        arg_id = argument_imlp_list_get(ds, i)
+        arg_id = mlp_list_get(argument_ds, i)
         state = visit_expression(state, arg_id)
         state.code = asm_emit_text(state.code, "    push rax")
     end for
@@ -242,7 +242,7 @@ function visit_method_call(state, node_id)
     
     -- Clean up stack
     numeric bytes = 0
-    bytes = (argument_imlp_list_length(ds) + 1) * 8
+    bytes = (mlp_list_length(argument_ds) + 1) * 8
     state.code = asm_emit_text(state.code, "    add rsp, " + numeric_to_string(bytes))
     
     return state
