@@ -71,7 +71,7 @@ function visit_function_declaration(state, node_id)
     end for
     
     -- Allocate local variables
-    numeric frame_size
+    numeric frame_size = 0
     frame_size = scope_get_current_frame_size(state.scope)
     if frame_size > 0 then
         state.code = asm_emit_text(state.code, "    sub rsp, " + numeric_to_string(frame_size))
@@ -107,10 +107,10 @@ function visit_function_call(state, node_id)
     state.code = asm_emit_text(state.code, "    ; Function call: " + func_name)
     
     -- Evaluate arguments (right to left for stack)
-    numeric arg_count
+    numeric arg_count = 0
     arg_count = argument_imlp_list_length(ds)
     for i = arg_count - 1 to 0 step -1 do
-        numeric arg_id
+        numeric arg_id = 0
         arg_id = argument_imlp_list_get(ds, i)
         state = visit_expression(state, arg_id)
         state.code = asm_emit_text(state.code, "    push rax")
@@ -142,7 +142,7 @@ function visit_lambda(state, node_id)
     numeric body_id = 1
     
     -- Generate unique lambda label
-    string lambda_label
+    string lambda_label = ""
     lambda_label = codegen_generate_label(state, "lambda")
     
     state.code = asm_emit_text(state.code, "    ; Lambda expression")
@@ -168,7 +168,7 @@ function visit_lambda(state, node_id)
     end for
     
     -- Allocate frame
-    numeric frame_size
+    numeric frame_size = 0
     frame_size = scope_get_current_frame_size(state.scope)
     if frame_size > 0 then
         state.code = asm_emit_lambda(state.code, "    sub rsp, " + numeric_to_string(frame_size))
@@ -201,7 +201,7 @@ function visit_block_in_lambda(state, node_id)
     
     for i
     i = 0 to statement_imlp_list_length(ds) - 1 do
-        numeric stmt_id
+        numeric stmt_id = 0
         stmt_id = statement_imlp_list_get(ds, i)
         -- TODO: Redirect emit to lambda section
         state = visit_statement(state, stmt_id)
@@ -231,7 +231,7 @@ function visit_method_call(state, node_id)
     -- Evaluate arguments
     for i
     i = argument_imlp_list_length(ds) - 1 to 0 step -1 do
-        numeric arg_id
+        numeric arg_id = 0
         arg_id = argument_imlp_list_get(ds, i)
         state = visit_expression(state, arg_id)
         state.code = asm_emit_text(state.code, "    push rax")
@@ -241,7 +241,7 @@ function visit_method_call(state, node_id)
     state.code = asm_emit_text(state.code, "    call " + method_name)
     
     -- Clean up stack
-    numeric bytes
+    numeric bytes = 0
     bytes = (argument_imlp_list_length(ds) + 1) * 8
     state.code = asm_emit_text(state.code, "    add rsp, " + numeric_to_string(bytes))
     
@@ -261,7 +261,7 @@ function visit_closure_with_captures(state, node_id)
     state.code = asm_emit_text(state.code, "    ; Closure with " + numeric_to_string(mlp_list_length(captured)) + " captures")
     
     -- Allocate closure object (function pointer + captured variables)
-    numeric closure_size
+    numeric closure_size = 0
     closure_size = 8 + (mlp_list_length(captured) * 8)
     state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(closure_size))
     state.code = asm_emit_text(state.code, "    call malloc")

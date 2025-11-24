@@ -23,7 +23,7 @@ function parse_list_literal(state)
     
     if parser_check(state, TOKEN_RIGHT_BRACKET) == 0 then
         while 1 == 1
-            numeric elem_id
+            numeric elem_id = 0
             elem_id = parse_expression(state, 0)
             element_imlp_list_add(ds, elem_id)
             
@@ -35,7 +35,7 @@ function parse_list_literal(state)
     
     state = parser_expect(state, TOKEN_RIGHT_BRACKET)
     
-    numeric list_id
+    numeric list_id = 0
     list_id = parser_create_node(state, AST_LIST_LITERAL, "list_literal")
     
     ASTListLiteralData data
@@ -58,10 +58,10 @@ function parse_hashmap_literal(state)
     
     if parser_check(state, TOKEN_RIGHT_BRACE) == 0 then
         while 1 == 1
-            numeric key_id
+            numeric key_id = 0
             key_id = parse_expression(state, 0)
             state = parser_expect(state, TOKEN_COLON)
-            numeric value_id
+            numeric value_id = 0
             value_id = parse_expression(state, 0)
             
             key_imlp_list_add(ds, key_id)
@@ -75,7 +75,7 @@ function parse_hashmap_literal(state)
     
     state = parser_expect(state, TOKEN_RIGHT_BRACE)
     
-    numeric map_id
+    numeric map_id = 0
     map_id = parser_create_node(state, AST_HASHMAP_LITERAL, "hashmap_literal")
     
     ASTHashMapLiteralData data
@@ -99,7 +99,7 @@ function parse_set_literal(state)
     
     if parser_check(state, TOKEN_RIGHT_BRACE) == 0 then
         while 1 == 1
-            numeric elem_id
+            numeric elem_id = 0
             elem_id = parse_expression(state, 0)
             element_imlp_list_add(ds, elem_id)
             
@@ -111,7 +111,7 @@ function parse_set_literal(state)
     
     state = parser_expect(state, TOKEN_RIGHT_BRACE)
     
-    numeric set_id
+    numeric set_id = 0
     set_id = parser_create_node(state, AST_SET_LITERAL, "set_literal")
     
     ASTSetLiteralData data
@@ -155,7 +155,7 @@ function parse_struct_field(state)
         
         -- Method body
         state = parser_enter_scope(state)
-        numeric body_id
+        numeric body_id = 0
         body_id = parse_block(state, TOKEN_END)
         state = parser_exit_scope(state)
         
@@ -265,7 +265,7 @@ function parse_struct_definition(state)
         state = parser_expect(state, TOKEN_END_STRUCT)
     end if
     
-    numeric struct_id
+    numeric struct_id = 0
     struct_id = parser_create_node(state, AST_STRUCT_DEFINITION, "struct_def")
     
     ASTStructData data
@@ -310,7 +310,7 @@ function parse_enum_definition(state)
         varimlp_list_add(ant_names, variant_token.lexeme)
         
         if parser_match(state, TOKEN_ASSIGN) == 1 then
-            numeric value_id
+            numeric value_id = 0
             value_id = parse_expression(state, 0)
             varimlp_list_add(ant_values, value_id)
         else
@@ -322,7 +322,7 @@ function parse_enum_definition(state)
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_ENUM)
     
-    numeric enum_id
+    numeric enum_id = 0
     enum_id = parser_create_node(state, AST_ENUM_DEFINITION, "enum_def")
     
     ASTEnumData data
@@ -352,7 +352,7 @@ function parse_struct_instantiation(state, type_name)
             
             state = parser_expect(state, TOKEN_COLON)
             
-            numeric value_id
+            numeric value_id = 0
             value_id = parse_expression(state, 0)
             
             fimlp_list_add(eld_names, field_token.lexeme)
@@ -366,7 +366,7 @@ function parse_struct_instantiation(state, type_name)
     
     state = parser_expect(state, TOKEN_RIGHT_BRACE)
     
-    numeric inst_id
+    numeric inst_id = 0
     inst_id = parser_create_node(state, AST_STRUCT_INSTANTIATION, "struct_inst")
     
     ASTStructInstantiationData data
@@ -389,7 +389,7 @@ function parse_member_access(state, object_id)
     member_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     
-    numeric access_id
+    numeric access_id = 0
     access_id = parser_create_node(state, AST_MEMBER_ACCESS, "member_access")
     
     ASTMemberAccessData data
@@ -412,12 +412,12 @@ function parse_type_annotation(state)
     string type_str = base_type_token.lexeme
     
     if parser_match(state, TOKEN_LEFT_BRACKET) == 1 then
-        string element_type
+        string element_type = ""
         element_type = parse_type_annotation(state)
         type_str = type_str + "[" + element_type
         
         if parser_match(state, TOKEN_COMMA) == 1 then
-            string value_type
+            string value_type = ""
             value_type = parse_type_annotation(state)
             type_str = type_str + ", " + value_type
         end if
@@ -435,10 +435,10 @@ end function
 
 function parse_range_expression(state, start_id)
     state = parser_expect(state, TOKEN_RANGE)
-    numeric end_id
+    numeric end_id = 0
     end_id = parse_expression(state, 0)
     
-    numeric range_id
+    numeric range_id = 0
     range_id = parser_create_node(state, AST_RANGE, "range_expr")
     
     ASTRangeData data
@@ -463,20 +463,20 @@ function parse_foreach_loop(state)
     
     state = parser_expect(state, TOKEN_IN)
     
-    numeric iterable_id
+    numeric iterable_id = 0
     iterable_id = parse_expression(state, 0)
     
     state = parser_expect(state, TOKEN_DO)
     
     state = parser_enter_scope(state)
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_FOR)
     
-    numeric foreach_id
+    numeric foreach_id = 0
     foreach_id = parser_create_node(state, AST_FOR_EACH_LOOP, "foreach_loop")
     
     ASTForEachData data
@@ -508,12 +508,12 @@ function parse_for_loop(state)
     
     state = parser_expect(state, TOKEN_ASSIGN)
     
-    numeric init_id
+    numeric init_id = 0
     init_id = parse_expression(state, 0)
     
     state = parser_expect(state, TOKEN_TO)
     
-    numeric end_id
+    numeric end_id = 0
     end_id = parse_expression(state, 0)
     
     numeric step_id = -1
@@ -524,14 +524,14 @@ function parse_for_loop(state)
     state = parser_expect(state, TOKEN_DO)
     
     state = parser_enter_scope(state)
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_FOR)
     
-    numeric for_id
+    numeric for_id = 0
     for_id = parser_create_node(state, AST_FOR_LOOP, "for_loop")
     
     ASTForLoopData data

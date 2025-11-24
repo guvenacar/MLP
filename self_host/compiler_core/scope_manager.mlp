@@ -97,14 +97,14 @@ function scope_exit(manager)
     end if
     
     -- Remove variables from current scope
-    numeric scope_index
+    numeric scope_index = 0
     scope_index = mlp_list_length(manager.scope_stack) - 1
     ScopeInfo current
     current = mlp_list_get(manager.scope_stack, scope_index)
     
     for i
     i = 0 to current.varimlp_list_length(able_names) - 1 do
-        string var_name
+        string var_name = ""
         var_name = current.varimlp_list_get(able_names, i)
         manager.varimlp_list_remove(able_map, var_name)
     end for
@@ -157,7 +157,7 @@ function scope_register_variable(manager, var_name, type_name, is_param)
     manager.next_offset = manager.next_offset + size
     
     -- Add to current scope
-    numeric scope_index
+    numeric scope_index = 0
     scope_index = mlp_list_length(manager.scope_stack) - 1
     ScopeInfo current
     current = mlp_list_get(manager.scope_stack, scope_index)
@@ -196,7 +196,7 @@ function scope_generate_label(manager, prefix)
     numeric id = manager.label_counter
     manager.label_counter = manager.label_counter + 1
     
-    string label
+    string label = ""
     label = prefix + "_" + numeric_to_string(id)
     return label
 end function
@@ -210,7 +210,7 @@ function scope_get_current_frame_size(manager)
         return 0
     end if
     
-    numeric scope_index
+    numeric scope_index = 0
     scope_index = mlp_list_length(manager.scope_stack) - 1
     ScopeInfo current
     current = mlp_list_get(manager.scope_stack, scope_index)
@@ -253,7 +253,7 @@ function scope_get_captured_variables(manager)
     list[string] keys = hashmap_keys(manager.variable_map)
     for i
     i = 0 to mlp_list_length(keys) - 1 do
-        string key
+        string key = ""
         key = mlp_list_get(keys, i)
         VariableInfo info
         info = manager.varimlp_list_get(able_map, key)
@@ -280,7 +280,7 @@ function scope_dump_variables(manager)
     list[string] keys = hashmap_keys(manager.variable_map)
     for i
     i = 0 to mlp_list_length(keys) - 1 do
-        string key
+        string key = ""
         key = mlp_list_get(keys, i)
         VariableInfo info
         info = manager.varimlp_list_get(able_map, key)

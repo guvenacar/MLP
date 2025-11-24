@@ -126,7 +126,7 @@ end function
 -- -----------------------------------------------------------------------------
 
 function codegen_register_string(state, str_value)
-    string label
+    string label = ""
     label = "str_" + numeric_to_string(state.string_counter)
     state.string_counter = state.string_counter + 1
     
@@ -144,7 +144,7 @@ function codegen_generate_label(state, prefix)
     numeric id = state.label_counter
     state.label_counter = state.label_counter + 1
     
-    string label
+    string label = ""
     label = prefix + "_" + numeric_to_string(id)
     return label
 end function
@@ -171,7 +171,7 @@ function visit_string(state, node_id)
     node = ast_arena_get(state.arena, node_id)
     
     string value = "Hello"
-    string label
+    string label = ""
     label = register_string_literal(state, value)
     
     state.code = asm_emit_text(state.code, "    ; String literal")
@@ -439,9 +439,9 @@ function visit_if_statement(state, node_id)
     numeric then_block_id = 2
     numeric else_block_id = -1
     
-    string else_label
+    string else_label = ""
     else_label = codegen_generate_label(state, "else")
-    string end_label
+    string end_label = ""
     end_label = codegen_generate_label(state, "endif")
     
     state.code = asm_emit_text(state.code, "    ; If statement")
@@ -473,9 +473,9 @@ function visit_while_loop(state, node_id)
     numeric condition_id = 1
     numeric body_id = 2
     
-    string loop_label
+    string loop_label = ""
     loop_label = codegen_generate_label(state, "while_loop")
-    string end_label
+    string end_label = ""
     end_label = codegen_generate_label(state, "while_end")
     
     state.code = asm_emit_text(state.code, "    ; While loop")
@@ -600,7 +600,7 @@ function visit_block(state, node_id)
     
     for i
     i = 0 to statement_imlp_list_length(ds) - 1 do
-        numeric stmt_id
+        numeric stmt_id = 0
         stmt_id = statement_imlp_list_get(ds, i)
         state = visit_statement(state, stmt_id)
     end for

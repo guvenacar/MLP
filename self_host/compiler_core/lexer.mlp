@@ -66,7 +66,7 @@ function advance(state)
         return state
     end if
 
-    string ch
+    string ch = ""
     ch = current_char(state)
     
     if ch == "\n" then
@@ -130,7 +130,7 @@ end function
 
 function skip_whitespace(state)
     while is_eof(state) == 0
-        string ch
+        string ch = ""
         ch = current_char(state)
         if is_whitespace(ch) == 0 then
             break
@@ -142,7 +142,7 @@ end function
 
 function skip_line_comment(state)
     while is_eof(state) == 0
-        string ch
+        string ch = ""
         ch = current_char(state)
         if ch == "\n" then
             break
@@ -157,9 +157,9 @@ function skip_block_comment(state)
     state = advance(state)
     
     while is_eof(state) == 0
-        string ch
+        string ch = ""
         ch = current_char(state)
-        string next
+        string next = ""
         next = peek_char(state, 1)
         
         if ch == "-" then
@@ -184,9 +184,9 @@ function skip_whitespace_and_comments(state)
             break
         end if
         
-        string ch
+        string ch = ""
         ch = current_char(state)
-        string next
+        string next = ""
         next = peek_char(state, 1)
         
         if ch == "-" then
@@ -219,7 +219,7 @@ function read_number(state)
     numeric start = state.position
     
     while is_eof(state) == 0
-        string ch
+        string ch = ""
         ch = current_char(state)
         if is_digit(ch) == 0 then
             break
@@ -228,7 +228,7 @@ function read_number(state)
     end while
     
     numeric len = state.position - start
-    string value
+    string value = ""
     value = string_substring(state.source_code, start, len)
     
     Token token
@@ -247,7 +247,7 @@ function read_string(state, delimiter)
     string current_part = ""
     
     while is_eof(state) == 0
-        string ch
+        string ch = ""
         ch = current_char(state)
         
         if ch == delimiter then
@@ -268,7 +268,7 @@ function read_string(state, delimiter)
             numeric var_start = state.position
             
             while is_eof(state) == 0
-                string vch
+                string vch = ""
                 vch = current_char(state)
                 if vch == "}" then
                     break
@@ -277,7 +277,7 @@ function read_string(state, delimiter)
             end while
             
             numeric var_len = state.position - var_start
-            string var_name
+            string var_name = ""
             var_name = string_substring(state.source_code, var_start, var_len)
             mlp_list_add(parts, "{" + var_name + "}")
             
@@ -292,7 +292,7 @@ function read_string(state, delimiter)
         mlp_list_add(parts, current_part)
     end if
     
-    numeric part_count
+    numeric part_count = 0
     part_count = mlp_list_length(parts)
     if part_count > 1 then
         Token token
@@ -318,7 +318,7 @@ function read_identifier(state)
     numeric start = state.position
     
     while is_eof(state) == 0
-        string ch
+        string ch = ""
         ch = current_char(state)
         if is_alnum(ch) == 0 then
             break
@@ -327,7 +327,7 @@ function read_identifier(state)
     end while
     
     numeric len = state.position - start
-    string value
+    string value = ""
     value = string_substring(state.source_code, start, len)
     
     TokenType token_type
@@ -389,9 +389,9 @@ end function
 -- -----------------------------------------------------------------------------
 
 function read_operator(state)
-    string ch
+    string ch = ""
     ch = current_char(state)
-    string next
+    string next = ""
     next = peek_char(state, 1)
     
     if ch == "=" then
@@ -593,7 +593,7 @@ function get_next_token(state)
         return make_token(TOKEN_EOF, "", state.line, state.column)
     end if
     
-    string ch
+    string ch = ""
     ch = current_char(state)
     
     if is_digit(ch) == 1 then

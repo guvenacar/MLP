@@ -39,13 +39,13 @@ function visit_lambda_expression(state, node_id)
         captured_vars = lambda_data.captured_vars
     end if
     
-    numeric captured_count
+    numeric captured_count = 0
     captured_count = mlp_list_length(captured_vars)
     
     -- Generate unique labels
-    string lambda_label
+    string lambda_label = ""
     lambda_label = "__lambda_" + numeric_to_string(lambda_counter)
-    string closure_label
+    string closure_label = ""
     closure_label = "__closure_" + numeric_to_string(lambda_counter)
     lambda_counter = lambda_counter + 1
     
@@ -57,7 +57,7 @@ function visit_lambda_expression(state, node_id)
     
     -- 1. Allocate closure struct on heap
     -- Layout: [0-7] function_ptr, [8-15] captured_var_1, [16-23] captured_var_2, ...
-    numeric closure_size
+    numeric closure_size = 0
     closure_size = 8 + (captured_count * 8)
     state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(closure_size) + "  ; Closure size")
     state.code = asm_emit_text(state.code, "    call malloc")
@@ -71,7 +71,7 @@ function visit_lambda_expression(state, node_id)
     -- 3. Copy captured variables into closure struct
     if captured_count > 0 then
         for i = 0 to captured_count - 1 do
-            string var_name
+            string var_name = ""
             var_name = mlp_list_get(captured_vars, i)
             Variable var
             var = scope_find_variable(state, var_name)
@@ -81,7 +81,7 @@ function visit_lambda_expression(state, node_id)
                 exit(1)
             end if
             
-            numeric offset
+            numeric offset = 0
             offset = 8 + (i * 8)
             state.code = asm_emit_text(state.code, "    ; Capture '" + var_name + "' at offset " + numeric_to_string(offset))
             state.code = asm_emit_text(state.code, "    mov rbx, " + var.asm_address + "  ; Load variable")
@@ -122,7 +122,7 @@ function visit_lambda_expression(state, node_id)
     lambda_section_code = lambda_section_code + "    sub rsp, 256\n"
     
     -- Save closure pointer (first parameter, always in rdi)
-    string closure_var_addr
+    string closure_var_addr = ""
     closure_var_addr = scope_allocate_variable(state, "__closure", "SAYISAL")
     lambda_section_code = lambda_section_code + "    mov " + closure_var_addr + ", rdi  ; Save closure pointer\n"
     
@@ -133,9 +133,9 @@ function visit_lambda_expression(state, node_id)
         Token param
         param = mlp_list_get(lambda_data.parameters, i)
         string param_name = param.lexeme
-        string param_addr
+        string param_addr = ""
         param_addr = scope_allocate_variable(state, param_name, "SAYISAL")
-        string reg
+        string reg = ""
         reg = arg_regimlp_list_get(sters, i)
         lambda_section_code = lambda_section_code + "    mov " + param_addr + ", " + reg + "  ; Parameter '" + param_name + "'\n"
     end for
@@ -143,12 +143,12 @@ function visit_lambda_expression(state, node_id)
     -- Load captured variables from closure struct
     if captured_count > 0 then
         for i = 0 to captured_count - 1 do
-            string var_name
+            string var_name = ""
             var_name = mlp_list_get(captured_vars, i)
-            numeric offset
+            numeric offset = 0
             offset = 8 + (i * 8)
             
-            string var_addr
+            string var_addr = ""
             var_addr = scope_allocate_variable(state, var_name, "SAYISAL")
             
             lambda_section_code = lambda_section_code + "    ; Load captured '" + var_name + "' from closure\n"
@@ -210,11 +210,11 @@ function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
     
     for i
     i = 0 to argument_imlp_list_length(ds) - 1 do
-        numeric arg_id
+        numeric arg_id = 0
         arg_id = argument_imlp_list_get(ds, i)
         state = visit_expression(state, arg_id)
         
-        string reg
+        string reg = ""
         reg = arg_regimlp_list_get(sters, i)
         state.code = asm_emit_text(state.code, "    mov " + reg + ", rax  ; Argument " + numeric_to_string(i + 1))
     end for

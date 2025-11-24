@@ -127,7 +127,7 @@ function register_function_from_ast(registry, arena, func_data)
     FunctionSignature sig
     sig = function_signature_create(func_data.name)
 
-    numeric param_count
+    numeric param_count = 0
     param_count = mlp_list_length(func_data.parameters)
     numeric i = 0
     while i < param_count
@@ -150,12 +150,12 @@ function register_function_from_ast(registry, arena, func_data)
 end function
 
 function pre_scan_functions(registry, arena, root_block_data)
-    numeric stmt_count
+    numeric stmt_count = 0
     stmt_count = root_block_data.statement_imlp_list_length(ds)
     numeric i = 0
     
     while i < stmt_count
-        numeric stmt_id
+        numeric stmt_id = 0
         stmt_id = root_block_data.statement_imlp_list_get(ds, i)
         ASTNode stmt_node
         stmt_node = ast_arena_get(arena, stmt_id)
@@ -184,7 +184,7 @@ function apply_default_parameters(registry, arena, call_data)
         return call_data
     end if
 
-    numeric provided_count
+    numeric provided_count = 0
     provided_count = call_data.argument_imlp_list_length(ds)
     numeric required_count = sig.param_count
     

@@ -47,7 +47,7 @@ function parse_import_statement(state)
         state = parser_expect(state, TOKEN_RIGHT_BRACE)
     end if
     
-    numeric import_id
+    numeric import_id = 0
     import_id = parser_create_node(state, AST_IMPORT_STATEMENT, "import_stmt")
     
     ASTImportData data
@@ -68,7 +68,7 @@ function parse_try_catch(state)
     state = parser_expect(state, TOKEN_TRY)
     
     state = parser_enter_scope(state)
-    numeric try_block_id
+    numeric try_block_id = 0
     try_block_id = parse_block(state, TOKEN_CATCH, TOKEN_END)
     state = parser_exit_scope(state)
     
@@ -95,7 +95,7 @@ function parse_try_catch(state)
         end if
         
         state = parser_enter_scope(state)
-        numeric catch_block_id
+        numeric catch_block_id = 0
         catch_block_id = parse_block(state, TOKEN_CATCH, TOKEN_END)
         state = parser_exit_scope(state)
         
@@ -107,7 +107,7 @@ function parse_try_catch(state)
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_TRY)
     
-    numeric try_id
+    numeric try_id = 0
     try_id = parser_create_node(state, AST_TRY_CATCH, "try_catch")
     
     ASTTryCatchData data
@@ -127,10 +127,10 @@ end function
 
 function parse_throw_statement(state)
     state = parser_expect(state, TOKEN_THROW)
-    numeric expr_id
+    numeric expr_id = 0
     expr_id = parse_expression(state, 0)
     
-    numeric throw_id
+    numeric throw_id = 0
     throw_id = parser_create_node(state, AST_THROW, "throw_stmt")
     
     ASTThrowData data
@@ -147,7 +147,7 @@ end function
 function parse_break_statement(state)
     state = parser_expect(state, TOKEN_BREAK)
     
-    numeric break_id
+    numeric break_id = 0
     break_id = parser_create_node(state, AST_BREAK, "break_stmt")
     
     ASTBreakData data
@@ -163,7 +163,7 @@ end function
 function parse_continue_statement(state)
     state = parser_expect(state, TOKEN_CONTINUE)
     
-    numeric continue_id
+    numeric continue_id = 0
     continue_id = parser_create_node(state, AST_CONTINUE, "continue_stmt")
     
     ASTContinueData data
@@ -178,19 +178,19 @@ end function
 
 function parse_match_statement(state)
     state = parser_expect(state, TOKEN_MATCH)
-    numeric expr_id
+    numeric expr_id = 0
     expr_id = parse_expression(state, 0)
     
     list[numeric] pattern_ids = list()
     list[numeric] body_ids = list()
     
     while parser_match(state, TOKEN_CASE) == 1
-        numeric pattern_id
+        numeric pattern_id = 0
         pattern_id = parse_expression(state, 0)
         state = parser_expect(state, TOKEN_ARROW)
         
         state = parser_enter_scope(state)
-        numeric body_id
+        numeric body_id = 0
         body_id = parse_block(state, TOKEN_CASE, TOKEN_END)
         state = parser_exit_scope(state)
         
@@ -201,7 +201,7 @@ function parse_match_statement(state)
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_MATCH)
     
-    numeric match_id
+    numeric match_id = 0
     match_id = parser_create_node(state, AST_MATCH, "match_stmt")
     
     ASTMatchData data
@@ -219,10 +219,10 @@ end function
 
 function parse_defer_statement(state)
     state = parser_expect(state, TOKEN_DEFER)
-    numeric stmt_id
+    numeric stmt_id = 0
     stmt_id = parse_statement(state)
     
-    numeric defer_id
+    numeric defer_id = 0
     defer_id = parser_create_node(state, AST_DEFER, "defer_stmt")
     
     ASTDeferData data
@@ -242,7 +242,7 @@ function parse_with_statement(state)
     list[numeric] resource_ids = list()
     
     while 1 == 1
-        numeric resource_id
+        numeric resource_id = 0
         resource_id = parse_expression(state, 0)
         resource_imlp_list_add(ds, resource_id)
         
@@ -254,14 +254,14 @@ function parse_with_statement(state)
     state = parser_expect(state, TOKEN_DO)
     
     state = parser_enter_scope(state)
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_WITH)
     
-    numeric with_id
+    numeric with_id = 0
     with_id = parser_create_node(state, AST_WITH, "with_stmt")
     
     ASTWithData data
@@ -285,10 +285,10 @@ function parse_type_alias(state)
     
     state = parser_expect(state, TOKEN_ASSIGN)
     
-    string aliased_type
+    string aliased_type = ""
     aliased_type = parse_type_annotation(state)
     
-    numeric alias_id
+    numeric alias_id = 0
     alias_id = parser_create_node(state, AST_TYPE_ALIAS, "type_alias")
     
     ASTTypeAliasData data
@@ -309,10 +309,10 @@ function parse_unary_expression(state)
     
     if token.type == TOKEN_NOT then
         state = parser_advance(state)
-        numeric operand_id
+        numeric operand_id = 0
         operand_id = parse_unary_expression(state)
         
-        numeric unary_id
+        numeric unary_id = 0
         unary_id = parser_create_node(state, AST_UNARY_OP, "unary_not")
         
         ASTUnaryData data
@@ -325,10 +325,10 @@ function parse_unary_expression(state)
     
     if token.type == TOKEN_MINUS then
         state = parser_advance(state)
-        numeric operand_id
+        numeric operand_id = 0
         operand_id = parse_unary_expression(state)
         
-        numeric unary_id
+        numeric unary_id = 0
         unary_id = parser_create_node(state, AST_UNARY_OP, "unary_minus")
         
         ASTUnaryData data
@@ -341,10 +341,10 @@ function parse_unary_expression(state)
     
     if token.type == TOKEN_BITWISE_NOT then
         state = parser_advance(state)
-        numeric operand_id
+        numeric operand_id = 0
         operand_id = parse_unary_expression(state)
         
-        numeric unary_id
+        numeric unary_id = 0
         unary_id = parser_create_node(state, AST_UNARY_OP, "unary_bitwise_not")
         
         ASTUnaryData data
@@ -365,11 +365,11 @@ end function
 function parse_panic_statement(state)
     state = parser_expect(state, TOKEN_PANIC)
     state = parser_expect(state, TOKEN_LEFT_PAREN)
-    numeric message_id
+    numeric message_id = 0
     message_id = parse_expression(state, 0)
     state = parser_expect(state, TOKEN_RIGHT_PAREN)
     
-    numeric panic_id
+    numeric panic_id = 0
     panic_id = parser_create_node(state, AST_PANIC, "panic_stmt")
     
     ASTPanicData data
@@ -384,10 +384,10 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parse_expression_statement(state)
-    numeric expr_id
+    numeric expr_id = 0
     expr_id = parse_expression(state, 0)
     
-    numeric expr_stmt_id
+    numeric expr_stmt_id = 0
     expr_stmt_id = parser_create_node(state, AST_EXPRESSION_STATEMENT, "expr_stmt")
     
     ASTExpressionStatementData data
@@ -439,7 +439,7 @@ function parse_enum_declaration(state)
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_ENUM)
     
-    numeric enum_id
+    numeric enum_id = 0
     enum_id = parser_create_node(state, AST_ENUM_DECLARATION, "enum_decl")
     
     ASTEnumData data
@@ -458,7 +458,7 @@ end function
 function parse_switch_statement(state)
     state = parser_expect(state, TOKEN_SWITCH)
     
-    numeric switch_expr_id
+    numeric switch_expr_id = 0
     switch_expr_id = parse_expression(state, 0)
     
     state = parser_expect(state, TOKEN_THEN)
@@ -483,7 +483,7 @@ function parse_switch_statement(state)
             state = parser_expect(state, TOKEN_THEN)
             
             state = parser_enter_scope(state)
-            numeric case_block_id
+            numeric case_block_id = 0
             case_block_id = parse_block(state, TOKEN_CASE, TOKEN_DEFAULT, TOKEN_END)
             state = parser_exit_scope(state)
             
@@ -504,7 +504,7 @@ function parse_switch_statement(state)
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_SWITCH)
     
-    numeric switch_id
+    numeric switch_id = 0
     switch_id = parser_create_node(state, AST_SWITCH_KOMUTU, "switch_stmt")
     
     ASTSwitchData data
@@ -554,10 +554,10 @@ function parse_lambda_expression(state)
     state = parser_expect(state, TOKEN_RIGHT_PAREN)
     state = parser_expect(state, TOKEN_ARROW)
     
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_expression(state, 0)
     
-    numeric lambda_id
+    numeric lambda_id = 0
     lambda_id = parser_create_node(state, AST_LAMBDA, "lambda_expr")
     
     ASTLambdaData data
@@ -618,14 +618,14 @@ function parse_async_function(state)
     state = parser_expect(state, TOKEN_RIGHT_PAREN)
     
     state = parser_enter_scope(state)
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_FUNCTION)
     
-    numeric async_id
+    numeric async_id = 0
     async_id = parser_create_node(state, AST_ASYNC_FUNCTION, "async_func")
     
     ASTAsyncFunctionData data
@@ -646,10 +646,10 @@ end function
 function parse_await_expression(state)
     state = parser_expect(state, TOKEN_AWAIT)
     
-    numeric expr_id
+    numeric expr_id = 0
     expr_id = parse_expression(state, 0)
     
-    numeric await_id
+    numeric await_id = 0
     await_id = parser_create_node(state, AST_AWAIT_EXPR, "await_expr")
     
     ASTAwaitData data
@@ -680,7 +680,7 @@ function find_free_variables(state, numeric node_id, list[string] free_vars, lis
         end for
         
         if is_param == 0 then
-            numeric var_exists
+            numeric var_exists = 0
             var_exists = scope_variable_exists(state, var_name)
             if var_exists == 1 then
                 numeric already_captured = 0
@@ -706,7 +706,7 @@ function find_free_variables(state, numeric node_id, list[string] free_vars, lis
         state = find_free_variables(state, node.right_id, free_vars, lambda_params)
     else if node.type == AST_ISLEC_CAGIRMA then
         for i = 0 to node.argument_count - 1 do
-            numeric arg_id
+            numeric arg_id = 0
             arg_id = mlp_list_get(node.arguments, i)
             state = find_free_variables(state, arg_id, free_vars, lambda_params)
         end for

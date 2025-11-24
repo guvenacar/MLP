@@ -1,0 +1,21 @@
+-- lang: en-US
+-- syntax: mlp
+
+struct Point then
+    numeric x
+    numeric y
+end struct
+
+function test_struct()
+    Point p
+    p.x = 10
+    p.y = 20
+    
+    numeric sum = 0
+    sum = p.x + p.y
+    print sum
+    
+    return 0
+end function
+
+numeric result = test_struct()

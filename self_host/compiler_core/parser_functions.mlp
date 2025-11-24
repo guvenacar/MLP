@@ -117,14 +117,14 @@ function parse_function_declaration(state)
     
     -- Function body
     state = parser_enter_scope(state)
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_FUNCTION)
     
-    numeric func_id
+    numeric func_id = 0
     func_id = parser_create_node(state, AST_FUNCTION_DECLARATION, "func_decl")
     
     ASTFunctionData data
@@ -150,7 +150,7 @@ function parse_argument_list(state)
     
     if parser_check(state, TOKEN_RIGHT_PAREN) == 0 then
         while 1 == 1
-            numeric arg_id
+            numeric arg_id = 0
             arg_id = parse_expression(state, 0)
             argument_imlp_list_add(ds, arg_id)
             
@@ -176,7 +176,7 @@ function parse_function_call(state, identifier_id)
     
     list[numeric] arguments = parse_argument_list(state)
     
-    numeric call_id
+    numeric call_id = 0
     call_id = parser_create_node(state, AST_FUNCTION_CALL, "func_call")
     
     ASTFunctionCallData data
@@ -202,7 +202,7 @@ function parse_method_call(state, receiver_id)
     
     list[numeric] arguments = parse_argument_list(state)
     
-    numeric call_id
+    numeric call_id = 0
     call_id = parser_create_node(state, AST_FUNCTION_CALL, "method_call")
     
     ASTFunctionCallData data
@@ -220,7 +220,7 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parse_postfix_expression(state)
-    numeric left_id
+    numeric left_id = 0
     left_id = parse_primary(state)
     
     while 1 == 1
@@ -233,11 +233,11 @@ function parse_postfix_expression(state)
             left_id = parse_method_call(state, left_id)
         else if token.type == TOKEN_LEFT_BRACKET then
             state = parser_advance(state)
-            numeric index_id
+            numeric index_id = 0
             index_id = parse_expression(state, 0)
             state = parser_expect(state, TOKEN_RIGHT_BRACKET)
             
-            numeric access_id
+            numeric access_id = 0
             access_id = parser_create_node(state, AST_ARRAY_ACCESS, "array_access")
             
             ASTArrayAccessData data
@@ -266,14 +266,14 @@ function parse_lambda_expression(state)
     state = parser_expect(state, TOKEN_ARROW)
     
     state = parser_enter_scope(state)
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_LAMBDA)
     
-    numeric lambda_id
+    numeric lambda_id = 0
     lambda_id = parser_create_node(state, AST_LAMBDA, "lambda_expr")
     
     ASTLambdaData data
@@ -316,14 +316,14 @@ function parse_async_function(state)
     state.registry = function_registry_register(state.registry, sig)
     
     state = parser_enter_scope(state)
-    numeric body_id
+    numeric body_id = 0
     body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_FUNCTION)
     
-    numeric func_id
+    numeric func_id = 0
     func_id = parser_create_node(state, AST_FUNCTION_DECLARATION, "async_func_decl")
     
     ASTFunctionData data
@@ -344,10 +344,10 @@ end function
 
 function parse_await_expression(state)
     state = parser_expect(state, TOKEN_AWAIT)
-    numeric expr_id
+    numeric expr_id = 0
     expr_id = parse_expression(state, 0)
     
-    numeric await_id
+    numeric await_id = 0
     await_id = parser_create_node(state, AST_AWAIT, "await_expr")
     
     ASTAwaitData data
@@ -363,10 +363,10 @@ end function
 
 function parse_yield_expression(state)
     state = parser_expect(state, TOKEN_YIELD)
-    numeric expr_id
+    numeric expr_id = 0
     expr_id = parse_expression(state, 0)
     
-    numeric yield_id
+    numeric yield_id = 0
     yield_id = parser_create_node(state, AST_YIELD, "yield_expr")
     
     ASTYieldData data
