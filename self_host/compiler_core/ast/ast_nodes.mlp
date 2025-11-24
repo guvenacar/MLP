@@ -1,14 +1,14 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# AST Module
-# -----------------------------------------------------------------------------
-# Canonical AST node enumerations plus lightweight record types that will be used
-# by the future lexer/parser/codegen pipeline. Each specialized struct references
-# other nodes through numeric identifiers so parser implementations can store
-# nodes inside arena-style lists without relying on pointers.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- AST Module
+-- -----------------------------------------------------------------------------
+-- Canonical AST node enumerations plus lightweight record types that will be used
+-- by the future lexer/parser/codegen pipeline. Each specialized struct references
+-- other nodes through numeric identifiers so parser implementations can store
+-- nodes inside arena-style lists without relying on pointers.
+-- -----------------------------------------------------------------------------
 
 enum ASTNodeType
     AST_BLOK
@@ -189,9 +189,9 @@ function ast_arena_get(arena, node_id)
     return arena.nodes.get(node_id)
 end function
 
-# -----------------------------------------------------------------------------
-# Specialized data carriers
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Specialized data carriers
+-- -----------------------------------------------------------------------------
 
 struct ASTBlockData then
     numeric node_id

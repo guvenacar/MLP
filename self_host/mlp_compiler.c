@@ -3516,11 +3516,12 @@ ASTNode* komut() {
 
         // SON'a kadar field'ları oku
         while (current_token->type != TOKEN_END && current_token->type != TOKEN_END_STRUCT) {
-            // Field tipi (SAYISAL, METIN, vb.)
+            // Field tipi (SAYISAL, METIN, BOOL, veya custom type - enum/struct)
             if (current_token->type != TOKEN_TYPE_NUMERIC &&
                 current_token->type != TOKEN_TYPE_STRING &&
-                current_token->type != TOKEN_TYPE_BOOLEAN) {
-                parseError("Field tipi", "SAYISAL/METIN/BOOL");
+                current_token->type != TOKEN_TYPE_BOOLEAN &&
+                current_token->type != TOKEN_IDENTIFIER) {  // Accept custom types (enum/struct)
+                parseError("Field tipi", "SAYISAL/METIN/BOOL/IDENTIFIER");
             }
 
             Token* field_tip = (Token*)malloc(sizeof(Token));
@@ -7588,17 +7589,13 @@ void visit_ListLiteral(ASTNode* node) {
 void visit_StructTanimlama(ASTNode* node) {
     char* struct_adi = node->struct_tanimlama_data.ad->value;
     int field_sayisi = node->struct_tanimlama_data.field_sayisi;
-    Token** field_tipleri = node->struct_tanimlama_data.field_tipleri;
-    Token** field_adlari = node->struct_tanimlama_data.field_adlari;
     char buffer[256];
 
     sprintf(buffer, "    ; --- Struct Tanımlama: %s (%d fields) ---", struct_adi, field_sayisi);
     asm_append(&text_section, buffer);
 
-    // Struct metadata'yı kaydet
-    register_struct_metadata(struct_adi, field_tipleri, field_adlari, field_sayisi);
-
-    // Metadata'dan bilgi al ve comment olarak yaz
+    // Struct metadata already registered in PHASE 0 of generate_asm()
+    // Just emit assembly comments
     StructMetadata* meta = find_struct_metadata(struct_adi);
     if (meta) {
         for (int i = 0; i < field_sayisi; i++) {
@@ -9132,11 +9129,28 @@ char* generate_asm(ASTNode* root) {
     asm_append(&text_section, "section .text");
     asm_append(&text_section, "global main");
 
+    // ========== PHASE 0: REGISTER STRUCT DEFINITIONS ==========
+    // Register all struct definitions BEFORE any code generation
+    // This ensures struct metadata is available when visiting struct variables
+    ASTNode* blok = root;
+    if (blok->type == AST_BLOK) {
+        for (int i = 0; i < blok->blok_data.sayisi; i++) {
+            ASTNode* node = blok->blok_data.komutlar[i];
+            if (node->type == AST_STRUCT_DECLARATION) {
+                // Register struct metadata WITHOUT emitting assembly
+                char* struct_adi = node->struct_tanimlama_data.ad->value;
+                int field_sayisi = node->struct_tanimlama_data.field_sayisi;
+                Token** field_tipleri = node->struct_tanimlama_data.field_tipleri;
+                Token** field_adlari = node->struct_tanimlama_data.field_adlari;
+                register_struct_metadata(struct_adi, field_tipleri, field_adlari, field_sayisi);
+            }
+        }
+    }
+
     // ========== PHASE 1: COLLECT IMPORTS (Pre-Scan Strategy) ==========
     // Parse root AST and collect imported functions WITHOUT emitting assembly
     // They will be emitted BEFORE main() in Phase 3
     
-    ASTNode* blok = root;
     if (blok->type == AST_BLOK) {
         for (int i = 0; i < blok->blok_data.sayisi; i++) {
             ASTNode* node = blok->blok_data.komutlar[i];
@@ -9206,15 +9220,19 @@ char* generate_asm(ASTNode* root) {
                 asm_append(&text_section, "    call mlp_main");
             }
         } else {
-            // No main - execute top level commands (SKIP IMPORTS)
+            // No main - execute top level commands (SKIP IMPORTS, FUNCTIONS, STRUCTS)
             for (int i = 0; i < blok->blok_data.sayisi; i++) {
                 ASTNode* node = blok->blok_data.komutlar[i];
                 // ✅ SKIP: Import statements (already processed in Phase 1)
                 if (node->type == AST_IMPORT) {
                     continue;
                 }
-                // ✅ SKIP: Function declarations (will be emitted in Phase 5)
+                // ✅ SKIP: Function declarations (will be emitted in Phase 5B)
                 if (node->type == AST_FUNCTION_DECLARATION || node->type == AST_ASYNC_FUNCTION) {
+                    continue;
+                }
+                // ✅ SKIP: Struct declarations (will be emitted in Phase 5A)
+                if (node->type == AST_STRUCT_DECLARATION) {
                     continue;
                 }
                 // Execute other top-level statements
@@ -9232,7 +9250,19 @@ char* generate_asm(ASTNode* root) {
     asm_append(&text_section, "    pop rbp");
     asm_append(&text_section, "    ret");
 
-    // ========== PHASE 5: USER-DEFINED FUNCTIONS ==========
+    // ========== PHASE 5A: EMIT STRUCT DEFINITIONS (Assembly Comments) ==========
+    if (blok->type == AST_BLOK) {
+        asm_append(&text_section, "");
+        asm_append(&text_section, "; === Struct Tanımları ===");
+        for (int i = 0; i < blok->blok_data.sayisi; i++) {
+            ASTNode* node = blok->blok_data.komutlar[i];
+            if (node->type == AST_STRUCT_DECLARATION) {
+                visit(node);  // Emits assembly comments for struct layout
+            }
+        }
+    }
+
+    // ========== PHASE 5B: USER-DEFINED FUNCTIONS ==========
     // 6. İkinci geçiş: Fonksiyon tanımları (imported functions ALREADY emitted in Phase 2)
     if (blok->type == AST_BLOK) {
         asm_append(&text_section, "");

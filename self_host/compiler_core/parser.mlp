@@ -1,20 +1,20 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Parser Module - Tam Entegre (Part 1: Core)
-# -----------------------------------------------------------------------------
-# C bootstrap derleyicisindeki parser mantığını MLP'ye taşır.
-# Pratt parsing, AST oluşturma, scope yönetimi.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Parser Module - Tam Entegre (Part 1: Core)
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki parser mantığını MLP'ye taşır.
+-- Pratt parsing, AST oluşturma, scope yönetimi.
+-- -----------------------------------------------------------------------------
 
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
 import "compiler_core/function_registry.mlp"
 
-# -----------------------------------------------------------------------------
-# Parser durumu
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Parser durumu
+-- -----------------------------------------------------------------------------
 
 struct ParserState then
     TokenStream stream
@@ -38,9 +38,9 @@ function parser_state_create(stream)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# Token navigation
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Token navigation
+-- -----------------------------------------------------------------------------
 
 function parser_advance(state)
     TokenStreamTakeResult result = token_stream_take(state.stream)
@@ -84,9 +84,9 @@ function parser_match(state, token_type)
     return 0
 end function
 
-# -----------------------------------------------------------------------------
-# Scope yönetimi
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Scope yönetimi
+-- -----------------------------------------------------------------------------
 
 function parser_enter_scope(state)
     state.scope_stack_offsets.add(0)
@@ -105,9 +105,9 @@ function parser_exit_scope(state)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# AST node creation helpers
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- AST node creation helpers
+-- -----------------------------------------------------------------------------
 
 function parser_create_node(state, node_type, debug_label)
     ASTLocation location = ast_location(
@@ -123,9 +123,9 @@ function parser_create_node(state, node_type, debug_label)
     return result.node_id
 end function
 
-# -----------------------------------------------------------------------------
-# Expression parsing (Pratt-style precedence climbing)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Expression parsing (Pratt-style precedence climbing)
+-- -----------------------------------------------------------------------------
 
 function get_precedence(token_type)
     if token_type == TOKEN_OR then return 10 end if
@@ -157,16 +157,16 @@ function is_binary_operator(token_type)
     return 0
 end function
 
-# -----------------------------------------------------------------------------
-# Forward declarations (diğer modüllerden import edilecek)
-# -----------------------------------------------------------------------------
-# parser_functions.mlp: parse_function_call, parse_postfix_expression, parse_lambda_expression
-# parser_structures.mlp: parse_list_literal, parse_hashmap_literal, parse_for_loop
-# parser_advanced.mlp: parse_import_statement, parse_try_catch, parse_unary_expression
+-- -----------------------------------------------------------------------------
+-- Forward declarations (diğer modüllerden import edilecek)
+-- -----------------------------------------------------------------------------
+-- parser_functions.mlp: parse_function_call, parse_postfix_expression, parse_lambda_expression
+-- parser_structures.mlp: parse_list_literal, parse_hashmap_literal, parse_for_loop
+-- parser_advanced.mlp: parse_import_statement, parse_try_catch, parse_unary_expression
 
-# -----------------------------------------------------------------------------
-# Primary expressions (literals, identifiers, parenthesized expressions)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Primary expressions (literals, identifiers, parenthesized expressions)
+-- -----------------------------------------------------------------------------
 
 function parse_primary(state)
     Token token = parser_peek(state)
@@ -272,9 +272,9 @@ function parse_primary(state)
     return -1
 end function
 
-# -----------------------------------------------------------------------------
-# Binary expression parsing (precedence climbing)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Binary expression parsing (precedence climbing)
+-- -----------------------------------------------------------------------------
 
 function parse_expression(state, min_precedence)
     numeric left_id = parse_primary(state)
@@ -310,9 +310,9 @@ function parse_expression(state, min_precedence)
     return left_id
 end function
 
-# -----------------------------------------------------------------------------
-# Statement parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Statement parsing
+-- -----------------------------------------------------------------------------
 
 function parse_print_statement(state)
     state = parser_expect(state, TOKEN_PRINT)
@@ -534,9 +534,9 @@ function parse_statement(state)
     return -1
 end function
 
-# -----------------------------------------------------------------------------
-# Block parsing (overload for multiple end tokens)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Block parsing (overload for multiple end tokens)
+-- -----------------------------------------------------------------------------
 
 function parse_block(state, end_token1)
     return parse_block_multi(state, end_token1, TOKEN_EOF)
@@ -573,9 +573,9 @@ function parse_block_multi(state, end_token1, end_token2)
     return block_id
 end function
 
-# -----------------------------------------------------------------------------
-# Top-level parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Top-level parsing
+-- -----------------------------------------------------------------------------
 
 function parse(source_code)
     TokenStream stream = tokenize(source_code)

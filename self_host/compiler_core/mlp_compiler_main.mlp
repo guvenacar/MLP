@@ -1,12 +1,12 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# MLP Compiler Main Pipeline
-# -----------------------------------------------------------------------------
-# C bootstrap derleyicisini MLP'ye taşıyan ana derleyici.
-# Lexer → Parser → Code Generator → Assembly output
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- MLP Compiler Main Pipeline
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisini MLP'ye taşıyan ana derleyici.
+-- Lexer → Parser → Code Generator → Assembly output
+-- -----------------------------------------------------------------------------
 
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
@@ -15,9 +15,9 @@ import "compiler_core/parser.mlp"
 import "compiler_core/codegen.mlp"
 import "compiler_core/scope_manager.mlp"
 
-# -----------------------------------------------------------------------------
-# Compiler options
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Compiler options
+-- -----------------------------------------------------------------------------
 
 struct CompilerOptions then
     string input_file
@@ -41,21 +41,21 @@ function compiler_options_default()
     return opts
 end function
 
-# -----------------------------------------------------------------------------
-# File I/O helpers
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- File I/O helpers
+-- -----------------------------------------------------------------------------
 
 function read_file(filepath)
     string content = ""
     
-    # TODO: Implement actual file reading
-    # For now, return empty string
+    -- TODO: Implement actual file reading
+    -- For now, return empty string
     
     return content
 end function
 
 function write_file(filepath, content)
-    # TODO: Implement actual file writing
+    -- TODO: Implement actual file writing
     
     print "Writing to file: "
     print filepath
@@ -63,9 +63,9 @@ function write_file(filepath, content)
     return 1
 end function
 
-# -----------------------------------------------------------------------------
-# Compilation pipeline
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Compilation pipeline
+-- -----------------------------------------------------------------------------
 
 struct CompilationResult then
     numeric success
@@ -91,7 +91,7 @@ function compile(source_code, options)
         print ""
     end if
     
-    # Phase 1: Lexical analysis
+    -- Phase 1: Lexical analysis
     if options.verbose == 1 then
         print "[1/3] Lexing..."
     end if
@@ -105,7 +105,7 @@ function compile(source_code, options)
         token_stream_dump(token_stream)
     end if
     
-    # Phase 2: Parsing
+    -- Phase 2: Parsing
     if options.verbose == 1 then
         print "[2/3] Parsing..."
     end if
@@ -119,7 +119,7 @@ function compile(source_code, options)
         ast_arena_dump(arena)
     end if
     
-    # Phase 3: Code generation
+    -- Phase 3: Code generation
     if options.verbose == 1 then
         print "[3/3] Generating assembly..."
     end if
@@ -139,9 +139,9 @@ function compile(source_code, options)
     return result
 end function
 
-# -----------------------------------------------------------------------------
-# Main compiler entry point
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Main compiler entry point
+-- -----------------------------------------------------------------------------
 
 function compile_file(input_path, output_path, verbose)
     CompilerOptions options = compiler_options_default()
@@ -155,7 +155,7 @@ function compile_file(input_path, output_path, verbose)
     print output_path
     print ""
     
-    # Read source file
+    -- Read source file
     string source_code = read_file(input_path)
     
     if source_code.length() == 0 then
@@ -163,7 +163,7 @@ function compile_file(input_path, output_path, verbose)
         return 0
     end if
     
-    # Compile
+    -- Compile
     CompilationResult result = compile(source_code, options)
     
     if result.success == 0 then
@@ -172,7 +172,7 @@ function compile_file(input_path, output_path, verbose)
         return 0
     end if
     
-    # Write output
+    -- Write output
     numeric write_success = write_file(output_path, result.output_asm)
     
     if write_success == 0 then
@@ -190,9 +190,9 @@ function compile_file(input_path, output_path, verbose)
     return 1
 end function
 
-# -----------------------------------------------------------------------------
-# Interactive REPL mode
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Interactive REPL mode
+-- -----------------------------------------------------------------------------
 
 function repl_mode()
     print "=== MLP Compiler REPL ==="
@@ -206,7 +206,7 @@ function repl_mode()
     while 1 == 1
         print "mlp> "
         
-        # TODO: Read line from stdin
+        -- TODO: Read line from stdin
         string input = ""
         
         if input == "exit" then
@@ -217,7 +217,7 @@ function repl_mode()
             continue
         end if
         
-        # Compile and show result
+        -- Compile and show result
         CompilationResult result = compile(input, options)
         
         if result.success == 1 then
@@ -234,9 +234,9 @@ function repl_mode()
     print "Goodbye!"
 end function
 
-# -----------------------------------------------------------------------------
-# Command line argument parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Command line argument parsing
+-- -----------------------------------------------------------------------------
 
 function parse_args(args)
     CompilerOptions options = compiler_options_default()
@@ -272,9 +272,9 @@ function parse_args(args)
     return options
 end function
 
-# -----------------------------------------------------------------------------
-# Main function
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Main function
+-- -----------------------------------------------------------------------------
 
 function main(args)
     if args.size() == 0 then
@@ -293,17 +293,17 @@ function main(args)
         return 1
     end if
     
-    # Check for REPL mode
+    -- Check for REPL mode
     string first_arg = args.get(0)
     if first_arg == "--repl" then
         repl_mode()
         return 0
     end if
     
-    # Parse arguments
+    -- Parse arguments
     CompilerOptions options = parse_args(args)
     
-    # Compile file
+    -- Compile file
     numeric success = compile_file(options.input_file, options.output_file, options.verbose)
     
     if success == 1 then
@@ -313,15 +313,15 @@ function main(args)
     end if
 end function
 
-# -----------------------------------------------------------------------------
-# Bootstrap entry point (when compiled with C compiler)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Bootstrap entry point (when compiled with C compiler)
+-- -----------------------------------------------------------------------------
 
 print "MLP Self-Hosting Compiler v0.1"
 print "Initializing..."
 print ""
 
-# For now, just compile a test file
+-- For now, just compile a test file
 numeric exit_code = compile_file("test.mlp", "test.asm", 1)
 
 print "Exit code: "

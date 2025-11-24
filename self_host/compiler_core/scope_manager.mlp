@@ -1,19 +1,19 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Scope Manager Module - Symbol table ve değişken tracking
-# -----------------------------------------------------------------------------
-# C bootstrap derleyicisindeki kapsam yönetimi mantığını MLP'ye taşır.
-# Variable tracking, scope levels, symbol resolution, offset calculation.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Scope Manager Module - Symbol table ve değişken tracking
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki kapsam yönetimi mantığını MLP'ye taşır.
+-- Variable tracking, scope levels, symbol resolution, offset calculation.
+-- -----------------------------------------------------------------------------
 
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
 
-# -----------------------------------------------------------------------------
-# Variable information
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Variable information
+-- -----------------------------------------------------------------------------
 
 struct VariableInfo then
     string name
@@ -25,9 +25,9 @@ struct VariableInfo then
     numeric size_bytes
 end struct
 
-# -----------------------------------------------------------------------------
-# Scope information
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Scope information
+-- -----------------------------------------------------------------------------
 
 struct ScopeInfo then
     numeric level
@@ -36,9 +36,9 @@ struct ScopeInfo then
     numeric stack_frame_size
 end struct
 
-# -----------------------------------------------------------------------------
-# Scope Manager state
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Scope Manager state
+-- -----------------------------------------------------------------------------
 
 struct ScopeManager then
     HashMap variable_map
@@ -48,9 +48,9 @@ struct ScopeManager then
     numeric label_counter
 end struct
 
-# -----------------------------------------------------------------------------
-# Scope Manager initialization
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Scope Manager initialization
+-- -----------------------------------------------------------------------------
 
 function scope_manager_create()
     ScopeManager manager
@@ -60,7 +60,7 @@ function scope_manager_create()
     manager.next_offset = 0
     manager.label_counter = 0
     
-    # Global scope
+    -- Global scope
     ScopeInfo global_scope
     global_scope.level = 0
     global_scope.parent_scope = -1
@@ -72,9 +72,9 @@ function scope_manager_create()
     return manager
 end function
 
-# -----------------------------------------------------------------------------
-# Scope operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Scope operations
+-- -----------------------------------------------------------------------------
 
 function scope_enter(manager)
     manager.current_level = manager.current_level + 1
@@ -96,7 +96,7 @@ function scope_exit(manager)
         panic("scope_exit: already at global scope")
     end if
     
-    # Remove variables from current scope
+    -- Remove variables from current scope
     numeric scope_index = manager.scope_stack.size() - 1
     ScopeInfo current = manager.scope_stack.get(scope_index)
     
@@ -111,9 +111,9 @@ function scope_exit(manager)
     return manager
 end function
 
-# -----------------------------------------------------------------------------
-# Variable registration
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Variable registration
+-- -----------------------------------------------------------------------------
 
 function scope_register_variable(manager, var_name, type_name, is_param)
     if manager.variable_map.has(var_name) == 1 then
@@ -125,7 +125,7 @@ function scope_register_variable(manager, var_name, type_name, is_param)
         end if
     end if
     
-    # Calculate size
+    -- Calculate size
     numeric size = 8
     if type_name == "string" then
         size = 8
@@ -137,7 +137,7 @@ function scope_register_variable(manager, var_name, type_name, is_param)
         size = 8
     end if
     
-    # Create variable info
+    -- Create variable info
     VariableInfo info
     info.name = var_name
     info.type_name = type_name
@@ -147,11 +147,11 @@ function scope_register_variable(manager, var_name, type_name, is_param)
     info.is_captured = 0
     info.size_bytes = size
     
-    # Update manager
+    -- Update manager
     manager.variable_map.set(var_name, info)
     manager.next_offset = manager.next_offset + size
     
-    # Add to current scope
+    -- Add to current scope
     numeric scope_index = manager.scope_stack.size() - 1
     ScopeInfo current = manager.scope_stack.get(scope_index)
     current.variable_names.add(var_name)
@@ -161,9 +161,9 @@ function scope_register_variable(manager, var_name, type_name, is_param)
     return manager
 end function
 
-# -----------------------------------------------------------------------------
-# Variable lookup
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Variable lookup
+-- -----------------------------------------------------------------------------
 
 function scope_lookup_variable(manager, var_name)
     if manager.variable_map.has(var_name) == 0 then
@@ -180,9 +180,9 @@ function scope_has_variable(manager, var_name)
     return manager.variable_map.has(var_name)
 end function
 
-# -----------------------------------------------------------------------------
-# Label generation
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Label generation
+-- -----------------------------------------------------------------------------
 
 function scope_generate_label(manager, prefix)
     numeric id = manager.label_counter
@@ -192,9 +192,9 @@ function scope_generate_label(manager, prefix)
     return label
 end function
 
-# -----------------------------------------------------------------------------
-# Stack frame calculation
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Stack frame calculation
+-- -----------------------------------------------------------------------------
 
 function scope_get_current_frame_size(manager)
     if manager.scope_stack.size() == 0 then
@@ -215,9 +215,9 @@ function scope_get_total_stack_size(manager)
     return total
 end function
 
-# -----------------------------------------------------------------------------
-# Variable capture (for closures)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Variable capture (for closures)
+-- -----------------------------------------------------------------------------
 
 function scope_mark_captured(manager, var_name)
     if manager.variable_map.has(var_name) == 0 then
@@ -248,9 +248,9 @@ function scope_get_captured_variables(manager)
     return captured
 end function
 
-# -----------------------------------------------------------------------------
-# Debug utilities
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Debug utilities
+-- -----------------------------------------------------------------------------
 
 function scope_dump_variables(manager)
     print "=== Scope Manager Dump ==="
@@ -283,9 +283,9 @@ function scope_dump_variables(manager)
     return manager
 end function
 
-# -----------------------------------------------------------------------------
-# Helper: numeric to string conversion
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Helper: numeric to string conversion
+-- -----------------------------------------------------------------------------
 
 function numeric_to_string(n)
     if n == 0 then return "0" end if
@@ -300,7 +300,7 @@ function numeric_to_string(n)
     if n == 9 then return "9" end if
     if n == 10 then return "10" end if
     
-    # For larger numbers, use string concatenation
+    -- For larger numbers, use string concatenation
     string result = ""
     numeric temp = n
     
@@ -323,9 +323,9 @@ function numeric_to_string(n)
     return result
 end function
 
-# -----------------------------------------------------------------------------
-# Scope reset (for new compilation units)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Scope reset (for new compilation units)
+-- -----------------------------------------------------------------------------
 
 function scope_reset(manager)
     manager.variable_map = HashMap()

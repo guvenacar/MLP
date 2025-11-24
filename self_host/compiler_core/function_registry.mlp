@@ -1,19 +1,19 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Function Registry Module
-# -----------------------------------------------------------------------------
-# Merkezi fonksiyon imza deposu ve ön-tarama (pre-scan) altyapısı.
-# Parser fonksiyon tanımlarını görünce kayıt eder, sonra code generator
-# çağrılarda bu kayıtlara bakarak default parametre değerlerini uygular.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Function Registry Module
+-- -----------------------------------------------------------------------------
+-- Merkezi fonksiyon imza deposu ve ön-tarama (pre-scan) altyapısı.
+-- Parser fonksiyon tanımlarını görünce kayıt eder, sonra code generator
+-- çağrılarda bu kayıtlara bakarak default parametre değerlerini uygular.
+-- -----------------------------------------------------------------------------
 
 import "ast/ast_nodes.mlp"
 
-# -----------------------------------------------------------------------------
-# Parametre bilgileri
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Parametre bilgileri
+-- -----------------------------------------------------------------------------
 
 struct ParameterInfo then
     string name
@@ -36,9 +36,9 @@ function parameter_info_has_default(param)
     return 0
 end function
 
-# -----------------------------------------------------------------------------
-# Fonksiyon imzaları
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Fonksiyon imzaları
+-- -----------------------------------------------------------------------------
 
 struct FunctionSignature then
     string name
@@ -72,9 +72,9 @@ function function_signature_get_parameter(sig, index)
     return sig.parameters.get(index)
 end function
 
-# -----------------------------------------------------------------------------
-# Fonksiyon registri (HashMap tabanlı)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Fonksiyon registri (HashMap tabanlı)
+-- -----------------------------------------------------------------------------
 
 struct FunctionRegistry then
     map[string:FunctionSignature] signatures
@@ -119,9 +119,9 @@ function function_registry_clear(registry)
     return registry
 end function
 
-# -----------------------------------------------------------------------------
-# Pre-scan altyapısı: AST'yi tarayıp fonksiyon imzalarını kaydet
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Pre-scan altyapısı: AST'yi tarayıp fonksiyon imzalarını kaydet
+-- -----------------------------------------------------------------------------
 
 function register_function_from_ast(registry, arena, func_data)
     FunctionSignature sig = function_signature_create(func_data.name)
@@ -164,9 +164,9 @@ function pre_scan_functions(registry, arena, root_block_data)
     return registry
 end function
 
-# -----------------------------------------------------------------------------
-# Default parametre değerlerini çağrı noktasında uygulama yardımcıları
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Default parametre değerlerini çağrı noktasında uygulama yardımcıları
+-- -----------------------------------------------------------------------------
 
 function apply_default_parameters(registry, arena, call_data)
     FunctionSignature sig = function_registry_lookup(registry, call_data.target_name)
@@ -203,9 +203,9 @@ function apply_default_parameters(registry, arena, call_data)
     return call_data
 end function
 
-# -----------------------------------------------------------------------------
-# Debug yardımcıları
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Debug yardımcıları
+-- -----------------------------------------------------------------------------
 
 function function_registry_dump(registry)
     print "=== Function Registry Dump ==="

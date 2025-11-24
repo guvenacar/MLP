@@ -1,18 +1,18 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Code Generator - Async/Await Module
-# -----------------------------------------------------------------------------
-# Async functions, await expressions, promise-based concurrency
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Code Generator - Async/Await Module
+-- -----------------------------------------------------------------------------
+-- Async functions, await expressions, promise-based concurrency
+-- -----------------------------------------------------------------------------
 
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
 import "compiler_core/scope_manager.mlp"
 import "compiler_core/codegen.mlp"
 
-# Async context globals
+-- Async context globals
 numeric in_async_function = 0
 string async_promise_var = ""
 string async_function_name = ""
@@ -20,9 +20,9 @@ numeric async_state_counter = 0
 numeric async_state_machine_mode = 0
 numeric await_label_counter = 0
 
-# -----------------------------------------------------------------------------
-# Count await expressions in AST
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Count await expressions in AST
+-- -----------------------------------------------------------------------------
 
 function count_awaits_in_node(state, numeric node_id)
     ASTNode node = ast_arena_get(state.arena, node_id)
@@ -32,7 +32,7 @@ function count_awaits_in_node(state, numeric node_id)
         count = 1
     end if
     
-    # Traverse based on node type
+    -- Traverse based on node type
     if node.type == AST_BLOK then
         for i = 0 to node.block_statement_count - 1 do
             numeric stmt_id = node.block_statements.get(i)
@@ -67,9 +67,9 @@ function count_awaits_in_node(state, numeric node_id)
     return count
 end function
 
-# -----------------------------------------------------------------------------
-# Async function code generation
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Async function code generation
+-- -----------------------------------------------------------------------------
 
 function visit_async_function(state, node_id)
     ASTNode node = ast_arena_get(state.arena, node_id)
@@ -77,14 +77,14 @@ function visit_async_function(state, node_id)
     string func_name = node.async_function_data.name
     numeric param_count = node.async_function_data.parameter_count
     
-    # Save scope context
+    -- Save scope context
     numeric saved_var_count = state.scope_var_count
     numeric saved_stack_offset = state.scope_stack_offset
     
-    # Enter function scope
+    -- Enter function scope
     state = scope_enter(state)
     
-    # Special handling for main
+    -- Special handling for main
     string label_name = func_name
     if func_name == "main" then
         label_name = "mlp_main"
@@ -94,12 +94,12 @@ function visit_async_function(state, node_id)
     state.code = asm_emit_text(state.code, label_name + ":")
     state.code = asm_emit_text(state.code, "    ; --- Async Function '" + func_name + "' (params: " + numeric_to_string(param_count) + ") ---")
     
-    # Function prolog
+    -- Function prolog
     state.code = asm_emit_text(state.code, "    push rbp")
     state.code = asm_emit_text(state.code, "    mov rbp, rsp")
     state.code = asm_emit_text(state.code, "    sub rsp, 256")
     
-    # Save parameters
+    -- Save parameters
     list[string] arg_registers = list("rdi", "rsi", "rdx", "rcx", "r8", "r9")
     
     for i = 0 to param_count - 1 do
@@ -112,17 +112,17 @@ function visit_async_function(state, node_id)
         state.code = asm_emit_text(state.code, "    mov " + param_addr + ", " + reg + "  ; Parameter '" + param_name + "'")
     end for
     
-    # Create promise for async function
+    -- Create promise for async function
     state.code = asm_emit_text(state.code, "    ; Create promise for async function")
     state.code = asm_emit_text(state.code, "    call promise_create")
     
     string promise_var = scope_allocate_variable(state, "__promise", "SAYISAL")
     state.code = asm_emit_text(state.code, "    mov " + promise_var + ", rax  ; Save promise pointer")
     
-    # Count await expressions
+    -- Count await expressions
     numeric await_count = count_awaits_in_node(state, node.async_function_data.body_id)
     
-    # Set async context
+    -- Set async context
     in_async_function = 1
     async_promise_var = promise_var
     async_function_name = label_name
@@ -133,84 +133,84 @@ function visit_async_function(state, node_id)
         async_state_machine_mode = 0
     else
         state.code = asm_emit_text(state.code, "    ; Async function with " + numeric_to_string(await_count) + " await point(s) - blocking await")
-        async_state_machine_mode = 0  # Use blocking await for simplicity
+        async_state_machine_mode = 0  -- Use blocking await for simplicity
     end if
     
-    # Execute function body
+    -- Execute function body
     state = visit_block(state, node.async_function_data.body_id)
     
-    # Fallthrough (no explicit return)
+    -- Fallthrough (no explicit return)
     state.code = asm_emit_text(state.code, "    ; Fallthrough: Resolve promise with implicit return")
     state.code = asm_emit_text(state.code, "    xor rax, rax  ; Implicit return value = 0")
     state.code = asm_emit_text(state.code, "    mov rdi, " + promise_var + "  ; Promise pointer")
     state.code = asm_emit_text(state.code, "    mov rsi, rax  ; Return value")
     state.code = asm_emit_text(state.code, "    call promise_resolve")
     
-    # Return promise pointer
+    -- Return promise pointer
     state.code = asm_emit_text(state.code, "    mov rax, " + promise_var + "  ; Return promise")
     
-    # Function epilog
+    -- Function epilog
     state.code = asm_emit_text(state.code, "    mov rsp, rbp")
     state.code = asm_emit_text(state.code, "    pop rbp")
     state.code = asm_emit_text(state.code, "    ret")
     
-    # Clear async context
+    -- Clear async context
     in_async_function = 0
     async_promise_var = ""
     async_function_name = ""
     
-    # Exit scope
+    -- Exit scope
     state = scope_exit(state)
     state.scope_stack_offset = saved_stack_offset
     
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# Await expression code generation
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Await expression code generation
+-- -----------------------------------------------------------------------------
 
 function visit_await_expression(state, node_id)
     ASTNode node = ast_arena_get(state.arena, node_id)
     
     state.code = asm_emit_text(state.code, "    ; --- Await Expression ---")
     
-    # Evaluate awaited expression (should return promise)
+    -- Evaluate awaited expression (should return promise)
     state = visit_expression(state, node.await_data.expression_id)
     
-    # Promise pointer in RAX
+    -- Promise pointer in RAX
     state.code = asm_emit_text(state.code, "    mov rbx, rax  ; Save promise pointer")
     
     if async_state_machine_mode == 1 then
-        # Non-blocking await with state machine (future enhancement)
+        -- Non-blocking await with state machine (future enhancement)
         async_state_counter = async_state_counter + 1
         numeric current_state = async_state_counter - 1
         numeric next_state = async_state_counter
         
         state.code = asm_emit_text(state.code, "    ; Non-blocking await - state " + numeric_to_string(current_state) + " -> " + numeric_to_string(next_state))
         
-        # Register continuation
+        -- Register continuation
         state.code = asm_emit_text(state.code, "    mov rdi, rbx  ; Promise pointer")
         state.code = asm_emit_text(state.code, "    lea rsi, [rel " + async_function_name + "_continue_" + numeric_to_string(next_state) + "]")
         state.code = asm_emit_text(state.code, "    call promise_then  ; Register continuation")
         
-        # Yield control
+        -- Yield control
         state.code = asm_emit_text(state.code, "    mov rax, " + async_promise_var + "  ; Return promise")
         state.code = asm_emit_text(state.code, "    mov rsp, rbp")
         state.code = asm_emit_text(state.code, "    pop rbp")
         state.code = asm_emit_text(state.code, "    ret  ; Yield")
         
-        # Resume point
+        -- Resume point
         state.code = asm_emit_text(state.code, "__state_" + numeric_to_string(next_state) + ":")
         state.code = asm_emit_text(state.code, "    ; Resumed after await (state " + numeric_to_string(next_state) + ")")
         
-        # Extract value
+        -- Extract value
         state.code = asm_emit_text(state.code, "    mov rdi, rbx  ; Promise pointer")
         state.code = asm_emit_text(state.code, "    call promise_get_value")
         
         await_label_counter = await_label_counter + 1
     else
-        # Blocking await - simple spin loop
+        -- Blocking await - simple spin loop
         string loop_label = "__await_loop_" + numeric_to_string(await_label_counter)
         
         state.code = asm_emit_text(state.code, loop_label + ":")
@@ -219,7 +219,7 @@ function visit_await_expression(state, node_id)
         state.code = asm_emit_text(state.code, "    test rax, rax")
         state.code = asm_emit_text(state.code, "    jz " + loop_label + "  ; Loop until resolved")
         
-        # Promise resolved - get value
+        -- Promise resolved - get value
         state.code = asm_emit_text(state.code, "    mov rdi, rbx  ; Promise pointer")
         state.code = asm_emit_text(state.code, "    call promise_get_value")
         state.code = asm_emit_text(state.code, "    ; Result now in RAX")
@@ -230,34 +230,34 @@ function visit_await_expression(state, node_id)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# Async return statement (resolve promise)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Async return statement (resolve promise)
+-- -----------------------------------------------------------------------------
 
 function visit_async_return(state, node_id)
     ASTNode node = ast_arena_get(state.arena, node_id)
     
     if in_async_function == 0 then
-        # Regular return
+        -- Regular return
         return visit_return_statement(state, node_id)
     end if
     
     state.code = asm_emit_text(state.code, "    ; --- Async Return (resolve promise) ---")
     
     if node.return_expression_id != -1 then
-        # Evaluate return expression
+        -- Evaluate return expression
         state = visit_expression(state, node.return_expression_id)
     else
-        # No return value
+        -- No return value
         state.code = asm_emit_text(state.code, "    xor rax, rax  ; Return void")
     end if
     
-    # Resolve promise with return value
+    -- Resolve promise with return value
     state.code = asm_emit_text(state.code, "    mov rdi, " + async_promise_var + "  ; Promise pointer")
     state.code = asm_emit_text(state.code, "    mov rsi, rax  ; Return value")
     state.code = asm_emit_text(state.code, "    call promise_resolve")
     
-    # Return promise pointer
+    -- Return promise pointer
     state.code = asm_emit_text(state.code, "    mov rax, " + async_promise_var + "  ; Return promise")
     state.code = asm_emit_text(state.code, "    mov rsp, rbp")
     state.code = asm_emit_text(state.code, "    pop rbp")
@@ -266,9 +266,9 @@ function visit_async_return(state, node_id)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# Generate async main wrapper (C main calls mlp_main)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Generate async main wrapper (C main calls mlp_main)
+-- -----------------------------------------------------------------------------
 
 function generate_async_main_wrapper(state)
     state.code = asm_emit_text(state.code, "")

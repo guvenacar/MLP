@@ -1,18 +1,18 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Token Module
-# -----------------------------------------------------------------------------
-# Centralized token definitions and lightweight helpers shared by the MLP
-# self-hosting pipeline (lexer + parser + generator). This file only describes
-# data structures and pure helpers; it does not perform any IO.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Token Module
+-- -----------------------------------------------------------------------------
+-- Centralized token definitions and lightweight helpers shared by the MLP
+-- self-hosting pipeline (lexer + parser + generator). This file only describes
+-- data structures and pure helpers; it does not perform any IO.
+-- -----------------------------------------------------------------------------
 
 enum TokenType
     TOKEN_EOF
 
-    # Literal categories
+    -- Literal categories
     TOKEN_NUMBER
     TOKEN_STRING
     TOKEN_INTERPOLATED_STRING
@@ -21,12 +21,12 @@ enum TokenType
     TOKEN_FALSE
     TOKEN_NULL
 
-    # Type declarations
+    -- Type declarations
     TOKEN_TYPE_NUMERIC
     TOKEN_TYPE_STRING
     TOKEN_TYPE_BOOLEAN
 
-    # Structural keywords
+    -- Structural keywords
     TOKEN_PRINT
     TOKEN_IF
     TOKEN_THEN
@@ -37,8 +37,8 @@ enum TokenType
     TOKEN_RETURN
     TOKEN_WHILE
     TOKEN_DO
-    TOKEN_BREAK    # while bitir
-    TOKEN_CONTINUE # while devam
+    TOKEN_BREAK    -- while bitir
+    TOKEN_CONTINUE -- while devam
     TOKEN_FOR
     TOKEN_TO
     TOKEN_STEP
@@ -65,15 +65,15 @@ enum TokenType
     TOKEN_TYPEOF
     TOKEN_IMPORT
 
-    # Lambda
+    -- Lambda
     TOKEN_LAMBDA
     TOKEN_ARROW
 
-    # Range / for-each helpers
+    -- Range / for-each helpers
     TOKEN_IN
     TOKEN_RANGE
 
-    # Built-in function groups ------------------------------------------------
+    -- Built-in function groups ------------------------------------------------
     TOKEN_BUILTIN_READ_FILE
     TOKEN_BUILTIN_WRITE_FILE
     TOKEN_BUILTIN_APPEND_FILE
@@ -169,7 +169,7 @@ enum TokenType
     TOKEN_BUILTIN_GET_FILE_NAME
     TOKEN_BUILTIN_GET_DIRECTORY
 
-    # Delimiters / operators --------------------------------------------------
+    -- Delimiters / operators --------------------------------------------------
     TOKEN_LEFT_PAREN
     TOKEN_RIGHT_PAREN
     TOKEN_LEFT_BRACKET
@@ -216,9 +216,9 @@ enum TokenType
     TOKEN_LABEL
 end enum
 
-# -----------------------------------------------------------------------------
-# Core token structures
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Core token structures
+-- -----------------------------------------------------------------------------
 
 struct Token then
     TokenType type
@@ -238,9 +238,9 @@ struct TokenStreamTakeResult then
     TokenStream stream
 end struct
 
-# -----------------------------------------------------------------------------
-# Factory helpers
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Factory helpers
+-- -----------------------------------------------------------------------------
 
 function make_token(token_type, lexeme, line, column)
     Token token

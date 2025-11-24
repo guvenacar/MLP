@@ -1,30 +1,30 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Runtime Async/Await Wrapper
-# -----------------------------------------------------------------------------
-# C runtime'daki async event loop fonksiyonlarını MLP'ye bağlar
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Runtime Async/Await Wrapper
+-- -----------------------------------------------------------------------------
+-- C runtime'daki async event loop fonksiyonlarını MLP'ye bağlar
+-- -----------------------------------------------------------------------------
 
-# -----------------------------------------------------------------------------
-# External C runtime functions (will be linked)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- External C runtime functions (will be linked)
+-- -----------------------------------------------------------------------------
 
-# extern async_create_promise() -> pointer
-# extern async_resolve_promise(pointer promise, pointer value)
-# extern async_reject_promise(pointer promise, pointer error)
-# extern async_await_promise(pointer promise) -> pointer
-# extern async_create_task(pointer function_ptr) -> pointer
-# extern async_schedule_task(pointer task)
-# extern async_run_event_loop()
-# extern async_stop_event_loop()
-# extern async_yield()
-# extern async_sleep(numeric milliseconds) -> pointer
+-- extern async_create_promise() -> pointer
+-- extern async_resolve_promise(pointer promise, pointer value)
+-- extern async_reject_promise(pointer promise, pointer error)
+-- extern async_await_promise(pointer promise) -> pointer
+-- extern async_create_task(pointer function_ptr) -> pointer
+-- extern async_schedule_task(pointer task)
+-- extern async_run_event_loop()
+-- extern async_stop_event_loop()
+-- extern async_yield()
+-- extern async_sleep(numeric milliseconds) -> pointer
 
-# -----------------------------------------------------------------------------
-# Promise wrapper type
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Promise wrapper type
+-- -----------------------------------------------------------------------------
 
 struct Promise then
     numeric ptr
@@ -32,19 +32,19 @@ struct Promise then
     numeric value
 end struct
 
-# State constants
+-- State constants
 numeric PROMISE_PENDING = 0
 numeric PROMISE_RESOLVED = 1
 numeric PROMISE_REJECTED = 2
 
-# -----------------------------------------------------------------------------
-# Promise operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Promise operations
+-- -----------------------------------------------------------------------------
 
 function promise_create()
     Promise p
-    # TODO: Call C runtime
-    # p.ptr = async_create_promise()
+    -- TODO: Call C runtime
+    -- p.ptr = async_create_promise()
     p.ptr = 0
     p.state = PROMISE_PENDING
     p.value = 0
@@ -52,30 +52,30 @@ function promise_create()
 end function
 
 function promise_resolve(p, value)
-    # TODO: Call C runtime
-    # async_resolve_promise(p.ptr, value)
+    -- TODO: Call C runtime
+    -- async_resolve_promise(p.ptr, value)
     p.state = PROMISE_RESOLVED
     p.value = value
     return p
 end function
 
 function promise_reject(p, error)
-    # TODO: Call C runtime
-    # async_reject_promise(p.ptr, error)
+    -- TODO: Call C runtime
+    -- async_reject_promise(p.ptr, error)
     p.state = PROMISE_REJECTED
     p.value = error
     return p
 end function
 
 function promise_await(p)
-    # TODO: Call C runtime
-    # return async_await_promise(p.ptr)
+    -- TODO: Call C runtime
+    -- return async_await_promise(p.ptr)
     return p.value
 end function
 
-# -----------------------------------------------------------------------------
-# Task wrapper type
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Task wrapper type
+-- -----------------------------------------------------------------------------
 
 struct Task then
     numeric ptr
@@ -83,20 +83,20 @@ struct Task then
     numeric state
 end struct
 
-# Task state constants
+-- Task state constants
 numeric TASK_PENDING = 0
 numeric TASK_RUNNING = 1
 numeric TASK_COMPLETED = 2
 numeric TASK_FAILED = 3
 
-# -----------------------------------------------------------------------------
-# Task operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Task operations
+-- -----------------------------------------------------------------------------
 
 function task_create(function_ptr)
     Task t
-    # TODO: Call C runtime
-    # t.ptr = async_create_task(function_ptr)
+    -- TODO: Call C runtime
+    -- t.ptr = async_create_task(function_ptr)
     t.ptr = 0
     t.function_ptr = function_ptr
     t.state = TASK_PENDING
@@ -104,44 +104,44 @@ function task_create(function_ptr)
 end function
 
 function task_schedule(t)
-    # TODO: Call C runtime
-    # async_schedule_task(t.ptr)
+    -- TODO: Call C runtime
+    -- async_schedule_task(t.ptr)
     t.state = TASK_RUNNING
     return t
 end function
 
-# -----------------------------------------------------------------------------
-# Event loop operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Event loop operations
+-- -----------------------------------------------------------------------------
 
 function async_run_loop()
-    # TODO: Call C runtime
-    # async_run_event_loop()
+    -- TODO: Call C runtime
+    -- async_run_event_loop()
     print "Event loop started"
 end function
 
 function async_stop_loop()
-    # TODO: Call C runtime
-    # async_stop_event_loop()
+    -- TODO: Call C runtime
+    -- async_stop_event_loop()
     print "Event loop stopped"
 end function
 
 function async_yield_control()
-    # TODO: Call C runtime
-    # async_yield()
+    -- TODO: Call C runtime
+    -- async_yield()
 end function
 
 function async_sleep_ms(milliseconds)
     Promise p = promise_create()
-    # TODO: Call C runtime
-    # numeric sleep_ptr = async_sleep(milliseconds)
-    # p.ptr = sleep_ptr
+    -- TODO: Call C runtime
+    -- numeric sleep_ptr = async_sleep(milliseconds)
+    -- p.ptr = sleep_ptr
     return p
 end function
 
-# -----------------------------------------------------------------------------
-# Async function state machine
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Async function state machine
+-- -----------------------------------------------------------------------------
 
 struct AsyncState then
     numeric state_index
@@ -179,9 +179,9 @@ function async_state_complete(state, result)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# Async/Await helper macros (code generation support)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Async/Await helper macros (code generation support)
+-- -----------------------------------------------------------------------------
 
 function async_wrap_function(function_ptr)
     Promise p = promise_create()
@@ -194,9 +194,9 @@ function await_expression(promise)
     return promise_await(promise)
 end function
 
-# -----------------------------------------------------------------------------
-# Generator support (yield)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Generator support (yield)
+-- -----------------------------------------------------------------------------
 
 struct Generator then
     numeric ptr
@@ -219,7 +219,7 @@ function generator_next(g)
         return -1
     end if
     
-    # TODO: Resume generator and get next value
+    -- TODO: Resume generator and get next value
     if g.yielded_values.size() > 0 then
         return g.yielded_values.get(0)
     end if
@@ -233,15 +233,15 @@ function generator_yield(g, value)
     return g
 end function
 
-# -----------------------------------------------------------------------------
-# Async I/O operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Async I/O operations
+-- -----------------------------------------------------------------------------
 
 function async_read_file(filepath)
     Promise p = promise_create()
     
-    # TODO: Async file read
-    # Schedule I/O task
+    -- TODO: Async file read
+    -- Schedule I/O task
     
     return p
 end function
@@ -249,8 +249,8 @@ end function
 function async_write_file(filepath, content)
     Promise p = promise_create()
     
-    # TODO: Async file write
-    # Schedule I/O task
+    -- TODO: Async file write
+    -- Schedule I/O task
     
     return p
 end function
@@ -258,8 +258,8 @@ end function
 function async_http_get(url)
     Promise p = promise_create()
     
-    # TODO: Async HTTP GET
-    # Schedule network task
+    -- TODO: Async HTTP GET
+    -- Schedule network task
     
     return p
 end function
@@ -267,21 +267,21 @@ end function
 function async_http_post(url, data)
     Promise p = promise_create()
     
-    # TODO: Async HTTP POST
-    # Schedule network task
+    -- TODO: Async HTTP POST
+    -- Schedule network task
     
     return p
 end function
 
-# -----------------------------------------------------------------------------
-# Async timeout operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Async timeout operations
+-- -----------------------------------------------------------------------------
 
 function async_timeout(milliseconds, promise)
     Promise timeout_promise = async_sleep_ms(milliseconds)
     
-    # Race between original promise and timeout
-    # TODO: Implement promise.race logic
+    -- Race between original promise and timeout
+    -- TODO: Implement promise.race logic
     
     return promise
 end function
@@ -289,8 +289,8 @@ end function
 function async_all(promises)
     Promise combined = promise_create()
     
-    # Wait for all promises to resolve
-    # TODO: Implement promise.all logic
+    -- Wait for all promises to resolve
+    -- TODO: Implement promise.all logic
     
     return combined
 end function
@@ -298,8 +298,8 @@ end function
 function async_any(promises)
     Promise first = promise_create()
     
-    # Wait for first promise to resolve
-    # TODO: Implement promise.race logic
+    -- Wait for first promise to resolve
+    -- TODO: Implement promise.race logic
     
     return first
 end function

@@ -1,20 +1,20 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Parser Advanced Module - Import, Try-Catch, Continue, Break
-# -----------------------------------------------------------------------------
-# C bootstrap derleyicisindeki advanced parsing mantığını MLP'ye taşır.
-# Import statements, exception handling, loop control.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Parser Advanced Module - Import, Try-Catch, Continue, Break
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki advanced parsing mantığını MLP'ye taşır.
+-- Import statements, exception handling, loop control.
+-- -----------------------------------------------------------------------------
 
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
 import "compiler_core/parser.mlp"
 
-# -----------------------------------------------------------------------------
-# Import statement parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Import statement parsing
+-- -----------------------------------------------------------------------------
 
 function parse_import_statement(state)
     state = parser_expect(state, TOKEN_IMPORT)
@@ -56,9 +56,9 @@ function parse_import_statement(state)
     return import_id
 end function
 
-# -----------------------------------------------------------------------------
-# Try-catch statement parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Try-catch statement parsing
+-- -----------------------------------------------------------------------------
 
 function parse_try_catch(state)
     state = parser_expect(state, TOKEN_TRY)
@@ -112,9 +112,9 @@ function parse_try_catch(state)
     return try_id
 end function
 
-# -----------------------------------------------------------------------------
-# Throw statement
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Throw statement
+-- -----------------------------------------------------------------------------
 
 function parse_throw_statement(state)
     state = parser_expect(state, TOKEN_THROW)
@@ -129,9 +129,9 @@ function parse_throw_statement(state)
     return throw_id
 end function
 
-# -----------------------------------------------------------------------------
-# Break statement
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Break statement
+-- -----------------------------------------------------------------------------
 
 function parse_break_statement(state)
     state = parser_expect(state, TOKEN_BREAK)
@@ -144,9 +144,9 @@ function parse_break_statement(state)
     return break_id
 end function
 
-# -----------------------------------------------------------------------------
-# Continue statement
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Continue statement
+-- -----------------------------------------------------------------------------
 
 function parse_continue_statement(state)
     state = parser_expect(state, TOKEN_CONTINUE)
@@ -159,9 +159,9 @@ function parse_continue_statement(state)
     return continue_id
 end function
 
-# -----------------------------------------------------------------------------
-# Match statement (pattern matching)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Match statement (pattern matching)
+-- -----------------------------------------------------------------------------
 
 function parse_match_statement(state)
     state = parser_expect(state, TOKEN_MATCH)
@@ -196,9 +196,9 @@ function parse_match_statement(state)
     return match_id
 end function
 
-# -----------------------------------------------------------------------------
-# Defer statement (cleanup guarantee)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Defer statement (cleanup guarantee)
+-- -----------------------------------------------------------------------------
 
 function parse_defer_statement(state)
     state = parser_expect(state, TOKEN_DEFER)
@@ -213,9 +213,9 @@ function parse_defer_statement(state)
     return defer_id
 end function
 
-# -----------------------------------------------------------------------------
-# With statement (resource management)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- With statement (resource management)
+-- -----------------------------------------------------------------------------
 
 function parse_with_statement(state)
     state = parser_expect(state, TOKEN_WITH)
@@ -250,9 +250,9 @@ function parse_with_statement(state)
     return with_id
 end function
 
-# -----------------------------------------------------------------------------
-# Type alias declaration
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Type alias declaration
+-- -----------------------------------------------------------------------------
 
 function parse_type_alias(state)
     state = parser_expect(state, TOKEN_TYPE)
@@ -274,9 +274,9 @@ function parse_type_alias(state)
     return alias_id
 end function
 
-# -----------------------------------------------------------------------------
-# Unary expressions (!, -, ~)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Unary expressions (!, -, ~)
+-- -----------------------------------------------------------------------------
 
 function parse_unary_expression(state)
     Token token = parser_peek(state)
@@ -326,9 +326,9 @@ function parse_unary_expression(state)
     return parse_postfix_expression(state)
 end function
 
-# -----------------------------------------------------------------------------
-# Panic statement (fatal error)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Panic statement (fatal error)
+-- -----------------------------------------------------------------------------
 
 function parse_panic_statement(state)
     state = parser_expect(state, TOKEN_PANIC)
@@ -345,9 +345,9 @@ function parse_panic_statement(state)
     return panic_id
 end function
 
-# -----------------------------------------------------------------------------
-# Expression statement (function call without assignment)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Expression statement (function call without assignment)
+-- -----------------------------------------------------------------------------
 
 function parse_expression_statement(state)
     numeric expr_id = parse_expression(state, 0)
@@ -361,9 +361,9 @@ function parse_expression_statement(state)
     return expr_stmt_id
 end function
 
-# -----------------------------------------------------------------------------
-# Enum declaration parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Enum declaration parsing
+-- -----------------------------------------------------------------------------
 
 function parse_enum_declaration(state)
     state = parser_expect(state, TOKEN_ENUM)
@@ -411,9 +411,9 @@ function parse_enum_declaration(state)
     return enum_id
 end function
 
-# -----------------------------------------------------------------------------
-# Switch statement parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Switch statement parsing
+-- -----------------------------------------------------------------------------
 
 function parse_switch_statement(state)
     state = parser_expect(state, TOKEN_SWITCH)
@@ -473,9 +473,9 @@ function parse_switch_statement(state)
     return switch_id
 end function
 
-# -----------------------------------------------------------------------------
-# Helper: Resolve enum value from identifier
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Helper: Resolve enum value from identifier
+-- -----------------------------------------------------------------------------
 
 function resolve_enum_value(state, string identifier)
     numeric value = 0
@@ -483,9 +483,9 @@ function resolve_enum_value(state, string identifier)
     return value
 end function
 
-# -----------------------------------------------------------------------------
-# Lambda expression parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Lambda expression parsing
+-- -----------------------------------------------------------------------------
 
 function parse_lambda_expression(state)
     state = parser_expect(state, TOKEN_LAMBDA)
@@ -525,9 +525,9 @@ function parse_lambda_expression(state)
     return lambda_id
 end function
 
-# -----------------------------------------------------------------------------
-# Async function parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Async function parsing
+-- -----------------------------------------------------------------------------
 
 function parse_async_function(state)
     state = parser_expect(state, TOKEN_ASYNC)
@@ -544,7 +544,7 @@ function parse_async_function(state)
     
     if parser_check(state, TOKEN_RIGHT_PAREN) == 0 then
         while 1 == 1
-            # Optional type annotation
+            -- Optional type annotation
             string param_type = "SAYISAL"
             if parser_match(state, TOKEN_TYPE_NUMERIC) == 1 then
                 param_type = "SAYISAL"
@@ -588,9 +588,9 @@ function parse_async_function(state)
     return async_id
 end function
 
-# -----------------------------------------------------------------------------
-# Await expression parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Await expression parsing
+-- -----------------------------------------------------------------------------
 
 function parse_await_expression(state)
     state = parser_expect(state, TOKEN_AWAIT)
@@ -606,9 +606,9 @@ function parse_await_expression(state)
     return await_id
 end function
 
-# -----------------------------------------------------------------------------
-# Closure capture analysis (called at codegen time)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Closure capture analysis (called at codegen time)
+-- -----------------------------------------------------------------------------
 
 function find_free_variables(state, numeric node_id, list[string] free_vars, list[Token] lambda_params)
     ASTNode node = parser_get_node(state, node_id)

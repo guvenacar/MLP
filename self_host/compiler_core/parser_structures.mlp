@@ -1,20 +1,20 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Parser Data Structures Module - List, HashMap, Set, Struct parsing
-# -----------------------------------------------------------------------------
-# C bootstrap derleyicisindeki veri yapısı parsing mantığını MLP'ye taşır.
-# List literals, HashMap literals, Set literals, Struct definitions.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Parser Data Structures Module - List, HashMap, Set, Struct parsing
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki veri yapısı parsing mantığını MLP'ye taşır.
+-- List literals, HashMap literals, Set literals, Struct definitions.
+-- -----------------------------------------------------------------------------
 
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
 import "compiler_core/parser.mlp"
 
-# -----------------------------------------------------------------------------
-# List literal parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- List literal parsing
+-- -----------------------------------------------------------------------------
 
 function parse_list_literal(state)
     state = parser_expect(state, TOKEN_LEFT_BRACKET)
@@ -44,9 +44,9 @@ function parse_list_literal(state)
     return list_id
 end function
 
-# -----------------------------------------------------------------------------
-# HashMap literal parsing
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- HashMap literal parsing
+-- -----------------------------------------------------------------------------
 
 function parse_hashmap_literal(state)
     state = parser_expect(state, TOKEN_LEFT_BRACE)
@@ -83,9 +83,9 @@ function parse_hashmap_literal(state)
     return map_id
 end function
 
-# -----------------------------------------------------------------------------
-# Set literal parsing (brace notation with single expressions)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Set literal parsing (brace notation with single expressions)
+-- -----------------------------------------------------------------------------
 
 function parse_set_literal(state)
     state = parser_expect(state, TOKEN_LEFT_BRACE)
@@ -115,37 +115,37 @@ function parse_set_literal(state)
     return set_id
 end function
 
-# -----------------------------------------------------------------------------
-# Struct field definition (Phase 6.2: Nested Structs + Methods)
-# -----------------------------------------------------------------------------
-# Port from: mlp_compiler.c komut() lines 3500-3560
-# Supports:
-# - Basic fields: numeric x, string name
-# - Nested structs: Person owner
-# - Methods: function greet() ... end function
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Struct field definition (Phase 6.2: Nested Structs + Methods)
+-- -----------------------------------------------------------------------------
+-- Port from: mlp_compiler.c komut() lines 3500-3560
+-- Supports:
+-- - Basic fields: numeric x, string name
+-- - Nested structs: Person owner
+-- - Methods: function greet() ... end function
+-- -----------------------------------------------------------------------------
 
 struct ASTStructField then
-    metin type_name        # Field type (numeric, string, or struct name)
-    metin field_name       # Field name
-    numeric default_value_id  # Default value (optional)
-    bool is_method         # True if this is a method definition
-    numeric method_body_id # Method body AST node ID (if is_method)
+    metin type_name        -- Field type (numeric, string, or struct name)
+    metin field_name       -- Field name
+    numeric default_value_id  -- Default value (optional)
+    bool is_method         -- True if this is a method definition
+    numeric method_body_id -- Method body AST node ID (if is_method)
 end struct
 
 function parse_struct_field(state)
-    # Check if this is a method definition
+    -- Check if this is a method definition
     if parser_check(state, TOKEN_FUNCTION) == 1 then
-        # Method definition inside struct
+        -- Method definition inside struct
         state = parser_expect(state, TOKEN_FUNCTION)
         
         Token method_name_token = parser_peek(state)
         state = parser_expect(state, TOKEN_IDENTIFIER)
         
-        # Parse method parameters
+        -- Parse method parameters
         list[ASTParameterInfo] parameters = parse_parameter_list(state)
         
-        # Method body
+        -- Method body
         state = parser_enter_scope(state)
         numeric body_id = parse_block(state, TOKEN_END)
         state = parser_exit_scope(state)
@@ -153,7 +153,7 @@ function parse_struct_field(state)
         state = parser_expect(state, TOKEN_END)
         state = parser_expect(state, TOKEN_FUNCTION)
         
-        # Create method field
+        -- Create method field
         ASTStructField field
         field.type_name = "METHOD"
         field.field_name = method_name_token.lexeme
@@ -163,28 +163,28 @@ function parse_struct_field(state)
         
         return field
     else
-        # Regular field definition
-        # Field type (numeric, string, boolean, or struct name)
+        -- Regular field definition
+        -- Field type (numeric, string, boolean, or struct name)
         Token type_token = parser_peek(state)
         
-        # Check if it's a type keyword or identifier (struct name)
+        -- Check if it's a type keyword or identifier (struct name)
         if parser_check(state, TOKEN_TYPE_NUMERIC) == 1 or
            parser_check(state, TOKEN_TYPE_STRING) == 1 or
            parser_check(state, TOKEN_TYPE_BOOLEAN) == 1 then
             state = parser_advance(state)
         else if parser_check(state, TOKEN_IDENTIFIER) == 1 then
-            # Nested struct type (e.g., Person owner)
+            -- Nested struct type (e.g., Person owner)
             state = parser_advance(state)
         else
-            # Error: expected type
+            -- Error: expected type
             parser_error(state, "Expected field type (numeric, string, boolean, or struct name)")
         end if
         
-        # Field name
+        -- Field name
         Token name_token = parser_peek(state)
         state = parser_expect(state, TOKEN_IDENTIFIER)
         
-        # Optional default value
+        -- Optional default value
         numeric default_value_id = -1
         if parser_match(state, TOKEN_ASSIGN) == 1 then
             default_value_id = parse_expression(state, 0)
@@ -201,21 +201,21 @@ function parse_struct_field(state)
     end if
 end function
 
-# -----------------------------------------------------------------------------
-# Struct definition (Phase 6.2: Enhanced with Nested Structs + Methods)
-# -----------------------------------------------------------------------------
-# Port from: mlp_compiler.c komut() lines 3500-3565
-# Example:
-# struct Person then
-#     numeric age
-#     string name
-#     Address home        # Nested struct
-#     
-#     function greet()    # Method
-#         yaz("Hello, " + name)
-#     end function
-# end struct
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Struct definition (Phase 6.2: Enhanced with Nested Structs + Methods)
+-- -----------------------------------------------------------------------------
+-- Port from: mlp_compiler.c komut() lines 3500-3565
+-- Example:
+-- struct Person then
+--     numeric age
+--     string name
+--     Address home        -- Nested struct
+--     
+--     function greet()    -- Method
+--         yaz("Hello, " + name)
+--     end function
+-- end struct
+-- -----------------------------------------------------------------------------
 
 function parse_struct_definition(state)
     state = parser_expect(state, TOKEN_STRUCT)
@@ -223,14 +223,14 @@ function parse_struct_definition(state)
     Token name_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     
-    # Optional 'then' keyword (for compatibility)
+    -- Optional 'then' keyword (for compatibility)
     if parser_check(state, TOKEN_THEN) == 1 then
         state = parser_expect(state, TOKEN_THEN)
     end if
     
     list[ASTStructField] fields = list()
     
-    # Parse fields until 'end' or 'end struct'
+    -- Parse fields until 'end' or 'end struct'
     while parser_check(state, TOKEN_END) == 0 and 
           parser_check(state, TOKEN_END_STRUCT) == 0
         if parser_check(state, TOKEN_EOF) == 1 then
@@ -241,10 +241,10 @@ function parse_struct_definition(state)
         fields.add(field)
     end while
     
-    # Accept both "end struct" and plain "end"
+    -- Accept both "end struct" and plain "end"
     if parser_check(state, TOKEN_END) == 1 then
         state = parser_expect(state, TOKEN_END)
-        # Optional "struct" keyword after "end"
+        -- Optional "struct" keyword after "end"
         if parser_check(state, TOKEN_STRUCT) == 1 then
             state = parser_advance(state)
         end if
@@ -260,15 +260,15 @@ function parse_struct_definition(state)
     data.fields = fields
     data.field_count = fields.size()
     
-    # Register struct metadata for later use
+    -- Register struct metadata for later use
     state.registry = register_struct_type(state.registry, name_token.lexeme, fields)
     
     return struct_id
 end function
 
-# -----------------------------------------------------------------------------
-# Enum definition
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Enum definition
+-- -----------------------------------------------------------------------------
 
 function parse_enum_definition(state)
     state = parser_expect(state, TOKEN_ENUM)
@@ -316,9 +316,9 @@ function parse_enum_definition(state)
     return enum_id
 end function
 
-# -----------------------------------------------------------------------------
-# Struct instantiation
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Struct instantiation
+-- -----------------------------------------------------------------------------
 
 function parse_struct_instantiation(state, type_name)
     state = parser_expect(state, TOKEN_LEFT_BRACE)
@@ -357,9 +357,9 @@ function parse_struct_instantiation(state, type_name)
     return inst_id
 end function
 
-# -----------------------------------------------------------------------------
-# Member access (dot notation)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Member access (dot notation)
+-- -----------------------------------------------------------------------------
 
 function parse_member_access(state, object_id)
     state = parser_expect(state, TOKEN_DOT)
@@ -377,9 +377,9 @@ function parse_member_access(state, object_id)
     return access_id
 end function
 
-# -----------------------------------------------------------------------------
-# List type annotation parsing (list[numeric], HashMap[string, numeric])
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- List type annotation parsing (list[numeric], HashMap[string, numeric])
+-- -----------------------------------------------------------------------------
 
 function parse_type_annotation(state)
     Token base_type_token = parser_peek(state)
@@ -403,9 +403,9 @@ function parse_type_annotation(state)
     return type_str
 end function
 
-# -----------------------------------------------------------------------------
-# Range expression (1..10)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Range expression (1..10)
+-- -----------------------------------------------------------------------------
 
 function parse_range_expression(state, start_id)
     state = parser_expect(state, TOKEN_RANGE)
@@ -422,9 +422,9 @@ function parse_range_expression(state, start_id)
     return range_id
 end function
 
-# -----------------------------------------------------------------------------
-# For-each loop
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- For-each loop
+-- -----------------------------------------------------------------------------
 
 function parse_foreach_loop(state)
     state = parser_expect(state, TOKEN_FOR)
@@ -456,9 +456,9 @@ function parse_foreach_loop(state)
     return foreach_id
 end function
 
-# -----------------------------------------------------------------------------
-# For loop with range
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- For loop with range
+-- -----------------------------------------------------------------------------
 
 function parse_for_loop(state)
     Token next_token = parser_peek(state)

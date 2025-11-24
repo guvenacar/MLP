@@ -1,12 +1,12 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Code Generator Module - AST → x86-64 Assembly
-# -----------------------------------------------------------------------------
-# C bootstrap derleyicisindeki code generator mantığını MLP'ye taşır.
-# AST traversal, assembly generation, register allocation.
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Code Generator Module - AST → x86-64 Assembly
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki code generator mantığını MLP'ye taşır.
+-- AST traversal, assembly generation, register allocation.
+-- -----------------------------------------------------------------------------
 
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
@@ -16,7 +16,7 @@ import "compiler_core/codegen_structures.mlp"
 import "compiler_core/codegen_control.mlp"
 import "compiler_core/import_handler.mlp"
 
-# Import runtime helpers
+-- Import runtime helpers
 import "runtime/bigdecimal.mlp"
 import "runtime/bigstring.mlp"
 import "runtime/hashmap.mlp"
@@ -24,9 +24,9 @@ import "runtime/async.mlp"
 import "runtime/gc.mlp"
 import "runtime/file_io.mlp"
 
-# -----------------------------------------------------------------------------
-# Assembly code sections
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Assembly code sections
+-- -----------------------------------------------------------------------------
 
 struct AsmCode then
     list[string] data_section
@@ -62,18 +62,18 @@ end function
 function asm_to_string(code)
     string result = ""
     
-    # Imports
+    -- Imports
     for i = 0 to code.imports.size() - 1 do
         result = result + code.imports.get(i) + "\n"
     end for
     
-    # Data section
+    -- Data section
     result = result + "\nsection .data\n"
     for i = 0 to code.data_section.size() - 1 do
         result = result + "    " + code.data_section.get(i) + "\n"
     end for
     
-    # Text section
+    -- Text section
     result = result + "\nsection .text\n"
     result = result + "    global _start\n\n"
     
@@ -81,7 +81,7 @@ function asm_to_string(code)
         result = result + code.text_section.get(i) + "\n"
     end for
     
-    # Lambda section
+    -- Lambda section
     if code.lambda_section.size() > 0 then
         result = result + "\n; Lambda functions\n"
         for i = 0 to code.lambda_section.size() - 1 do
@@ -92,9 +92,9 @@ function asm_to_string(code)
     return result
 end function
 
-# -----------------------------------------------------------------------------
-# Code Generator state
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Code Generator state
+-- -----------------------------------------------------------------------------
 
 struct CodeGenState then
     AsmCode code
@@ -117,9 +117,9 @@ function codegen_create(arena)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# String literal registration
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- String literal registration
+-- -----------------------------------------------------------------------------
 
 function codegen_register_string(state, str_value)
     string label = "str_" + numeric_to_string(state.string_counter)
@@ -131,9 +131,9 @@ function codegen_register_string(state, str_value)
     return label
 end function
 
-# -----------------------------------------------------------------------------
-# Label generation
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Label generation
+-- -----------------------------------------------------------------------------
 
 function codegen_generate_label(state, prefix)
     numeric id = state.label_counter
@@ -143,14 +143,14 @@ function codegen_generate_label(state, prefix)
     return label
 end function
 
-# -----------------------------------------------------------------------------
-# Visit functions (AST node handlers)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Visit functions (AST node handlers)
+-- -----------------------------------------------------------------------------
 
 function visit_number(state, node_id)
     ASTNode node = ast_arena_get(state.arena, node_id)
     
-    # Get literal value
+    -- Get literal value
     string value = "0"
     
     state.code = asm_emit_text(state.code, "    ; Number literal: " + value)
@@ -167,7 +167,7 @@ function visit_string(state, node_id)
     
     state.code = asm_emit_text(state.code, "    ; String literal")
     
-    # RUNTIME: Call bigstring_create(str)
+    -- RUNTIME: Call bigstring_create(str)
     state.code = asm_emit_text(state.code, "    ; Create BigString")
     state.code = asm_emit_text(state.code, "    lea rdi, [rel " + label + "]")
     state.code = asm_emit_text(state.code, "    call bigstring_create")
@@ -198,16 +198,16 @@ function visit_binary_op(state, node_id)
     
     state.code = asm_emit_text(state.code, "    ; Binary operation: " + operator)
     
-    # Evaluate left (BigDecimal ptr in rax)
+    -- Evaluate left (BigDecimal ptr in rax)
     state = visit_expression(state, left_id)
     state.code = asm_emit_text(state.code, "    push rax")
     
-    # Evaluate right (BigDecimal ptr in rax)
+    -- Evaluate right (BigDecimal ptr in rax)
     state = visit_expression(state, right_id)
     state.code = asm_emit_text(state.code, "    mov rsi, rax")
     state.code = asm_emit_text(state.code, "    pop rdi")
     
-    # RUNTIME: Call bigdecimal arithmetic operations
+    -- RUNTIME: Call bigdecimal arithmetic operations
     if operator == "+" then
         state.code = asm_emit_text(state.code, "    call bigdecimal_add")
     end if
@@ -228,7 +228,7 @@ function visit_binary_op(state, node_id)
         state.code = asm_emit_text(state.code, "    call bigdecimal_mod")
     end if
     
-    # Comparison operators
+    -- Comparison operators
     if operator == "==" then
         state.code = asm_emit_text(state.code, "    call bigdecimal_eq")
     end if
@@ -328,9 +328,9 @@ function visit_expression(state, node_id)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# Statement visitors
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Statement visitors
+-- -----------------------------------------------------------------------------
 
 function visit_print(state, node_id)
     ASTNode node = ast_arena_get(state.arena, node_id)
@@ -339,15 +339,15 @@ function visit_print(state, node_id)
     
     state.code = asm_emit_text(state.code, "    ; Print statement")
     
-    # Evaluate expression (BigDecimal or BigString ptr in rax)
+    -- Evaluate expression (BigDecimal or BigString ptr in rax)
     state = visit_expression(state, expr_id)
     
-    # RUNTIME: Convert to string for printing
+    -- RUNTIME: Convert to string for printing
     state.code = asm_emit_text(state.code, "    mov rdi, rax")
     state.code = asm_emit_text(state.code, "    call bigstring_to_cstr")
     state.code = asm_emit_text(state.code, "    ; C string ptr in rax")
     
-    # RUNTIME: Call printf or write syscall
+    -- RUNTIME: Call printf or write syscall
     state.code = asm_emit_text(state.code, "    mov rdi, rax")
     state.code = asm_emit_text(state.code, "    call puts")
     
@@ -361,10 +361,10 @@ function visit_return(state, node_id)
     
     state.code = asm_emit_text(state.code, "    ; Return statement")
     
-    # Evaluate expression
+    -- Evaluate expression
     state = visit_expression(state, expr_id)
     
-    # Cleanup and return
+    -- Cleanup and return
     state.code = asm_emit_text(state.code, "    mov rsp, rbp")
     state.code = asm_emit_text(state.code, "    pop rbp")
     state.code = asm_emit_text(state.code, "    ret")
@@ -381,11 +381,11 @@ function visit_variable_declaration(state, node_id)
     
     state.code = asm_emit_text(state.code, "    ; Variable declaration: " + var_name)
     
-    # Register variable
+    -- Register variable
     state.scope = scope_register_variable(state.scope, var_name, type_name, 0)
     VariableInfo info = scope_lookup_variable(state.scope, var_name)
     
-    # Evaluate initializer
+    -- Evaluate initializer
     if value_id >= 0 then
         state = visit_expression(state, value_id)
         state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_string(info.stack_offset) + "], rax")
@@ -402,10 +402,10 @@ function visit_assignment(state, node_id)
     
     state.code = asm_emit_text(state.code, "    ; Assignment: " + var_name)
     
-    # Evaluate value
+    -- Evaluate value
     state = visit_expression(state, value_id)
     
-    # Store to variable
+    -- Store to variable
     VariableInfo info = scope_lookup_variable(state.scope, var_name)
     state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_string(info.stack_offset) + "], rax")
     
@@ -424,16 +424,16 @@ function visit_if_statement(state, node_id)
     
     state.code = asm_emit_text(state.code, "    ; If statement")
     
-    # Evaluate condition
+    -- Evaluate condition
     state = visit_expression(state, condition_id)
     state.code = asm_emit_text(state.code, "    cmp rax, 0")
     state.code = asm_emit_text(state.code, "    je " + else_label)
     
-    # Then block
+    -- Then block
     state = visit_block(state, then_block_id)
     state.code = asm_emit_text(state.code, "    jmp " + end_label)
     
-    # Else block
+    -- Else block
     state.code = asm_emit_text(state.code, else_label + ":")
     if else_block_id >= 0 then
         state = visit_block(state, else_block_id)
@@ -456,12 +456,12 @@ function visit_while_loop(state, node_id)
     state.code = asm_emit_text(state.code, "    ; While loop")
     state.code = asm_emit_text(state.code, loop_label + ":")
     
-    # Evaluate condition
+    -- Evaluate condition
     state = visit_expression(state, condition_id)
     state.code = asm_emit_text(state.code, "    cmp rax, 0")
     state.code = asm_emit_text(state.code, "    je " + end_label)
     
-    # Body
+    -- Body
     state = visit_block(state, body_id)
     state.code = asm_emit_text(state.code, "    jmp " + loop_label)
     
@@ -581,26 +581,26 @@ function visit_block(state, node_id)
     return state
 end function
 
-# -----------------------------------------------------------------------------
-# Main code generation entry point (5-PHASE PRE-SCAN STRATEGY)
-# -----------------------------------------------------------------------------
-# Port from: mlp_compiler.c generate_asm() lines 8920-9250
-# 
-# Phase 1: Collect imports (don't emit assembly)
-# Phase 2: Emit imported functions BEFORE main
-# Phase 3: Main entry point (prolog)
-# Phase 4: Main body (skip imports & functions)
-# Phase 5: User-defined functions
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Main code generation entry point (5-PHASE PRE-SCAN STRATEGY)
+-- -----------------------------------------------------------------------------
+-- Port from: mlp_compiler.c generate_asm() lines 8920-9250
+-- 
+-- Phase 1: Collect imports (don't emit assembly)
+-- Phase 2: Emit imported functions BEFORE main
+-- Phase 3: Main entry point (prolog)
+-- Phase 4: Main body (skip imports & functions)
+-- Phase 5: User-defined functions
+-- -----------------------------------------------------------------------------
 
 function generate_code(arena, lexer, parser, base_dir)
     CodeGenState state = codegen_create(arena)
     
-    # Get root block
+    -- Get root block
     ASTNode root = ast_arena_get(arena, 0)
     
-    # ========== PHASE 1: COLLECT IMPORTS ==========
-    # Parse root AST and collect imported functions WITHOUT emitting assembly
+    -- ========== PHASE 1: COLLECT IMPORTS ==========
+    -- Parse root AST and collect imported functions WITHOUT emitting assembly
     ImportContext import_ctx = create_import_context(base_dir)
     
     if root.type == AST_BLOK then
@@ -614,7 +614,7 @@ function generate_code(arena, lexer, parser, base_dir)
         end for
     end if
     
-    # ========== PHASE 2: EMIT IMPORTED FUNCTIONS (BEFORE MAIN) ==========
+    -- ========== PHASE 2: EMIT IMPORTED FUNCTIONS (BEFORE MAIN) ==========
     state.code = asm_emit_text(state.code, "section .text")
     state.code = asm_emit_text(state.code, "global main")
     state.code = asm_emit_text(state.code, "")
@@ -626,7 +626,7 @@ function generate_code(arena, lexer, parser, base_dir)
         ASTNode[] imported_funcs = get_imported_functions(import_ctx)
         for i = 0 to imported_count - 1 do
             ASTNode func_node = imported_funcs[i]
-            # Emit function (call visit_statement for each imported function)
+            -- Emit function (call visit_statement for each imported function)
             state = visit_statement(state, func_node.id)
         end for
         
@@ -634,7 +634,7 @@ function generate_code(arena, lexer, parser, base_dir)
         state.code = asm_emit_text(state.code, "")
     end if
     
-    # ========== PHASE 3: MAIN ENTRY POINT ==========
+    -- ========== PHASE 3: MAIN ENTRY POINT ==========
     state.code = asm_emit_text(state.code, "main:")
     state.code = asm_emit_text(state.code, "    push rbp")
     state.code = asm_emit_text(state.code, "    mov rbp, rsp")
@@ -643,10 +643,10 @@ function generate_code(arena, lexer, parser, base_dir)
     state.code = asm_emit_text(state.code, "    call tyd_fix_cwd")
     state.code = asm_emit_text(state.code, "")
     
-    # ========== PHASE 4: MAIN BODY (SKIP IMPORTS AND FUNCTIONS) ==========
+    -- ========== PHASE 4: MAIN BODY (SKIP IMPORTS AND FUNCTIONS) ==========
     state.code = asm_emit_text(state.code, "    ; --- Ana Program Akışı ---")
     
-    # Check if there's a main function
+    -- Check if there's a main function
     bool has_main = false
     bool main_is_async = false
     
@@ -666,7 +666,7 @@ function generate_code(arena, lexer, parser, base_dir)
     
     if has_main then
         if main_is_async then
-            # Async main with blocking await
+            -- Async main with blocking await
             state.code = asm_emit_text(state.code, "    ; Async main (blocking await)")
             state.code = asm_emit_text(state.code, "    call mlp_main")
             state.code = asm_emit_text(state.code, "    mov rbx, rax  ; Save promise")
@@ -678,27 +678,27 @@ function generate_code(arena, lexer, parser, base_dir)
             state.code = asm_emit_text(state.code, "    mov rdi, rbx")
             state.code = asm_emit_text(state.code, "    call promise_get_value")
         else
-            # Regular synchronous main
+            -- Regular synchronous main
             state.code = asm_emit_text(state.code, "    call mlp_main")
         end if
     else
-        # No main - execute top level commands (SKIP IMPORTS)
+        -- No main - execute top level commands (SKIP IMPORTS)
         if root.type == AST_BLOK then
             for i = 0 to root.block_statement_count - 1 do
                 numeric stmt_id = root.block_statements[i]
                 ASTNode stmt = ast_arena_get(arena, stmt_id)
                 
-                # SKIP: Import statements (already processed in Phase 1)
+                -- SKIP: Import statements (already processed in Phase 1)
                 if stmt.type == AST_IMPORT_STATEMENT then
                     continue
                 end if
                 
-                # SKIP: Function declarations (will be emitted in Phase 5)
+                -- SKIP: Function declarations (will be emitted in Phase 5)
                 if stmt.type == AST_FUNCTION_DECLARATION or stmt.type == AST_ASYNC_FUNCTION then
                     continue
                 end if
                 
-                # Execute other top-level statements
+                -- Execute other top-level statements
                 state = visit_statement(state, stmt_id)
             end for
         else
@@ -706,7 +706,7 @@ function generate_code(arena, lexer, parser, base_dir)
         end if
     end if
     
-    # Program exit (epilog)
+    -- Program exit (epilog)
     state.code = asm_emit_text(state.code, "    ; --- Program Sonu ---")
     state.code = asm_emit_text(state.code, "    xor rax, rax")
     state.code = asm_emit_text(state.code, "    mov rsp, rbp")
@@ -714,7 +714,7 @@ function generate_code(arena, lexer, parser, base_dir)
     state.code = asm_emit_text(state.code, "    ret")
     state.code = asm_emit_text(state.code, "")
     
-    # ========== PHASE 5: USER-DEFINED FUNCTIONS ==========
+    -- ========== PHASE 5: USER-DEFINED FUNCTIONS ==========
     if root.type == AST_BLOK then
         state.code = asm_emit_text(state.code, "; === Fonksiyon Tanımları ===")
         
@@ -728,7 +728,7 @@ function generate_code(arena, lexer, parser, base_dir)
         end for
     end if
     
-    # Cleanup imports
+    -- Cleanup imports
     cleanup_imports(import_ctx)
     
     return asm_to_string(state.code)

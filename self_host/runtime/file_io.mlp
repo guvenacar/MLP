@@ -1,30 +1,30 @@
-# lang: en-US
-# syntax: mlp
+-- lang: en-US
+-- syntax: mlp
 
-# -----------------------------------------------------------------------------
-# Runtime File I/O Wrapper
-# -----------------------------------------------------------------------------
-# C runtime'daki file I/O fonksiyonlarını MLP'ye bağlar
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Runtime File I/O Wrapper
+-- -----------------------------------------------------------------------------
+-- C runtime'daki file I/O fonksiyonlarını MLP'ye bağlar
+-- -----------------------------------------------------------------------------
 
-# -----------------------------------------------------------------------------
-# External C runtime functions (will be linked)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- External C runtime functions (will be linked)
+-- -----------------------------------------------------------------------------
 
-# extern fopen(pointer filename, pointer mode) -> pointer
-# extern fclose(pointer file)
-# extern fread(pointer buffer, numeric size, numeric count, pointer file) -> numeric
-# extern fwrite(pointer buffer, numeric size, numeric count, pointer file) -> numeric
-# extern fseek(pointer file, numeric offset, numeric whence) -> numeric
-# extern ftell(pointer file) -> numeric
-# extern feof(pointer file) -> numeric
-# extern ferror(pointer file) -> numeric
-# extern fgets(pointer buffer, numeric size, pointer file) -> pointer
-# extern fputs(pointer str, pointer file) -> numeric
+-- extern fopen(pointer filename, pointer mode) -> pointer
+-- extern fclose(pointer file)
+-- extern fread(pointer buffer, numeric size, numeric count, pointer file) -> numeric
+-- extern fwrite(pointer buffer, numeric size, numeric count, pointer file) -> numeric
+-- extern fseek(pointer file, numeric offset, numeric whence) -> numeric
+-- extern ftell(pointer file) -> numeric
+-- extern feof(pointer file) -> numeric
+-- extern ferror(pointer file) -> numeric
+-- extern fgets(pointer buffer, numeric size, pointer file) -> pointer
+-- extern fputs(pointer str, pointer file) -> numeric
 
-# -----------------------------------------------------------------------------
-# File wrapper type
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- File wrapper type
+-- -----------------------------------------------------------------------------
 
 struct File then
     numeric ptr
@@ -33,7 +33,7 @@ struct File then
     numeric is_open
 end struct
 
-# File mode constants
+-- File mode constants
 string FILE_READ = "r"
 string FILE_WRITE = "w"
 string FILE_APPEND = "a"
@@ -41,21 +41,21 @@ string FILE_READ_WRITE = "r+"
 string FILE_WRITE_READ = "w+"
 string FILE_APPEND_READ = "a+"
 
-# Seek constants
+-- Seek constants
 numeric SEEK_SET = 0
 numeric SEEK_CUR = 1
 numeric SEEK_END = 2
 
-# -----------------------------------------------------------------------------
-# File operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- File operations
+-- -----------------------------------------------------------------------------
 
 function file_open(filepath, mode)
     File f
     f.path = filepath
     f.mode = mode
-    # TODO: Call C runtime
-    # f.ptr = fopen(filepath, mode)
+    -- TODO: Call C runtime
+    -- f.ptr = fopen(filepath, mode)
     f.ptr = 0
     f.is_open = 1
     return f
@@ -63,8 +63,8 @@ end function
 
 function file_close(f)
     if f.is_open == 1 then
-        # TODO: Call C runtime
-        # fclose(f.ptr)
+        -- TODO: Call C runtime
+        -- fclose(f.ptr)
         f.is_open = 0
     end if
     return f
@@ -75,9 +75,9 @@ function file_read(f, size)
         return ""
     end if
     
-    # TODO: Call C runtime
-    # numeric buffer = gc_malloc(size)
-    # numeric bytes_read = fread(buffer, 1, size, f.ptr)
+    -- TODO: Call C runtime
+    -- numeric buffer = gc_malloc(size)
+    -- numeric bytes_read = fread(buffer, 1, size, f.ptr)
     
     return ""
 end function
@@ -87,8 +87,8 @@ function file_write(f, content)
         return 0
     end if
     
-    # TODO: Call C runtime
-    # numeric bytes_written = fwrite(content, 1, string_length(content), f.ptr)
+    -- TODO: Call C runtime
+    -- numeric bytes_written = fwrite(content, 1, string_length(content), f.ptr)
     
     return 0
 end function
@@ -98,9 +98,9 @@ function file_read_line(f)
         return ""
     end if
     
-    # TODO: Call C runtime
-    # numeric buffer = gc_malloc(4096)
-    # numeric result = fgets(buffer, 4096, f.ptr)
+    -- TODO: Call C runtime
+    -- numeric buffer = gc_malloc(4096)
+    -- numeric result = fgets(buffer, 4096, f.ptr)
     
     return ""
 end function
@@ -110,23 +110,23 @@ function file_write_line(f, line)
         return 0
     end if
     
-    # TODO: Call C runtime
-    # numeric result = fputs(line, f.ptr)
+    -- TODO: Call C runtime
+    -- numeric result = fputs(line, f.ptr)
     
     return 0
 end function
 
-# -----------------------------------------------------------------------------
-# File positioning
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- File positioning
+-- -----------------------------------------------------------------------------
 
 function file_seek(f, offset, whence)
     if f.is_open == 0 then
         return -1
     end if
     
-    # TODO: Call C runtime
-    # return fseek(f.ptr, offset, whence)
+    -- TODO: Call C runtime
+    -- return fseek(f.ptr, offset, whence)
     
     return 0
 end function
@@ -136,8 +136,8 @@ function file_tell(f)
         return -1
     end if
     
-    # TODO: Call C runtime
-    # return ftell(f.ptr)
+    -- TODO: Call C runtime
+    -- return ftell(f.ptr)
     
     return 0
 end function
@@ -146,17 +146,17 @@ function file_rewind(f)
     return file_seek(f, 0, SEEK_SET)
 end function
 
-# -----------------------------------------------------------------------------
-# File status
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- File status
+-- -----------------------------------------------------------------------------
 
 function file_eof(f)
     if f.is_open == 0 then
         return 1
     end if
     
-    # TODO: Call C runtime
-    # return feof(f.ptr)
+    -- TODO: Call C runtime
+    -- return feof(f.ptr)
     
     return 0
 end function
@@ -166,15 +166,15 @@ function file_error(f)
         return 1
     end if
     
-    # TODO: Call C runtime
-    # return ferror(f.ptr)
+    -- TODO: Call C runtime
+    -- return ferror(f.ptr)
     
     return 0
 end function
 
-# -----------------------------------------------------------------------------
-# High-level file operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- High-level file operations
+-- -----------------------------------------------------------------------------
 
 function read_file(filepath)
     File f = file_open(filepath, FILE_READ)
@@ -183,12 +183,12 @@ function read_file(filepath)
         return ""
     end if
     
-    # Get file size
+    -- Get file size
     file_seek(f, 0, SEEK_END)
     numeric size = file_tell(f)
     file_rewind(f)
     
-    # Read entire file
+    -- Read entire file
     string content = file_read(f, size)
     
     file_close(f)
@@ -232,9 +232,9 @@ function file_exists(filepath)
     return 1
 end function
 
-# -----------------------------------------------------------------------------
-# Line-based file operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Line-based file operations
+-- -----------------------------------------------------------------------------
 
 function read_lines(filepath)
     File f = file_open(filepath, FILE_READ)
@@ -273,30 +273,30 @@ function write_lines(filepath, lines)
     return count
 end function
 
-# -----------------------------------------------------------------------------
-# Directory operations (extern from C runtime)
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Directory operations (extern from C runtime)
+-- -----------------------------------------------------------------------------
 
-# extern opendir(pointer path) -> pointer
-# extern readdir(pointer dir) -> pointer
-# extern closedir(pointer dir)
+-- extern opendir(pointer path) -> pointer
+-- extern readdir(pointer dir) -> pointer
+-- extern closedir(pointer dir)
 
 function list_directory(path)
     list[string] entries = list()
     
-    # TODO: Call C runtime
-    # numeric dir_ptr = opendir(path)
-    # while entry = readdir(dir_ptr) do
-    #     entries.add(entry_name)
-    # end while
-    # closedir(dir_ptr)
+    -- TODO: Call C runtime
+    -- numeric dir_ptr = opendir(path)
+    -- while entry = readdir(dir_ptr) do
+    --     entries.add(entry_name)
+    -- end while
+    -- closedir(dir_ptr)
     
     return entries
 end function
 
-# -----------------------------------------------------------------------------
-# Path operations
-# -----------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- Path operations
+-- -----------------------------------------------------------------------------
 
 function path_join(parts)
     string result = ""
