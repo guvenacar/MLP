@@ -24,14 +24,24 @@ Instead of forcing everyone to use English keywords like `if`, `while`, `functio
 
 ---
 
-## 🎉 Project Status: PRODUCTION READY!
+## 🎉 Project Status: SELF-HOSTING ACHIEVED! ✨
 
-- ✅ **English-Native Compiler** (C): Fully working
+### 🏆 Milestone: First Self-Hosting Bootstrap (24 Kasım 2025)
+
+- ✅ **Stage 0 C Compiler**: Fully working (mlp_compiler)
+- ✅ **Stage 0→1 Bootstrap**: Minimal test passed! 🎉
+- ✅ **Self-Hosting Test**: test_ultra_minimal.mlp compiled and executed
+- ✅ **Runtime Library**: libmlpruntime.a completed
+- ✅ **Compilation Pipeline**: Source → Assembly → Object → Executable
 - ✅ **Multi-Language Preprocessor** (Python): Turkish, Russian, Chinese, Hindi
-- ✅ **Self-Hosting Compiler** (MLP): 984 lines of code
 - ✅ **x86-64 Assembly Output**: NASM syntax
 - ✅ **Struct Support**: Structured data types
 - ✅ **One-Command Compilation**: `mlpc` wrapper script
+
+### 🚧 Known Blockers (for full bootstrap)
+- Struct codegen: Generator cannot access struct registry
+- Import resolution: MLP_SOURCE_DIR path conflicts
+- Full mlpc.mlp compilation: Blocked by above issues
 
 ---
 
