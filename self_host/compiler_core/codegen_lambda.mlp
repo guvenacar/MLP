@@ -209,9 +209,9 @@ function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
     list[string] arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
     
     for i
-    i = 0 to mlp_list_length(argument_ds) - 1 do
+    i = 0 to mlp_list_length(argument_ids) - 1 do
         numeric arg_id = 0
-        arg_id = mlp_list_get(argument_ds, i)
+        arg_id = mlp_list_get(argument_ids, i)
         state = visit_expression(state, arg_id)
         
         string reg = ""

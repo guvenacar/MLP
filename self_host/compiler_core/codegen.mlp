@@ -599,9 +599,9 @@ function visit_block(state, node_id)
     list[numeric] statement_ids = list()
     
     for i
-    i = 0 to mlp_list_length(statement_ds) - 1 do
+    i = 0 to mlp_list_length(statement_ids) - 1 do
         numeric stmt_id = 0
-        stmt_id = mlp_list_get(statement_ds, i)
+        stmt_id = mlp_list_get(statement_ids, i)
         state = visit_statement(state, stmt_id)
     end for
     

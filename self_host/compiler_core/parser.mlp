@@ -607,7 +607,7 @@ function parse_block_multi(state, end_token1, end_token2)
         
         numeric stmt_id = 0
         stmt_id = parse_statement(state)
-        mlp_list_add(statement_ds, stmt_id)
+        mlp_list_add(statement_ids, stmt_id)
     end while
     
     numeric block_id = 0
