@@ -79,11 +79,13 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_list_literal(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     list[numeric] element_ids = list()
     
-    numeric count = element_ids.size()
+    numeric count
+    count = element_imlp_list_length(ds)
     
     state.code = asm_emit_text(state.code, "    ; List literal with " + numeric_to_string(count) + " elements")
     
@@ -93,8 +95,10 @@ function visit_list_literal(state, node_id)
     state.code = asm_emit_text(state.code, "    mov rbx, rax")
     
     -- Add elements
-    for i = 0 to element_ids.size() - 1 do
-        numeric elem_id = element_ids.get(i)
+    for i
+    i = 0 to element_imlp_list_length(ds) - 1 do
+        numeric elem_id
+        elem_id = element_imlp_list_get(ds, i)
         state = visit_expression(state, elem_id)
         
         -- RUNTIME: Call list_add(list, element)
@@ -115,7 +119,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_array_access(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric array_id = 1
     numeric index_id = 2
@@ -150,7 +155,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_hashmap_literal(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     list[numeric] key_ids = list()
     list[numeric] value_ids = list()
@@ -163,9 +169,12 @@ function visit_hashmap_literal(state, node_id)
     state.code = asm_emit_text(state.code, "    mov rbx, rax")
     
     -- Insert key-value pairs
-    for i = 0 to key_ids.size() - 1 do
-        numeric key_id = key_ids.get(i)
-        numeric value_id = value_ids.get(i)
+    for i
+    i = 0 to key_imlp_list_length(ds) - 1 do
+        numeric key_id
+        key_id = key_imlp_list_get(ds, i)
+        numeric value_id
+        value_id = value_imlp_list_get(ds, i)
         
         -- Evaluate key
         state = visit_expression(state, key_id)
@@ -190,7 +199,7 @@ function visit_hashmap_literal(state, node_id)
 end function
 
 -- -----------------------------------------------------------------------------
--- HashMap access (map.get(key))
+-- HashMap access (mlp_list_get(map, key))
 -- -----------------------------------------------------------------------------
 
 function visit_hashmap_get(state, map_id, key_id)
@@ -216,7 +225,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_set_literal(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     list[numeric] element_ids = list()
     
@@ -228,8 +238,10 @@ function visit_set_literal(state, node_id)
     state.code = asm_emit_text(state.code, "    mov rbx, rax")
     
     -- Insert elements
-    for i = 0 to element_ids.size() - 1 do
-        numeric elem_id = element_ids.get(i)
+    for i
+    i = 0 to element_imlp_list_length(ds) - 1 do
+        numeric elem_id
+        elem_id = element_imlp_list_get(ds, i)
         
         -- Evaluate element
         state = visit_expression(state, elem_id)
@@ -253,7 +265,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_struct_instantiation(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     string type_name = "MyStruct"
     list[string] field_names = list()
@@ -262,14 +275,17 @@ function visit_struct_instantiation(state, node_id)
     state.code = asm_emit_text(state.code, "    ; Struct instantiation: " + type_name)
     
     -- Allocate struct (assuming 8 bytes per field)
-    numeric bytes = field_names.size() * 8
+    numeric bytes
+    bytes = fimlp_list_length(eld_names) * 8
     state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(bytes))
     state.code = asm_emit_text(state.code, "    call malloc")
     state.code = asm_emit_text(state.code, "    mov rbx, rax")
     
     -- Initialize fields
-    for i = 0 to field_names.size() - 1 do
-        numeric value_id = field_value_ids.get(i)
+    for i
+    i = 0 to fimlp_list_length(eld_names) - 1 do
+        numeric value_id
+        value_id = field_value_imlp_list_get(ds, i)
         
         -- Evaluate field value
         state = visit_expression(state, value_id)
@@ -290,7 +306,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_member_access(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric object_id = 1
     string member_name = "field"
@@ -314,7 +331,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_range(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric start_id = 1
     numeric end_id = 2
@@ -346,7 +364,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_for_loop(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     string iterator_name = "i"
     numeric init_id = 1
@@ -354,8 +373,10 @@ function visit_for_loop(state, node_id)
     numeric step_id = -1
     numeric body_id = 3
     
-    string loop_label = codegen_generate_label(state, "for_loop")
-    string end_label = codegen_generate_label(state, "for_end")
+    string loop_label
+    loop_label = codegen_generate_label(state, "for_loop")
+    string end_label
+    end_label = codegen_generate_label(state, "for_end")
     
     state.code = asm_emit_text(state.code, "    ; For loop")
     
@@ -365,7 +386,8 @@ function visit_for_loop(state, node_id)
     -- Initialize iterator
     state = visit_expression(state, init_id)
     state.scope = scope_register_variable(state.scope, iterator_name, "numeric", 0)
-    VariableInfo iter_info = scope_lookup_variable(state.scope, iterator_name)
+    VariableInfo iter_info
+    iter_info = scope_lookup_variable(state.scope, iterator_name)
     state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_string(iter_info.stack_offset) + "], rax")
     
     -- Loop start
@@ -408,14 +430,17 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_foreach_loop(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     string iterator_name = "item"
     numeric iterable_id = 1
     numeric body_id = 2
     
-    string loop_label = codegen_generate_label(state, "foreach_loop")
-    string end_label = codegen_generate_label(state, "foreach_end")
+    string loop_label
+    loop_label = codegen_generate_label(state, "foreach_loop")
+    string end_label
+    end_label = codegen_generate_label(state, "foreach_end")
     
     state.code = asm_emit_text(state.code, "    ; Foreach loop")
     
@@ -447,7 +472,8 @@ function visit_foreach_loop(state, node_id)
     
     -- Store in iterator variable
     state.scope = scope_register_variable(state.scope, iterator_name, "numeric", 0)
-    VariableInfo iter_info = scope_lookup_variable(state.scope, iterator_name)
+    VariableInfo iter_info
+    iter_info = scope_lookup_variable(state.scope, iterator_name)
     state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_string(iter_info.stack_offset) + "], rax")
     
     -- Body

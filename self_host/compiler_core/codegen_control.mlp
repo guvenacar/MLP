@@ -17,14 +17,17 @@ import "compiler_core/codegen.mlp"
 -- -----------------------------------------------------------------------------
 
 function visit_try_catch(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric try_block_id = 1
     list[numeric] catch_block_ids = list()
     list[string] exception_types = list()
     
-    string catch_label = codegen_generate_label(state, "catch")
-    string end_label = codegen_generate_label(state, "try_end")
+    string catch_label
+    catch_label = codegen_generate_label(state, "catch")
+    string end_label
+    end_label = codegen_generate_label(state, "try_end")
     
     state.code = asm_emit_text(state.code, "    ; Try-catch block")
     
@@ -48,11 +51,15 @@ function visit_try_catch(state, node_id)
     state.code = asm_emit_text(state.code, "    mov [rbp - 8], rax")
     
     -- Generate catch handlers
-    for i = 0 to catch_block_ids.size() - 1 do
-        numeric catch_id = catch_block_ids.get(i)
-        string exc_type = exception_types.get(i)
+    for i
+    i = 0 to catch_block_imlp_list_length(ds) - 1 do
+        numeric catch_id
+        catch_id = catch_block_imlp_list_get(ds, i)
+        string exc_type
+        exc_type = exceptimlp_list_get(on_types, i)
         
-        string next_catch = codegen_generate_label(state, "catch_next")
+        string next_catch
+        next_catch = codegen_generate_label(state, "catch_next")
         
         -- Check exception type
         state.code = asm_emit_text(state.code, "    ; Check exception type: " + exc_type)
@@ -84,7 +91,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_throw(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric expr_id = 1
     
@@ -133,13 +141,15 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_match(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric expr_id = 1
     list[numeric] pattern_ids = list()
     list[numeric] body_ids = list()
     
-    string end_label = codegen_generate_label(state, "match_end")
+    string end_label
+    end_label = codegen_generate_label(state, "match_end")
     
     state.code = asm_emit_text(state.code, "    ; Match statement")
     
@@ -148,11 +158,15 @@ function visit_match(state, node_id)
     state.code = asm_emit_text(state.code, "    mov [rbp - 8], rax")
     
     -- Generate pattern checks
-    for i = 0 to pattern_ids.size() - 1 do
-        numeric pattern_id = pattern_ids.get(i)
-        numeric body_id = body_ids.get(i)
+    for i
+    i = 0 to pattern_imlp_list_length(ds) - 1 do
+        numeric pattern_id
+        pattern_id = pattern_imlp_list_get(ds, i)
+        numeric body_id
+        body_id = body_imlp_list_get(ds, i)
         
-        string next_case = codegen_generate_label(state, "match_case")
+        string next_case
+        next_case = codegen_generate_label(state, "match_case")
         
         -- Evaluate pattern
         state = visit_expression(state, pattern_id)
@@ -184,7 +198,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_defer(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric stmt_id = 1
     
@@ -192,7 +207,8 @@ function visit_defer(state, node_id)
     
     -- TODO: Track deferred statements in stack
     -- For now, just emit at function exit
-    string defer_label = codegen_generate_label(state, "defer")
+    string defer_label
+    defer_label = codegen_generate_label(state, "defer")
     
     state.code = asm_emit_text(state.code, "    lea rax, [rel " + defer_label + "]")
     state.code = asm_emit_text(state.code, "    push rax")
@@ -206,19 +222,24 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_with(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     list[numeric] resource_ids = list()
     numeric body_id = 1
     
-    string cleanup_label = codegen_generate_label(state, "with_cleanup")
-    string end_label = codegen_generate_label(state, "with_end")
+    string cleanup_label
+    cleanup_label = codegen_generate_label(state, "with_cleanup")
+    string end_label
+    end_label = codegen_generate_label(state, "with_end")
     
     state.code = asm_emit_text(state.code, "    ; With statement")
     
     -- Acquire resources
-    for i = 0 to resource_ids.size() - 1 do
-        numeric res_id = resource_ids.get(i)
+    for i
+    i = 0 to resource_imlp_list_length(ds) - 1 do
+        numeric res_id
+        res_id = resource_imlp_list_get(ds, i)
         state = visit_expression(state, res_id)
         state.code = asm_emit_text(state.code, "    push rax")
     end for
@@ -239,7 +260,8 @@ function visit_with(state, node_id)
     state.code = asm_emit_text(state.code, cleanup_label + ":")
     
     -- Release resources (reverse order)
-    for i = resource_ids.size() - 1 to 0 step -1 do
+    for i
+    i = resource_imlp_list_length(ds) - 1 to 0 step -1 do
         state.code = asm_emit_text(state.code, "    pop rdi")
         state.code = asm_emit_text(state.code, "    call resource_close")
     end for
@@ -255,7 +277,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_panic(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric message_id = 1
     
@@ -276,7 +299,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_unary_op(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric operand_id = 1
     TokenType operator_type = TOKEN_NOT
@@ -305,7 +329,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_expression_statement(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric expr_id = 1
     
@@ -322,7 +347,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_import(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     string module_path = "module"
     
@@ -360,7 +386,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_enum_definition(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     string enum_name = "MyEnum"
     list[string] variant_names = list()
@@ -370,9 +397,12 @@ function visit_enum_definition(state, node_id)
     state.code = asm_emit_text(state.code, "; Enum: " + enum_name)
     
     -- Generate constants in data section
-    for i = 0 to variant_names.size() - 1 do
-        string var_name = variant_names.get(i)
-        numeric value = variant_values.get(i)
+    for i
+    i = 0 to varimlp_list_length(ant_names) - 1 do
+        string var_name
+        var_name = varimlp_list_get(ant_names, i)
+        numeric value
+        value = varimlp_list_get(ant_values, i)
         
         string const_name = enum_name + "_" + var_name
         state.code = asm_emit_data(state.code, const_name + ": dq " + numeric_to_string(value))
@@ -386,7 +416,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_switch_statement(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric switch_expr_id = 1
     list[numeric] case_values = list()
@@ -396,8 +427,10 @@ function visit_switch_statement(state, node_id)
     numeric switch_id = state.label_counter
     state.label_counter = state.label_counter + 1
     
-    string switch_end = ".switch_" + numeric_to_string(switch_id) + "_end"
-    string switch_default = ".switch_" + numeric_to_string(switch_id) + "_default"
+    string switch_end
+    switch_end = ".switch_" + numeric_to_string(switch_id) + "_end"
+    string switch_default
+    switch_default = ".switch_" + numeric_to_string(switch_id) + "_default"
     
     state.code = asm_emit_text(state.code, "")
     state.code = asm_emit_text(state.code, "    ; Switch statement")
@@ -409,12 +442,17 @@ function visit_switch_statement(state, node_id)
     state.code = asm_emit_text(state.code, "    push rax")
     
     -- Generate case comparisons
-    for i = 0 to case_values.size() - 1 do
-        numeric case_value = case_values.get(i)
-        numeric case_block_id = case_block_ids.get(i)
+    for i
+    i = 0 to mlp_list_length(case_values) - 1 do
+        numeric case_value
+        case_value = mlp_list_get(case_values, i)
+        numeric case_block_id
+        case_block_id = case_block_imlp_list_get(ds, i)
         
-        string case_label = ".case_" + numeric_to_string(switch_id) + "_" + numeric_to_string(i)
-        string case_skip = ".case_" + numeric_to_string(switch_id) + "_" + numeric_to_string(i) + "_skip"
+        string case_label
+        case_label = ".case_" + numeric_to_string(switch_id) + "_" + numeric_to_string(i)
+        string case_skip
+        case_skip = ".case_" + numeric_to_string(switch_id) + "_" + numeric_to_string(i) + "_skip"
         
         -- Compare switch value with case value
         state.code = asm_emit_text(state.code, "    mov rax, [rsp]")

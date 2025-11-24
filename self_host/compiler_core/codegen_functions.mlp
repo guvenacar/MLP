@@ -22,7 +22,8 @@ import "compiler_core/codegen.mlp"
 -- -----------------------------------------------------------------------------
 
 function visit_function_declaration(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     -- Get function data
     string func_name = "my_function"
@@ -42,8 +43,10 @@ function visit_function_declaration(state, node_id)
     -- x86-64 calling convention: RDI, RSI, RDX, RCX, R8, R9
     metin[] arg_registers = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
     
-    for i = 0 to parameters.size() - 1 do
-        ASTParameterInfo param = parameters.get(i)
+    for i
+    i = 0 to mlp_list_length(parameters) - 1 do
+        ASTParameterInfo param
+        param = mlp_list_get(parameters, i)
         
         -- Determine parameter type (Phase 5.10: Typed Parameters)
         metin type_name = "SAYISAL"  -- Default: numeric
@@ -62,12 +65,14 @@ function visit_function_declaration(state, node_id)
         state.scope = scope_register_variable(state.scope, param.identifier, type_name, 1)
         
         -- Move argument from register to stack (Phase 5.10: Type-aware)
-        metin var_address = scope_get_variable_address(state.scope, param.identifier)
+        metin var_address
+        var_address = scope_get_variable_address(state.scope, param.identifier)
         state.code = asm_emit_text(state.code, "    mov " + var_address + ", " + arg_registers[i])
     end for
     
     -- Allocate local variables
-    numeric frame_size = scope_get_current_frame_size(state.scope)
+    numeric frame_size
+    frame_size = scope_get_current_frame_size(state.scope)
     if frame_size > 0 then
         state.code = asm_emit_text(state.code, "    sub rsp, " + numeric_to_string(frame_size))
     end if
@@ -93,7 +98,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_function_call(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     string func_name = "my_function"
     list[numeric] argument_ids = list()
@@ -101,9 +107,11 @@ function visit_function_call(state, node_id)
     state.code = asm_emit_text(state.code, "    ; Function call: " + func_name)
     
     -- Evaluate arguments (right to left for stack)
-    numeric arg_count = argument_ids.size()
+    numeric arg_count
+    arg_count = argument_imlp_list_length(ds)
     for i = arg_count - 1 to 0 step -1 do
-        numeric arg_id = argument_ids.get(i)
+        numeric arg_id
+        arg_id = argument_imlp_list_get(ds, i)
         state = visit_expression(state, arg_id)
         state.code = asm_emit_text(state.code, "    push rax")
     end for
@@ -127,13 +135,15 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_lambda(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     list[ASTParameterInfo] parameters = list()
     numeric body_id = 1
     
     -- Generate unique lambda label
-    string lambda_label = codegen_generate_label(state, "lambda")
+    string lambda_label
+    lambda_label = codegen_generate_label(state, "lambda")
     
     state.code = asm_emit_text(state.code, "    ; Lambda expression")
     state.code = asm_emit_text(state.code, "    lea rax, [rel " + lambda_label + "]")
@@ -150,13 +160,16 @@ function visit_lambda(state, node_id)
     state.scope = scope_enter(state.scope)
     
     -- Register parameters
-    for i = 0 to parameters.size() - 1 do
-        ASTParameterInfo param = parameters.get(i)
+    for i
+    i = 0 to mlp_list_length(parameters) - 1 do
+        ASTParameterInfo param
+        param = mlp_list_get(parameters, i)
         state.scope = scope_register_variable(state.scope, param.identifier, param.type_name, 1)
     end for
     
     -- Allocate frame
-    numeric frame_size = scope_get_current_frame_size(state.scope)
+    numeric frame_size
+    frame_size = scope_get_current_frame_size(state.scope)
     if frame_size > 0 then
         state.code = asm_emit_lambda(state.code, "    sub rsp, " + numeric_to_string(frame_size))
     end if
@@ -181,12 +194,15 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_block_in_lambda(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     list[numeric] statement_ids = list()
     
-    for i = 0 to statement_ids.size() - 1 do
-        numeric stmt_id = statement_ids.get(i)
+    for i
+    i = 0 to statement_imlp_list_length(ds) - 1 do
+        numeric stmt_id
+        stmt_id = statement_imlp_list_get(ds, i)
         -- TODO: Redirect emit to lambda section
         state = visit_statement(state, stmt_id)
     end for
@@ -199,7 +215,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_method_call(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric receiver_id = 1
     string method_name = "method"
@@ -212,8 +229,10 @@ function visit_method_call(state, node_id)
     state.code = asm_emit_text(state.code, "    push rax")
     
     -- Evaluate arguments
-    for i = argument_ids.size() - 1 to 0 step -1 do
-        numeric arg_id = argument_ids.get(i)
+    for i
+    i = argument_imlp_list_length(ds) - 1 to 0 step -1 do
+        numeric arg_id
+        arg_id = argument_imlp_list_get(ds, i)
         state = visit_expression(state, arg_id)
         state.code = asm_emit_text(state.code, "    push rax")
     end for
@@ -222,7 +241,8 @@ function visit_method_call(state, node_id)
     state.code = asm_emit_text(state.code, "    call " + method_name)
     
     -- Clean up stack
-    numeric bytes = (argument_ids.size() + 1) * 8
+    numeric bytes
+    bytes = (argument_imlp_list_length(ds) + 1) * 8
     state.code = asm_emit_text(state.code, "    add rsp, " + numeric_to_string(bytes))
     
     return state
@@ -233,14 +253,16 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_closure_with_captures(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     list[VariableInfo] captured = scope_get_captured_variables(state.scope)
     
-    state.code = asm_emit_text(state.code, "    ; Closure with " + numeric_to_string(captured.size()) + " captures")
+    state.code = asm_emit_text(state.code, "    ; Closure with " + numeric_to_string(mlp_list_length(captured)) + " captures")
     
     -- Allocate closure object (function pointer + captured variables)
-    numeric closure_size = 8 + (captured.size() * 8)
+    numeric closure_size
+    closure_size = 8 + (mlp_list_length(captured) * 8)
     state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(closure_size))
     state.code = asm_emit_text(state.code, "    call malloc")
     state.code = asm_emit_text(state.code, "    mov rbx, rax")
@@ -252,8 +274,10 @@ function visit_closure_with_captures(state, node_id)
     
     -- Store captured variables
     numeric offset = 8
-    for i = 0 to captured.size() - 1 do
-        VariableInfo var = captured.get(i)
+    for i
+    i = 0 to mlp_list_length(captured) - 1 do
+        VariableInfo var
+        var = mlp_list_get(captured, i)
         state.code = asm_emit_text(state.code, "    mov rax, [rbp - " + numeric_to_string(var.stack_offset) + "]")
         state.code = asm_emit_text(state.code, "    mov [rbx + " + numeric_to_string(offset) + "], rax")
         offset = offset + 8
@@ -270,7 +294,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_async_function(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     string func_name = "async_function"
     
@@ -303,7 +328,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_await(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric expr_id = 1
     
@@ -325,7 +351,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_yield(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     numeric expr_id = 1
     

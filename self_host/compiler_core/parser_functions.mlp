@@ -28,13 +28,15 @@ function parse_parameter(state)
        parser_check(state, TOKEN_TYPE_STRING) == 1 or
        parser_check(state, TOKEN_TYPE_BOOLEAN) == 1 then
         -- Save type annotation
-        Token type_token = parser_peek(state)
+        Token type_token
+        type_token = parser_peek(state)
         param_type = type_token.type
         state = parser_advance(state)
     end if
     
     -- Parameter name (required)
-    Token name_token = parser_peek(state)
+    Token name_token
+    name_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     
     -- Phase 7.6: Check for array parameter syntax: name[]
@@ -67,8 +69,9 @@ function parse_parameter_list(state)
     
     if parser_check(state, TOKEN_RIGHT_PAREN) == 0 then
         while 1 == 1
-            ASTParameterInfo param = parse_parameter(state)
-            parameters.add(param)
+            ASTParameterInfo param
+            param = parse_parameter(state)
+            mlp_list_add(parameters, param)
             
             if parser_match(state, TOKEN_COMMA) == 0 then
                 break
@@ -88,7 +91,8 @@ end function
 function parse_function_declaration(state)
     state = parser_expect(state, TOKEN_FUNCTION)
     
-    Token name_token = parser_peek(state)
+    Token name_token
+    name_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     
     list[ASTParameterInfo] parameters = parse_parameter_list(state)
@@ -96,7 +100,8 @@ function parse_function_declaration(state)
     -- Return type (opsiyonel)
     string return_type = "numeric"
     if parser_match(state, TOKEN_ARROW) == 1 then
-        Token ret_type_token = parser_peek(state)
+        Token ret_type_token
+        ret_type_token = parser_peek(state)
         state = parser_advance(state)
         return_type = ret_type_token.lexeme
     end if
@@ -104,7 +109,7 @@ function parse_function_declaration(state)
     -- Register function signature
     FunctionSignature sig
     sig.name = name_token.lexeme
-    sig.parameter_count = parameters.size()
+    sig.parameter_count = mlp_list_length(parameters)
     sig.parameters = parameters
     sig.return_type = return_type
     
@@ -112,13 +117,15 @@ function parse_function_declaration(state)
     
     -- Function body
     state = parser_enter_scope(state)
-    numeric body_id = parse_block(state, TOKEN_END)
+    numeric body_id
+    body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_FUNCTION)
     
-    numeric func_id = parser_create_node(state, AST_FUNCTION_DECLARATION, "func_decl")
+    numeric func_id
+    func_id = parser_create_node(state, AST_FUNCTION_DECLARATION, "func_decl")
     
     ASTFunctionData data
     data.node_id = func_id
@@ -143,8 +150,9 @@ function parse_argument_list(state)
     
     if parser_check(state, TOKEN_RIGHT_PAREN) == 0 then
         while 1 == 1
-            numeric arg_id = parse_expression(state, 0)
-            argument_ids.add(arg_id)
+            numeric arg_id
+            arg_id = parse_expression(state, 0)
+            argument_imlp_list_add(ds, arg_id)
             
             if parser_match(state, TOKEN_COMMA) == 0 then
                 break
@@ -162,12 +170,14 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parse_function_call(state, identifier_id)
-    Token name_token = parser_peek(state)
+    Token name_token
+    name_token = parser_peek(state)
     string func_name = name_token.lexeme
     
     list[numeric] arguments = parse_argument_list(state)
     
-    numeric call_id = parser_create_node(state, AST_FUNCTION_CALL, "func_call")
+    numeric call_id
+    call_id = parser_create_node(state, AST_FUNCTION_CALL, "func_call")
     
     ASTFunctionCallData data
     data.node_id = call_id
@@ -186,12 +196,14 @@ end function
 function parse_method_call(state, receiver_id)
     state = parser_expect(state, TOKEN_DOT)
     
-    Token method_token = parser_peek(state)
+    Token method_token
+    method_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     
     list[numeric] arguments = parse_argument_list(state)
     
-    numeric call_id = parser_create_node(state, AST_FUNCTION_CALL, "method_call")
+    numeric call_id
+    call_id = parser_create_node(state, AST_FUNCTION_CALL, "method_call")
     
     ASTFunctionCallData data
     data.node_id = call_id
@@ -208,10 +220,12 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parse_postfix_expression(state)
-    numeric left_id = parse_primary(state)
+    numeric left_id
+    left_id = parse_primary(state)
     
     while 1 == 1
-        Token token = parser_peek(state)
+        Token token
+        token = parser_peek(state)
         
         if token.type == TOKEN_LEFT_PAREN then
             left_id = parse_function_call(state, left_id)
@@ -219,10 +233,12 @@ function parse_postfix_expression(state)
             left_id = parse_method_call(state, left_id)
         else if token.type == TOKEN_LEFT_BRACKET then
             state = parser_advance(state)
-            numeric index_id = parse_expression(state, 0)
+            numeric index_id
+            index_id = parse_expression(state, 0)
             state = parser_expect(state, TOKEN_RIGHT_BRACKET)
             
-            numeric access_id = parser_create_node(state, AST_ARRAY_ACCESS, "array_access")
+            numeric access_id
+            access_id = parser_create_node(state, AST_ARRAY_ACCESS, "array_access")
             
             ASTArrayAccessData data
             data.node_id = access_id
@@ -250,13 +266,15 @@ function parse_lambda_expression(state)
     state = parser_expect(state, TOKEN_ARROW)
     
     state = parser_enter_scope(state)
-    numeric body_id = parse_block(state, TOKEN_END)
+    numeric body_id
+    body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_LAMBDA)
     
-    numeric lambda_id = parser_create_node(state, AST_LAMBDA, "lambda_expr")
+    numeric lambda_id
+    lambda_id = parser_create_node(state, AST_LAMBDA, "lambda_expr")
     
     ASTLambdaData data
     data.node_id = lambda_id
@@ -275,34 +293,38 @@ function parse_async_function(state)
     state = parser_expect(state, TOKEN_ASYNC)
     state = parser_expect(state, TOKEN_FUNCTION)
     
-    Token name_token = parser_peek(state)
+    Token name_token
+    name_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     
     list[ASTParameterInfo] parameters = parse_parameter_list(state)
     
     string return_type = "numeric"
     if parser_match(state, TOKEN_ARROW) == 1 then
-        Token ret_type_token = parser_peek(state)
+        Token ret_type_token
+        ret_type_token = parser_peek(state)
         state = parser_advance(state)
         return_type = ret_type_token.lexeme
     end if
     
     FunctionSignature sig
     sig.name = name_token.lexeme
-    sig.parameter_count = parameters.size()
+    sig.parameter_count = mlp_list_length(parameters)
     sig.parameters = parameters
     sig.return_type = return_type
     
     state.registry = function_registry_register(state.registry, sig)
     
     state = parser_enter_scope(state)
-    numeric body_id = parse_block(state, TOKEN_END)
+    numeric body_id
+    body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     state = parser_expect(state, TOKEN_FUNCTION)
     
-    numeric func_id = parser_create_node(state, AST_FUNCTION_DECLARATION, "async_func_decl")
+    numeric func_id
+    func_id = parser_create_node(state, AST_FUNCTION_DECLARATION, "async_func_decl")
     
     ASTFunctionData data
     data.node_id = func_id
@@ -322,9 +344,11 @@ end function
 
 function parse_await_expression(state)
     state = parser_expect(state, TOKEN_AWAIT)
-    numeric expr_id = parse_expression(state, 0)
+    numeric expr_id
+    expr_id = parse_expression(state, 0)
     
-    numeric await_id = parser_create_node(state, AST_AWAIT, "await_expr")
+    numeric await_id
+    await_id = parser_create_node(state, AST_AWAIT, "await_expr")
     
     ASTAwaitData data
     data.node_id = await_id
@@ -339,9 +363,11 @@ end function
 
 function parse_yield_expression(state)
     state = parser_expect(state, TOKEN_YIELD)
-    numeric expr_id = parse_expression(state, 0)
+    numeric expr_id
+    expr_id = parse_expression(state, 0)
     
-    numeric yield_id = parser_create_node(state, AST_YIELD, "yield_expr")
+    numeric yield_id
+    yield_id = parser_create_node(state, AST_YIELD, "yield_expr")
     
     ASTYieldData data
     data.node_id = yield_id

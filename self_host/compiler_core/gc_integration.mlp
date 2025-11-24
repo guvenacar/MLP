@@ -140,7 +140,8 @@ function gc_exit_scope()
     let roots = gc_local_roots[gc_root_stack_depth]
     
     -- Generate unregister calls for each root
-    for i = 0 to len(roots) - 1
+    for i
+    i = 0 to len(roots) - 1
         let root_label = roots[i]
         generate_gc_remove_root(root_label)
     end for
@@ -215,7 +216,8 @@ end function
 -- Allocate GC-managed closure context
 function generate_closure_allocation(capture_count: numeric, result_reg: string)
     -- Closure struct: [0-7] func_ptr, [8+] captured variables
-    let closure_size = 8 + (capture_count * 8)
+    let closure_size
+    closure_size = 8 + (capture_count * 8)
     
     emit("    ; Allocate closure (GC-managed, " + str(capture_count) + " captures)")
     emit("    mov rdi, " + str(closure_size) + "                    ; closure size")
@@ -240,7 +242,8 @@ function replace_malloc_with_gc_malloc(malloc_line: string, gc_type: numeric) ->
     -- Example output: "    mov rsi, 1; call gc_malloc"
     
     -- Extract size setup (should be in rdi already)
-    let gc_line = "    mov rsi, " + str(gc_type) + "    ; GC type\n"
+    let gc_line
+    gc_line = "    mov rsi, " + str(gc_type) + "    ; GC type\n"
     gc_line = gc_line + "    call gc_malloc"
     
     return gc_line

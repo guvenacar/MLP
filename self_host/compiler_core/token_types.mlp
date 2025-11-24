@@ -253,8 +253,9 @@ function make_token(token_type, lexeme, line, column)
 end function
 
 function make_interpolated_token(token_type, lexeme, line, column, parts)
-    Token token = make_token(token_type, lexeme, line, column)
-    if parts.size() > 0 then
+    Token token
+    token = make_token(token_type, lexeme, line, column)
+    if mlp_list_length(parts) > 0 then
         token.interpolation_parts = parts
     end if
     return token
@@ -268,7 +269,7 @@ function token_stream_create(token_list)
 end function
 
 function token_stream_is_end(stream)
-    if stream.index >= stream.tokens.size() then
+    if stream.index >= mlp_list_length(stream.tokens) then
         return 1
     end if
     return 0
@@ -279,29 +280,33 @@ function token_stream_peek(stream)
         return make_token(TOKEN_EOF, "", 0, 0)
     end if
 
-    return stream.tokens.get(stream.index)
+    return mlp_list_get(stream.tokens, stream.index)
 end function
 
 function token_stream_take(stream)
     TokenStreamTakeResult result
     result.token = token_stream_peek(stream)
 
-    TokenStream next_stream = stream
+    TokenStream next_stream
+    next_stream = stream
     if token_stream_is_end(stream) == 0 then
         next_stream.index = next_stream.index + 1
     end if
 
-    result.stream = next_stream
+    result.remaining = next_stream
     return result
 end function
 
 function token_stream_expect(stream, expected_type)
-    TokenStreamTakeResult take = token_stream_take(stream)
-    if take.token.type != expected_type then
+    TokenStreamTakeResult take
+    take = token_stream_take(stream)
+    Token current_token
+    current_token = take.token
+    if current_token.type != expected_type then
         print "Token mismatch. Expected: "
         print expected_type
         print " but got: "
-        print take.token.type
+        print current_token.type
         panic("token_stream_expect: unexpected token")
     end if
     return take

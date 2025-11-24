@@ -167,10 +167,11 @@ end function
 function ast_arena_insert(arena, node)
     ASTArenaInsertResult result
 
-    ASTNode stored_node = node
+    ASTNode stored_node
+    stored_node = node
     stored_node.id = arena.next_id
     arena.next_id = arena.next_id + 1
-    arena.nodes.add(stored_node)
+    mlp_list_add(arena.nodes, stored_node)
 
     result.arena = arena
     result.node_id = stored_node.id
@@ -182,11 +183,11 @@ function ast_arena_get(arena, node_id)
         panic("ast_arena_get: negative node id")
     end if
 
-    if node_id >= arena.nodes.size() then
+    if node_id >= mlp_list_length(arena.nodes) then
         panic("ast_arena_get: node id out of range")
     end if
 
-    return arena.nodes.get(node_id)
+    return mlp_list_get(arena.nodes, node_id)
 end function
 
 -- -----------------------------------------------------------------------------

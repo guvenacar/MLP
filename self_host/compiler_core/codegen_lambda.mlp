@@ -21,24 +21,28 @@ numeric lambda_counter = 0
 -- -----------------------------------------------------------------------------
 
 function visit_lambda_expression(state, node_id)
-    ASTNode node = ast_arena_get(state.arena, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
     
     -- Detect captured variables at codegen time
     list[string] captured_vars = list()
     
-    if node.lambda_data.captured_vars.size() == 0 then
+    if mlp_list_length(node.lambda_data.captured_vars) == 0 then
         state = find_free_variables(state, node.lambda_data.body_id, captured_vars, node.lambda_data.parameters)
         node.lambda_data.captured_vars = captured_vars
-        node.lambda_data.captured_count = captured_vars.size()
+        node.lambda_data.captured_count = mlp_list_length(captured_vars)
     else
         captured_vars = node.lambda_data.captured_vars
     end if
     
-    numeric captured_count = captured_vars.size()
+    numeric captured_count
+    captured_count = mlp_list_length(captured_vars)
     
     -- Generate unique labels
-    string lambda_label = "__lambda_" + numeric_to_string(lambda_counter)
-    string closure_label = "__closure_" + numeric_to_string(lambda_counter)
+    string lambda_label
+    lambda_label = "__lambda_" + numeric_to_string(lambda_counter)
+    string closure_label
+    closure_label = "__closure_" + numeric_to_string(lambda_counter)
     lambda_counter = lambda_counter + 1
     
     -- =========================
@@ -49,7 +53,8 @@ function visit_lambda_expression(state, node_id)
     
     -- 1. Allocate closure struct on heap
     -- Layout: [0-7] function_ptr, [8-15] captured_var_1, [16-23] captured_var_2, ...
-    numeric closure_size = 8 + (captured_count * 8)
+    numeric closure_size
+    closure_size = 8 + (captured_count * 8)
     state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(closure_size) + "  ; Closure size")
     state.code = asm_emit_text(state.code, "    call malloc")
     state.code = asm_emit_text(state.code, "    mov [rel " + closure_label + "], rax  ; Save closure base")
@@ -62,15 +67,18 @@ function visit_lambda_expression(state, node_id)
     -- 3. Copy captured variables into closure struct
     if captured_count > 0 then
         for i = 0 to captured_count - 1 do
-            string var_name = captured_vars.get(i)
-            Variable var = scope_find_variable(state, var_name)
+            string var_name
+            var_name = mlp_list_get(captured_vars, i)
+            Variable var
+            var = scope_find_variable(state, var_name)
             
             if var == null then
                 yazdir("ERROR: Captured variable '" + var_name + "' not found!")
                 exit(1)
             end if
             
-            numeric offset = 8 + (i * 8)
+            numeric offset
+            offset = 8 + (i * 8)
             state.code = asm_emit_text(state.code, "    ; Capture '" + var_name + "' at offset " + numeric_to_string(offset))
             state.code = asm_emit_text(state.code, "    mov rbx, " + var.asm_address + "  ; Load variable")
             state.code = asm_emit_text(state.code, "    mov rcx, [rel " + closure_label + "]  ; Load closure base")
@@ -110,27 +118,34 @@ function visit_lambda_expression(state, node_id)
     lambda_section_code = lambda_section_code + "    sub rsp, 256\n"
     
     -- Save closure pointer (first parameter, always in rdi)
-    string closure_var_addr = scope_allocate_variable(state, "__closure", "SAYISAL")
+    string closure_var_addr
+    closure_var_addr = scope_allocate_variable(state, "__closure", "SAYISAL")
     lambda_section_code = lambda_section_code + "    mov " + closure_var_addr + ", rdi  ; Save closure pointer\n"
     
     -- Save user parameters (rsi, rdx, rcx, ...)
     list[string] arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
     
     for i = 0 to node.lambda_data.parameter_count - 1 do
-        Token param = node.lambda_data.parameters.get(i)
+        Token param
+        param = mlp_list_get(node.lambda_data.parameters, i)
         string param_name = param.lexeme
-        string param_addr = scope_allocate_variable(state, param_name, "SAYISAL")
-        string reg = arg_registers.get(i)
+        string param_addr
+        param_addr = scope_allocate_variable(state, param_name, "SAYISAL")
+        string reg
+        reg = arg_regimlp_list_get(sters, i)
         lambda_section_code = lambda_section_code + "    mov " + param_addr + ", " + reg + "  ; Parameter '" + param_name + "'\n"
     end for
     
     -- Load captured variables from closure struct
     if captured_count > 0 then
         for i = 0 to captured_count - 1 do
-            string var_name = captured_vars.get(i)
-            numeric offset = 8 + (i * 8)
+            string var_name
+            var_name = mlp_list_get(captured_vars, i)
+            numeric offset
+            offset = 8 + (i * 8)
             
-            string var_addr = scope_allocate_variable(state, var_name, "SAYISAL")
+            string var_addr
+            var_addr = scope_allocate_variable(state, var_name, "SAYISAL")
             
             lambda_section_code = lambda_section_code + "    ; Load captured '" + var_name + "' from closure\n"
             lambda_section_code = lambda_section_code + "    mov rbx, " + closure_var_addr + "  ; Closure pointer\n"
@@ -170,7 +185,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
-    Variable closure_var = scope_find_variable(state, closure_var_name)
+    Variable closure_var
+    closure_var = scope_find_variable(state, closure_var_name)
     
     if closure_var == null then
         yazdir("ERROR: Closure variable '" + closure_var_name + "' not found!")
@@ -188,11 +204,14 @@ function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
     -- 3. Evaluate arguments
     list[string] arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
     
-    for i = 0 to argument_ids.size() - 1 do
-        numeric arg_id = argument_ids.get(i)
+    for i
+    i = 0 to argument_imlp_list_length(ds) - 1 do
+        numeric arg_id
+        arg_id = argument_imlp_list_get(ds, i)
         state = visit_expression(state, arg_id)
         
-        string reg = arg_registers.get(i)
+        string reg
+        reg = arg_regimlp_list_get(sters, i)
         state.code = asm_emit_text(state.code, "    mov " + reg + ", rax  ; Argument " + numeric_to_string(i + 1))
     end for
     

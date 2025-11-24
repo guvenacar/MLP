@@ -43,7 +43,8 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parser_advance(state)
-    TokenStreamTakeResult result = token_stream_take(state.stream)
+    TokenStreamTakeResult result
+    result = token_stream_take(state.stream)
     state.stream = result.stream
     state.current_token = result.token
     state.current_index = state.current_index + 1
@@ -89,7 +90,7 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parser_enter_scope(state)
-    state.scope_stack_offsets.add(0)
+    mlp_list_add(state.scope_stack_offsets, 0)
     state.scope_level = state.scope_level + 1
     return state
 end function
@@ -97,9 +98,10 @@ end function
 function parser_exit_scope(state)
     if state.scope_level > 0 then
         state.scope_level = state.scope_level - 1
-        numeric size = state.scope_stack_offsets.size()
+        numeric size
+        size = mlp_list_length(state.scope_stack_offsets)
         if size > 0 then
-            state.scope_stack_offsets.remove(size - 1)
+            mlp_list_remove(state.scope_stack_offsets, size - 1)
         end if
     end if
     return state
@@ -110,14 +112,17 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parser_create_node(state, node_type, debug_label)
-    ASTLocation location = ast_location(
+    ASTLocation location
+    location = ast_location(
         "<source>",
         state.current_token.line,
         state.current_token.column
     )
     
-    ASTNode node = ast_node_create(node_type, location, debug_label)
-    ASTArenaInsertResult result = ast_arena_insert(state.arena, node)
+    ASTNode node
+    node = ast_node_create(node_type, location, debug_label)
+    ASTArenaInsertResult result
+    result = ast_arena_insert(state.arena, node)
     
     state.arena = result.arena
     return result.node_id
@@ -150,7 +155,8 @@ function get_precedence(token_type)
 end function
 
 function is_binary_operator(token_type)
-    numeric prec = get_precedence(token_type)
+    numeric prec
+    prec = get_precedence(token_type)
     if prec > 0 then
         return 1
     end if
@@ -169,10 +175,12 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parse_primary(state)
-    Token token = parser_peek(state)
+    Token token
+    token = parser_peek(state)
     
     if token.type == TOKEN_NUMBER then
-        numeric node_id = parser_create_node(state, AST_SAYI, "number_literal")
+        numeric node_id
+        node_id = parser_create_node(state, AST_SAYI, "number_literal")
         state = parser_advance(state)
         
         ASTLiteralData data
@@ -185,7 +193,8 @@ function parse_primary(state)
     end if
     
     if token.type == TOKEN_STRING then
-        numeric node_id = parser_create_node(state, AST_METIN, "string_literal")
+        numeric node_id
+        node_id = parser_create_node(state, AST_METIN, "string_literal")
         state = parser_advance(state)
         
         ASTLiteralData data
@@ -198,7 +207,8 @@ function parse_primary(state)
     end if
     
     if token.type == TOKEN_INTERPOLATED_STRING then
-        numeric node_id = parser_create_node(state, AST_INTERPOLATED_STRING, "interpolated_string")
+        numeric node_id
+        node_id = parser_create_node(state, AST_INTERPOLATED_STRING, "interpolated_string")
         state = parser_advance(state)
         
         ASTLiteralData data
@@ -211,25 +221,29 @@ function parse_primary(state)
     end if
     
     if token.type == TOKEN_TRUE then
-        numeric node_id = parser_create_node(state, AST_SAYI, "boolean_true")
+        numeric node_id
+        node_id = parser_create_node(state, AST_SAYI, "boolean_true")
         state = parser_advance(state)
         return node_id
     end if
     
     if token.type == TOKEN_FALSE then
-        numeric node_id = parser_create_node(state, AST_SAYI, "boolean_false")
+        numeric node_id
+        node_id = parser_create_node(state, AST_SAYI, "boolean_false")
         state = parser_advance(state)
         return node_id
     end if
     
     if token.type == TOKEN_NULL then
-        numeric node_id = parser_create_node(state, AST_SAYI, "null_literal")
+        numeric node_id
+        node_id = parser_create_node(state, AST_SAYI, "null_literal")
         state = parser_advance(state)
         return node_id
     end if
     
     if token.type == TOKEN_IDENTIFIER then
-        numeric node_id = parser_create_node(state, AST_DEGISKEN, "identifier")
+        numeric node_id
+        node_id = parser_create_node(state, AST_DEGISKEN, "identifier")
         state = parser_advance(state)
         
         ASTIdentifierData data
@@ -241,7 +255,8 @@ function parse_primary(state)
     
     if token.type == TOKEN_LEFT_PAREN then
         state = parser_advance(state)
-        numeric expr_id = parse_expression(state, 0)
+        numeric expr_id
+        expr_id = parse_expression(state, 0)
         state = parser_expect(state, TOKEN_RIGHT_PAREN)
         return expr_id
     end if
@@ -277,26 +292,32 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parse_expression(state, min_precedence)
-    numeric left_id = parse_primary(state)
+    numeric left_id
+    left_id = parse_primary(state)
     
     while 1 == 1
-        Token op_token = parser_peek(state)
+        Token op_token
+        op_token = parser_peek(state)
         
         if is_binary_operator(op_token.type) == 0 then
             break
         end if
         
-        numeric op_prec = get_precedence(op_token.type)
+        numeric op_prec
+        op_prec = get_precedence(op_token.type)
         if op_prec < min_precedence then
             break
         end if
         
-        TokenType op_type = op_token.type
+        TokenType op_type
+        op_type = op_token.type
         state = parser_advance(state)
         
-        numeric right_id = parse_expression(state, op_prec + 1)
+        numeric right_id
+        right_id = parse_expression(state, op_prec + 1)
         
-        numeric binary_id = parser_create_node(state, AST_IKILI_ISLEM, "binary_op")
+        numeric binary_id
+        binary_id = parser_create_node(state, AST_IKILI_ISLEM, "binary_op")
         
         ASTBinaryData data
         data.node_id = binary_id
@@ -316,9 +337,11 @@ end function
 
 function parse_print_statement(state)
     state = parser_expect(state, TOKEN_PRINT)
-    numeric expr_id = parse_expression(state, 0)
+    numeric expr_id
+    expr_id = parse_expression(state, 0)
     
-    numeric print_id = parser_create_node(state, AST_PRINT_STATEMENT, "print")
+    numeric print_id
+    print_id = parser_create_node(state, AST_PRINT_STATEMENT, "print")
     
     ASTPrintData data
     data.node_id = print_id
@@ -329,9 +352,11 @@ end function
 
 function parse_return_statement(state)
     state = parser_expect(state, TOKEN_RETURN)
-    numeric expr_id = parse_expression(state, 0)
+    numeric expr_id
+    expr_id = parse_expression(state, 0)
     
-    numeric return_id = parser_create_node(state, AST_RETURN_STATEMENT_KOMUTU, "return")
+    numeric return_id
+    return_id = parser_create_node(state, AST_RETURN_STATEMENT_KOMUTU, "return")
     
     ASTReturnData data
     data.node_id = return_id
@@ -341,10 +366,12 @@ function parse_return_statement(state)
 end function
 
 function parse_variable_declaration(state)
-    Token type_token = parser_peek(state)
+    Token type_token
+    type_token = parser_peek(state)
     state = parser_advance(state)
     
-    Token name_token = parser_peek(state)
+    Token name_token
+    name_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     
     numeric value_id = -1
@@ -352,7 +379,8 @@ function parse_variable_declaration(state)
         value_id = parse_expression(state, 0)
     end if
     
-    numeric decl_id = parser_create_node(state, AST_VARIABLE_DECLARATION, "var_decl")
+    numeric decl_id
+    decl_id = parser_create_node(state, AST_VARIABLE_DECLARATION, "var_decl")
     
     ASTVariableDeclarationData data
     data.node_id = decl_id
@@ -365,13 +393,16 @@ function parse_variable_declaration(state)
 end function
 
 function parse_assignment(state)
-    Token name_token = parser_peek(state)
+    Token name_token
+    name_token = parser_peek(state)
     state = parser_expect(state, TOKEN_IDENTIFIER)
     state = parser_expect(state, TOKEN_ASSIGN)
     
-    numeric value_id = parse_expression(state, 0)
+    numeric value_id
+    value_id = parse_expression(state, 0)
     
-    numeric assign_id = parser_create_node(state, AST_ASSIGNMENT_KOMUTU, "assignment")
+    numeric assign_id
+    assign_id = parser_create_node(state, AST_ASSIGNMENT_KOMUTU, "assignment")
     
     ASTAssignmentData data
     data.node_id = assign_id
@@ -383,11 +414,13 @@ end function
 
 function parse_if_statement(state)
     state = parser_expect(state, TOKEN_IF)
-    numeric condition_id = parse_expression(state, 0)
+    numeric condition_id
+    condition_id = parse_expression(state, 0)
     state = parser_expect(state, TOKEN_THEN)
     
     state = parser_enter_scope(state)
-    numeric then_block_id = parse_block(state, TOKEN_END, TOKEN_ELSE)
+    numeric then_block_id
+    then_block_id = parse_block(state, TOKEN_END, TOKEN_ELSE)
     state = parser_exit_scope(state)
     
     numeric else_block_id = -1
@@ -399,7 +432,8 @@ function parse_if_statement(state)
     
     state = parser_expect(state, TOKEN_END)
     
-    numeric if_id = parser_create_node(state, AST_IF_STATEMENT_KOMUTU, "if_stmt")
+    numeric if_id
+    if_id = parser_create_node(state, AST_IF_STATEMENT_KOMUTU, "if_stmt")
     
     ASTIfData data
     data.node_id = if_id
@@ -412,16 +446,19 @@ end function
 
 function parse_while_statement(state)
     state = parser_expect(state, TOKEN_WHILE)
-    numeric condition_id = parse_expression(state, 0)
+    numeric condition_id
+    condition_id = parse_expression(state, 0)
     state = parser_expect(state, TOKEN_DO)
     
     state = parser_enter_scope(state)
-    numeric body_id = parse_block(state, TOKEN_END)
+    numeric body_id
+    body_id = parse_block(state, TOKEN_END)
     state = parser_exit_scope(state)
     
     state = parser_expect(state, TOKEN_END)
     
-    numeric while_id = parser_create_node(state, AST_WHILE_LOOP_KOMUTU, "while_loop")
+    numeric while_id
+    while_id = parser_create_node(state, AST_WHILE_LOOP_KOMUTU, "while_loop")
     
     ASTWhileData data
     data.node_id = while_id
@@ -432,7 +469,8 @@ function parse_while_statement(state)
 end function
 
 function parse_statement(state)
-    Token token = parser_peek(state)
+    Token token
+    token = parser_peek(state)
     
     if token.type == TOKEN_IMPORT then
         return parse_import_statement(state)
@@ -546,7 +584,8 @@ function parse_block_multi(state, end_token1, end_token2)
     list[numeric] statement_ids = list()
     
     while 1 == 1
-        Token token = parser_peek(state)
+        Token token
+        token = parser_peek(state)
         
         if token.type == TOKEN_EOF then
             break
@@ -560,11 +599,13 @@ function parse_block_multi(state, end_token1, end_token2)
             break
         end if
         
-        numeric stmt_id = parse_statement(state)
-        statement_ids.add(stmt_id)
+        numeric stmt_id
+        stmt_id = parse_statement(state)
+        statement_imlp_list_add(ds, stmt_id)
     end while
     
-    numeric block_id = parser_create_node(state, AST_BLOK, "block")
+    numeric block_id
+    block_id = parser_create_node(state, AST_BLOK, "block")
     
     ASTBlockData data
     data.node_id = block_id
@@ -578,10 +619,13 @@ end function
 -- -----------------------------------------------------------------------------
 
 function parse(source_code)
-    TokenStream stream = tokenize(source_code)
-    ParserState state = parser_state_create(stream)
+    TokenStream stream
+    stream = tokenize(source_code)
+    ParserState state
+    state = parser_state_create(stream)
     
-    numeric root_id = parse_block(state, TOKEN_EOF)
+    numeric root_id
+    root_id = parse_block(state, TOKEN_EOF)
     
     return state.arena
 end function

@@ -77,7 +77,8 @@ function resolve_import_path(metin import_path, metin base_dir)
         resolved_path = import_path
     else
         -- Relative path - try MLP_SOURCE_DIR first
-        metin source_dir = ortam_degiskeni_al("MLP_SOURCE_DIR")
+        metin source_dir
+        source_dir = ortam_degiskeni_al("MLP_SOURCE_DIR")
         
         if source_dir != "" then
             -- Use MLP_SOURCE_DIR
@@ -110,7 +111,8 @@ function handle_import(ImportContext ctx, ASTNode import_node, LexerState lexer,
     metin file_path = import_node.import_path
     
     -- ========== Import Path Resolution ==========
-    metin resolved_path = resolve_import_path(file_path, ctx.base_dir)
+    metin resolved_path
+    resolved_path = resolve_import_path(file_path, ctx.base_dir)
     
     -- ========== Circular Import Detection ==========
     if is_file_imported(ctx, resolved_path) then
@@ -121,7 +123,8 @@ function handle_import(ImportContext ctx, ASTNode import_node, LexerState lexer,
     mark_file_imported(ctx, resolved_path)
     
     -- ========== Parse Imported File ==========
-    metin import_source = dosya_oku(resolved_path)
+    metin import_source
+    import_source = dosya_oku(resolved_path)
     
     if import_source == "" then
         yaz("ERROR: Cannot open import file '" + resolved_path + "'")
@@ -133,7 +136,8 @@ function handle_import(ImportContext ctx, ASTNode import_node, LexerState lexer,
     sayisal saved_position = lexer.current_position
     sayisal saved_line = lexer.current_line
     sayisal saved_column = lexer.current_column
-    Token saved_token = lexer.current_token
+    Token saved_token
+    saved_token = lexer.current_token
     
     -- Initialize lexer with imported file
     lexer = create_lexer(import_source)
@@ -146,7 +150,8 @@ function handle_import(ImportContext ctx, ASTNode import_node, LexerState lexer,
     -- They will be emitted BEFORE main() in codegen
     
     while lexer.current_token.type != TOKEN_EOF do
-        ASTNode stmt = parse_statement(parser, lexer)
+        ASTNode stmt
+        stmt = parse_statement(parser, lexer)
         
         if stmt != null then
             -- Collect function definitions (don't emit yet)

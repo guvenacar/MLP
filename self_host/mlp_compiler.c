@@ -3526,9 +3526,38 @@ ASTNode* komut() {
 
             Token* field_tip = (Token*)malloc(sizeof(Token));
             field_tip->type = current_token->type;
-            field_tip->value = strdup(current_token->value);
-            field_tipleri[field_sayisi] = field_tip;
+            
+            // Handle generic types like list[string] or list[Token]
+            // Store the full type name including generic parameter
+            char full_type_name[256];
+            strcpy(full_type_name, current_token->value);
             consume(current_token->type);
+            
+            // Check for generic type parameter [T]
+            if (current_token->type == TOKEN_LEFT_BRACKET) {
+                strcat(full_type_name, "[");
+                consume(TOKEN_LEFT_BRACKET);
+                
+                // Generic parameter (must be identifier or primitive type)
+                if (current_token->type == TOKEN_IDENTIFIER ||
+                    current_token->type == TOKEN_TYPE_NUMERIC ||
+                    current_token->type == TOKEN_TYPE_STRING ||
+                    current_token->type == TOKEN_TYPE_BOOLEAN) {
+                    strcat(full_type_name, current_token->value);
+                    consume(current_token->type);
+                } else {
+                    parseError("Generic type parameter", "IDENTIFIER/TYPE");
+                }
+                
+                if (current_token->type != TOKEN_RIGHT_BRACKET) {
+                    parseError("Closing bracket", "]");
+                }
+                strcat(full_type_name, "]");
+                consume(TOKEN_RIGHT_BRACKET);
+            }
+            
+            field_tip->value = strdup(full_type_name);
+            field_tipleri[field_sayisi] = field_tip;
 
             // Field adı
             if (current_token->type != TOKEN_IDENTIFIER) {
