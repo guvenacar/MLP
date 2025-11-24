@@ -1,0 +1,151 @@
+# lang: tr-TR
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Test: Lambda & Closures
+# -----------------------------------------------------------------------------
+# Lambda expressions, closure capture, first-class functions
+# -----------------------------------------------------------------------------
+
+function test_simple_lambda()
+    yazdir("=== Simple Lambda Test ===")
+    
+    # Non-capturing lambda (function pointer only)
+    numeric double_fn = lambda(x) => x * 2
+    
+    numeric result = double_fn(5)
+    yazdir("double(5) = ", result)  # Expected: 10
+    
+    yazdir("")
+end function
+
+function test_closure_capture()
+    yazdir("=== Closure Capture Test ===")
+    
+    numeric multiplier = 3
+    
+    # Lambda captures 'multiplier' from outer scope
+    numeric multiply_fn = lambda(x) => x * multiplier
+    
+    numeric result = multiply_fn(7)
+    yazdir("multiply(7) with multiplier=3: ", result)  # Expected: 21
+    
+    yazdir("")
+end function
+
+function test_closure_factory()
+    yazdir("=== Closure Factory Test ===")
+    
+    # Function returns closure that captures parameter
+    function make_adder(numeric n)
+        return lambda(x) => x + n
+    end function
+    
+    numeric add5 = make_adder(5)
+    numeric add10 = make_adder(10)
+    
+    numeric result1 = add5(3)
+    yazdir("add5(3) = ", result1)  # Expected: 8
+    
+    numeric result2 = add10(3)
+    yazdir("add10(3) = ", result2)  # Expected: 13
+    
+    yazdir("")
+end function
+
+function test_nested_closures()
+    yazdir("=== Nested Closures Test ===")
+    
+    numeric a = 2
+    numeric b = 3
+    
+    # Lambda captures both 'a' and 'b'
+    numeric compute_fn = lambda(x) => (x + a) * b
+    
+    numeric result = compute_fn(5)
+    yazdir("(5 + 2) * 3 = ", result)  # Expected: 21
+    
+    yazdir("")
+end function
+
+function test_lambda_as_parameter()
+    yazdir("=== Lambda as Parameter Test ===")
+    
+    # Higher-order function that takes lambda as parameter
+    function apply_twice(numeric fn, numeric value)
+        numeric result1 = fn(value)
+        numeric result2 = fn(result1)
+        return result2
+    end function
+    
+    numeric square_fn = lambda(x) => x * x
+    
+    numeric result = apply_twice(square_fn, 2)
+    yazdir("square(square(2)) = ", result)  # Expected: 16
+    
+    yazdir("")
+end function
+
+function test_lambda_composition()
+    yazdir("=== Lambda Composition Test ===")
+    
+    numeric double_fn = lambda(x) => x * 2
+    numeric increment_fn = lambda(x) => x + 1
+    
+    numeric value = 5
+    numeric result = double_fn(increment_fn(value))
+    yazdir("double(increment(5)) = ", result)  # Expected: 12
+    
+    yazdir("")
+end function
+
+function test_closure_mutation()
+    yazdir("=== Closure Mutation Test ===")
+    
+    numeric counter = 0
+    
+    # Lambda that modifies captured variable
+    numeric increment_fn = lambda() => counter + 1
+    
+    counter = 10
+    numeric result = increment_fn()
+    yazdir("counter = 10, increment() = ", result)  # Expected: 11
+    
+    yazdir("")
+end function
+
+function test_multiple_captures()
+    yazdir("=== Multiple Captures Test ===")
+    
+    numeric x = 2
+    numeric y = 3
+    numeric z = 4
+    
+    # Lambda captures three variables
+    numeric compute_fn = lambda(n) => (n * x + y) * z
+    
+    numeric result = compute_fn(5)
+    yazdir("((5 * 2) + 3) * 4 = ", result)  # Expected: 52
+    
+    yazdir("")
+end function
+
+function main()
+    yazdir("╔═══════════════════════════════════════╗")
+    yazdir("║   Lambda & Closures Test Suite       ║")
+    yazdir("╚═══════════════════════════════════════╝")
+    yazdir("")
+    
+    test_simple_lambda()
+    test_closure_capture()
+    test_closure_factory()
+    test_nested_closures()
+    test_lambda_as_parameter()
+    test_lambda_composition()
+    test_closure_mutation()
+    test_multiple_captures()
+    
+    yazdir("╔═══════════════════════════════════════╗")
+    yazdir("║     All Tests Completed Successfully  ║")
+    yazdir("╚═══════════════════════════════════════╝")
+end function

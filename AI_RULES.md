@@ -152,14 +152,31 @@ MLP, iki farklı derleme yolu sunar:
 
 ### ⚠️ KRİTİK MİMARİ KURALLARI - MUTLAK UYULACAK!
 
-**🔴 KURAL #1: PREPROCESSOR PIPELINE (ASLA İHLAL ETMEYİN!)**
+**🔴 KURAL #1: 3-STAGE PREPROCESSOR PIPELINE (ASLA İHLAL ETMEYİN!)**
 
 ```
-Kaynak Kod (.mlp - Türkçe/Rusça/Hintçe/vs)
+Kaynak Kod (.mlp - Herhangi syntax + Türkçe/Rusça/Hintçe)
+    Örnek: if (x > 0) { YAZDIR "Merhaba" }  (C-style + Türkçe)
     ↓
+┌─────────────────────────────────────────────────────┐
+│ STAGE 1: SYNTAX NORMALIZATION                       │
+│ (stage0/syntax_preprocessor.py + syntax.json)       │
+└─────────────────────────────────────────────────────┘
+    ├─→ syntax.json'dan syntax mapping'leri oku
+    ├─→ C-style { } → MLP base syntax (then/end)
+    ├─→ Python-style : indent → MLP base (then/end)
+    ├─→ Keywords AYNEN KORU (herhangi dil)
+    ├─→ Strings ve comments KORU
+    └─→ Çıktı: Normalized MLP (.mlp)
+    ↓
+Normalized MLP (.mlp - MLP syntax + Türkçe/Rusça/Hintçe)
+    Örnek: if x > 0 then YAZDIR "Merhaba" end if
+    ↓
+┌─────────────────────────────────────────────────────┐
+│ STAGE 2: LANGUAGE TRANSLATION                       │
+│ (runtime/mlp_preprocessor.c + diller.json)          │
+└─────────────────────────────────────────────────────┘
 ❌ LEXER ASLA TÜRKÇE GÖRMEZ!
-    ↓
-MLP_PREPROCESSOR (C dilinde - runtime/mlp_preprocessor.c)
     ├─→ diller.json'dan keyword mapping'leri oku
     ├─→ Türkçe/Rusça/Hintçe keywords → English keywords
     ├─→ String içerikleri KORU (çevirme!)
@@ -171,7 +188,11 @@ English IR (.mlp)
     ├─→ Strings: "Merhaba" (UTF-8 korunmuş)
     └─→ Comments: Korunmuş
     ↓
-MLPC (Compiler - self_host/mlp_compiler.c)
+┌─────────────────────────────────────────────────────┐
+│ STAGE 3: COMPILATION                                │
+│ (self_host/mlp_compiler.c)                          │
+└─────────────────────────────────────────────────────┘
+MLPC (Compiler)
     ├─→ SADECE İngilizce keywords anlar
     ├─→ UTF-8 strings'i byte sequence'e çevirir
     └─→ Assembly üretir

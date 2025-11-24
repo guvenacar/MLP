@@ -1,0 +1,260 @@
+# lang: en-US
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Runtime BigDecimal Wrapper
+# -----------------------------------------------------------------------------
+# C runtime'daki BigDecimal fonksiyonlarını MLP'ye bağlar
+# Tüm numeric operasyonlar bu modül üzerinden yapılır
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# External C runtime functions (will be linked)
+# -----------------------------------------------------------------------------
+
+# extern bigdecimal_create(string value) -> pointer
+# extern bigdecimal_add(pointer a, pointer b) -> pointer
+# extern bigdecimal_subtract(pointer a, pointer b) -> pointer
+# extern bigdecimal_multiply(pointer a, pointer b) -> pointer
+# extern bigdecimal_divide(pointer a, pointer b) -> pointer
+# extern bigdecimal_modulo(pointer a, pointer b) -> pointer
+# extern bigdecimal_compare(pointer a, pointer b) -> numeric
+# extern bigdecimal_to_string(pointer bd) -> string
+# extern bigdecimal_free(pointer bd)
+
+# -----------------------------------------------------------------------------
+# BigDecimal wrapper type
+# -----------------------------------------------------------------------------
+
+struct BigDecimal then
+    numeric ptr
+end struct
+
+# -----------------------------------------------------------------------------
+# Constructors
+# -----------------------------------------------------------------------------
+
+function bigdecimal_from_string(value)
+    BigDecimal bd
+    # TODO: Call C runtime
+    # bd.ptr = bigdecimal_create(value)
+    bd.ptr = 0
+    return bd
+end function
+
+function bigdecimal_from_int(value)
+    string str_value = int_to_string(value)
+    return bigdecimal_from_string(str_value)
+end function
+
+function bigdecimal_zero()
+    return bigdecimal_from_string("0")
+end function
+
+function bigdecimal_one()
+    return bigdecimal_from_string("1")
+end function
+
+# -----------------------------------------------------------------------------
+# Arithmetic operations
+# -----------------------------------------------------------------------------
+
+function bigdecimal_add_op(a, b)
+    BigDecimal result
+    # TODO: Call C runtime
+    # result.ptr = bigdecimal_add(a.ptr, b.ptr)
+    result.ptr = 0
+    return result
+end function
+
+function bigdecimal_subtract_op(a, b)
+    BigDecimal result
+    # TODO: Call C runtime
+    # result.ptr = bigdecimal_subtract(a.ptr, b.ptr)
+    result.ptr = 0
+    return result
+end function
+
+function bigdecimal_multiply_op(a, b)
+    BigDecimal result
+    # TODO: Call C runtime
+    # result.ptr = bigdecimal_multiply(a.ptr, b.ptr)
+    result.ptr = 0
+    return result
+end function
+
+function bigdecimal_divide_op(a, b)
+    BigDecimal result
+    # TODO: Call C runtime
+    # result.ptr = bigdecimal_divide(a.ptr, b.ptr)
+    result.ptr = 0
+    return result
+end function
+
+function bigdecimal_modulo_op(a, b)
+    BigDecimal result
+    # TODO: Call C runtime
+    # result.ptr = bigdecimal_modulo(a.ptr, b.ptr)
+    result.ptr = 0
+    return result
+end function
+
+# -----------------------------------------------------------------------------
+# Comparison operations
+# -----------------------------------------------------------------------------
+
+function bigdecimal_equals(a, b)
+    # TODO: Call C runtime
+    # numeric cmp = bigdecimal_compare(a.ptr, b.ptr)
+    # return cmp == 0
+    return 0
+end function
+
+function bigdecimal_less_than(a, b)
+    # TODO: Call C runtime
+    # numeric cmp = bigdecimal_compare(a.ptr, b.ptr)
+    # return cmp < 0
+    return 0
+end function
+
+function bigdecimal_greater_than(a, b)
+    # TODO: Call C runtime
+    # numeric cmp = bigdecimal_compare(a.ptr, b.ptr)
+    # return cmp > 0
+    return 0
+end function
+
+function bigdecimal_less_or_equal(a, b)
+    # TODO: Call C runtime
+    # numeric cmp = bigdecimal_compare(a.ptr, b.ptr)
+    # return cmp <= 0
+    return 0
+end function
+
+function bigdecimal_greater_or_equal(a, b)
+    # TODO: Call C runtime
+    # numeric cmp = bigdecimal_compare(a.ptr, b.ptr)
+    # return cmp >= 0
+    return 0
+end function
+
+# -----------------------------------------------------------------------------
+# Conversion operations
+# -----------------------------------------------------------------------------
+
+function bigdecimal_to_str(bd)
+    # TODO: Call C runtime
+    # return bigdecimal_to_string(bd.ptr)
+    return "0"
+end function
+
+function bigdecimal_to_int(bd)
+    string str = bigdecimal_to_str(bd)
+    return string_to_int(str)
+end function
+
+# -----------------------------------------------------------------------------
+# Memory management
+# -----------------------------------------------------------------------------
+
+function bigdecimal_destroy(bd)
+    # TODO: Call C runtime
+    # bigdecimal_free(bd.ptr)
+    bd.ptr = 0
+    return bd
+end function
+
+# -----------------------------------------------------------------------------
+# Helper: int to string conversion
+# -----------------------------------------------------------------------------
+
+function int_to_string(n)
+    if n == 0 then return "0" end if
+    if n == 1 then return "1" end if
+    if n == 2 then return "2" end if
+    if n == 3 then return "3" end if
+    if n == 4 then return "4" end if
+    if n == 5 then return "5" end if
+    if n == 6 then return "6" end if
+    if n == 7 then return "7" end if
+    if n == 8 then return "8" end if
+    if n == 9 then return "9" end if
+    if n == 10 then return "10" end if
+    
+    string result = ""
+    numeric temp = n
+    numeric is_negative = 0
+    
+    if temp < 0 then
+        is_negative = 1
+        temp = -temp
+    end if
+    
+    while temp > 0
+        numeric digit = temp % 10
+        temp = temp / 10
+        
+        if digit == 0 then result = "0" + result end if
+        if digit == 1 then result = "1" + result end if
+        if digit == 2 then result = "2" + result end if
+        if digit == 3 then result = "3" + result end if
+        if digit == 4 then result = "4" + result end if
+        if digit == 5 then result = "5" + result end if
+        if digit == 6 then result = "6" + result end if
+        if digit == 7 then result = "7" + result end if
+        if digit == 8 then result = "8" + result end if
+        if digit == 9 then result = "9" + result end if
+    end while
+    
+    if is_negative == 1 then
+        result = "-" + result
+    end if
+    
+    return result
+end function
+
+# -----------------------------------------------------------------------------
+# Helper: string to int conversion
+# -----------------------------------------------------------------------------
+
+function string_to_int(str)
+    numeric result = 0
+    numeric is_negative = 0
+    numeric start_index = 0
+    
+    if str.length() == 0 then
+        return 0
+    end if
+    
+    # Check for negative sign
+    string first_char = str.substring(0, 1)
+    if first_char == "-" then
+        is_negative = 1
+        start_index = 1
+    end if
+    
+    # Parse digits
+    for i = start_index to str.length() - 1 do
+        string char = str.substring(i, i + 1)
+        numeric digit = 0
+        
+        if char == "0" then digit = 0 end if
+        if char == "1" then digit = 1 end if
+        if char == "2" then digit = 2 end if
+        if char == "3" then digit = 3 end if
+        if char == "4" then digit = 4 end if
+        if char == "5" then digit = 5 end if
+        if char == "6" then digit = 6 end if
+        if char == "7" then digit = 7 end if
+        if char == "8" then digit = 8 end if
+        if char == "9" then digit = 9 end if
+        
+        result = result * 10 + digit
+    end for
+    
+    if is_negative == 1 then
+        result = -result
+    end if
+    
+    return result
+end function

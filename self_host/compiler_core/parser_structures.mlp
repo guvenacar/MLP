@@ -1,0 +1,508 @@
+# lang: en-US
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Parser Data Structures Module - List, HashMap, Set, Struct parsing
+# -----------------------------------------------------------------------------
+# C bootstrap derleyicisindeki veri yapısı parsing mantığını MLP'ye taşır.
+# List literals, HashMap literals, Set literals, Struct definitions.
+# -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/parser.mlp"
+
+# -----------------------------------------------------------------------------
+# List literal parsing
+# -----------------------------------------------------------------------------
+
+function parse_list_literal(state)
+    state = parser_expect(state, TOKEN_LEFT_BRACKET)
+    
+    list[numeric] element_ids = list()
+    
+    if parser_check(state, TOKEN_RIGHT_BRACKET) == 0 then
+        while 1 == 1
+            numeric elem_id = parse_expression(state, 0)
+            element_ids.add(elem_id)
+            
+            if parser_match(state, TOKEN_COMMA) == 0 then
+                break
+            end if
+        end while
+    end if
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACKET)
+    
+    numeric list_id = parser_create_node(state, AST_LIST_LITERAL, "list_literal")
+    
+    ASTListLiteralData data
+    data.node_id = list_id
+    data.element_ids = element_ids
+    data.element_type = "numeric"
+    
+    return list_id
+end function
+
+# -----------------------------------------------------------------------------
+# HashMap literal parsing
+# -----------------------------------------------------------------------------
+
+function parse_hashmap_literal(state)
+    state = parser_expect(state, TOKEN_LEFT_BRACE)
+    
+    list[numeric] key_ids = list()
+    list[numeric] value_ids = list()
+    
+    if parser_check(state, TOKEN_RIGHT_BRACE) == 0 then
+        while 1 == 1
+            numeric key_id = parse_expression(state, 0)
+            state = parser_expect(state, TOKEN_COLON)
+            numeric value_id = parse_expression(state, 0)
+            
+            key_ids.add(key_id)
+            value_ids.add(value_id)
+            
+            if parser_match(state, TOKEN_COMMA) == 0 then
+                break
+            end if
+        end while
+    end if
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    
+    numeric map_id = parser_create_node(state, AST_HASHMAP_LITERAL, "hashmap_literal")
+    
+    ASTHashMapLiteralData data
+    data.node_id = map_id
+    data.key_ids = key_ids
+    data.value_ids = value_ids
+    data.key_type = "string"
+    data.value_type = "numeric"
+    
+    return map_id
+end function
+
+# -----------------------------------------------------------------------------
+# Set literal parsing (brace notation with single expressions)
+# -----------------------------------------------------------------------------
+
+function parse_set_literal(state)
+    state = parser_expect(state, TOKEN_LEFT_BRACE)
+    
+    list[numeric] element_ids = list()
+    
+    if parser_check(state, TOKEN_RIGHT_BRACE) == 0 then
+        while 1 == 1
+            numeric elem_id = parse_expression(state, 0)
+            element_ids.add(elem_id)
+            
+            if parser_match(state, TOKEN_COMMA) == 0 then
+                break
+            end if
+        end while
+    end if
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    
+    numeric set_id = parser_create_node(state, AST_SET_LITERAL, "set_literal")
+    
+    ASTSetLiteralData data
+    data.node_id = set_id
+    data.element_ids = element_ids
+    data.element_type = "numeric"
+    
+    return set_id
+end function
+
+# -----------------------------------------------------------------------------
+# Struct field definition (Phase 6.2: Nested Structs + Methods)
+# -----------------------------------------------------------------------------
+# Port from: mlp_compiler.c komut() lines 3500-3560
+# Supports:
+# - Basic fields: numeric x, string name
+# - Nested structs: Person owner
+# - Methods: function greet() ... end function
+# -----------------------------------------------------------------------------
+
+struct ASTStructField then
+    metin type_name        # Field type (numeric, string, or struct name)
+    metin field_name       # Field name
+    numeric default_value_id  # Default value (optional)
+    bool is_method         # True if this is a method definition
+    numeric method_body_id # Method body AST node ID (if is_method)
+end struct
+
+function parse_struct_field(state)
+    # Check if this is a method definition
+    if parser_check(state, TOKEN_FUNCTION) == 1 then
+        # Method definition inside struct
+        state = parser_expect(state, TOKEN_FUNCTION)
+        
+        Token method_name_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        # Parse method parameters
+        list[ASTParameterInfo] parameters = parse_parameter_list(state)
+        
+        # Method body
+        state = parser_enter_scope(state)
+        numeric body_id = parse_block(state, TOKEN_END)
+        state = parser_exit_scope(state)
+        
+        state = parser_expect(state, TOKEN_END)
+        state = parser_expect(state, TOKEN_FUNCTION)
+        
+        # Create method field
+        ASTStructField field
+        field.type_name = "METHOD"
+        field.field_name = method_name_token.lexeme
+        field.default_value_id = -1
+        field.is_method = true
+        field.method_body_id = body_id
+        
+        return field
+    else
+        # Regular field definition
+        # Field type (numeric, string, boolean, or struct name)
+        Token type_token = parser_peek(state)
+        
+        # Check if it's a type keyword or identifier (struct name)
+        if parser_check(state, TOKEN_TYPE_NUMERIC) == 1 or
+           parser_check(state, TOKEN_TYPE_STRING) == 1 or
+           parser_check(state, TOKEN_TYPE_BOOLEAN) == 1 then
+            state = parser_advance(state)
+        else if parser_check(state, TOKEN_IDENTIFIER) == 1 then
+            # Nested struct type (e.g., Person owner)
+            state = parser_advance(state)
+        else
+            # Error: expected type
+            parser_error(state, "Expected field type (numeric, string, boolean, or struct name)")
+        end if
+        
+        # Field name
+        Token name_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        # Optional default value
+        numeric default_value_id = -1
+        if parser_match(state, TOKEN_ASSIGN) == 1 then
+            default_value_id = parse_expression(state, 0)
+        end if
+        
+        ASTStructField field
+        field.type_name = type_token.lexeme
+        field.field_name = name_token.lexeme
+        field.default_value_id = default_value_id
+        field.is_method = false
+        field.method_body_id = -1
+        
+        return field
+    end if
+end function
+
+# -----------------------------------------------------------------------------
+# Struct definition (Phase 6.2: Enhanced with Nested Structs + Methods)
+# -----------------------------------------------------------------------------
+# Port from: mlp_compiler.c komut() lines 3500-3565
+# Example:
+# struct Person then
+#     numeric age
+#     string name
+#     Address home        # Nested struct
+#     
+#     function greet()    # Method
+#         yaz("Hello, " + name)
+#     end function
+# end struct
+# -----------------------------------------------------------------------------
+
+function parse_struct_definition(state)
+    state = parser_expect(state, TOKEN_STRUCT)
+    
+    Token name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    # Optional 'then' keyword (for compatibility)
+    if parser_check(state, TOKEN_THEN) == 1 then
+        state = parser_expect(state, TOKEN_THEN)
+    end if
+    
+    list[ASTStructField] fields = list()
+    
+    # Parse fields until 'end' or 'end struct'
+    while parser_check(state, TOKEN_END) == 0 and 
+          parser_check(state, TOKEN_END_STRUCT) == 0
+        if parser_check(state, TOKEN_EOF) == 1 then
+            break
+        end if
+        
+        ASTStructField field = parse_struct_field(state)
+        fields.add(field)
+    end while
+    
+    # Accept both "end struct" and plain "end"
+    if parser_check(state, TOKEN_END) == 1 then
+        state = parser_expect(state, TOKEN_END)
+        # Optional "struct" keyword after "end"
+        if parser_check(state, TOKEN_STRUCT) == 1 then
+            state = parser_advance(state)
+        end if
+    else if parser_check(state, TOKEN_END_STRUCT) == 1 then
+        state = parser_expect(state, TOKEN_END_STRUCT)
+    end if
+    
+    numeric struct_id = parser_create_node(state, AST_STRUCT_DEFINITION, "struct_def")
+    
+    ASTStructData data
+    data.node_id = struct_id
+    data.name = name_token.lexeme
+    data.fields = fields
+    data.field_count = fields.size()
+    
+    # Register struct metadata for later use
+    state.registry = register_struct_type(state.registry, name_token.lexeme, fields)
+    
+    return struct_id
+end function
+
+# -----------------------------------------------------------------------------
+# Enum definition
+# -----------------------------------------------------------------------------
+
+function parse_enum_definition(state)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    Token name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_THEN)
+    
+    list[string] variant_names = list()
+    list[numeric] variant_values = list()
+    
+    numeric auto_value = 0
+    
+    while parser_check(state, TOKEN_END) == 0
+        if parser_check(state, TOKEN_EOF) == 1 then
+            break
+        end if
+        
+        Token variant_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        variant_names.add(variant_token.lexeme)
+        
+        if parser_match(state, TOKEN_ASSIGN) == 1 then
+            numeric value_id = parse_expression(state, 0)
+            variant_values.add(value_id)
+        else
+            variant_values.add(auto_value)
+            auto_value = auto_value + 1
+        end if
+    end while
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    numeric enum_id = parser_create_node(state, AST_ENUM_DEFINITION, "enum_def")
+    
+    ASTEnumData data
+    data.node_id = enum_id
+    data.name = name_token.lexeme
+    data.variant_names = variant_names
+    data.variant_values = variant_values
+    
+    return enum_id
+end function
+
+# -----------------------------------------------------------------------------
+# Struct instantiation
+# -----------------------------------------------------------------------------
+
+function parse_struct_instantiation(state, type_name)
+    state = parser_expect(state, TOKEN_LEFT_BRACE)
+    
+    list[string] field_names = list()
+    list[numeric] field_value_ids = list()
+    
+    if parser_check(state, TOKEN_RIGHT_BRACE) == 0 then
+        while 1 == 1
+            Token field_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            
+            state = parser_expect(state, TOKEN_COLON)
+            
+            numeric value_id = parse_expression(state, 0)
+            
+            field_names.add(field_token.lexeme)
+            field_value_ids.add(value_id)
+            
+            if parser_match(state, TOKEN_COMMA) == 0 then
+                break
+            end if
+        end while
+    end if
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    
+    numeric inst_id = parser_create_node(state, AST_STRUCT_INSTANTIATION, "struct_inst")
+    
+    ASTStructInstantiationData data
+    data.node_id = inst_id
+    data.type_name = type_name
+    data.field_names = field_names
+    data.field_value_ids = field_value_ids
+    
+    return inst_id
+end function
+
+# -----------------------------------------------------------------------------
+# Member access (dot notation)
+# -----------------------------------------------------------------------------
+
+function parse_member_access(state, object_id)
+    state = parser_expect(state, TOKEN_DOT)
+    
+    Token member_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    numeric access_id = parser_create_node(state, AST_MEMBER_ACCESS, "member_access")
+    
+    ASTMemberAccessData data
+    data.node_id = access_id
+    data.object_id = object_id
+    data.member_name = member_token.lexeme
+    
+    return access_id
+end function
+
+# -----------------------------------------------------------------------------
+# List type annotation parsing (list[numeric], HashMap[string, numeric])
+# -----------------------------------------------------------------------------
+
+function parse_type_annotation(state)
+    Token base_type_token = parser_peek(state)
+    state = parser_advance(state)
+    
+    string type_str = base_type_token.lexeme
+    
+    if parser_match(state, TOKEN_LEFT_BRACKET) == 1 then
+        string element_type = parse_type_annotation(state)
+        type_str = type_str + "[" + element_type
+        
+        if parser_match(state, TOKEN_COMMA) == 1 then
+            string value_type = parse_type_annotation(state)
+            type_str = type_str + ", " + value_type
+        end if
+        
+        state = parser_expect(state, TOKEN_RIGHT_BRACKET)
+        type_str = type_str + "]"
+    end if
+    
+    return type_str
+end function
+
+# -----------------------------------------------------------------------------
+# Range expression (1..10)
+# -----------------------------------------------------------------------------
+
+function parse_range_expression(state, start_id)
+    state = parser_expect(state, TOKEN_RANGE)
+    numeric end_id = parse_expression(state, 0)
+    
+    numeric range_id = parser_create_node(state, AST_RANGE, "range_expr")
+    
+    ASTRangeData data
+    data.node_id = range_id
+    data.start_id = start_id
+    data.end_id = end_id
+    data.is_inclusive = 0
+    
+    return range_id
+end function
+
+# -----------------------------------------------------------------------------
+# For-each loop
+# -----------------------------------------------------------------------------
+
+function parse_foreach_loop(state)
+    state = parser_expect(state, TOKEN_FOR)
+    
+    Token var_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_IN)
+    
+    numeric iterable_id = parse_expression(state, 0)
+    
+    state = parser_expect(state, TOKEN_DO)
+    
+    state = parser_enter_scope(state)
+    numeric body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_FOR)
+    
+    numeric foreach_id = parser_create_node(state, AST_FOR_EACH_LOOP, "foreach_loop")
+    
+    ASTForEachData data
+    data.node_id = foreach_id
+    data.iterator_name = var_token.lexeme
+    data.iterable_id = iterable_id
+    data.body_block_id = body_id
+    
+    return foreach_id
+end function
+
+# -----------------------------------------------------------------------------
+# For loop with range
+# -----------------------------------------------------------------------------
+
+function parse_for_loop(state)
+    Token next_token = parser_peek(state)
+    
+    if next_token.type == TOKEN_FOR then
+        return parse_foreach_loop(state)
+    end if
+    
+    state = parser_expect(state, TOKEN_FOR)
+    
+    Token var_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_ASSIGN)
+    
+    numeric init_id = parse_expression(state, 0)
+    
+    state = parser_expect(state, TOKEN_TO)
+    
+    numeric end_id = parse_expression(state, 0)
+    
+    numeric step_id = -1
+    if parser_match(state, TOKEN_STEP) == 1 then
+        step_id = parse_expression(state, 0)
+    end if
+    
+    state = parser_expect(state, TOKEN_DO)
+    
+    state = parser_enter_scope(state)
+    numeric body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_FOR)
+    
+    numeric for_id = parser_create_node(state, AST_FOR_LOOP, "for_loop")
+    
+    ASTForLoopData data
+    data.node_id = for_id
+    data.iterator_name = var_token.lexeme
+    data.init_id = init_id
+    data.condition_id = end_id
+    data.step_id = step_id
+    data.body_block_id = body_id
+    
+    return for_id
+end function

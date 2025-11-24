@@ -1,0 +1,227 @@
+# lang: tr-TR
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Test: Async/Await
+# -----------------------------------------------------------------------------
+# Asynchronous functions, await expressions, promise-based concurrency
+# -----------------------------------------------------------------------------
+
+async function test_basic_async()
+    yazdir("=== Basic Async Function Test ===")
+    
+    # Simple async function that returns immediately
+    yazdir("Async function başladı")
+    yazdir("Async function tamamlandı")
+    
+    return 42
+end function
+
+async function async_delay(numeric ms)
+    yazdir("Delay başlatıldı: ", ms, " ms")
+    
+    # Simulate async delay (would use async_sleep in real runtime)
+    numeric start = time()
+    while time() - start < ms
+        # Busy wait (placeholder for real async sleep)
+    end while
+    
+    yazdir("Delay tamamlandı: ", ms, " ms")
+    return ms
+end function
+
+async function test_await_basic()
+    yazdir("=== Basic Await Test ===")
+    
+    yazdir("Async işlem başlatılıyor...")
+    numeric promise = async_delay(100)
+    numeric result = await promise
+    yazdir("Async işlem tamamlandı, sonuç: ", result)
+    
+    return result
+end function
+
+async function test_multiple_awaits()
+    yazdir("=== Multiple Awaits Test ===")
+    
+    yazdir("İlk async işlem...")
+    numeric p1 = async_delay(50)
+    numeric r1 = await p1
+    yazdir("İlk sonuç: ", r1)
+    
+    yazdir("İkinci async işlem...")
+    numeric p2 = async_delay(75)
+    numeric r2 = await p2
+    yazdir("İkinci sonuç: ", r2)
+    
+    yazdir("Üçüncü async işlem...")
+    numeric p3 = async_delay(100)
+    numeric r3 = await p3
+    yazdir("Üçüncü sonuç: ", r3)
+    
+    numeric total = r1 + r2 + r3
+    yazdir("Toplam: ", total)
+    
+    return total
+end function
+
+async function async_compute(numeric x, numeric y)
+    yazdir("Async hesaplama: ", x, " * ", y)
+    
+    # Simulate async computation
+    numeric result = x * y
+    
+    yazdir("Hesaplama sonucu: ", result)
+    return result
+end function
+
+async function test_await_with_computation()
+    yazdir("=== Await with Computation Test ===")
+    
+    numeric p1 = async_compute(5, 3)
+    numeric p2 = async_compute(7, 2)
+    
+    numeric r1 = await p1
+    yazdir("Birinci hesaplama: ", r1)
+    
+    numeric r2 = await p2
+    yazdir("İkinci hesaplama: ", r2)
+    
+    numeric sum = r1 + r2
+    yazdir("Toplam: ", sum)
+    
+    return sum
+end function
+
+async function async_factorial(numeric n)
+    if n <= 1 then
+        return 1
+    end if
+    
+    # Recursive async factorial
+    numeric prev_promise = async_factorial(n - 1)
+    numeric prev = await prev_promise
+    
+    return n * prev
+end function
+
+async function test_recursive_async()
+    yazdir("=== Recursive Async Test ===")
+    
+    numeric p = async_factorial(5)
+    numeric result = await p
+    yazdir("5! = ", result)  # Expected: 120
+    
+    return result
+end function
+
+async function async_read_data(numeric id)
+    yazdir("Veri okunuyor, ID: ", id)
+    
+    # Simulate async I/O
+    numeric data = id * 10
+    
+    yazdir("Veri okundu: ", data)
+    return data
+end function
+
+async function test_parallel_pattern()
+    yazdir("=== Parallel Pattern Test ===")
+    
+    # Start multiple async operations
+    numeric p1 = async_read_data(1)
+    numeric p2 = async_read_data(2)
+    numeric p3 = async_read_data(3)
+    
+    # Await all (sequential for now)
+    numeric r1 = await p1
+    numeric r2 = await p2
+    numeric r3 = await p3
+    
+    numeric sum = r1 + r2 + r3
+    yazdir("Toplam veri: ", sum)  # Expected: 10 + 20 + 30 = 60
+    
+    return sum
+end function
+
+async function async_error_prone(numeric should_fail)
+    if should_fail == 1 then
+        yazdir("Hata oluşturuluyor...")
+        # Would throw error in real implementation
+        return -1
+    else
+        yazdir("Başarılı işlem")
+        return 100
+    end if
+end function
+
+async function test_error_handling()
+    yazdir("=== Error Handling Test ===")
+    
+    # Success case
+    numeric p1 = async_error_prone(0)
+    numeric r1 = await p1
+    yazdir("Başarı durumu: ", r1)  # Expected: 100
+    
+    # Error case (would use try-catch in real implementation)
+    numeric p2 = async_error_prone(1)
+    numeric r2 = await p2
+    yazdir("Hata durumu: ", r2)  # Expected: -1
+    
+    return r1 + r2
+end function
+
+async function main()
+    yazdir("╔═══════════════════════════════════════╗")
+    yazdir("║     Async/Await Test Suite           ║")
+    yazdir("╚═══════════════════════════════════════╝")
+    yazdir("")
+    
+    # Test 1: Basic async function
+    numeric p1 = test_basic_async()
+    numeric r1 = await p1
+    yazdir("Test 1 sonuç: ", r1)
+    yazdir("")
+    
+    # Test 2: Basic await
+    numeric p2 = test_await_basic()
+    numeric r2 = await p2
+    yazdir("Test 2 sonuç: ", r2)
+    yazdir("")
+    
+    # Test 3: Multiple awaits
+    numeric p3 = test_multiple_awaits()
+    numeric r3 = await p3
+    yazdir("Test 3 sonuç: ", r3)
+    yazdir("")
+    
+    # Test 4: Await with computation
+    numeric p4 = test_await_with_computation()
+    numeric r4 = await p4
+    yazdir("Test 4 sonuç: ", r4)
+    yazdir("")
+    
+    # Test 5: Recursive async
+    numeric p5 = test_recursive_async()
+    numeric r5 = await p5
+    yazdir("Test 5 sonuç: ", r5)
+    yazdir("")
+    
+    # Test 6: Parallel pattern
+    numeric p6 = test_parallel_pattern()
+    numeric r6 = await p6
+    yazdir("Test 6 sonuç: ", r6)
+    yazdir("")
+    
+    # Test 7: Error handling
+    numeric p7 = test_error_handling()
+    numeric r7 = await p7
+    yazdir("Test 7 sonuç: ", r7)
+    yazdir("")
+    
+    yazdir("╔═══════════════════════════════════════╗")
+    yazdir("║     All Async Tests Completed         ║")
+    yazdir("╚═══════════════════════════════════════╝")
+    
+    return 0
+end function

@@ -1,0 +1,164 @@
+# lang: en-US
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Runtime GC Wrapper
+# -----------------------------------------------------------------------------
+# C runtime'daki Boehm GC fonksiyonlarını MLP'ye bağlar
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# External C runtime functions (will be linked)
+# -----------------------------------------------------------------------------
+
+# extern GC_malloc(numeric size) -> pointer
+# extern GC_malloc_atomic(numeric size) -> pointer
+# extern GC_realloc(pointer ptr, numeric new_size) -> pointer
+# extern GC_free(pointer ptr)
+# extern GC_gcollect()
+# extern GC_get_heap_size() -> numeric
+# extern GC_get_free_bytes() -> numeric
+# extern GC_get_bytes_since_gc() -> numeric
+# extern GC_set_max_heap_size(numeric size)
+
+# -----------------------------------------------------------------------------
+# GC wrapper functions
+# -----------------------------------------------------------------------------
+
+function gc_malloc(size)
+    # TODO: Call C runtime
+    # return GC_malloc(size)
+    return 0
+end function
+
+function gc_malloc_atomic(size)
+    # TODO: Call C runtime (for atomic data like strings)
+    # return GC_malloc_atomic(size)
+    return 0
+end function
+
+function gc_realloc(ptr, new_size)
+    # TODO: Call C runtime
+    # return GC_realloc(ptr, new_size)
+    return 0
+end function
+
+function gc_free(ptr)
+    # TODO: Call C runtime (usually not needed with GC)
+    # GC_free(ptr)
+end function
+
+function gc_collect()
+    # TODO: Call C runtime
+    # GC_gcollect()
+    print "GC collection triggered"
+end function
+
+# -----------------------------------------------------------------------------
+# GC statistics
+# -----------------------------------------------------------------------------
+
+function gc_heap_size()
+    # TODO: Call C runtime
+    # return GC_get_heap_size()
+    return 0
+end function
+
+function gc_free_bytes()
+    # TODO: Call C runtime
+    # return GC_get_free_bytes()
+    return 0
+end function
+
+function gc_bytes_since_gc()
+    # TODO: Call C runtime
+    # return GC_get_bytes_since_gc()
+    return 0
+end function
+
+function gc_set_max_heap(size)
+    # TODO: Call C runtime
+    # GC_set_max_heap_size(size)
+end function
+
+# -----------------------------------------------------------------------------
+# MLP memory allocation helpers
+# -----------------------------------------------------------------------------
+
+function alloc_bigdecimal()
+    numeric size = 32
+    return gc_malloc(size)
+end function
+
+function alloc_bigstring()
+    numeric size = 64
+    return gc_malloc_atomic(size)
+end function
+
+function alloc_hashmap()
+    numeric size = 128
+    return gc_malloc(size)
+end function
+
+function alloc_list()
+    numeric size = 64
+    return gc_malloc(size)
+end function
+
+function alloc_struct(field_count)
+    numeric size = field_count * 8
+    return gc_malloc(size)
+end function
+
+function alloc_closure(captured_count)
+    numeric base_size = 32
+    numeric capture_size = captured_count * 8
+    return gc_malloc(base_size + capture_size)
+end function
+
+# -----------------------------------------------------------------------------
+# GC control functions
+# -----------------------------------------------------------------------------
+
+function gc_enable()
+    # TODO: Call C runtime
+    # GC_enable()
+    print "GC enabled"
+end function
+
+function gc_disable()
+    # TODO: Call C runtime
+    # GC_disable()
+    print "GC disabled"
+end function
+
+function gc_is_enabled()
+    # TODO: Call C runtime
+    # return GC_is_enabled()
+    return 1
+end function
+
+# -----------------------------------------------------------------------------
+# GC debugging
+# -----------------------------------------------------------------------------
+
+function gc_print_stats()
+    numeric heap_size = gc_heap_size()
+    numeric free_bytes = gc_free_bytes()
+    numeric since_gc = gc_bytes_since_gc()
+    
+    print "=== GC Statistics ==="
+    print "Heap size: " + string(heap_size)
+    print "Free bytes: " + string(free_bytes)
+    print "Bytes since last GC: " + string(since_gc)
+    print "===================="
+end function
+
+function gc_trigger_if_needed()
+    numeric since_gc = gc_bytes_since_gc()
+    numeric threshold = 1048576
+    
+    if since_gc > threshold then
+        gc_collect()
+    end if
+end function

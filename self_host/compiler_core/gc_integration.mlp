@@ -1,0 +1,358 @@
+# gc_integration.mlp - Garbage Collection Integration for MELP Compiler
+# Port of gc.c/gc.h C implementation to MELP
+# Phase 9.1 - Core Infrastructure
+# Date: 24 Kasım 2025
+
+# Global GC state tracking
+let gc_enabled = 1
+let gc_collection_count = 0
+let gc_malloc_count = 0
+
+# Object type constants (match GC_TYPE_* from gc.h)
+let GC_TYPE_PROMISE = 1
+let GC_TYPE_STRING = 2
+let GC_TYPE_LIST = 3
+let GC_TYPE_HASHMAP = 4
+let GC_TYPE_GENERIC = 5
+let GC_TYPE_ASYNC_CONTEXT = 6
+let GC_TYPE_CLOSURE = 7
+
+# External C runtime functions (will be linked from gc.c)
+external function gc_init() end function
+external function gc_shutdown() end function
+external function gc_malloc(size: numeric, type: numeric) -> numeric end function
+external function gc_calloc(count: numeric, size: numeric, type: numeric) -> numeric end function
+external function gc_realloc(ptr: numeric, new_size: numeric, type: numeric) -> numeric end function
+external function gc_strdup(str: string) -> numeric end function
+external function gc_add_root(ptr_addr: numeric) end function
+external function gc_remove_root(ptr_addr: numeric) end function
+external function gc_collect() end function
+external function gc_set_enabled(enabled: numeric) end function
+external function gc_is_enabled() -> numeric end function
+external function gc_set_threshold(threshold: numeric) end function
+external function gc_get_threshold() -> numeric end function
+external function gc_get_stats(stats_ptr: numeric) end function
+external function gc_print_stats() end function
+external function gc_is_managed(ptr: numeric) -> numeric end function
+external function gc_get_size(ptr: numeric) -> numeric end function
+external function gc_get_type(ptr: numeric) -> numeric end function
+
+# ============================================================================
+# Code Generation Helpers
+# ============================================================================
+
+# Generate GC initialization in program entry point
+function generate_gc_init()
+    emit("    ; GC initialization")
+    emit("    call gc_init")
+    emit("")
+end function
+
+# Generate GC shutdown before program exit
+function generate_gc_shutdown()
+    emit("    ; GC shutdown")
+    emit("    call gc_shutdown")
+    emit("")
+end function
+
+# Generate GC-managed allocation (replaces malloc)
+function generate_gc_malloc(size_reg: string, type_constant: numeric, result_reg: string)
+    # size_reg: Register containing size (e.g., "rax")
+    # type_constant: GC_TYPE_* constant
+    # result_reg: Register to store result pointer (e.g., "rax")
+    
+    emit("    ; GC allocation (type=" + str(type_constant) + ")")
+    emit("    mov rdi, " + size_reg + "       ; size")
+    emit("    mov rsi, " + str(type_constant) + "       ; type")
+    emit("    call gc_malloc")
+    
+    if result_reg != "rax"
+        emit("    mov " + result_reg + ", rax   ; store result")
+    end if
+    emit("")
+    
+    gc_malloc_count = gc_malloc_count + 1
+end function
+
+# Generate GC root registration for global variable
+function generate_gc_add_root(var_label: string)
+    emit("    ; Register GC root: " + var_label)
+    emit("    lea rdi, [" + var_label + "]    ; address of pointer")
+    emit("    call gc_add_root")
+    emit("")
+end function
+
+# Generate GC root unregistration
+function generate_gc_remove_root(var_label: string)
+    emit("    ; Unregister GC root: " + var_label)
+    emit("    lea rdi, [" + var_label + "]    ; address of pointer")
+    emit("    call gc_remove_root")
+    emit("")
+end function
+
+# Generate explicit GC collection call
+function generate_gc_collect()
+    emit("    ; Trigger garbage collection")
+    emit("    call gc_collect")
+    emit("")
+    
+    gc_collection_count = gc_collection_count + 1
+end function
+
+# Generate GC-managed string duplication
+function generate_gc_strdup(str_reg: string, result_reg: string)
+    # str_reg: Register containing source string pointer
+    # result_reg: Register to store result pointer
+    
+    emit("    ; GC string duplication")
+    emit("    mov rdi, " + str_reg + "        ; source string")
+    emit("    call gc_strdup")
+    
+    if result_reg != "rax"
+        emit("    mov " + result_reg + ", rax   ; store result")
+    end if
+    emit("")
+end function
+
+# ============================================================================
+# Scope-Based Root Management
+# ============================================================================
+
+# Track local variables that need GC root registration
+let gc_local_roots = []
+let gc_root_stack_depth = 0
+
+# Enter a new scope (function or block)
+function gc_enter_scope()
+    gc_root_stack_depth = gc_root_stack_depth + 1
+    
+    # Push empty root list for this scope
+    gc_local_roots[gc_root_stack_depth] = []
+end function
+
+# Exit scope and unregister roots
+function gc_exit_scope()
+    if gc_root_stack_depth <= 0
+        return
+    end if
+    
+    # Get roots for current scope
+    let roots = gc_local_roots[gc_root_stack_depth]
+    
+    # Generate unregister calls for each root
+    for i = 0 to len(roots) - 1
+        let root_label = roots[i]
+        generate_gc_remove_root(root_label)
+    end for
+    
+    # Pop scope
+    gc_local_roots[gc_root_stack_depth] = []
+    gc_root_stack_depth = gc_root_stack_depth - 1
+end function
+
+# Register a local variable as GC root in current scope
+function gc_register_local_root(var_label: string)
+    if gc_root_stack_depth <= 0
+        # No active scope - register as global root
+        generate_gc_add_root(var_label)
+        return
+    end if
+    
+    # Add to current scope's root list
+    let roots = gc_local_roots[gc_root_stack_depth]
+    roots[len(roots)] = var_label
+    gc_local_roots[gc_root_stack_depth] = roots
+    
+    # Generate registration code
+    generate_gc_add_root(var_label)
+end function
+
+# ============================================================================
+# Type-Specific Allocation Helpers
+# ============================================================================
+
+# Allocate GC-managed promise
+function generate_promise_allocation(result_reg: string)
+    # Promise size from simple_runtime.c: sizeof(Promise) ~= 64 bytes
+    emit("    ; Allocate promise (GC-managed)")
+    emit("    mov rdi, 64                     ; sizeof(Promise)")
+    emit("    mov rsi, " + str(GC_TYPE_PROMISE) + "                     ; GC_TYPE_PROMISE")
+    emit("    call gc_malloc")
+    
+    if result_reg != "rax"
+        emit("    mov " + result_reg + ", rax")
+    end if
+    emit("")
+    
+    gc_malloc_count = gc_malloc_count + 1
+end function
+
+# Allocate GC-managed string buffer
+function generate_string_allocation(size_reg: string, result_reg: string)
+    generate_gc_malloc(size_reg, GC_TYPE_STRING, result_reg)
+end function
+
+# Allocate GC-managed list/array
+function generate_list_allocation(element_count_reg: string, result_reg: string)
+    # List structure: items pointer + count + capacity
+    # Size = (count * 8) + 16
+    emit("    ; Allocate list (GC-managed)")
+    emit("    mov rax, " + element_count_reg)
+    emit("    imul rax, 8                     ; count * sizeof(void*)")
+    emit("    add rax, 16                      ; + metadata")
+    emit("    mov rdi, rax")
+    emit("    mov rsi, " + str(GC_TYPE_LIST) + "                     ; GC_TYPE_LIST")
+    emit("    call gc_malloc")
+    
+    if result_reg != "rax"
+        emit("    mov " + result_reg + ", rax")
+    end if
+    emit("")
+    
+    gc_malloc_count = gc_malloc_count + 1
+end function
+
+# Allocate GC-managed closure context
+function generate_closure_allocation(capture_count: numeric, result_reg: string)
+    # Closure struct: [0-7] func_ptr, [8+] captured variables
+    let closure_size = 8 + (capture_count * 8)
+    
+    emit("    ; Allocate closure (GC-managed, " + str(capture_count) + " captures)")
+    emit("    mov rdi, " + str(closure_size) + "                    ; closure size")
+    emit("    mov rsi, " + str(GC_TYPE_CLOSURE) + "                     ; GC_TYPE_CLOSURE")
+    emit("    call gc_malloc")
+    
+    if result_reg != "rax"
+        emit("    mov " + result_reg + ", rax")
+    end if
+    emit("")
+    
+    gc_malloc_count = gc_malloc_count + 1
+end function
+
+# ============================================================================
+# Codegen Integration
+# ============================================================================
+
+# Replace malloc calls with gc_malloc in existing codegen
+function replace_malloc_with_gc_malloc(malloc_line: string, gc_type: numeric) -> string
+    # Example input: "    call malloc"
+    # Example output: "    mov rsi, 1; call gc_malloc"
+    
+    # Extract size setup (should be in rdi already)
+    let gc_line = "    mov rsi, " + str(gc_type) + "    ; GC type\n"
+    gc_line = gc_line + "    call gc_malloc"
+    
+    return gc_line
+end function
+
+# Check if a variable needs GC root registration
+function should_register_as_root(var_name: string, var_type: string) -> numeric
+    # Register heap-allocated types as roots
+    if var_type == "promise" or var_type == "Promise"
+        return 1
+    end if
+    
+    if var_type == "string" or var_type == "String"
+        return 1
+    end if
+    
+    if var_type == "list" or var_type == "List" or var_type == "array"
+        return 1
+    end if
+    
+    if var_type == "map" or var_type == "HashMap"
+        return 1
+    end if
+    
+    if var_type == "closure" or var_type == "lambda"
+        return 1
+    end if
+    
+    return 0  # Primitive types don't need GC tracking
+end function
+
+# ============================================================================
+# Statistics & Debugging
+# ============================================================================
+
+function print_gc_stats()
+    print("=== GC Statistics ===")
+    print("GC enabled: " + str(gc_enabled))
+    print("Allocations: " + str(gc_malloc_count))
+    print("Collections: " + str(gc_collection_count))
+    print("")
+    
+    # Call C runtime to print detailed stats
+    emit("    call gc_print_stats")
+end function
+
+# ============================================================================
+# Assembly Directives
+# ============================================================================
+
+# Generate .data section for GC initialization flag
+function generate_gc_data_section()
+    emit("section .data")
+    emit("    gc_initialized: dq 0    ; GC init flag")
+    emit("")
+end function
+
+# Generate .bss section for GC statistics
+function generate_gc_bss_section()
+    emit("section .bss")
+    emit("    gc_stats: resb 64       ; GC statistics buffer")
+    emit("")
+end function
+
+# ============================================================================
+# Example Usage in Codegen
+# ============================================================================
+
+# Example: Generate promise creation with GC
+function example_promise_create_with_gc()
+    emit("    ; Example: Promise creation (GC-managed)")
+    generate_promise_allocation("rax")
+    emit("    ; rax now contains GC-managed promise pointer")
+    emit("")
+    
+    # Register as root if storing in global
+    emit("    mov [global_promise], rax")
+    generate_gc_add_root("global_promise")
+end function
+
+# Example: Generate function with scope-based GC roots
+function example_function_with_gc_scope()
+    emit("example_function:")
+    emit("    push rbp")
+    emit("    mov rbp, rsp")
+    emit("")
+    
+    # Enter GC scope
+    gc_enter_scope()
+    
+    # Allocate local variable (GC-managed)
+    emit("    ; Allocate local promise")
+    generate_promise_allocation("rax")
+    emit("    mov [rbp-8], rax        ; store local")
+    
+    # Register local as root
+    gc_register_local_root("rbp-8")
+    
+    # ... function body ...
+    
+    # Exit GC scope (auto-unregisters roots)
+    gc_exit_scope()
+    
+    emit("    mov rsp, rbp")
+    emit("    pop rbp")
+    emit("    ret")
+    emit("")
+end function
+
+# ============================================================================
+# Initialization
+# ============================================================================
+
+print("GC Integration Module Loaded")
+print("GC Types: Promise=" + str(GC_TYPE_PROMISE) + ", String=" + str(GC_TYPE_STRING) + ", List=" + str(GC_TYPE_LIST))

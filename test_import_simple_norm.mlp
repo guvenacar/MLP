@@ -1,0 +1,9 @@
+-- Simple import test
+import "mylib.mlp"
+
+function main()
+    greet("World")
+    return 0
+end function
+
+main()

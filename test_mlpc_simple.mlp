@@ -1,0 +1,33 @@
+-- Test mlpc simple version
+
+struct CompilerOptions then
+    string input_file
+    string output_file
+    numeric verbose
+end
+
+function options_create()
+    CompilerOptions opts
+    opts.input_file = ""
+    opts.output_file = "output.asm"
+    opts.verbose = 0
+    return opts
+end
+
+function print_help()
+    print "MLP Self-Hosting Compiler v1.0"
+    print "Usage: mlpc [options] <input.mlp>"
+end
+
+function main()
+    print "=== MLP Self-Hosting Compiler ==="
+    print "Version 1.0.0"
+    
+    print_help()
+    
+    print "Compiler initialized successfully!"
+    
+    return 0
+end
+
+numeric result = main()

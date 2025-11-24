@@ -1,0 +1,658 @@
+# lang: en-US
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Parser Advanced Module - Import, Try-Catch, Continue, Break
+# -----------------------------------------------------------------------------
+# C bootstrap derleyicisindeki advanced parsing mantığını MLP'ye taşır.
+# Import statements, exception handling, loop control.
+# -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/parser.mlp"
+
+# -----------------------------------------------------------------------------
+# Import statement parsing
+# -----------------------------------------------------------------------------
+
+function parse_import_statement(state)
+    state = parser_expect(state, TOKEN_IMPORT)
+    
+    Token module_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_STRING)
+    
+    string module_path = module_token.lexeme
+    
+    list[string] imported_symbols = list()
+    
+    if parser_match(state, TOKEN_AS) == 1 then
+        Token alias_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        imported_symbols.add(alias_token.lexeme)
+    else if parser_match(state, TOKEN_LEFT_BRACE) == 1 then
+        while parser_check(state, TOKEN_RIGHT_BRACE) == 0
+            Token symbol_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            imported_symbols.add(symbol_token.lexeme)
+            
+            if parser_match(state, TOKEN_COMMA) == 0 then
+                break
+            end if
+        end while
+        
+        state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    end if
+    
+    numeric import_id = parser_create_node(state, AST_IMPORT_STATEMENT, "import_stmt")
+    
+    ASTImportData data
+    data.node_id = import_id
+    data.module_path = module_path
+    data.imported_symbols = imported_symbols
+    data.alias = ""
+    data.is_wildcard = 0
+    
+    return import_id
+end function
+
+# -----------------------------------------------------------------------------
+# Try-catch statement parsing
+# -----------------------------------------------------------------------------
+
+function parse_try_catch(state)
+    state = parser_expect(state, TOKEN_TRY)
+    
+    state = parser_enter_scope(state)
+    numeric try_block_id = parse_block(state, TOKEN_CATCH, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    list[numeric] catch_block_ids = list()
+    list[string] exception_types = list()
+    list[string] exception_vars = list()
+    
+    while parser_match(state, TOKEN_CATCH) == 1
+        string exception_type = "Exception"
+        string exception_var = "e"
+        
+        if parser_check(state, TOKEN_IDENTIFIER) == 1 then
+            Token type_token = parser_peek(state)
+            state = parser_advance(state)
+            exception_type = type_token.lexeme
+            
+            if parser_check(state, TOKEN_IDENTIFIER) == 1 then
+                Token var_token = parser_peek(state)
+                state = parser_advance(state)
+                exception_var = var_token.lexeme
+            end if
+        end if
+        
+        state = parser_enter_scope(state)
+        numeric catch_block_id = parse_block(state, TOKEN_CATCH, TOKEN_END)
+        state = parser_exit_scope(state)
+        
+        catch_block_ids.add(catch_block_id)
+        exception_types.add(exception_type)
+        exception_vars.add(exception_var)
+    end while
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_TRY)
+    
+    numeric try_id = parser_create_node(state, AST_TRY_CATCH, "try_catch")
+    
+    ASTTryCatchData data
+    data.node_id = try_id
+    data.try_block_id = try_block_id
+    data.catch_block_ids = catch_block_ids
+    data.exception_types = exception_types
+    data.exception_vars = exception_vars
+    data.finally_block_id = -1
+    
+    return try_id
+end function
+
+# -----------------------------------------------------------------------------
+# Throw statement
+# -----------------------------------------------------------------------------
+
+function parse_throw_statement(state)
+    state = parser_expect(state, TOKEN_THROW)
+    numeric expr_id = parse_expression(state, 0)
+    
+    numeric throw_id = parser_create_node(state, AST_THROW, "throw_stmt")
+    
+    ASTThrowData data
+    data.node_id = throw_id
+    data.expression_id = expr_id
+    
+    return throw_id
+end function
+
+# -----------------------------------------------------------------------------
+# Break statement
+# -----------------------------------------------------------------------------
+
+function parse_break_statement(state)
+    state = parser_expect(state, TOKEN_BREAK)
+    
+    numeric break_id = parser_create_node(state, AST_BREAK, "break_stmt")
+    
+    ASTBreakData data
+    data.node_id = break_id
+    
+    return break_id
+end function
+
+# -----------------------------------------------------------------------------
+# Continue statement
+# -----------------------------------------------------------------------------
+
+function parse_continue_statement(state)
+    state = parser_expect(state, TOKEN_CONTINUE)
+    
+    numeric continue_id = parser_create_node(state, AST_CONTINUE, "continue_stmt")
+    
+    ASTContinueData data
+    data.node_id = continue_id
+    
+    return continue_id
+end function
+
+# -----------------------------------------------------------------------------
+# Match statement (pattern matching)
+# -----------------------------------------------------------------------------
+
+function parse_match_statement(state)
+    state = parser_expect(state, TOKEN_MATCH)
+    numeric expr_id = parse_expression(state, 0)
+    
+    list[numeric] pattern_ids = list()
+    list[numeric] body_ids = list()
+    
+    while parser_match(state, TOKEN_CASE) == 1
+        numeric pattern_id = parse_expression(state, 0)
+        state = parser_expect(state, TOKEN_ARROW)
+        
+        state = parser_enter_scope(state)
+        numeric body_id = parse_block(state, TOKEN_CASE, TOKEN_END)
+        state = parser_exit_scope(state)
+        
+        pattern_ids.add(pattern_id)
+        body_ids.add(body_id)
+    end while
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_MATCH)
+    
+    numeric match_id = parser_create_node(state, AST_MATCH, "match_stmt")
+    
+    ASTMatchData data
+    data.node_id = match_id
+    data.expression_id = expr_id
+    data.pattern_ids = pattern_ids
+    data.body_ids = body_ids
+    
+    return match_id
+end function
+
+# -----------------------------------------------------------------------------
+# Defer statement (cleanup guarantee)
+# -----------------------------------------------------------------------------
+
+function parse_defer_statement(state)
+    state = parser_expect(state, TOKEN_DEFER)
+    numeric stmt_id = parse_statement(state)
+    
+    numeric defer_id = parser_create_node(state, AST_DEFER, "defer_stmt")
+    
+    ASTDeferData data
+    data.node_id = defer_id
+    data.statement_id = stmt_id
+    
+    return defer_id
+end function
+
+# -----------------------------------------------------------------------------
+# With statement (resource management)
+# -----------------------------------------------------------------------------
+
+function parse_with_statement(state)
+    state = parser_expect(state, TOKEN_WITH)
+    
+    list[numeric] resource_ids = list()
+    
+    while 1 == 1
+        numeric resource_id = parse_expression(state, 0)
+        resource_ids.add(resource_id)
+        
+        if parser_match(state, TOKEN_COMMA) == 0 then
+            break
+        end if
+    end while
+    
+    state = parser_expect(state, TOKEN_DO)
+    
+    state = parser_enter_scope(state)
+    numeric body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_WITH)
+    
+    numeric with_id = parser_create_node(state, AST_WITH, "with_stmt")
+    
+    ASTWithData data
+    data.node_id = with_id
+    data.resource_ids = resource_ids
+    data.body_block_id = body_id
+    
+    return with_id
+end function
+
+# -----------------------------------------------------------------------------
+# Type alias declaration
+# -----------------------------------------------------------------------------
+
+function parse_type_alias(state)
+    state = parser_expect(state, TOKEN_TYPE)
+    
+    Token name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_ASSIGN)
+    
+    string aliased_type = parse_type_annotation(state)
+    
+    numeric alias_id = parser_create_node(state, AST_TYPE_ALIAS, "type_alias")
+    
+    ASTTypeAliasData data
+    data.node_id = alias_id
+    data.name = name_token.lexeme
+    data.aliased_type = aliased_type
+    
+    return alias_id
+end function
+
+# -----------------------------------------------------------------------------
+# Unary expressions (!, -, ~)
+# -----------------------------------------------------------------------------
+
+function parse_unary_expression(state)
+    Token token = parser_peek(state)
+    
+    if token.type == TOKEN_NOT then
+        state = parser_advance(state)
+        numeric operand_id = parse_unary_expression(state)
+        
+        numeric unary_id = parser_create_node(state, AST_UNARY_OP, "unary_not")
+        
+        ASTUnaryData data
+        data.node_id = unary_id
+        data.operand_id = operand_id
+        data.operator_type = TOKEN_NOT
+        
+        return unary_id
+    end if
+    
+    if token.type == TOKEN_MINUS then
+        state = parser_advance(state)
+        numeric operand_id = parse_unary_expression(state)
+        
+        numeric unary_id = parser_create_node(state, AST_UNARY_OP, "unary_minus")
+        
+        ASTUnaryData data
+        data.node_id = unary_id
+        data.operand_id = operand_id
+        data.operator_type = TOKEN_MINUS
+        
+        return unary_id
+    end if
+    
+    if token.type == TOKEN_BITWISE_NOT then
+        state = parser_advance(state)
+        numeric operand_id = parse_unary_expression(state)
+        
+        numeric unary_id = parser_create_node(state, AST_UNARY_OP, "unary_bitwise_not")
+        
+        ASTUnaryData data
+        data.node_id = unary_id
+        data.operand_id = operand_id
+        data.operator_type = TOKEN_BITWISE_NOT
+        
+        return unary_id
+    end if
+    
+    return parse_postfix_expression(state)
+end function
+
+# -----------------------------------------------------------------------------
+# Panic statement (fatal error)
+# -----------------------------------------------------------------------------
+
+function parse_panic_statement(state)
+    state = parser_expect(state, TOKEN_PANIC)
+    state = parser_expect(state, TOKEN_LEFT_PAREN)
+    numeric message_id = parse_expression(state, 0)
+    state = parser_expect(state, TOKEN_RIGHT_PAREN)
+    
+    numeric panic_id = parser_create_node(state, AST_PANIC, "panic_stmt")
+    
+    ASTPanicData data
+    data.node_id = panic_id
+    data.message_id = message_id
+    
+    return panic_id
+end function
+
+# -----------------------------------------------------------------------------
+# Expression statement (function call without assignment)
+# -----------------------------------------------------------------------------
+
+function parse_expression_statement(state)
+    numeric expr_id = parse_expression(state, 0)
+    
+    numeric expr_stmt_id = parser_create_node(state, AST_EXPRESSION_STATEMENT, "expr_stmt")
+    
+    ASTExpressionStatementData data
+    data.node_id = expr_stmt_id
+    data.expression_id = expr_id
+    
+    return expr_stmt_id
+end function
+
+# -----------------------------------------------------------------------------
+# Enum declaration parsing
+# -----------------------------------------------------------------------------
+
+function parse_enum_declaration(state)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    Token name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    string enum_name = name_token.lexeme
+    
+    state = parser_expect(state, TOKEN_THEN)
+    
+    list[string] value_names = list()
+    list[numeric] value_values = list()
+    numeric next_value = 0
+    
+    while parser_check(state, TOKEN_END) == 0
+        Token value_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        string value_name = value_token.lexeme
+        numeric value_int = next_value
+        
+        if parser_match(state, TOKEN_ASSIGN) == 1 then
+            Token num_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_NUMBER)
+            value_int = parse_int(num_token.lexeme)
+        end if
+        
+        value_names.add(value_name)
+        value_values.add(value_int)
+        
+        next_value = value_int + 1
+    end while
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    numeric enum_id = parser_create_node(state, AST_ENUM_DECLARATION, "enum_decl")
+    
+    ASTEnumData data
+    data.node_id = enum_id
+    data.enum_name = enum_name
+    data.value_names = value_names
+    data.value_values = value_values
+    
+    return enum_id
+end function
+
+# -----------------------------------------------------------------------------
+# Switch statement parsing
+# -----------------------------------------------------------------------------
+
+function parse_switch_statement(state)
+    state = parser_expect(state, TOKEN_SWITCH)
+    
+    numeric switch_expr_id = parse_expression(state, 0)
+    
+    state = parser_expect(state, TOKEN_THEN)
+    
+    list[numeric] case_values = list()
+    list[numeric] case_block_ids = list()
+    numeric default_block_id = -1
+    
+    while parser_check(state, TOKEN_END) == 0
+        if parser_match(state, TOKEN_CASE) == 1 then
+            Token value_token = parser_peek(state)
+            state = parser_advance(state)
+            
+            numeric case_value = -1
+            if value_token.type == TOKEN_NUMBER then
+                case_value = parse_int(value_token.lexeme)
+            else if value_token.type == TOKEN_IDENTIFIER then
+                case_value = resolve_enum_value(state, value_token.lexeme)
+            end if
+            
+            state = parser_expect(state, TOKEN_THEN)
+            
+            state = parser_enter_scope(state)
+            numeric case_block_id = parse_block(state, TOKEN_CASE, TOKEN_DEFAULT, TOKEN_END)
+            state = parser_exit_scope(state)
+            
+            case_values.add(case_value)
+            case_block_ids.add(case_block_id)
+            
+        else if parser_match(state, TOKEN_DEFAULT) == 1 then
+            state = parser_expect(state, TOKEN_THEN)
+            
+            state = parser_enter_scope(state)
+            default_block_id = parse_block(state, TOKEN_END)
+            state = parser_exit_scope(state)
+            
+            break
+        end if
+    end while
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_SWITCH)
+    
+    numeric switch_id = parser_create_node(state, AST_SWITCH_KOMUTU, "switch_stmt")
+    
+    ASTSwitchData data
+    data.node_id = switch_id
+    data.switch_expression_id = switch_expr_id
+    data.case_values = case_values
+    data.case_block_ids = case_block_ids
+    data.default_block_id = default_block_id
+    
+    return switch_id
+end function
+
+# -----------------------------------------------------------------------------
+# Helper: Resolve enum value from identifier
+# -----------------------------------------------------------------------------
+
+function resolve_enum_value(state, string identifier)
+    numeric value = 0
+    
+    return value
+end function
+
+# -----------------------------------------------------------------------------
+# Lambda expression parsing
+# -----------------------------------------------------------------------------
+
+function parse_lambda_expression(state)
+    state = parser_expect(state, TOKEN_LAMBDA)
+    state = parser_expect(state, TOKEN_LEFT_PAREN)
+    
+    list[Token] parameters = list()
+    
+    if parser_check(state, TOKEN_RIGHT_PAREN) == 0 then
+        while 1 == 1
+            Token param_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            
+            parameters.add(param_token)
+            
+            if parser_match(state, TOKEN_COMMA) == 0 then
+                break
+            end if
+        end while
+    end if
+    
+    state = parser_expect(state, TOKEN_RIGHT_PAREN)
+    state = parser_expect(state, TOKEN_ARROW)
+    
+    numeric body_id = parse_expression(state, 0)
+    
+    numeric lambda_id = parser_create_node(state, AST_LAMBDA, "lambda_expr")
+    
+    ASTLambdaData data
+    data.node_id = lambda_id
+    data.parameters = parameters
+    data.parameter_count = parameters.size()
+    data.body_id = body_id
+    data.is_expression = 1
+    data.captured_vars = list()
+    data.captured_count = 0
+    
+    return lambda_id
+end function
+
+# -----------------------------------------------------------------------------
+# Async function parsing
+# -----------------------------------------------------------------------------
+
+function parse_async_function(state)
+    state = parser_expect(state, TOKEN_ASYNC)
+    state = parser_expect(state, TOKEN_FUNCTION)
+    
+    Token name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    string func_name = name_token.lexeme
+    
+    state = parser_expect(state, TOKEN_LEFT_PAREN)
+    
+    list[Token] parameters = list()
+    list[string] parameter_types = list()
+    
+    if parser_check(state, TOKEN_RIGHT_PAREN) == 0 then
+        while 1 == 1
+            # Optional type annotation
+            string param_type = "SAYISAL"
+            if parser_match(state, TOKEN_TYPE_NUMERIC) == 1 then
+                param_type = "SAYISAL"
+            else if parser_match(state, TOKEN_TYPE_STRING) == 1 then
+                param_type = "METIN"
+            else if parser_match(state, TOKEN_TYPE_BOOLEAN) == 1 then
+                param_type = "BOOLEAN"
+            end if
+            
+            Token param_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            
+            parameters.add(param_token)
+            parameter_types.add(param_type)
+            
+            if parser_match(state, TOKEN_COMMA) == 0 then
+                break
+            end if
+        end while
+    end if
+    
+    state = parser_expect(state, TOKEN_RIGHT_PAREN)
+    
+    state = parser_enter_scope(state)
+    numeric body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_FUNCTION)
+    
+    numeric async_id = parser_create_node(state, AST_ASYNC_FUNCTION, "async_func")
+    
+    ASTAsyncFunctionData data
+    data.node_id = async_id
+    data.name = func_name
+    data.parameters = parameters
+    data.parameter_count = parameters.size()
+    data.parameter_types = parameter_types
+    data.body_id = body_id
+    
+    return async_id
+end function
+
+# -----------------------------------------------------------------------------
+# Await expression parsing
+# -----------------------------------------------------------------------------
+
+function parse_await_expression(state)
+    state = parser_expect(state, TOKEN_AWAIT)
+    
+    numeric expr_id = parse_expression(state, 0)
+    
+    numeric await_id = parser_create_node(state, AST_AWAIT_EXPR, "await_expr")
+    
+    ASTAwaitData data
+    data.node_id = await_id
+    data.expression_id = expr_id
+    
+    return await_id
+end function
+
+# -----------------------------------------------------------------------------
+# Closure capture analysis (called at codegen time)
+# -----------------------------------------------------------------------------
+
+function find_free_variables(state, numeric node_id, list[string] free_vars, list[Token] lambda_params)
+    ASTNode node = parser_get_node(state, node_id)
+    
+    if node.type == AST_DEGISKEN then
+        string var_name = node.variable_name
+        
+        numeric is_param = 0
+        for i = 0 to lambda_params.size() - 1 do
+            if lambda_params.get(i).lexeme == var_name then
+                is_param = 1
+                break
+            end if
+        end for
+        
+        if is_param == 0 then
+            numeric var_exists = scope_variable_exists(state, var_name)
+            if var_exists == 1 then
+                numeric already_captured = 0
+                for i = 0 to free_vars.size() - 1 do
+                    if free_vars.get(i) == var_name then
+                        already_captured = 1
+                        break
+                    end if
+                end for
+                
+                if already_captured == 0 then
+                    free_vars.add(var_name)
+                end if
+            end if
+        end if
+        
+        return state
+    end if
+    
+    if node.type == AST_IKILI_ISLEM then
+        state = find_free_variables(state, node.left_id, free_vars, lambda_params)
+        state = find_free_variables(state, node.right_id, free_vars, lambda_params)
+    else if node.type == AST_ISLEC_CAGIRMA then
+        for i = 0 to node.argument_count - 1 do
+            numeric arg_id = node.arguments.get(i)
+            state = find_free_variables(state, arg_id, free_vars, lambda_params)
+        end for
+    end if
+    
+    return state
+end function

@@ -1,0 +1,12 @@
+-- My Library Module
+function greet(string name)
+    print "Hello, "
+    print "About to print name:"
+    print name
+    print "After printing name"
+    return 0
+end function
+
+function add(numeric a, numeric b)
+    return a + b
+end function

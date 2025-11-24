@@ -1,0 +1,190 @@
+-- ============================================================================
+-- MELP Import Handler Module
+-- ============================================================================
+-- Port from: mlp_compiler.c (lines 42-72, 5625-5715)
+-- Date: 24 Kasım 2025
+-- Strategy: Pre-Scan Import Strategy (Phase 5.10)
+--
+-- Bu modül import statement'ları yönetir:
+-- 1. Import path resolution (MLP_SOURCE_DIR kullanarak)
+-- 2. Circular import detection
+-- 3. Imported function collection (Pre-Scan strategy)
+-- 4. Recursive import handling
+-- ============================================================================
+
+import "ast_nodes.mlp"
+import "lexer.mlp"
+import "parser.mlp"
+
+-- ========== Import Context ==========
+-- C'deki global state'i struct olarak kapsülledik
+
+struct ImportContext then
+    -- Imported function AST nodes (Pre-Scan strategy)
+    ASTNode[] imported_functions
+    sayisal imported_count
+    
+    -- Circular import detection
+    metin[] imported_files
+    sayisal file_count
+    
+    -- Base directory for relative imports
+    metin base_dir
+end struct
+
+-- ========== Constructor ==========
+
+function create_import_context(metin base_directory)
+    ImportContext ctx
+    
+    -- Initialize arrays (empty)
+    ctx.imported_functions = []
+    ctx.imported_count = 0
+    
+    ctx.imported_files = []
+    ctx.file_count = 0
+    
+    ctx.base_dir = base_directory
+    
+    return ctx
+end function
+
+-- ========== Circular Import Detection ==========
+
+function is_file_imported(ImportContext ctx, metin file_path)
+    for i = 0 to ctx.file_count - 1 do
+        if ctx.imported_files[i] == file_path then
+            return true  -- Already imported
+        end if
+    end for
+    return false
+end function
+
+function mark_file_imported(ImportContext ctx, metin file_path)
+    -- Add to imported files list
+    ctx.imported_files[ctx.file_count] = file_path
+    ctx.file_count = ctx.file_count + 1
+end function
+
+-- ========== Import Path Resolution ==========
+
+function resolve_import_path(metin import_path, metin base_dir)
+    metin resolved_path
+    
+    -- Check if absolute path
+    if string_alt(import_path, 0, 1) == "/" then
+        -- Absolute path - use as is
+        resolved_path = import_path
+    else
+        -- Relative path - try MLP_SOURCE_DIR first
+        metin source_dir = ortam_degiskeni_al("MLP_SOURCE_DIR")
+        
+        if source_dir != "" then
+            -- Use MLP_SOURCE_DIR
+            resolved_path = source_dir + "/" + import_path
+        else if base_dir != "" then
+            -- Use base_dir
+            resolved_path = base_dir + "/" + import_path
+        else
+            -- No base, use as is (current directory)
+            resolved_path = import_path
+        end if
+    end if
+    
+    return resolved_path
+end function
+
+-- ========== Collect Imported Function ==========
+-- Pre-Scan Strategy: Collect AST nodes, don't emit assembly yet
+
+function collect_imported_function(ImportContext ctx, ASTNode func_node)
+    -- Add to imported functions array
+    ctx.imported_functions[ctx.imported_count] = func_node
+    ctx.imported_count = ctx.imported_count + 1
+end function
+
+-- ========== Handle Import Statement ==========
+-- C'deki visit_Import() fonksiyonunun MELP versiyonu
+
+function handle_import(ImportContext ctx, ASTNode import_node, LexerState lexer, ParserState parser)
+    metin file_path = import_node.import_path
+    
+    -- ========== Import Path Resolution ==========
+    metin resolved_path = resolve_import_path(file_path, ctx.base_dir)
+    
+    -- ========== Circular Import Detection ==========
+    if is_file_imported(ctx, resolved_path) then
+        return  -- Already imported, skip
+    end if
+    
+    -- Mark as imported
+    mark_file_imported(ctx, resolved_path)
+    
+    -- ========== Parse Imported File ==========
+    metin import_source = dosya_oku(resolved_path)
+    
+    if import_source == "" then
+        yaz("ERROR: Cannot open import file '" + resolved_path + "'")
+        return
+    end if
+    
+    -- Save current lexer state
+    metin saved_source = lexer.source_code
+    sayisal saved_position = lexer.current_position
+    sayisal saved_line = lexer.current_line
+    sayisal saved_column = lexer.current_column
+    Token saved_token = lexer.current_token
+    
+    -- Initialize lexer with imported file
+    lexer = create_lexer(import_source)
+    
+    -- Get first token
+    lexer.current_token = get_next_token(lexer)
+    
+    -- ========== COLLECT Imported Functions (Pre-Scan Strategy) ==========
+    -- Parse the imported file and collect function definitions
+    -- They will be emitted BEFORE main() in codegen
+    
+    while lexer.current_token.type != TOKEN_EOF do
+        ASTNode stmt = parse_statement(parser, lexer)
+        
+        if stmt != null then
+            -- Collect function definitions (don't emit yet)
+            if stmt.type == AST_FUNCTION_DECLARATION then
+                collect_imported_function(ctx, stmt)
+            
+            -- Handle nested imports recursively
+            else if stmt.type == AST_IMPORT_STATEMENT then
+                handle_import(ctx, stmt, lexer, parser)  -- Recursive
+            end if
+            -- Skip other statements (variable declarations, etc.)
+        end if
+    end while
+    
+    -- Restore lexer state
+    lexer.source_code = saved_source
+    lexer.current_position = saved_position
+    lexer.current_line = saved_line
+    lexer.current_column = saved_column
+    lexer.current_token = saved_token
+end function
+
+-- ========== Get Imported Functions ==========
+-- Returns collected imported functions for codegen
+
+function get_imported_functions(ImportContext ctx)
+    return ctx.imported_functions
+end function
+
+function get_imported_count(ImportContext ctx)
+    return ctx.imported_count
+end function
+
+-- ========== Cleanup ==========
+
+function cleanup_imports(ImportContext ctx)
+    -- MELP has automatic memory management
+    -- Just reset counters
+    ctx.imported_count = 0
+    ctx.file_count = 0
+end function

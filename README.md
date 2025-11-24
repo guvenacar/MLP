@@ -109,15 +109,35 @@ cd ..
 
 ### Pipeline
 
-**🔴 CRITICAL: Lexer NEVER sees non-English keywords!**
+**🔴 CRITICAL: 3-Stage Pipeline - Lexer NEVER sees non-English keywords!**
 
 ```
 Multi-Language Source (.mlp)
-  Example: YAZDIR "Merhaba", EĞER, SAYISAL
+  Example: if (x > 0) { YAZDIR "Merhaba" }  (C-style syntax + Turkish)
         ↓
 ┌──────────────────────────────────────────┐
-│  PREPROCESSOR (mlp_preprocessor - C)     │
+│  STAGE 1: SYNTAX PREPROCESSOR (Python)   │
 │  ════════════════════════════════════════│
+│  → syntax_preprocessor.py                │
+│  1. Detect syntax style (syntax.json):   │
+│     - C-style: { } braces                │
+│     - Python-style: : indentation        │
+│     - MLP-default: keyword blocks        │
+│  2. Normalize to MLP base syntax:        │
+│     { → then                             │
+│     } → end                              │
+│     : + indent → then / dedent → end    │
+│  3. PRESERVE keywords (any language)     │
+│  4. PRESERVE strings & comments          │
+└──────────────────────────────────────────┘
+        ↓
+Normalized MLP (.mlp)
+  Example: if x > 0 then YAZDIR "Merhaba" end if
+        ↓
+┌──────────────────────────────────────────┐
+│  STAGE 2: LANGUAGE PREPROCESSOR (C)      │
+│  ════════════════════════════════════════│
+│  → mlp_preprocessor.c                    │
 │  1. Detect: -- lang: tr-TR               │
 │  2. Load: diller.json keyword mappings   │
 │  3. Translate KEYWORDS:                  │

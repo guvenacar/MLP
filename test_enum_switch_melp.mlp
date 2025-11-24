@@ -1,0 +1,166 @@
+# lang: tr-TR
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Test: Enum & Switch Statements (MELP Compiler)
+# -----------------------------------------------------------------------------
+# Enum değerleri ve switch-case yapılarını test eder
+# -----------------------------------------------------------------------------
+
+enum Color then
+    RED
+    GREEN = 5
+    BLUE
+end enum
+
+enum Status then
+    PENDING = 0
+    ACTIVE = 1
+    COMPLETED = 2
+    CANCELLED = -1
+end enum
+
+function test_enum_values()
+    yazdir("=== Enum Values Test ===")
+    
+    # Enum değerlerini kullan
+    numeric color = Color.RED
+    yazdir("RED değeri: ", color)
+    
+    numeric green = Color.GREEN
+    yazdir("GREEN değeri: ", green)
+    
+    numeric blue = Color.BLUE
+    yazdir("BLUE değeri: ", blue)
+    
+    yazdir("")
+end function
+
+function test_switch_basic()
+    yazdir("=== Basic Switch Test ===")
+    
+    numeric value = 5
+    
+    switch value then
+        case 1 then
+            yazdir("Değer: 1")
+        end case
+        
+        case 5 then
+            yazdir("Değer: 5 (DOĞRU!)")
+        end case
+        
+        case 10 then
+            yazdir("Değer: 10")
+        end case
+        
+        default then
+            yazdir("Değer: Bilinmiyor")
+        end default
+    end switch
+    
+    yazdir("")
+end function
+
+function test_switch_with_enum()
+    yazdir("=== Switch with Enum Test ===")
+    
+    numeric status = Status.ACTIVE
+    
+    switch status then
+        case Status.PENDING then
+            yazdir("Durum: Beklemede")
+        end case
+        
+        case Status.ACTIVE then
+            yazdir("Durum: Aktif (DOĞRU!)")
+        end case
+        
+        case Status.COMPLETED then
+            yazdir("Durum: Tamamlandı")
+        end case
+        
+        case Status.CANCELLED then
+            yazdir("Durum: İptal Edildi")
+        end case
+        
+        default then
+            yazdir("Durum: Geçersiz")
+        end default
+    end switch
+    
+    yazdir("")
+end function
+
+function test_switch_no_default()
+    yazdir("=== Switch without Default Test ===")
+    
+    numeric color = Color.BLUE
+    
+    switch color then
+        case Color.RED then
+            yazdir("Renk: Kırmızı")
+        end case
+        
+        case Color.GREEN then
+            yazdir("Renk: Yeşil")
+        end case
+        
+        case Color.BLUE then
+            yazdir("Renk: Mavi (DOĞRU!)")
+        end case
+    end switch
+    
+    yazdir("")
+end function
+
+function test_switch_multiple_values()
+    yazdir("=== Switch with Multiple Values Test ===")
+    
+    numeric day = 3
+    
+    switch day then
+        case 1 then
+            yazdir("Gün: Pazartesi")
+        end case
+        
+        case 2 then
+            yazdir("Gün: Salı")
+        end case
+        
+        case 3 then
+            yazdir("Gün: Çarşamba (DOĞRU!)")
+        end case
+        
+        case 4 then
+            yazdir("Gün: Perşembe")
+        end case
+        
+        case 5 then
+            yazdir("Gün: Cuma")
+        end case
+        
+        default then
+            yazdir("Gün: Hafta sonu")
+        end default
+    end switch
+    
+    yazdir("")
+end function
+
+function main()
+    yazdir("╔═══════════════════════════════════════╗")
+    yazdir("║  Enum & Switch Statement Test Suite  ║")
+    yazdir("╚═══════════════════════════════════════╝")
+    yazdir("")
+    
+    test_enum_values()
+    test_switch_basic()
+    test_switch_with_enum()
+    test_switch_no_default()
+    test_switch_multiple_values()
+    
+    yazdir("╔═══════════════════════════════════════╗")
+    yazdir("║     All Tests Completed Successfully  ║")
+    yazdir("╚═══════════════════════════════════════╝")
+end function

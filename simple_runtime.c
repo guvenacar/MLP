@@ -1361,3 +1361,12 @@ void* promise_await_value(Promise* p) {
         return NULL;
     }
 }
+
+// ========== Missing Runtime Functions (for self-hosting) ==========
+
+// mlp_set_args: Store command-line arguments (stub for now)
+void mlp_set_args(int argc, char** argv) {
+    // TODO: Store args in global registry for later use
+    (void)argc;
+    (void)argv;
+}

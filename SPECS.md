@@ -50,16 +50,36 @@ MLP achieves this through:
 
 ### Pipeline
 
+**3-Stage Compilation Pipeline:**
+
 ```
-Source Code (Any Language)
+Source Code (Any Syntax + Any Language)
     ↓
-Preprocessor (keyword translation)
+┌─────────────────────────────────────────┐
+│ Stage 1: Syntax Normalization           │
+│ → syntax_preprocessor.py                │
+│ → Reads: syntax.json                    │
+│ → C-style/Python-style → MLP base       │
+└─────────────────────────────────────────┘
     ↓
-English Intermediate Code
+Normalized MLP (MLP syntax + Any Language)
     ↓
-Compiler (lexer → parser → code gen)
+┌─────────────────────────────────────────┐
+│ Stage 2: Language Translation           │
+│ → mlp_preprocessor.c                    │
+│ → Reads: diller.json                    │
+│ → Turkish/Russian/Hindi → English       │
+└─────────────────────────────────────────┘
     ↓
-x86-64 Assembly
+English Intermediate Code (MLP syntax + English)
+    ↓
+┌─────────────────────────────────────────┐
+│ Stage 3: Compilation                    │
+│ → mlp_compiler (Lexer → Parser → Gen)  │
+│ → English keywords only                 │
+└─────────────────────────────────────────┘
+    ↓
+x86-64 Assembly (NASM)
     ↓
 Native Executable
 ```
@@ -236,10 +256,34 @@ Turkish Source → Preprocessor (YAZDIR→print) → English IR → Lexer → Pa
 
 ### How It Works
 
-**Preprocessor Pipeline:**
+**Preprocessor Pipeline (2 Stages):**
 
 ```
-Input: Turkish/Russian/Hindi .mlp file
+┌─────────────────────────────────────────────────────┐
+│ STAGE 1: SYNTAX NORMALIZATION                       │
+│ (syntax_preprocessor.py + syntax.json)              │
+└─────────────────────────────────────────────────────┘
+Input: Any syntax style .mlp file
+  Examples:
+    - C-style:      if (x > 0) { print x }
+    - Python-style: if x > 0: print x
+    - MLP-default:  if x > 0 then print x end if
+  ↓
+1. Detect syntax from "// syntax: <id>" or auto-detect
+  ↓
+2. Load syntax mappings from syntax.json
+  ↓
+3. Normalize to MLP base syntax:
+   { → then, } → end
+   : + indent → then, dedent → end
+  ↓
+Output: Normalized MLP syntax (any language keywords)
+
+┌─────────────────────────────────────────────────────┐
+│ STAGE 2: LANGUAGE TRANSLATION                       │
+│ (mlp_preprocessor.c + diller.json)                  │
+└─────────────────────────────────────────────────────┘
+Input: Normalized MLP with Turkish/Russian/Hindi
   ↓
 1. Detect language from "-- lang: XX-XX" header
   ↓

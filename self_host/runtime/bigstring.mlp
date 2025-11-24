@@ -1,0 +1,249 @@
+# lang: en-US
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Runtime BigString Wrapper
+# -----------------------------------------------------------------------------
+# C runtime'daki BigString fonksiyonlarını MLP'ye bağlar
+# Tüm string operasyonlar bu modül üzerinden yapılır
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# External C runtime functions (will be linked)
+# -----------------------------------------------------------------------------
+
+# extern bigstring_create(string value) -> pointer
+# extern bigstring_concat(pointer a, pointer b) -> pointer
+# extern bigstring_substring(pointer str, numeric start, numeric end) -> pointer
+# extern bigstring_length(pointer str) -> numeric
+# extern bigstring_compare(pointer a, pointer b) -> numeric
+# extern bigstring_equals(pointer a, pointer b) -> numeric
+# extern bigstring_contains(pointer str, pointer substr) -> numeric
+# extern bigstring_index_of(pointer str, pointer substr) -> numeric
+# extern bigstring_to_cstring(pointer str) -> string
+# extern bigstring_free(pointer str)
+
+# -----------------------------------------------------------------------------
+# BigString wrapper type
+# -----------------------------------------------------------------------------
+
+struct BigString then
+    numeric ptr
+end struct
+
+# -----------------------------------------------------------------------------
+# Constructors
+# -----------------------------------------------------------------------------
+
+function bigstring_from_cstring(value)
+    BigString bs
+    # TODO: Call C runtime
+    # bs.ptr = bigstring_create(value)
+    bs.ptr = 0
+    return bs
+end function
+
+function bigstring_empty()
+    return bigstring_from_cstring("")
+end function
+
+# -----------------------------------------------------------------------------
+# String operations
+# -----------------------------------------------------------------------------
+
+function bigstring_concat_op(a, b)
+    BigString result
+    # TODO: Call C runtime
+    # result.ptr = bigstring_concat(a.ptr, b.ptr)
+    result.ptr = 0
+    return result
+end function
+
+function bigstring_substring_op(str, start_pos, end_pos)
+    BigString result
+    # TODO: Call C runtime
+    # result.ptr = bigstring_substring(str.ptr, start_pos, end_pos)
+    result.ptr = 0
+    return result
+end function
+
+function bigstring_length_op(str)
+    # TODO: Call C runtime
+    # return bigstring_length(str.ptr)
+    return 0
+end function
+
+# -----------------------------------------------------------------------------
+# Comparison operations
+# -----------------------------------------------------------------------------
+
+function bigstring_equals_op(a, b)
+    # TODO: Call C runtime
+    # return bigstring_equals(a.ptr, b.ptr)
+    return 0
+end function
+
+function bigstring_compare_op(a, b)
+    # TODO: Call C runtime
+    # return bigstring_compare(a.ptr, b.ptr)
+    return 0
+end function
+
+function bigstring_less_than(a, b)
+    numeric cmp = bigstring_compare_op(a, b)
+    if cmp < 0 then
+        return 1
+    end if
+    return 0
+end function
+
+function bigstring_greater_than(a, b)
+    numeric cmp = bigstring_compare_op(a, b)
+    if cmp > 0 then
+        return 1
+    end if
+    return 0
+end function
+
+# -----------------------------------------------------------------------------
+# Search operations
+# -----------------------------------------------------------------------------
+
+function bigstring_contains_op(str, substr)
+    # TODO: Call C runtime
+    # return bigstring_contains(str.ptr, substr.ptr)
+    return 0
+end function
+
+function bigstring_index_of_op(str, substr)
+    # TODO: Call C runtime
+    # return bigstring_index_of(str.ptr, substr.ptr)
+    return -1
+end function
+
+# -----------------------------------------------------------------------------
+# Conversion operations
+# -----------------------------------------------------------------------------
+
+function bigstring_to_cstring_op(bs)
+    # TODO: Call C runtime
+    # return bigstring_to_cstring(bs.ptr)
+    return ""
+end function
+
+# -----------------------------------------------------------------------------
+# Memory management
+# -----------------------------------------------------------------------------
+
+function bigstring_destroy(bs)
+    # TODO: Call C runtime
+    # bigstring_free(bs.ptr)
+    bs.ptr = 0
+    return bs
+end function
+
+# -----------------------------------------------------------------------------
+# String interpolation support
+# -----------------------------------------------------------------------------
+
+function bigstring_interpolate(parts, values)
+    BigString result = bigstring_empty()
+    
+    numeric part_count = parts.size()
+    numeric value_count = values.size()
+    
+    for i = 0 to part_count - 1 do
+        string part = parts.get(i)
+        BigString part_str = bigstring_from_cstring(part)
+        result = bigstring_concat_op(result, part_str)
+        
+        if i < value_count then
+            # Convert value to string
+            numeric value = values.get(i)
+            string value_str = numeric_to_string(value)
+            BigString value_bigstr = bigstring_from_cstring(value_str)
+            result = bigstring_concat_op(result, value_bigstr)
+        end if
+    end for
+    
+    return result
+end function
+
+# -----------------------------------------------------------------------------
+# Helper: numeric to string conversion
+# -----------------------------------------------------------------------------
+
+function numeric_to_string(n)
+    if n == 0 then return "0" end if
+    if n == 1 then return "1" end if
+    if n == 2 then return "2" end if
+    if n == 3 then return "3" end if
+    if n == 4 then return "4" end if
+    if n == 5 then return "5" end if
+    if n == 6 then return "6" end if
+    if n == 7 then return "7" end if
+    if n == 8 then return "8" end if
+    if n == 9 then return "9" end if
+    if n == 10 then return "10" end if
+    
+    string result = ""
+    numeric temp = n
+    numeric is_negative = 0
+    
+    if temp < 0 then
+        is_negative = 1
+        temp = -temp
+    end if
+    
+    while temp > 0
+        numeric digit = temp % 10
+        temp = temp / 10
+        
+        if digit == 0 then result = "0" + result end if
+        if digit == 1 then result = "1" + result end if
+        if digit == 2 then result = "2" + result end if
+        if digit == 3 then result = "3" + result end if
+        if digit == 4 then result = "4" + result end if
+        if digit == 5 then result = "5" + result end if
+        if digit == 6 then result = "6" + result end if
+        if digit == 7 then result = "7" + result end if
+        if digit == 8 then result = "8" + result end if
+        if digit == 9 then result = "9" + result end if
+    end while
+    
+    if is_negative == 1 then
+        result = "-" + result
+    end if
+    
+    return result
+end function
+
+# -----------------------------------------------------------------------------
+# Common string operations (higher level)
+# -----------------------------------------------------------------------------
+
+function bigstring_trim(str)
+    # TODO: Implement trim logic
+    return str
+end function
+
+function bigstring_to_upper(str)
+    # TODO: Implement upper case conversion
+    return str
+end function
+
+function bigstring_to_lower(str)
+    # TODO: Implement lower case conversion
+    return str
+end function
+
+function bigstring_replace(str, old_substr, new_substr)
+    # TODO: Implement replace logic
+    return str
+end function
+
+function bigstring_split(str, delimiter)
+    # TODO: Implement split logic
+    list[BigString] result = list()
+    return result
+end function

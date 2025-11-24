@@ -1,0 +1,10 @@
+-- My Library Module
+function greet(string name)
+    print "Hello, "
+    print name
+    return 0
+end function
+
+function add(numeric a, numeric b)
+    return a + b
+end function

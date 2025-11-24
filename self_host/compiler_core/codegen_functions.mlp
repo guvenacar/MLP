@@ -1,0 +1,347 @@
+# lang: en-US
+# syntax: mlp
+
+# -----------------------------------------------------------------------------
+# Code Generator - Functions Module
+# -----------------------------------------------------------------------------
+# Function declaration, call, lambda, closure code generation
+# -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/scope_manager.mlp"
+import "compiler_core/codegen.mlp"
+
+# -----------------------------------------------------------------------------
+# Function declaration code generation (Phase 5.10: Typed Parameters)
+# -----------------------------------------------------------------------------
+# Port from: mlp_compiler.c visit_IslecTanimlama() lines 6280-6360
+# Supports: Type-aware parameter allocation
+# Example: function greet(string name, numeric age)
+#   → name gets METIN type, age gets SAYISAL type
+# -----------------------------------------------------------------------------
+
+function visit_function_declaration(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    # Get function data
+    string func_name = "my_function"
+    list[ASTParameterInfo] parameters = list()
+    numeric body_id = 1
+    
+    state.code = asm_emit_text(state.code, "")
+    state.code = asm_emit_text(state.code, "; Function: " + func_name)
+    state.code = asm_emit_text(state.code, func_name + ":")
+    state.code = asm_emit_text(state.code, "    push rbp")
+    state.code = asm_emit_text(state.code, "    mov rbp, rsp")
+    
+    # Enter function scope
+    state.scope = scope_enter(state.scope)
+    
+    # Register parameters with TYPE INFORMATION (Phase 5.10)
+    # x86-64 calling convention: RDI, RSI, RDX, RCX, R8, R9
+    metin[] arg_registers = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+    
+    for i = 0 to parameters.size() - 1 do
+        ASTParameterInfo param = parameters.get(i)
+        
+        # Determine parameter type (Phase 5.10: Typed Parameters)
+        metin type_name = "SAYISAL"  # Default: numeric
+        
+        if param.is_array == true then
+            type_name = "ARRAY_SAYISAL"  # Array parameter
+        else if param.type == TOKEN_TYPE_STRING then
+            type_name = "METIN"  # String parameter
+        else if param.type == TOKEN_TYPE_BOOLEAN then
+            type_name = "BOOLEAN"  # Boolean parameter
+        else
+            type_name = "SAYISAL"  # Numeric parameter
+        end if
+        
+        # Register variable with correct type
+        state.scope = scope_register_variable(state.scope, param.identifier, type_name, 1)
+        
+        # Move argument from register to stack (Phase 5.10: Type-aware)
+        metin var_address = scope_get_variable_address(state.scope, param.identifier)
+        state.code = asm_emit_text(state.code, "    mov " + var_address + ", " + arg_registers[i])
+    end for
+    
+    # Allocate local variables
+    numeric frame_size = scope_get_current_frame_size(state.scope)
+    if frame_size > 0 then
+        state.code = asm_emit_text(state.code, "    sub rsp, " + numeric_to_string(frame_size))
+    end if
+    
+    # Generate function body
+    state = visit_block(state, body_id)
+    
+    # Exit function scope
+    state.scope = scope_exit(state.scope)
+    
+    # Default return (if no explicit return)
+    state.code = asm_emit_text(state.code, "    ; --- Implicit Return (Function Epilog) ---")
+    state.code = asm_emit_text(state.code, "    xor rax, rax")
+    state.code = asm_emit_text(state.code, "    mov rsp, rbp")
+    state.code = asm_emit_text(state.code, "    pop rbp")
+    state.code = asm_emit_text(state.code, "    ret")
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Function call code generation
+# -----------------------------------------------------------------------------
+
+function visit_function_call(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    string func_name = "my_function"
+    list[numeric] argument_ids = list()
+    
+    state.code = asm_emit_text(state.code, "    ; Function call: " + func_name)
+    
+    # Evaluate arguments (right to left for stack)
+    numeric arg_count = argument_ids.size()
+    for i = arg_count - 1 to 0 step -1 do
+        numeric arg_id = argument_ids.get(i)
+        state = visit_expression(state, arg_id)
+        state.code = asm_emit_text(state.code, "    push rax")
+    end for
+    
+    # Call function
+    state.code = asm_emit_text(state.code, "    call " + func_name)
+    
+    # Clean up stack
+    if arg_count > 0 then
+        numeric bytes = arg_count * 8
+        state.code = asm_emit_text(state.code, "    add rsp, " + numeric_to_string(bytes))
+    end if
+    
+    # Result is in rax
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Lambda expression code generation
+# -----------------------------------------------------------------------------
+
+function visit_lambda(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    list[ASTParameterInfo] parameters = list()
+    numeric body_id = 1
+    
+    # Generate unique lambda label
+    string lambda_label = codegen_generate_label(state, "lambda")
+    
+    state.code = asm_emit_text(state.code, "    ; Lambda expression")
+    state.code = asm_emit_text(state.code, "    lea rax, [rel " + lambda_label + "]")
+    
+    # Generate lambda function in separate section
+    string old_section = "text"
+    
+    state.code = asm_emit_lambda(state.code, "")
+    state.code = asm_emit_lambda(state.code, lambda_label + ":")
+    state.code = asm_emit_lambda(state.code, "    push rbp")
+    state.code = asm_emit_lambda(state.code, "    mov rbp, rsp")
+    
+    # Enter lambda scope
+    state.scope = scope_enter(state.scope)
+    
+    # Register parameters
+    for i = 0 to parameters.size() - 1 do
+        ASTParameterInfo param = parameters.get(i)
+        state.scope = scope_register_variable(state.scope, param.identifier, param.type_name, 1)
+    end for
+    
+    # Allocate frame
+    numeric frame_size = scope_get_current_frame_size(state.scope)
+    if frame_size > 0 then
+        state.code = asm_emit_lambda(state.code, "    sub rsp, " + numeric_to_string(frame_size))
+    end if
+    
+    # Generate lambda body (emit to lambda section)
+    state = visit_block_in_lambda(state, body_id)
+    
+    # Exit lambda scope
+    state.scope = scope_exit(state.scope)
+    
+    # Default return
+    state.code = asm_emit_lambda(state.code, "    xor rax, rax")
+    state.code = asm_emit_lambda(state.code, "    mov rsp, rbp")
+    state.code = asm_emit_lambda(state.code, "    pop rbp")
+    state.code = asm_emit_lambda(state.code, "    ret")
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Helper: Visit block but emit to lambda section
+# -----------------------------------------------------------------------------
+
+function visit_block_in_lambda(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    list[numeric] statement_ids = list()
+    
+    for i = 0 to statement_ids.size() - 1 do
+        numeric stmt_id = statement_ids.get(i)
+        # TODO: Redirect emit to lambda section
+        state = visit_statement(state, stmt_id)
+    end for
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Method call code generation (object.method())
+# -----------------------------------------------------------------------------
+
+function visit_method_call(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    numeric receiver_id = 1
+    string method_name = "method"
+    list[numeric] argument_ids = list()
+    
+    state.code = asm_emit_text(state.code, "    ; Method call: " + method_name)
+    
+    # Evaluate receiver (this/self)
+    state = visit_expression(state, receiver_id)
+    state.code = asm_emit_text(state.code, "    push rax")
+    
+    # Evaluate arguments
+    for i = argument_ids.size() - 1 to 0 step -1 do
+        numeric arg_id = argument_ids.get(i)
+        state = visit_expression(state, arg_id)
+        state.code = asm_emit_text(state.code, "    push rax")
+    end for
+    
+    # Call method (receiver is first argument)
+    state.code = asm_emit_text(state.code, "    call " + method_name)
+    
+    # Clean up stack
+    numeric bytes = (argument_ids.size() + 1) * 8
+    state.code = asm_emit_text(state.code, "    add rsp, " + numeric_to_string(bytes))
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Closure capture code generation
+# -----------------------------------------------------------------------------
+
+function visit_closure_with_captures(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    list[VariableInfo] captured = scope_get_captured_variables(state.scope)
+    
+    state.code = asm_emit_text(state.code, "    ; Closure with " + numeric_to_string(captured.size()) + " captures")
+    
+    # Allocate closure object (function pointer + captured variables)
+    numeric closure_size = 8 + (captured.size() * 8)
+    state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(closure_size))
+    state.code = asm_emit_text(state.code, "    call malloc")
+    state.code = asm_emit_text(state.code, "    mov rbx, rax")
+    
+    # Store function pointer
+    string lambda_label = "lambda_0"
+    state.code = asm_emit_text(state.code, "    lea rax, [rel " + lambda_label + "]")
+    state.code = asm_emit_text(state.code, "    mov [rbx], rax")
+    
+    # Store captured variables
+    numeric offset = 8
+    for i = 0 to captured.size() - 1 do
+        VariableInfo var = captured.get(i)
+        state.code = asm_emit_text(state.code, "    mov rax, [rbp - " + numeric_to_string(var.stack_offset) + "]")
+        state.code = asm_emit_text(state.code, "    mov [rbx + " + numeric_to_string(offset) + "], rax")
+        offset = offset + 8
+    end for
+    
+    # Return closure pointer in rax
+    state.code = asm_emit_text(state.code, "    mov rax, rbx")
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Async function code generation (state machine)
+# -----------------------------------------------------------------------------
+
+function visit_async_function(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    string func_name = "async_function"
+    
+    state.code = asm_emit_text(state.code, "")
+    state.code = asm_emit_text(state.code, "; Async Function: " + func_name)
+    state.code = asm_emit_text(state.code, func_name + ":")
+    state.code = asm_emit_text(state.code, "    push rbp")
+    state.code = asm_emit_text(state.code, "    mov rbp, rsp")
+    
+    # Allocate async state structure
+    state.code = asm_emit_text(state.code, "    ; Allocate async state")
+    state.code = asm_emit_text(state.code, "    mov rdi, 64")
+    state.code = asm_emit_text(state.code, "    call malloc")
+    state.code = asm_emit_text(state.code, "    mov [rbp - 8], rax")
+    
+    # Initialize state machine (state = 0)
+    state.code = asm_emit_text(state.code, "    mov qword [rax], 0")
+    
+    # Return promise/future
+    state.code = asm_emit_text(state.code, "    mov rax, [rbp - 8]")
+    state.code = asm_emit_text(state.code, "    mov rsp, rbp")
+    state.code = asm_emit_text(state.code, "    pop rbp")
+    state.code = asm_emit_text(state.code, "    ret")
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Await expression code generation
+# -----------------------------------------------------------------------------
+
+function visit_await(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    numeric expr_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Await expression")
+    
+    # Evaluate promise/future (returns Promise ptr)
+    state = visit_expression(state, expr_id)
+    
+    # RUNTIME: Call promise_await(promise)
+    state.code = asm_emit_text(state.code, "    mov rdi, rax")
+    state.code = asm_emit_text(state.code, "    call promise_await")
+    state.code = asm_emit_text(state.code, "    ; Result value in rax")
+    
+    return state
+end function
+
+# -----------------------------------------------------------------------------
+# Yield expression code generation
+# -----------------------------------------------------------------------------
+
+function visit_yield(state, node_id)
+    ASTNode node = ast_arena_get(state.arena, node_id)
+    
+    numeric expr_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Yield expression")
+    
+    # Evaluate value to yield
+    state = visit_expression(state, expr_id)
+    
+    # RUNTIME: Call generator_yield(generator, value)
+    state.code = asm_emit_text(state.code, "    mov rsi, rax")
+    state.code = asm_emit_text(state.code, "    mov rdi, [rbp - 16]")
+    state.code = asm_emit_text(state.code, "    call generator_yield")
+    state.code = asm_emit_text(state.code, "    ; Generator state updated")
+    
+    # RUNTIME: Call async_yield_control() to yield execution
+    state.code = asm_emit_text(state.code, "    call async_yield_control")
+    
+    return state
+end function

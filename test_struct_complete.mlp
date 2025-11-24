@@ -1,0 +1,48 @@
+-- Test: Struct Completion (Phase 6.2)
+-- Nested structs, methods, field access
+
+-- Nested struct definition
+struct Address then
+    string city
+    numeric zip_code
+end struct
+
+-- Main struct with nested struct and method
+struct Person then
+    string name
+    numeric age
+    Address home       -- Nested struct
+    
+    function greet()   -- Struct method
+        yaz("Hello, my name is " + name)
+        yaz("I am " + age + " years old")
+        yaz("I live in " + home.city)
+    end function
+    
+    function celebrate_birthday()
+        age = age + 1
+        yaz("Happy birthday! Now " + age + " years old")
+    end function
+end struct
+
+function main()
+    -- Create Person instance
+    Person p
+    p.name = "Alice"
+    p.age = 25
+    
+    -- Initialize nested struct
+    Address addr
+    addr.city = "Istanbul"
+    addr.zip_code = 34000
+    p.home = addr
+    
+    -- Call struct methods
+    p.greet()
+    p.celebrate_birthday()
+    p.greet()
+    
+    -- Access nested struct fields
+    yaz("City: " + p.home.city)
+    yaz("ZIP: " + p.home.zip_code)
+end function

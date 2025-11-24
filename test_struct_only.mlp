@@ -1,0 +1,14 @@
+-- Test struct syntax
+
+struct CompilerOptions then
+    string input_file
+    string output_file
+    numeric verbose
+end
+
+function main()
+    print "Test struct"
+    return 0
+end
+
+main()
