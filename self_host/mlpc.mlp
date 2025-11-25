@@ -24,23 +24,23 @@ import "compiler_core/codegen_control.mlp"
 import "compiler_core/import_handler.mlp"
 
 -- Import runtime wrappers (for file I/O, etc.)
-import "runtime/file_io.mlp"
+-- import "runtime/file_io.mlp" -- TEMP DISABLED
 
 -- -----------------------------------------------------------------------------
 -- Compiler Options
 -- -----------------------------------------------------------------------------
 
-struct CompilerOptions then
-    string input_file
-    string output_file
-    numeric verbose
-    numeric debug_tokens
-    numeric debug_ast
-    numeric debug_scope
-    numeric optimize_level
-    numeric show_help
-    numeric show_version
-end struct
+struct CompilerOptions
+    String input_file
+    String output_file
+    Numeric verbose
+    Numeric debug_tokens
+    Numeric debug_ast
+    Numeric debug_scope
+    Numeric optimize_level
+    Numeric show_help
+    Numeric show_version
+end_struct
 
 function options_create()
     CompilerOptions opts
@@ -54,7 +54,7 @@ function options_create()
     opts.show_help = 0
     opts.show_version = 0
     return opts
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Help and Version
@@ -77,13 +77,13 @@ function print_help()
     print "Examples:"
     print "  mlpc program.mlp -o program.asm"
     print "  mlpc --verbose --debug-tokens input.mlp"
-end function
+end_function
 
 function print_version()
     print "MLP Self-Hosting Compiler v1.0.0"
     print "Build: 2025-11-24"
     print "Target: x86-64 Linux"
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Main Entry Point (Simple version for now)
@@ -105,7 +105,7 @@ function main()
     print "Ready for compilation pipeline implementation."
     
     return 0
-end function
+end_function
 
 -- Run
-numeric result = main()
+Numeric result = main()

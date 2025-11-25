@@ -11,7 +11,7 @@ struct CompilerOptions then
     string input_file
     string output_file
     numeric verbose
-end struct
+end_struct
 
 function options_create()
     CompilerOptions opts
@@ -19,12 +19,12 @@ function options_create()
     opts.output_file = "output.asm"
     opts.verbose = 0
     return opts
-end function
+end_function
 
 function print_help()
     print "MLP Self-Hosting Compiler v1.0"
     print "Usage: mlpc <input.mlp>"
-end function
+end_function
 
 function main()
     print "=== MLP Self-Hosting Compiler (Minimal) ==="
@@ -48,7 +48,7 @@ function main()
     print "✓ Self-hosting test PASSED!"
     
     return 0
-end function
+end_function
 
 -- Run main
 numeric result = main()

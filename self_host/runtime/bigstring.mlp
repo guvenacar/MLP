@@ -5,23 +5,23 @@
 -- Runtime BigString Wrapper
 -- -----------------------------------------------------------------------------
 -- C runtime'daki BigString fonksiyonlarını MLP'ye bağlar
--- Tüm string operasyonlar bu modül üzerinden yapılır
+-- Tüm metin operasyonlar bu modül üzerinden yapılır
 -- -----------------------------------------------------------------------------
 
 -- -----------------------------------------------------------------------------
 -- External C runtime functions (will be linked)
 -- -----------------------------------------------------------------------------
 
--- extern bigstring_create(string value) -> pointer
+-- extern bigstring_create(metin value) -> pointer
 -- extern bigstring_concat(pointer a, pointer b) -> pointer
--- extern bigstring_substring(pointer str, numeric start, numeric end) -> pointer
--- extern bigstring_length(pointer str) -> numeric
+-- extern bigstring_substring(pointer str_val, numeric start, numeric end) -> pointer
+-- extern bigstring_length(pointer str_val) -> numeric
 -- extern bigstring_compare(pointer a, pointer b) -> numeric
 -- extern bigstring_equals(pointer a, pointer b) -> numeric
--- extern bigstring_contains(pointer str, pointer substr) -> numeric
--- extern bigstring_index_of(pointer str, pointer substr) -> numeric
--- extern bigstring_to_cstring(pointer str) -> string
--- extern bigstring_free(pointer str)
+-- extern bigstring_contains(pointer str_val, pointer substr) -> numeric
+-- extern bigstring_index_of(pointer str_val, pointer substr) -> numeric
+-- extern bigstring_to_cstring(pointer str_val) -> metin
+-- extern bigstring_free(pointer str_val)
 
 -- -----------------------------------------------------------------------------
 -- BigString wrapper type
@@ -29,7 +29,7 @@
 
 struct BigString then
     numeric ptr
-end struct
+end_struct
 
 -- -----------------------------------------------------------------------------
 -- Constructors
@@ -41,11 +41,11 @@ function bigstring_from_cstring(value)
     -- bs.ptr = bigstring_create(value)
     bs.ptr = 0
     return bs
-end function
+end_function
 
 function bigstring_empty()
     return bigstring_from_cstring("")
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- String operations
@@ -57,21 +57,21 @@ function bigstring_concat_op(a, b)
     -- result.ptr = bigstring_concat(a.ptr, b.ptr)
     result.ptr = 0
     return result
-end function
+end_function
 
-function bigstring_substring_op(str, start_pos, end_pos)
+function bigstring_substring_op(str_val, start_pos, end_pos)
     BigString result
     -- TODO: Call C runtime
-    -- result.ptr = bigstring_substring(str.ptr, start_pos, end_pos)
+    -- result.ptr = bigstring_substring(str_val.ptr, start_pos, end_pos)
     result.ptr = 0
     return result
-end function
+end_function
 
-function bigstring_length_op(str)
+function bigstring_length_op(str_val)
     -- TODO: Call C runtime
-    -- return bigstring_length(str.ptr)
+    -- return bigstring_length(str_val.ptr)
     return 0
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Comparison operations
@@ -81,45 +81,45 @@ function bigstring_equals_op(a, b)
     -- TODO: Call C runtime
     -- return bigstring_equals(a.ptr, b.ptr)
     return 0
-end function
+end_function
 
 function bigstring_compare_op(a, b)
     -- TODO: Call C runtime
     -- return bigstring_compare(a.ptr, b.ptr)
     return 0
-end function
+end_function
 
 function bigstring_less_than(a, b)
     numeric cmp = bigstring_compare_op(a, b)
     if cmp < 0 then
         return 1
-    end if
+    end_if
     return 0
-end function
+end_function
 
 function bigstring_greater_than(a, b)
     numeric cmp = bigstring_compare_op(a, b)
     if cmp > 0 then
         return 1
-    end if
+    end_if
     return 0
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Search operations
 -- -----------------------------------------------------------------------------
 
-function bigstring_contains_op(str, substr)
+function bigstring_contains_op(str_val, substr)
     -- TODO: Call C runtime
-    -- return bigstring_contains(str.ptr, substr.ptr)
+    -- return bigstring_contains(str_val.ptr, substr.ptr)
     return 0
-end function
+end_function
 
-function bigstring_index_of_op(str, substr)
+function bigstring_index_of_op(str_val, substr)
     -- TODO: Call C runtime
-    -- return bigstring_index_of(str.ptr, substr.ptr)
+    -- return bigstring_index_of(str_val.ptr, substr.ptr)
     return -1
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Conversion operations
@@ -129,7 +129,7 @@ function bigstring_to_cstring_op(bs)
     -- TODO: Call C runtime
     -- return bigstring_to_cstring(bs.ptr)
     return ""
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Memory management
@@ -140,7 +140,7 @@ function bigstring_destroy(bs)
     -- bigstring_free(bs.ptr)
     bs.ptr = 0
     return bs
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- String interpolation support
@@ -153,97 +153,97 @@ function bigstring_interpolate(parts, values)
     numeric value_count = values.size()
     
     for i = 0 to part_count - 1 do
-        string part = parts.get(i)
+        metin part = parts.get(i)
         BigString part_str = bigstring_from_cstring(part)
         result = bigstring_concat_op(result, part_str)
         
         if i < value_count then
-            -- Convert value to string
+            -- Convert value to metin
             numeric value = values.get(i)
-            string value_str = numeric_to_string(value)
+            metin value_str = numeric_to_metin(value)
             BigString value_bigstr = bigstring_from_cstring(value_str)
             result = bigstring_concat_op(result, value_bigstr)
-        end if
-    end for
+        end_if
+    end_for
     
     return result
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
--- Helper: numeric to string conversion
+-- Helper: numeric to metin conversion
 -- -----------------------------------------------------------------------------
 
-function numeric_to_string(n)
-    if n == 0 then return "0" end if
-    if n == 1 then return "1" end if
-    if n == 2 then return "2" end if
-    if n == 3 then return "3" end if
-    if n == 4 then return "4" end if
-    if n == 5 then return "5" end if
-    if n == 6 then return "6" end if
-    if n == 7 then return "7" end if
-    if n == 8 then return "8" end if
-    if n == 9 then return "9" end if
-    if n == 10 then return "10" end if
+function numeric_to_metin(n)
+    if n == 0 then return "0" end_if
+    if n == 1 then return "1" end_if
+    if n == 2 then return "2" end_if
+    if n == 3 then return "3" end_if
+    if n == 4 then return "4" end_if
+    if n == 5 then return "5" end_if
+    if n == 6 then return "6" end_if
+    if n == 7 then return "7" end_if
+    if n == 8 then return "8" end_if
+    if n == 9 then return "9" end_if
+    if n == 10 then return "10" end_if
     
-    string result = ""
+    metin result = ""
     numeric temp = n
     numeric is_negative = 0
     
     if temp < 0 then
         is_negative = 1
         temp = -temp
-    end if
+    end_if
     
     while temp > 0
         numeric digit = temp % 10
         temp = temp / 10
         
-        if digit == 0 then result = "0" + result end if
-        if digit == 1 then result = "1" + result end if
-        if digit == 2 then result = "2" + result end if
-        if digit == 3 then result = "3" + result end if
-        if digit == 4 then result = "4" + result end if
-        if digit == 5 then result = "5" + result end if
-        if digit == 6 then result = "6" + result end if
-        if digit == 7 then result = "7" + result end if
-        if digit == 8 then result = "8" + result end if
-        if digit == 9 then result = "9" + result end if
-    end while
+        if digit == 0 then result = "0" + result end_if
+        if digit == 1 then result = "1" + result end_if
+        if digit == 2 then result = "2" + result end_if
+        if digit == 3 then result = "3" + result end_if
+        if digit == 4 then result = "4" + result end_if
+        if digit == 5 then result = "5" + result end_if
+        if digit == 6 then result = "6" + result end_if
+        if digit == 7 then result = "7" + result end_if
+        if digit == 8 then result = "8" + result end_if
+        if digit == 9 then result = "9" + result end_if
+    end_while
     
     if is_negative == 1 then
         result = "-" + result
-    end if
+    end_if
     
     return result
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
--- Common string operations (higher level)
+-- Common metin operations (higher level)
 -- -----------------------------------------------------------------------------
 
-function bigstring_trim(str)
+function bigstring_trim(str_val)
     -- TODO: Implement trim logic
-    return str
-end function
+    return str_val
+end_function
 
-function bigstring_to_upper(str)
+function bigstring_to_upper(str_val)
     -- TODO: Implement upper case conversion
-    return str
-end function
+    return str_val
+end_function
 
-function bigstring_to_lower(str)
+function bigstring_to_lower(str_val)
     -- TODO: Implement lower case conversion
-    return str
-end function
+    return str_val
+end_function
 
-function bigstring_replace(str, old_substr, new_substr)
+function bigstring_replace(str_val, old_substr, new_substr)
     -- TODO: Implement replace logic
-    return str
-end function
+    return str_val
+end_function
 
-function bigstring_split(str, delimiter)
+function bigstring_split(str_val, delimiter)
     -- TODO: Implement split logic
     list[BigString] result = list()
     return result
-end function
+end_function

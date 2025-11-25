@@ -10,13 +10,13 @@
 function is_whitespace(ch) then
     numeric code = ord(ch)
     
-    if code == 32 then return 1 end if    -- space
-    if code == 9 then return 1 end if     -- tab
-    if code == 10 then return 1 end if    -- newline
-    if code == 13 then return 1 end if    -- carriage return
+    if code == 32 then return 1 end_if    -- space
+    if code == 9 then return 1 end_if     -- tab
+    if code == 10 then return 1 end_if    -- newline
+    if code == 13 then return 1 end_if    -- carriage return
     
     return 0
-end function
+end_function
 
 -- Check if character is digit (0-9)
 function is_digit(ch) then
@@ -24,10 +24,10 @@ function is_digit(ch) then
     if code >= 48 then
         if code <= 57 then
             return 1
-        end if
-    end if
+        end_if
+    end_if
     return 0
-end function
+end_function
 
 -- Check if character is letter (A-Z, a-z) or underscore
 function is_alpha(ch) then
@@ -37,34 +37,34 @@ function is_alpha(ch) then
     if code >= 65 then
         if code <= 90 then
             return 1
-        end if
-    end if
+        end_if
+    end_if
     
     -- a-z
     if code >= 97 then
         if code <= 122 then
             return 1
-        end if
-    end if
+        end_if
+    end_if
     
     -- underscore
     if code == 95 then
         return 1
-    end if
+    end_if
     
     return 0
-end function
+end_function
 
 -- Check if character is alphanumeric
 function is_alnum(ch) then
     if is_alpha(ch) == 1 then
         return 1
-    end if
+    end_if
     if is_digit(ch) == 1 then
         return 1
-    end if
+    end_if
     return 0
-end function
+end_function
 
 -- ========================================
 -- TOKEN SCANNING
@@ -89,15 +89,15 @@ function scan_number(text, start_pos) then
                     pos = pos + 1
                 else
                     return pos    -- second dot, stop
-                end if
+                end_if
             else
                 return pos        -- not a number character
-            end if
-        end if
-    end while
+            end_if
+        end_if
+    end_while
     
     return pos
-end function
+end_function
 
 -- Scan string literal
 function scan_string(text, start_pos) then
@@ -109,15 +109,15 @@ function scan_string(text, start_pos) then
         
         if ch == "\"" then
             return pos + 1  -- Include closing quote
-        end if
+        end_if
         
         pos = pos + 1
-    end while
+    end_while
     
     print "ERROR: Unclosed string at position "
     print start_pos
     return pos
-end function
+end_function
 
 -- Scan identifier or keyword
 function scan_identifier(text, start_pos) then
@@ -129,57 +129,57 @@ function scan_identifier(text, start_pos) then
         
         if is_alnum(ch) == 0 then
             return pos
-        end if
+        end_if
         
         pos = pos + 1
-    end while
+    end_while
     
     return pos
-end function
+end_function
 
 -- Check if word is a keyword
 function is_keyword(word) then
     -- Data types
-    if word == "numeric" then return 1 end if
-    if word == "string" then return 1 end if
-    if word == "boolean" then return 1 end if
-    if word == "const" then return 1 end if
+    if word == "numeric" then return 1 end_if
+    if word == "string" then return 1 end_if
+    if word == "boolean" then return 1 end_if
+    if word == "const" then return 1 end_if
     
     -- Control flow
-    if word == "if" then return 1 end if
-    if word == "then" then return 1 end if
-    if word == "else" then return 1 end if
-    if word == "end" then return 1 end if
-    if word == "while" then return 1 end if
-    if word == "for" then return 1 end if
-    if word == "to" then return 1 end if
-    if word == "step" then return 1 end if
-    if word == "break" then return 1 end if
-    if word == "continue" then return 1 end if
+    if word == "if" then return 1 end_if
+    if word == "then" then return 1 end_if
+    if word == "else" then return 1 end_if
+    if word == "end" then return 1 end_if
+    if word == "while" then return 1 end_if
+    if word == "for" then return 1 end_if
+    if word == "to" then return 1 end_if
+    if word == "step" then return 1 end_if
+    if word == "break" then return 1 end_if
+    if word == "continue" then return 1 end_if
     
     -- Functions
-    if word == "function" then return 1 end if
-    if word == "return" then return 1 end if
+    if word == "function" then return 1 end_if
+    if word == "return" then return 1 end_if
     
     -- Built-ins
-    if word == "print" then return 1 end if
+    if word == "print" then return 1 end_if
     
     -- Literals
-    if word == "true" then return 1 end if
-    if word == "false" then return 1 end if
+    if word == "true" then return 1 end_if
+    if word == "false" then return 1 end_if
     
     -- Logical operators
-    if word == "and" then return 1 end if
-    if word == "or" then return 1 end if
-    if word == "not" then return 1 end if
-    if word == "mod" then return 1 end if
+    if word == "and" then return 1 end_if
+    if word == "or" then return 1 end_if
+    if word == "not" then return 1 end_if
+    if word == "mod" then return 1 end_if
     
     -- Compound types
-    if word == "struct" then return 1 end if
-    if word == "enum" then return 1 end if
+    if word == "struct" then return 1 end_if
+    if word == "enum" then return 1 end_if
     
     return 0
-end function
+end_function
 
 -- ========================================
 -- MAIN TOKENIZER
@@ -258,12 +258,12 @@ function tokenize(text) then
                         print "ASSIGN"
                         token_count = token_count + 1
                         pos = pos + 1
-                    end if
+                    end_if
                 else
                     print "ASSIGN"
                     token_count = token_count + 1
                     pos = pos + 1
-                end if
+                end_if
             
             else if current == "!" then
                 if pos + 1 < length then
@@ -275,11 +275,11 @@ function tokenize(text) then
                     else
                         print "ERROR: Expected '=' after '!'"
                         pos = pos + 1
-                    end if
+                    end_if
                 else
                     print "ERROR: Expected '=' after '!'"
                     pos = pos + 1
-                end if
+                end_if
             
             else if current == "<" then
                 if pos + 1 < length then
@@ -292,12 +292,12 @@ function tokenize(text) then
                         print "LT"
                         token_count = token_count + 1
                         pos = pos + 1
-                    end if
+                    end_if
                 else
                     print "LT"
                     token_count = token_count + 1
                     pos = pos + 1
-                end if
+                end_if
             
             else if current == ">" then
                 if pos + 1 < length then
@@ -310,12 +310,12 @@ function tokenize(text) then
                         print "GT"
                         token_count = token_count + 1
                         pos = pos + 1
-                    end if
+                    end_if
                 else
                     print "GT"
                     token_count = token_count + 1
                     pos = pos + 1
-                end if
+                end_if
             
             -- String literal
             else if current == "\"" then
@@ -352,7 +352,7 @@ function tokenize(text) then
                 else
                     print "IDENTIFIER: "
                     print word
-                end if
+                end_if
                 
                 token_count = token_count + 1
                 pos = end_pos
@@ -364,24 +364,24 @@ function tokenize(text) then
                 print ord(current)
                 print ")"
                 pos = pos + 1
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-            end if
-        end if
-    end while
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+            end_if
+        end_if
+    end_while
     
     print "--------"
     print "Total tokens: "
@@ -389,7 +389,7 @@ function tokenize(text) then
     print ""
     
     return token_count
-end function
+end_function
 
 -- ========================================
 -- TESTS
@@ -404,13 +404,13 @@ numeric count1 = tokenize(test1)
 print "========================================="
 print "Test 2: Function definition"
 print "========================================="
-string test2 = "function add(a, b) then return a + b end function"
+string test2 = "function add(a, b) then return a + b end_function"
 numeric count2 = tokenize(test2)
 
 print "========================================="
 print "Test 3: If statement"
 print "========================================="
-string test3 = "if x > 10 then print x end if"
+string test3 = "if x > 10 then print x end_if"
 numeric count3 = tokenize(test3)
 
 print "========================================="

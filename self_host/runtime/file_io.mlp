@@ -20,7 +20,7 @@
 -- extern feof(pointer file) -> numeric
 -- extern ferror(pointer file) -> numeric
 -- extern fgets(pointer buffer, numeric size, pointer file) -> pointer
--- extern fputs(pointer str, pointer file) -> numeric
+-- extern fputs(pointer str_val, pointer file) -> numeric
 
 -- -----------------------------------------------------------------------------
 -- File wrapper type
@@ -28,18 +28,18 @@
 
 struct File then
     numeric ptr
-    string path
-    string mode
+    metin path
+    metin mode
     numeric is_open
-end struct
+end_struct
 
 -- File mode constants
-string FILE_READ = "r"
-string FILE_WRITE = "w"
-string FILE_APPEND = "a"
-string FILE_READ_WRITE = "r+"
-string FILE_WRITE_READ = "w+"
-string FILE_APPEND_READ = "a+"
+metin FILE_READ = "r"
+metin FILE_WRITE = "w"
+metin FILE_APPEND = "a"
+metin FILE_READ_WRITE = "r+"
+metin FILE_WRITE_READ = "w+"
+metin FILE_APPEND_READ = "a+"
 
 -- Seek constants
 numeric SEEK_SET = 0
@@ -59,62 +59,62 @@ function file_open(filepath, mode)
     f.ptr = 0
     f.is_open = 1
     return f
-end function
+end_function
 
 function file_close(f)
     if f.is_open == 1 then
         -- TODO: Call C runtime
         -- fclose(f.ptr)
         f.is_open = 0
-    end if
+    end_if
     return f
-end function
+end_function
 
 function file_read(f, size)
     if f.is_open == 0 then
         return ""
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- numeric buffer = gc_malloc(size)
     -- numeric bytes_read = fread(buffer, 1, size, f.ptr)
     
     return ""
-end function
+end_function
 
 function file_write(f, content)
     if f.is_open == 0 then
         return 0
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- numeric bytes_written = fwrite(content, 1, string_length(content), f.ptr)
     
     return 0
-end function
+end_function
 
 function file_read_line(f)
     if f.is_open == 0 then
         return ""
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- numeric buffer = gc_malloc(4096)
     -- numeric result = fgets(buffer, 4096, f.ptr)
     
     return ""
-end function
+end_function
 
 function file_write_line(f, line)
     if f.is_open == 0 then
         return 0
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- numeric result = fputs(line, f.ptr)
     
     return 0
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- File positioning
@@ -123,28 +123,28 @@ end function
 function file_seek(f, offset, whence)
     if f.is_open == 0 then
         return -1
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- return fseek(f.ptr, offset, whence)
     
     return 0
-end function
+end_function
 
 function file_tell(f)
     if f.is_open == 0 then
         return -1
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- return ftell(f.ptr)
     
     return 0
-end function
+end_function
 
 function file_rewind(f)
     return file_seek(f, 0, SEEK_SET)
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- File status
@@ -153,24 +153,24 @@ end function
 function file_eof(f)
     if f.is_open == 0 then
         return 1
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- return feof(f.ptr)
     
     return 0
-end function
+end_function
 
 function file_error(f)
     if f.is_open == 0 then
         return 1
-    end if
+    end_if
     
     -- TODO: Call C runtime
     -- return ferror(f.ptr)
     
     return 0
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- High-level file operations
@@ -181,7 +181,7 @@ function read_file(filepath)
     
     if f.ptr == 0 then
         return ""
-    end if
+    end_if
     
     -- Get file size
     file_seek(f, 0, SEEK_END)
@@ -189,48 +189,48 @@ function read_file(filepath)
     file_rewind(f)
     
     -- Read entire file
-    string content = file_read(f, size)
+    metin content = file_read(f, size)
     
     file_close(f)
     return content
-end function
+end_function
 
 function write_file(filepath, content)
     File f = file_open(filepath, FILE_WRITE)
     
     if f.ptr == 0 then
         return 0
-    end if
+    end_if
     
     numeric bytes_written = file_write(f, content)
     
     file_close(f)
     return bytes_written
-end function
+end_function
 
 function append_file(filepath, content)
     File f = file_open(filepath, FILE_APPEND)
     
     if f.ptr == 0 then
         return 0
-    end if
+    end_if
     
     numeric bytes_written = file_write(f, content)
     
     file_close(f)
     return bytes_written
-end function
+end_function
 
 function file_exists(filepath)
     File f = file_open(filepath, FILE_READ)
     
     if f.ptr == 0 then
         return 0
-    end if
+    end_if
     
     file_close(f)
     return 1
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Line-based file operations
@@ -240,38 +240,38 @@ function read_lines(filepath)
     File f = file_open(filepath, FILE_READ)
     
     if f.ptr == 0 then
-        list[string] empty = list()
+        list[metin] empty = list()
         return empty
-    end if
+    end_if
     
-    list[string] lines = list()
+    list[metin] lines = list()
     
-    string line = file_read_line(f)
+    metin line = file_read_line(f)
     while line != "" do
         lines.add(line)
         line = file_read_line(f)
-    end while
+    end_while
     
     file_close(f)
     return lines
-end function
+end_function
 
 function write_lines(filepath, lines)
     File f = file_open(filepath, FILE_WRITE)
     
     if f.ptr == 0 then
         return 0
-    end if
+    end_if
     
     numeric count = 0
     for line in lines do
         file_write_line(f, line)
         count = count + 1
-    end for
+    end_for
     
     file_close(f)
     return count
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Directory operations (extern from C runtime)
@@ -282,62 +282,92 @@ end function
 -- extern closedir(pointer dir)
 
 function list_directory(path)
-    list[string] entries = list()
+    list[metin] entries = list()
     
     -- TODO: Call C runtime
     -- numeric dir_ptr = opendir(path)
     -- while entry = readdir(dir_ptr) do
     --     entries.add(entry_name)
-    -- end while
+    -- end_while
     -- closedir(dir_ptr)
     
     return entries
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Path operations
 -- -----------------------------------------------------------------------------
 
 function path_join(parts)
-    string result = ""
+    metin result = ""
     numeric count = parts.size()
     
-    for i = 0, count do
+    for i = 0 to count - 1 do
         result = result + parts.get(i)
         if i < count - 1 then
             result = result + "/"
-        end if
-    end for
+        end_if
+    end_for
     
     return result
-end function
+end_function
 
 function path_basename(filepath)
-    numeric last_slash = filepath.last_index_of("/")
+    numeric len = string_length(filepath)
+    numeric last_slash = -1
+    
+    numeric i = 0
+    while i < len do
+        metin c = string_substring(filepath, i, i + 1)
+        if c == "/" then
+            last_slash = i
+        end_if
+        i = i + 1
+    end_while
     
     if last_slash < 0 then
         return filepath
-    end if
+    end_if
     
-    return filepath.substring(last_slash + 1)
-end function
+    return string_substring(filepath, last_slash + 1, len - (last_slash + 1))
+end_function
 
 function path_dirname(filepath)
-    numeric last_slash = filepath.last_index_of("/")
+    numeric len = string_length(filepath)
+    numeric last_slash = -1
+    
+    numeric i = 0
+    while i < len do
+        metin c = string_substring(filepath, i, i + 1)
+        if c == "/" then
+            last_slash = i
+        end_if
+        i = i + 1
+    end_while
     
     if last_slash < 0 then
         return "."
-    end if
+    end_if
     
-    return filepath.substring(0, last_slash)
-end function
+    return string_substring(filepath, 0, last_slash)
+end_function
 
 function path_extension(filepath)
-    numeric last_dot = filepath.last_index_of(".")
+    numeric len = string_length(filepath)
+    numeric last_dot = -1
+    
+    numeric i = 0
+    while i < len do
+        metin c = string_substring(filepath, i, i + 1)
+        if c == "." then
+            last_dot = i
+        end_if
+        i = i + 1
+    end_while
     
     if last_dot < 0 then
         return ""
-    end if
+    end_if
     
-    return filepath.substring(last_dot)
-end function
+    return string_substring(filepath, last_dot, len - last_dot)
+end_function

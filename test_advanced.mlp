@@ -1,0 +1,71 @@
+-- Advanced features test
+
+struct Person
+    string name
+    numeric age
+end_struct
+
+struct Company
+    string company_name
+    numeric employee_count
+end_struct
+
+function test_nested_if(x)
+    if x > 100 then
+        if x > 200 then
+            print "Very large"
+            return 3
+        else
+            print "Large"
+            return 2
+        end_if
+    else
+        if x > 50 then
+            print "Medium"
+            return 1
+        else
+            print "Small"
+            return 0
+        end_if
+    end_if
+end_function
+
+function test_while_loop()
+    numeric i = 0
+    numeric sum = 0
+    while i < 10
+        sum = sum + i
+        i = i + 1
+    end_while
+    print "While loop sum: "
+    print sum
+    return sum
+end_function
+
+function test_nested_loops()
+    numeric total = 0
+    for i = 1 to 3 do
+        for j = 1 to 3 do
+            total = total + i * j
+        end_for
+    end_for
+    print "Nested loops total: "
+    print total
+    return total
+end_function
+
+function main()
+    print "=== Advanced Features Test ==="
+    
+    Person p
+    p.age = 25
+    print "Person age: "
+    print p.age
+    
+    numeric r1 = test_nested_if(150)
+    numeric r2 = test_while_loop()
+    numeric r3 = test_nested_loops()
+    
+    print "All advanced tests passed!"
+    return 0
+end_function

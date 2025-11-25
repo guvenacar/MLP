@@ -20,14 +20,14 @@ import "compiler_core/scope_manager.mlp"
 -- -----------------------------------------------------------------------------
 
 struct CompilerOptions then
-    string input_file
-    string output_file
-    numeric verbose
-    numeric debug_tokens
-    numeric debug_ast
-    numeric debug_scope
-    numeric optimize
-end struct
+    String input_file
+    String output_file
+    Numeric verbose
+    Numeric debug_tokens
+    Numeric debug_ast
+    Numeric debug_scope
+    Numeric optimize
+end_struct
 
 function compiler_options_default()
     CompilerOptions opts
@@ -39,20 +39,20 @@ function compiler_options_default()
     opts.debug_scope = 0
     opts.optimize = 0
     return opts
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- File I/O helpers
 -- -----------------------------------------------------------------------------
 
 function read_file(filepath)
-    string content = ""
+    String content = ""
     
     -- TODO: Implement actual file reading
     -- For now, return empty string
     
     return content
-end function
+end_function
 
 function write_file(filepath, content)
     -- TODO: Implement actual file writing
@@ -61,19 +61,19 @@ function write_file(filepath, content)
     print filepath
     
     return 1
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Compilation pipeline
 -- -----------------------------------------------------------------------------
 
 struct CompilationResult then
-    numeric success
-    string output_asm
-    string error_message
-    numeric token_count
-    numeric ast_node_count
-end struct
+    Numeric success
+    String output_asm
+    String error_message
+    Numeric token_count
+    Numeric ast_node_count
+end_struct
 
 function compile(source_code, options)
     CompilationResult result
@@ -89,12 +89,12 @@ function compile(source_code, options)
         print source_code.length()
         print " characters"
         print ""
-    end if
+    end_if
     
     -- Phase 1: Lexical analysis
     if options.verbose == 1 then
         print "[1/3] Lexing..."
-    end if
+    end_if
     
     TokenStream token_stream
     token_stream = tokenize(source_code)
@@ -104,12 +104,12 @@ function compile(source_code, options)
         print "Tokens generated: "
         print result.token_count
         token_stream_dump(token_stream)
-    end if
+    end_if
     
     -- Phase 2: Parsing
     if options.verbose == 1 then
         print "[2/3] Parsing..."
-    end if
+    end_if
     
     ASTArena arena
     arena = parse(source_code)
@@ -119,14 +119,14 @@ function compile(source_code, options)
         print "AST nodes created: "
         print result.ast_node_count
         ast_arena_dump(arena)
-    end if
+    end_if
     
     -- Phase 3: Code generation
     if options.verbose == 1 then
         print "[3/3] Generating assembly..."
-    end if
+    end_if
     
-    string assembly = ""
+    String assembly = ""
     assembly = generate_code(arena)
     result.output_asm = assembly
     
@@ -135,12 +135,12 @@ function compile(source_code, options)
         print assembly.length()
         print " characters"
         print ""
-    end if
+    end_if
     
     result.success = 1
     
     return result
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Main compiler entry point
@@ -160,13 +160,13 @@ function compile_file(input_path, output_path, verbose)
     print ""
     
     -- Read source file
-    string source_code = ""
+    String source_code = ""
     source_code = read_file(input_path)
     
     if source_code.length() == 0 then
         print "Error: Could not read file or file is empty"
         return 0
-    end if
+    end_if
     
     -- Compile
     CompilationResult result
@@ -176,16 +176,16 @@ function compile_file(input_path, output_path, verbose)
         print "Compilation failed: "
         print result.error_message
         return 0
-    end if
+    end_if
     
     -- Write output
-    numeric write_success = 0
+    Numeric write_success = 0
     write_success = write_file(output_path, result.output_asm)
     
     if write_success == 0 then
         print "Error: Could not write output file"
         return 0
-    end if
+    end_if
     
     print "Compilation successful!"
     print "Tokens: "
@@ -195,7 +195,7 @@ function compile_file(input_path, output_path, verbose)
     print ""
     
     return 1
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Interactive REPL mode
@@ -215,15 +215,15 @@ function repl_mode()
         print "mlp> "
         
         -- TODO: Read line from stdin
-        string input = ""
+        String input = ""
         
         if input == "exit" then
             break
-        end if
+        end_if
         
         if input == "" then
             continue
-        end if
+        end_if
         
         -- Compile and show result
         CompilationResult result
@@ -235,13 +235,13 @@ function repl_mode()
         else
             print "Error: "
             print result.error_message
-        end if
+        end_if
         
         print ""
-    end while
+    end
     
     print "Goodbye!"
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Command line argument parsing
@@ -251,9 +251,9 @@ function parse_args(args)
     CompilerOptions options
     options = compiler_options_default()
     
-    numeric i = 0
+    Numeric i = 0
     while i < mlp_list_length(args)
-        string arg = ""
+        String arg = ""
         arg = mlp_list_get(args, i)
         
         if arg == "-v" then
@@ -272,16 +272,16 @@ function parse_args(args)
             i = i + 1
             if i < mlp_list_length(args) then
                 options.output_file = mlp_list_get(args, i)
-            end if
+            end_if
         else
             options.input_file = arg
-        end if
+        end_if
         
         i = i + 1
-    end while
+    end
     
     return options
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Main function
@@ -302,30 +302,30 @@ function main(args)
         print "  --repl              Start interactive REPL mode"
         print ""
         return 1
-    end if
+    end_if
     
     -- Check for REPL mode
-    string first_arg = ""
+    String first_arg = ""
     first_arg = mlp_list_get(args, 0)
     if first_arg == "--repl" then
         repl_mode()
         return 0
-    end if
+    end_if
     
     -- Parse arguments
     CompilerOptions options
     options = parse_args(args)
     
     -- Compile file
-    numeric success = 0
+    Numeric success = 0
     success = compile_file(options.input_file, options.output_file, options.verbose)
     
     if success == 1 then
         return 0
     else
         return 1
-    end if
-end function
+    end_if
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Bootstrap entry point (when compiled with C compiler)
@@ -336,7 +336,7 @@ print "Initializing..."
 print ""
 
 -- For now, just compile a test file
-numeric exit_code = compile_file("test.mlp", "test.asm", 1)
+Numeric exit_code = compile_file("test.mlp", "test.asm", 1)
 
 print "Exit code: "
 print exit_code

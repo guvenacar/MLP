@@ -1,0 +1,3 @@
+function main()
+    print "Hello from MLP!"
+end_function

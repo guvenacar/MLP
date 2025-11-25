@@ -1,0 +1,6 @@
+-- lang: en-US
+enum Color
+    RED
+    GREEN
+    BLUE
+end enum

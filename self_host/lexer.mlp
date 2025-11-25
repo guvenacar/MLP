@@ -72,8 +72,8 @@ while pos < src_len do
                                 int is_zero = string_karsilastir(next, "0");
                                 if is_zero == 0 then
                                     pos = pos + 1
-                                end
-                            end
+    end_if
+    end_if
                         else
                             if is_5 == 0 then
                                 token_types.add(TOKEN_SAYI)
@@ -96,13 +96,13 @@ while pos < src_len do
                                                 pos = pos + 3
                                             else
                                                 pos = pos + 1
-                                            end
+    end_if
                                         else
                                             pos = pos + 1
-                                        end
+    end_if
                                     else
                                         pos = pos + 1
-                                    end
+    end_if
                                 else
                                     if is_p == 0 then
                                         token_types.add(TOKEN_PRINT)
@@ -117,17 +117,17 @@ while pos < src_len do
                                             pos = pos + 1
                                         else
                                             pos = pos + 1
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
+    end_if
+    end_if
+    end_if
+    end_if
+    end_if
+    end_if
+    end_if
+    end_if
+    end_if
+    end_if
+    end_if
 
 token_types.add(TOKEN_EOF)
 token_count = token_count + 1
@@ -141,6 +141,6 @@ int idx = 0;
 while idx < token_count do
     print token_types.get(idx)
     idx = idx + 1
-end
+    end_if
 
 print "Lexer OK!"

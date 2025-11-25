@@ -1,0 +1,12 @@
+function test_loop()
+    numeric sum = 0
+    numeric i = 0
+    while i < 5
+        sum = sum + i
+        i = i + 1
+    end
+    return sum
+end_function
+
+numeric result = test_loop()
+print result

@@ -1,0 +1,546 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Parser Data Structures Module - List, HashMap, Set, Struct parsing
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki veri yapısı parsing mantığını MLP'ye taşır.
+-- List literals, HashMap literals, Set literals, Struct definitions.
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/parser.mlp"
+
+-- -----------------------------------------------------------------------------
+-- List literal parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_list_literal(state)
+    state = parser_expect(state, TOKEN_LEFT_BRACKET)
+    
+    liste element_ids = liste()
+    
+    eğer parser_check(state, TOKEN_RIGHT_BRACKET) == 0 ise
+        döngü 1 == 1
+            sayısal elem_id = 0
+            elem_id = parse_expression(state, 0)
+            mlp_list_add(element_ids, elem_id)
+            
+            eğer parser_match(state, TOKEN_COMMA) == 0 ise
+                break
+            son_eğer
+        son
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACKET)
+    
+    sayısal list_id = 0
+    list_id = parser_create_node(state, AST_LIST_LITERAL, "list_literal")
+    
+    ASTListLiteralData data
+    data.node_id = list_id
+    data.element_ids = element_ids
+    data.element_type = "sayısal"
+    
+    döndür list_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- HashMap literal parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_hashmap_literal(state)
+    state = parser_expect(state, TOKEN_LEFT_BRACE)
+    
+    liste key_ids = liste()
+    liste value_ids = liste()
+    
+    eğer parser_check(state, TOKEN_RIGHT_BRACE) == 0 ise
+        döngü 1 == 1
+            sayısal key_id = 0
+            key_id = parse_expression(state, 0)
+            state = parser_expect(state, TOKEN_COLON)
+            sayısal value_id = 0
+            value_id = parse_expression(state, 0)
+            
+            mlp_list_add(key_ids, key_id)
+            mlp_list_add(value_ids, value_id)
+            
+            eğer parser_match(state, TOKEN_COMMA) == 0 ise
+                break
+            son_eğer
+        son
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    
+    sayısal map_id = 0
+    map_id = parser_create_node(state, AST_HASHMAP_LITERAL, "hashmap_literal")
+    
+    ASTHashMapLiteralData data
+    data.node_id = map_id
+    data.key_ids = key_ids
+    data.value_ids = value_ids
+    data.key_type = "metin"
+    data.value_type = "sayısal"
+    
+    döndür map_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Set literal parsing (brace notation with single expressions)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_set_literal(state)
+    state = parser_expect(state, TOKEN_LEFT_BRACE)
+    
+    liste element_ids = liste()
+    
+    eğer parser_check(state, TOKEN_RIGHT_BRACE) == 0 ise
+        döngü 1 == 1
+            sayısal elem_id = 0
+            elem_id = parse_expression(state, 0)
+            mlp_list_add(element_ids, elem_id)
+            
+            eğer parser_match(state, TOKEN_COMMA) == 0 ise
+                break
+            son_eğer
+        son
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    
+    sayısal set_id = 0
+    set_id = parser_create_node(state, AST_SET_LITERAL, "set_literal")
+    
+    ASTSetLiteralData data
+    data.node_id = set_id
+    data.element_ids = element_ids
+    data.element_type = "sayısal"
+    
+    döndür set_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Struct field definition (Phase 6.2: Nested Structs + Methods)
+-- -----------------------------------------------------------------------------
+-- Port from: mlp_compiler.c komut() lines 3500-3560
+-- Supports:
+-- - Basic fields: sayısal x, metin name
+-- - Nested structs: Person owner
+-- - Methods: fonksiyon greet() ... son_fonksiyon
+-- -----------------------------------------------------------------------------
+
+yapı ASTStructField ise
+    metin type_name        -- Field type (sayısal, metin, or yapı name)
+    metin field_name       -- Field name
+    sayısal default_value_id  -- Default value (optional)
+    bool is_method         -- True eğer this is a method definition
+    sayısal method_body_id -- Method body AST node ID (eğer is_method)
+son_yapı
+
+fonksiyon parse_struct_field(state)
+    -- Check eğer this is a method definition
+    eğer parser_check(state, TOKEN_FUNCTION) == 1 ise
+        -- Method definition inside yapı
+        state = parser_expect(state, TOKEN_FUNCTION)
+        
+        Token method_name_token
+        method_name_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        -- Parse method parameters
+        liste parameters = parse_parameter_list(state)
+        
+        -- Method body
+        state = parser_enter_scope(state)
+        sayısal body_id = 0
+        body_id = parse_block(state, TOKEN_END)
+        state = parser_exit_scope(state)
+        
+        state = parser_expect(state, TOKEN_END)
+        state = parser_expect(state, TOKEN_FUNCTION)
+        
+        -- Create method field
+        ASTStructField field
+        field.type_name = "METHOD"
+        field.field_name = method_name_token.lexeme
+        field.default_value_id = -1
+        field.is_method = true
+        field.method_body_id = body_id
+        
+        döndür field
+    değilse
+        -- Regular field definition
+        -- Field type (sayısal, metin, boolean, or yapı name)
+        Token type_token
+        type_token = parser_peek(state)
+        
+        -- Check eğer it's a type keyword or identifier (yapı name)
+        eğer parser_check(state, TOKEN_TYPE_NUMERIC) == 1 or
+           parser_check(state, TOKEN_TYPE_STRING) == 1 or
+           parser_check(state, TOKEN_TYPE_BOOLEAN) == 1 ise
+            state = parser_advance(state)
+        değilse eğer parser_check(state, TOKEN_IDENTIFIER) == 1 ise
+            -- Nested yapı type (e.g., Person owner)
+            state = parser_advance(state)
+        değilse
+            -- Error: expected type
+            parser_error(state, "Expected field type (sayısal, metin, boolean, or yapı name)")
+        son_eğer
+        
+        -- Field name
+        Token name_token
+        name_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        -- Optional default value
+        sayısal default_value_id = -1
+        eğer parser_match(state, TOKEN_ASSIGN) == 1 ise
+            default_value_id = parse_expression(state, 0)
+        son_eğer
+        
+        ASTStructField field
+        field.type_name = type_token.lexeme
+        field.field_name = name_token.lexeme
+        field.default_value_id = default_value_id
+        field.is_method = false
+        field.method_body_id = -1
+        
+        döndür field
+    son_eğer
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Struct definition (Phase 6.2: Enhanced with Nested Structs + Methods)
+-- -----------------------------------------------------------------------------
+-- Port from: mlp_compiler.c komut() lines 3500-3565
+-- Example:
+-- yapı Person ise
+--     sayısal age
+--     metin name
+--     Address home        -- Nested yapı
+--     
+--     fonksiyon greet()    -- Method
+--         yaz("Hello, " + name)
+--     son_fonksiyon
+-- son_yapı
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_struct_definition(state)
+    state = parser_expect(state, TOKEN_STRUCT)
+    
+    Token name_token
+    name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    -- Optional 'ise' keyword (için compatibility)
+    eğer parser_check(state, TOKEN_THEN) == 1 ise
+        state = parser_expect(state, TOKEN_THEN)
+    son_eğer
+    
+    liste fields = liste()
+    
+    -- Parse fields until 'son' or 'son_yapı'
+    döngü parser_check(state, TOKEN_END) == 0 and 
+          parser_check(state, TOKEN_END_STRUCT) == 0
+        eğer parser_check(state, TOKEN_EOF) == 1 ise
+            break
+        son_eğer
+        
+        ASTStructField field
+        field = parse_struct_field(state)
+        mlp_list_add(felds, field)
+    son
+    
+    -- Accept both "son_yapı" and plain "son"
+    eğer parser_check(state, TOKEN_END) == 1 ise
+        state = parser_expect(state, TOKEN_END)
+        -- Optional "yapı" keyword after "son"
+        eğer parser_check(state, TOKEN_STRUCT) == 1 ise
+            state = parser_advance(state)
+        son_eğer
+    değilse eğer parser_check(state, TOKEN_END_STRUCT) == 1 ise
+        state = parser_expect(state, TOKEN_END_STRUCT)
+    son_eğer
+    
+    sayısal struct_id = 0
+    struct_id = parser_create_node(state, AST_STRUCT_DEFINITION, "struct_def")
+    
+    ASTStructData data
+    data.node_id = struct_id
+    data.name = name_token.lexeme
+    data.fields = fields
+    data.field_count = mlp_list_length(felds)
+    
+    -- Register yapı metadata için later use
+    state.registry = register_struct_type(state.registry, name_token.lexeme, fields)
+    
+    döndür struct_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Enum definition
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_enum_definition(state)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    Token name_token
+    name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_THEN)
+    
+    liste variant_names = liste()
+    liste variant_values = liste()
+    
+    sayısal auto_value = 0
+    
+    döngü parser_check(state, TOKEN_END) == 0
+        eğer parser_check(state, TOKEN_EOF) == 1 ise
+            break
+        son_eğer
+        
+        Token variant_token
+        variant_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        mlp_list_add(varant_names, variant_token.lexeme)
+        
+        eğer parser_match(state, TOKEN_ASSIGN) == 1 ise
+            sayısal value_id = 0
+            value_id = parse_expression(state, 0)
+            mlp_list_add(varant_values, value_id)
+        değilse
+            mlp_list_add(varant_values, auto_value)
+            auto_value = auto_value + 1
+        son_eğer
+    son
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    sayısal enum_id = 0
+    enum_id = parser_create_node(state, AST_ENUM_DEFINITION, "enum_def")
+    
+    ASTEnumData data
+    data.node_id = enum_id
+    data.name = name_token.lexeme
+    data.variant_names = variant_names
+    data.variant_values = variant_values
+    
+    döndür enum_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Struct instantiation
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_struct_instantiation(state, type_name)
+    state = parser_expect(state, TOKEN_LEFT_BRACE)
+    
+    liste field_names = liste()
+    liste field_value_ids = liste()
+    
+    eğer parser_check(state, TOKEN_RIGHT_BRACE) == 0 ise
+        döngü 1 == 1
+            Token field_token
+            field_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            
+            state = parser_expect(state, TOKEN_COLON)
+            
+            sayısal value_id = 0
+            value_id = parse_expression(state, 0)
+            
+            mlp_list_add(feld_names, field_token.lexeme)
+            mlp_list_add(field_value_ids, value_id)
+            
+            eğer parser_match(state, TOKEN_COMMA) == 0 ise
+                break
+            son_eğer
+        son
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    
+    sayısal inst_id = 0
+    inst_id = parser_create_node(state, AST_STRUCT_INSTANTIATION, "struct_inst")
+    
+    ASTStructInstantiationData data
+    data.node_id = inst_id
+    data.type_name = type_name
+    data.field_names = field_names
+    data.field_value_ids = field_value_ids
+    
+    döndür inst_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Member access (dot notation)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_member_access(state, object_id)
+    state = parser_expect(state, TOKEN_DOT)
+    
+    Token member_token
+    member_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    sayısal access_id = 0
+    access_id = parser_create_node(state, AST_MEMBER_ACCESS, "member_access")
+    
+    ASTMemberAccessData data
+    data.node_id = access_id
+    data.object_id = object_id
+    data.member_name = member_token.lexeme
+    
+    döndür access_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- List type annotation parsing (liste, HashMap[metin, sayısal])
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_type_annotation(state)
+    Token base_type_token
+    base_type_token = parser_peek(state)
+    state = parser_advance(state)
+    
+    metin type_str = base_type_token.lexeme
+    
+    eğer parser_match(state, TOKEN_LEFT_BRACKET) == 1 ise
+        metin element_type = ""
+        element_type = parse_type_annotation(state)
+        type_str = type_str + "[" + element_type
+        
+        eğer parser_match(state, TOKEN_COMMA) == 1 ise
+            metin value_type = ""
+            value_type = parse_type_annotation(state)
+            type_str = type_str + ", " + value_type
+        son_eğer
+        
+        state = parser_expect(state, TOKEN_RIGHT_BRACKET)
+        type_str = type_str + "]"
+    son_eğer
+    
+    döndür type_str
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Range expression (1..10)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_range_expression(state, start_id)
+    state = parser_expect(state, TOKEN_RANGE)
+    sayısal end_id = 0
+    end_id = parse_expression(state, 0)
+    
+    sayısal range_id = 0
+    range_id = parser_create_node(state, AST_RANGE, "range_expr")
+    
+    ASTRangeData data
+    data.node_id = range_id
+    data.start_id = start_id
+    data.end_id = end_id
+    data.is_inclusive = 0
+    
+    döndür range_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- For-each loop
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_foreach_loop(state)
+    state = parser_expect(state, TOKEN_FOR)
+    
+    Token var_token
+    var_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_IN)
+    
+    sayısal iterable_id = 0
+    iterable_id = parse_expression(state, 0)
+    
+    state = parser_expect(state, TOKEN_DO)
+    
+    state = parser_enter_scope(state)
+    sayısal body_id = 0
+    body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_FOR)
+    
+    sayısal foreach_id = 0
+    foreach_id = parser_create_node(state, AST_FOR_EACH_LOOP, "foreach_loop")
+    
+    ASTForEachData data
+    data.node_id = foreach_id
+    data.iterator_name = var_token.lexeme
+    data.iterable_id = iterable_id
+    data.body_block_id = body_id
+    
+    döndür foreach_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- For loop with range
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_for_loop(state)
+    Token next_token
+    next_token = parser_peek(state)
+    
+    eğer next_token.type == TOKEN_FOR ise
+        döndür parse_foreach_loop(state)
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_FOR)
+    
+    Token var_token
+    var_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_ASSIGN)
+    
+    sayısal init_id = 0
+    init_id = parse_expression(state, 0)
+    
+    state = parser_expect(state, TOKEN_TO)
+    
+    sayısal end_id = 0
+    end_id = parse_expression(state, 0)
+    
+    sayısal step_id = -1
+    eğer parser_match(state, TOKEN_STEP) == 1 ise
+        step_id = parse_expression(state, 0)
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_DO)
+    
+    state = parser_enter_scope(state)
+    sayısal body_id = 0
+    body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_FOR)
+    
+    sayısal for_id = 0
+    for_id = parser_create_node(state, AST_FOR_LOOP, "for_loop")
+    
+    ASTForLoopData data
+    data.node_id = for_id
+    data.iterator_name = var_token.lexeme
+    data.init_id = init_id
+    data.condition_id = end_id
+    data.step_id = step_id
+    data.body_block_id = body_id
+    
+    döndür for_id
+son_fonksiyon

@@ -96,7 +96,7 @@ while token_pos < token_count do
     if current_type == TOKEN_EOF then
         print "EOF"
         break
-    end
+    end_if
     
     -- Variable declaration: int x = value;
     if current_type == TOKEN_INT then
@@ -141,7 +141,7 @@ while token_pos < token_count do
             int left_node_type = AST_NUMBER;
             if left_type == TOKEN_IDENTIFIER then
                 left_node_type = AST_IDENTIFIER
-            end
+    end_if
             
             ast_types.add(left_node_type)
             ast_left.add(NULL_NODE)
@@ -162,7 +162,7 @@ while token_pos < token_count do
                 int right_node_type = AST_NUMBER;
                 if right_type == TOKEN_IDENTIFIER then
                     right_node_type = AST_IDENTIFIER
-                end
+    end_if
                 
                 ast_types.add(right_node_type)
                 ast_left.add(NULL_NODE)
@@ -197,12 +197,12 @@ while token_pos < token_count do
                 
                 statements.add(print_node2)
                 stmt_count = stmt_count + 1
-            end
+    end_if
         else
             token_pos = token_pos + 1
-        end
-    end
-end
+    end_if
+    end_if
+    end_if
 
 print "---"
 print "AST nodes:"
@@ -223,6 +223,6 @@ while i < ast_count do
     print r
     print v
     i = i + 1
-end
+    end_if
 
 print "Parser OK!"

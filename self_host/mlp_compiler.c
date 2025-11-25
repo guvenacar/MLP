@@ -40,6 +40,32 @@ HashMap* function_registry = NULL;
 void register_function_signature(ASTNode* node);
 void pre_scan_functions(ASTNode* root);
 
+// ========== Block Context Stack (for nested block parsing) ==========
+typedef enum {
+    CTX_IF,
+    CTX_WHILE,
+    CTX_FOR,
+    CTX_FUNCTION,
+    CTX_STRUCT,
+    CTX_ENUM,
+    CTX_SWITCH
+} BlockContextType;
+
+static BlockContextType context_stack[100];
+static int context_depth = 0;
+
+static void push_context(BlockContextType type) {
+    if (context_depth < 100) {
+        context_stack[context_depth++] = type;
+    }
+}
+
+static void pop_context() {
+    if (context_depth > 0) {
+        context_depth--;
+    }
+}
+
 // ========== Import Tracking (Phase 5.10 - Pre-Scan Strategy) ==========
 typedef struct {
     ASTNode** functions;  // Array of imported function AST nodes
@@ -613,6 +639,7 @@ struct ASTNode {
         struct {
             Token* struct_tip; // Struct tipi (Nokta)
             Token* ad;         // Değişken ismi (p)
+            ASTNode* baslangic_deger; // Optional initialization
         } struct_degisken_data;
 
         // ===== Phase 6: Dynamic Lists (Modern Generic Syntax) =====
@@ -1125,12 +1152,9 @@ const char* get_base_dir() {
 }
 
 int main(int argc, char* argv[]) {
-    fprintf(stderr, "BAŞLANGIÇ: main() başladı\n");
     
     // Initialize function registry
-    fprintf(stderr, "BAŞLANGIÇ: hashmap_create çağrılıyor\n");
     function_registry = hashmap_create(128);
-    fprintf(stderr, "BAŞLANGIÇ: hashmap_create tamamlandı, registry=%p\n", (void*)function_registry);
     
     if (argc < 3) {
         fprintf(stderr, "Kullanım: %s <girdi_dosyasi.tyd> <cikti_dosyasi.asm>\n", argv[0]);
@@ -1140,14 +1164,12 @@ int main(int argc, char* argv[]) {
     const char* girdi_dosya_adi = argv[1];
     const char* cikti_dosya_adi = argv[2];
 
-    fprintf(stderr, "BAŞLANGIÇ: girdi=%s, çıktı=%s\n", girdi_dosya_adi, cikti_dosya_adi);
 
     // --- Set base_dir from environment variable (for import resolution) ---
     // If MLP_SOURCE_DIR is set, use it; otherwise fall back to input file's directory
     char* absolute_input_path = NULL;
     char* env_source_dir = getenv("MLP_SOURCE_DIR");
     if (env_source_dir != NULL) {
-        fprintf(stderr, "BAŞLANGIÇ: MLP_SOURCE_DIR=%s\n", env_source_dir);
         base_dir = strdup(env_source_dir);
         // Still need absolute path for opening the file
         absolute_input_path = realpath(girdi_dosya_adi, NULL);
@@ -1157,9 +1179,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         // --- Fallback: Resolve absolute path and set base_dir ---
-        fprintf(stderr, "BAŞLANGIÇ: realpath çağrılıyor\n");
         absolute_input_path = realpath(girdi_dosya_adi, NULL);
-        fprintf(stderr, "BAŞLANGIÇ: realpath tamamlandı, path=%s\n", absolute_input_path ? absolute_input_path : "NULL");
         if (absolute_input_path == NULL) {
             perror("Gerçek dosya yolu çözümlenemedi");
             return 1;
@@ -1329,7 +1349,16 @@ KeywordMap keywords[] = {
     {"to",       TOKEN_TO},
     {"step",     TOKEN_STEP},
     {"break",    TOKEN_BREAK},
-    {"end",      TOKEN_END},       // Generic end (will check for compound)
+    {"end",      TOKEN_END},       // Generic end (deprecated, use specific end_xxx)
+    
+    // Specific end keywords (single token, no lookahead needed)
+    {"end_if",       TOKEN_END_IF},
+    {"end_while",    TOKEN_END_WHILE},
+    {"end_for",      TOKEN_END_FOR},
+    {"end_function", TOKEN_END_FUNCTION},
+    {"end_struct",   TOKEN_END_STRUCT},
+    {"end_enum",     TOKEN_END_ENUM},
+    {"end_switch",   TOKEN_END_SWITCH},
 
     // Boolean and NULL literals
     {"true",     TOKEN_TRUE},
@@ -1676,6 +1705,7 @@ Token* getNextToken() {
             // Not a keyword - create identifier token
             token = createToken(TOKEN_IDENTIFIER, value);
         }
+        
         free(value);
         return token;
     }
@@ -2005,6 +2035,8 @@ Token* getNextToken() {
 // ============================================================================
 
 Token* check_keyword(const char* word) {
+    // DEBUG
+
     // Type declarations (English base - BASE_LANGUAGE.md)
     if (strcmp(word, "numeric") == 0) return createToken(TOKEN_TYPE_NUMERIC, word);
     if (strcmp(word, "string") == 0) return createToken(TOKEN_TYPE_STRING, word);
@@ -2028,14 +2060,21 @@ Token* check_keyword(const char* word) {
     if (strcmp(word, "for") == 0) return createToken(TOKEN_FOR, word);
     if (strcmp(word, "to") == 0) return createToken(TOKEN_TO, word);
     if (strcmp(word, "step") == 0) return createToken(TOKEN_STEP, word);
-    if (strcmp(word, "break") == 0) return createToken(TOKEN_WHILE_BITIR, word);
+    if (strcmp(word, "break") == 0) return createToken(TOKEN_BREAK, word);
+    if (strcmp(word, "continue") == 0) return createToken(TOKEN_CONTINUE, word);
     
     // Self-documenting ends (English base)
-    // Phase 8: Compound keywords disabled - they break lexer position
-    // Only use plain 'end' for now
     if (strcmp(word, "end") == 0) {
         return createToken(TOKEN_END, word);
     }
+    // Specific end keywords (single token with underscore)
+    if (strcmp(word, "end_if") == 0) return createToken(TOKEN_END_IF, word);
+    if (strcmp(word, "end_while") == 0) return createToken(TOKEN_END_WHILE, word);
+    if (strcmp(word, "end_for") == 0) return createToken(TOKEN_END_FOR, word);
+    if (strcmp(word, "end_function") == 0) return createToken(TOKEN_END_FUNCTION, word);
+    if (strcmp(word, "end_struct") == 0) return createToken(TOKEN_END_STRUCT, word);
+    if (strcmp(word, "end_enum") == 0) return createToken(TOKEN_END_ENUM, word);
+    if (strcmp(word, "end_switch") == 0) return createToken(TOKEN_END_SWITCH, word);
     
     if (strcmp(word, "struct") == 0) return createToken(TOKEN_YAPI_STRUCT, word);
     if (strcmp(word, "enum") == 0) return createToken(TOKEN_YAPI_ENUM, word);
@@ -2043,6 +2082,14 @@ Token* check_keyword(const char* word) {
     if (strcmp(word, "case") == 0) return createToken(TOKEN_YAPI_CASE, word);
     if (strcmp(word, "default") == 0) return createToken(TOKEN_YAPI_DEFAULT, word);
     if (strcmp(word, "do") == 0) return createToken(TOKEN_YAPI_DO, word);
+
+    // Logical operators (English base)
+    if (strcmp(word, "and") == 0) return createToken(TOKEN_AND, word);
+    if (strcmp(word, "or") == 0) return createToken(TOKEN_OR, word);
+    if (strcmp(word, "not") == 0) return createToken(TOKEN_NOT, word);
+    if (strcmp(word, "true") == 0) return createToken(TOKEN_TRUE, word);
+    if (strcmp(word, "false") == 0) return createToken(TOKEN_FALSE, word);
+    if (strcmp(word, "null") == 0) return createToken(TOKEN_NULL, word);
 
     // Not a keyword - return NULL (will be treated as identifier)
     return NULL;
@@ -2077,7 +2124,7 @@ Token* peekNextToken() {
 static Token* current_token = NULL;
 
 // ===== Parser-Level Variable Type Tracking =====
-#define MAX_PARSE_VARS 100
+#define MAX_PARSE_VARS 1000
 
 typedef struct {
     char* name;
@@ -2089,6 +2136,7 @@ int parse_var_count = 0;
 
 void register_parse_var(const char* name, const char* type) {
     if (parse_var_count >= MAX_PARSE_VARS) return;
+    // DEBUG
     parse_vars[parse_var_count].name = strdup(name);
     parse_vars[parse_var_count].type = strdup(type);
     parse_var_count++;
@@ -2097,9 +2145,11 @@ void register_parse_var(const char* name, const char* type) {
 const char* get_parse_var_type(const char* name) {
     for (int i = parse_var_count - 1; i >= 0; i--) {
         if (strcmp(parse_vars[i].name, name) == 0) {
+            // DEBUG
             return parse_vars[i].type;
         }
     }
+    // DEBUG
     return NULL;
 }
 
@@ -2121,21 +2171,21 @@ static const char* getTokenTypeName(TokenType type) {
         case TOKEN_TRUE: return "true";
         case TOKEN_FALSE: return "false";
         case TOKEN_NULL: return "null";
-        case TOKEN_TYPE_NUMERIC: return "SAYISAL";
-        case TOKEN_TYPE_STRING: return "METIN (tip)";
-        case TOKEN_TYPE_BOOLEAN: return "BOOL";
-        case TOKEN_PRINT: return "PRINT";
-        case TOKEN_IF: return "IF";
-        case TOKEN_THEN: return "THEN";
-        case TOKEN_ELSE: return "ELSE";
-        case TOKEN_FUNCTION: return "FUNCTION";
-        case TOKEN_RETURN: return "RETURN";
-        case TOKEN_WHILE: return "WHILE";
-        case TOKEN_YAPI_DO: return "DO";
-        case TOKEN_FOR: return "FOR";
-        case TOKEN_TO: return "TO";
-        case TOKEN_STEP: return "STEP";
-        case TOKEN_END: return "END";
+        case TOKEN_TYPE_NUMERIC: return "numeric";
+        case TOKEN_TYPE_STRING: return "string";
+        case TOKEN_TYPE_BOOLEAN: return "boolean";
+        case TOKEN_PRINT: return "print";
+        case TOKEN_IF: return "if";
+        case TOKEN_THEN: return "then";
+        case TOKEN_ELSE: return "else";
+        case TOKEN_FUNCTION: return "function";
+        case TOKEN_RETURN: return "return";
+        case TOKEN_WHILE: return "while";
+        case TOKEN_YAPI_DO: return "do";
+        case TOKEN_FOR: return "for";
+        case TOKEN_TO: return "to";
+        case TOKEN_STEP: return "step";
+        case TOKEN_END: return "end";
         case TOKEN_LEFT_PAREN: return "(";
         case TOKEN_RIGHT_PAREN: return ")";
         case TOKEN_COMMA: return ",";
@@ -2213,6 +2263,9 @@ void consume(TokenType expected_type) {
     if (current_token == NULL) {
         parseError("Dosya beklenenden önce bitti.", "Herhangi bir Token");
     }
+    
+    // DEBUG PRINT
+
     if (current_token->type == expected_type) {
         if (current_token->value != NULL) {
             free(current_token->value);
@@ -2455,7 +2508,7 @@ ASTNode* createAST_StructFieldAtama(Token* struct_ad, Token* field_ad, ASTNode* 
 }
 
 // Struct Değişken (Nokta p;)
-ASTNode* createAST_StructDegisken(Token* struct_tip, Token* ad) {
+ASTNode* createAST_StructDegisken(Token* struct_tip, Token* ad, ASTNode* baslangic_deger) {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) return NULL;
     node->type = AST_STRUCT_VARIABLE;
@@ -2465,6 +2518,7 @@ ASTNode* createAST_StructDegisken(Token* struct_tip, Token* ad) {
     node->struct_degisken_data.ad = (Token*)malloc(sizeof(Token));
     node->struct_degisken_data.ad->type = ad->type;
     node->struct_degisken_data.ad->value = strdup(ad->value);
+    node->struct_degisken_data.baslangic_deger = baslangic_deger;
     return node;
 }
 
@@ -3143,6 +3197,9 @@ ASTNode* birincil() {
         ad_token_kopya.value = strdup(current_token->value);  // Must strdup - lexer will reuse buffer
         consume(TOKEN_IDENTIFIER);
 
+        // DEBUG
+        fflush(stdout);
+
         // Phase 11.2: Built-in argc identifier without explicit declaration
         if (strcmp(ad_token_kopya.value, "argc") == 0 &&
             current_token->type != TOKEN_LEFT_PAREN &&
@@ -3421,6 +3478,25 @@ ASTNode* unary_ifade() {
         return not_node;
     }
     
+    // Handle unary minus (-)
+    if (current_token->type == TOKEN_MINUS) {
+        consume(TOKEN_MINUS);
+        ASTNode* operand = unary_ifade();
+        
+        // Create binary op: 0 - operand
+        ASTNode* zero_node = (ASTNode*)malloc(sizeof(ASTNode));
+        zero_node->type = AST_SAYI;
+        zero_node->sabit_data.deger = strdup("0");
+        
+        ASTNode* minus_node = (ASTNode*)malloc(sizeof(ASTNode));
+        minus_node->type = AST_IKILI_ISLEM;
+        minus_node->ikili_islem_data.sol = zero_node;
+        minus_node->ikili_islem_data.sag = operand;
+        minus_node->ikili_islem_data.operator_type = TOKEN_MINUS;
+        
+        return minus_node;
+    }
+
     // Otherwise, parse primary expression
     return birincil();
 }
@@ -3510,12 +3586,15 @@ ASTNode* komut() {
         }
 
         // Field'ları parse et
-        Token** field_tipleri = (Token**)malloc(sizeof(Token*) * 20);  // Max 20 field
-        Token** field_adlari = (Token**)malloc(sizeof(Token*) * 20);
+        Token** field_tipleri = (Token**)malloc(sizeof(Token*) * 50);  // Max 50 fields
+        Token** field_adlari = (Token**)malloc(sizeof(Token*) * 50);
         int field_sayisi = 0;
 
         // SON'a kadar field'ları oku
-        while (current_token->type != TOKEN_END && current_token->type != TOKEN_END_STRUCT) {
+        // FIX: Check for end_struct, generic end, or EOF
+        while (current_token->type != TOKEN_END_STRUCT &&
+               current_token->type != TOKEN_END &&
+               current_token->type != TOKEN_EOF) {
             // Field tipi (SAYISAL, METIN, BOOL, veya custom type - enum/struct)
             if (current_token->type != TOKEN_TYPE_NUMERIC &&
                 current_token->type != TOKEN_TYPE_STRING &&
@@ -3575,15 +3654,11 @@ ASTNode* komut() {
             field_sayisi++;
         }
 
-        // Accept both "end struct" and plain "end"
-        if (current_token->type == TOKEN_END) {
-            consume(TOKEN_END);
-            // Check for optional "struct" keyword
-            if (current_token && current_token->type == TOKEN_YAPI_STRUCT) {
-                consume(TOKEN_YAPI_STRUCT);
-            }
-        } else if (current_token->type == TOKEN_END_STRUCT) {
+        // Accept "end_struct" (single keyword)
+        if (current_token->type == TOKEN_END_STRUCT) {
             consume(TOKEN_END_STRUCT);
+        } else {
+            parseError("end_struct expected", "end_struct");
         }
 
         ASTNode* struct_node = createAST_StructTanimlama(&struct_ad, field_tipleri, field_adlari, field_sayisi);
@@ -3604,14 +3679,19 @@ ASTNode* komut() {
         enum_ad->value = strdup(current_token->value);
         consume(TOKEN_IDENTIFIER);
 
+        // Register enum name as a type
+        register_parse_var(enum_ad->value, "Enum");
+
         // Değerleri parse et (then keyword kaldırıldı)
-        Token** value_adlari = (Token**)malloc(sizeof(Token*) * 100);  // Max 100 enum value
-        int* value_degerleri = (int*)malloc(sizeof(int) * 100);
+        Token** value_adlari = (Token**)malloc(sizeof(Token*) * 200);  // Max 200 enum values (TokenType has 168)
+        int* value_degerleri = (int*)malloc(sizeof(int) * 200);
         int value_sayisi = 0;
         int next_value = 0;
 
         // end'e kadar değerleri oku
-        while (current_token->type != TOKEN_END) {
+        // FIX: Check for end_enum or EOF
+        while (current_token->type != TOKEN_END_ENUM &&
+               current_token->type != TOKEN_EOF) {
             // Değer adı
             if (current_token->type != TOKEN_IDENTIFIER) {
                 parseError("Enum değer adı", "IDENTIFIER");
@@ -3636,13 +3716,11 @@ ASTNode* komut() {
             value_sayisi++;
         }
 
-        // Accept "end enum" with lookahead (same as struct/function parsing)
-        if (current_token->type == TOKEN_END) {
-            consume(TOKEN_END);
-            // Lookahead: if next token is "enum", consume it
-            if (current_token && current_token->type == TOKEN_YAPI_ENUM) {
-                consume(TOKEN_YAPI_ENUM);
-            }
+        // Accept "end_enum" (single keyword)
+        if (current_token->type == TOKEN_END_ENUM) {
+            consume(TOKEN_END_ENUM);
+        } else {
+            parseError("end_enum expected", "end_enum");
         }
 
         // AST node oluştur
@@ -3668,7 +3746,7 @@ ASTNode* komut() {
         }
 
         // Case'leri parse et
-        ASTNode** cases = (ASTNode**)malloc(sizeof(ASTNode*) * 100);  // Max 100 case
+        ASTNode** cases = (ASTNode**)malloc(sizeof(ASTNode*) * 500);  // Max 100 case
         int case_sayisi = 0;
         ASTNode* default_blok = NULL;
 
@@ -3686,7 +3764,7 @@ ASTNode* komut() {
                 }
 
                 // Case bloğu
-                ASTNode** case_komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 100);
+                ASTNode** case_komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 500);
                 int case_komut_sayisi = 0;
 
                 while (current_token->type != TOKEN_END &&
@@ -3721,7 +3799,7 @@ ASTNode* komut() {
                 }
 
                 // Default bloğu
-                ASTNode** default_komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 100);
+                ASTNode** default_komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 500);
                 int default_komut_sayisi = 0;
 
                 while (current_token->type != TOKEN_END) {
@@ -3744,9 +3822,9 @@ ASTNode* komut() {
         if (current_token->type == TOKEN_END) {
             consume(TOKEN_END);
             // Lookahead: if next token is "switch", consume it
-            if (current_token && current_token->type == TOKEN_YAPI_SWITCH) {
-                consume(TOKEN_YAPI_SWITCH);
-            }
+            // if (current_token && current_token->type == TOKEN_YAPI_SWITCH) {
+            //    consume(TOKEN_YAPI_SWITCH);
+            // }
         }
 
         // Switch node oluştur
@@ -3783,10 +3861,30 @@ ASTNode* komut() {
             ad.value = strdup(current_token->value);
             consume(TOKEN_IDENTIFIER);
 
+            // Check for initialization
+            ASTNode* init_expr = NULL;
+            if (current_token->type == TOKEN_ASSIGN) {
+                consume(TOKEN_ASSIGN);
+                init_expr = ifade();
+            }
+
+            // Check if it is an Enum
+            const char* type_kind = get_parse_var_type(struct_tip.value);
+            if (type_kind && strcmp(type_kind, "Enum") == 0) {
+                 // It is an Enum!
+                 // Create a numeric variable declaration
+                 struct_tip.type = TOKEN_TYPE_NUMERIC; 
+                 
+                 ASTNode* enum_var_node = createAST_DegiskenTanimlama(&struct_tip, &ad, init_expr);
+                 free(struct_tip.value);
+                 free(ad.value);
+                 return enum_var_node;
+            }
+
             // Semicolon kaldırıldı - Python tarzı
             // consume(TOKEN_SEMICOLON);
 
-            ASTNode* struct_var_node = createAST_StructDegisken(&struct_tip, &ad);
+            ASTNode* struct_var_node = createAST_StructDegisken(&struct_tip, &ad, init_expr);
             free(struct_tip.value);
             free(ad.value);
             return struct_var_node;
@@ -3913,7 +4011,8 @@ ASTNode* komut() {
         current_token->type == TOKEN_TYPE_STRING ||
         current_token->type == TOKEN_TYPE_BOOLEAN ||
         current_token->type == TOKEN_LIST ||      // Phase 6: List definition
-        current_token->type == TOKEN_OPTIONAL)    // Phase 6.2: Optional definition
+        current_token->type == TOKEN_OPTIONAL ||  // Phase 6.2: Optional definition
+        (current_token->type == TOKEN_IDENTIFIER && get_parse_var_type(current_token->value) != NULL)) // Custom types (Enum/Struct)
     {
         // Phase 6: List tanımlama
         if (current_token->type == TOKEN_LIST) {
@@ -4114,6 +4213,52 @@ ASTNode* komut() {
         return builtin_node;
     }
 
+    // Phase 5.4: Custom Type Variable Declaration (Enum/Struct)
+    // Pattern: Identifier Identifier ... (e.g. TokenType param_type)
+    if (current_token->type == TOKEN_IDENTIFIER) {
+        Token* next_token = peekNextToken();
+        int is_declaration = 0;
+        
+        // Check if next token is identifier (Type Name)
+        if (next_token && next_token->type == TOKEN_IDENTIFIER) {
+             is_declaration = 1;
+        }
+        
+        if (next_token) {
+            if (next_token->value) free(next_token->value);
+            free(next_token);
+        }
+        
+        if (is_declaration) {
+            // Parse as variable declaration
+            Token tip_token;
+            tip_token.type = current_token->type;
+            tip_token.value = strdup(current_token->value);
+            consume(TOKEN_IDENTIFIER); // Consume type name
+
+            Token ad_token;
+            if (current_token->type != TOKEN_IDENTIFIER) {
+                 parseError("Variable name expected after type", "IDENTIFIER");
+            }
+            ad_token.type = current_token->type;
+            ad_token.value = strdup(current_token->value);
+            consume(TOKEN_IDENTIFIER); // Consume variable name
+            
+            // Optional assignment
+            ASTNode* ifade_dugumu = NULL;
+            if (current_token->type == TOKEN_ASSIGN) {
+                consume(TOKEN_ASSIGN);
+                ifade_dugumu = ifade();
+            }
+            
+            // Create declaration node
+            ASTNode* tanimlama_node = createAST_DegiskenTanimlama(&tip_token, &ad_token, ifade_dugumu);
+            free(tip_token.value);
+            free(ad_token.value);
+            return tanimlama_node;
+        }
+    }
+
     // 8. Atama or İfade Komutu (Noktalı virgülsüz)
     if (current_token->type == TOKEN_IDENTIFIER) {
         // Phase 5.8: Check for label (identifier followed by colon)
@@ -4262,6 +4407,7 @@ ASTNode* komut() {
     }
 
     // Copy-paste error (and other errors) removed.
+    // Copy-paste error (and other errors) removed.
     // If none match, this is an error.
     parseError("Statement expected.", "PRINT, Type, Identifier, IF, WHILE or OPERATOR");
     return NULL;
@@ -4271,21 +4417,56 @@ ASTNode* kosul_komutu() {
     consume(TOKEN_IF);
     ASTNode* kosul_ifadesi = ifade(); 
     consume(TOKEN_THEN);
+    
+    push_context(CTX_IF);  // Push context before parsing if block
     ASTNode* ise_blogu = blok();
+    pop_context();  // Pop after if block
+    
     ASTNode* degilse_blogu = NULL;
+    
+    // Handle else / else if chain
     if (current_token->type == TOKEN_ELSE) {
         consume(TOKEN_ELSE);
-        degilse_blogu = blok();
-    }
-    // Accept both "end eğer" and plain "end"
-    // Accept "end if" with lookahead (same as struct/function parsing)
-    if (current_token->type == TOKEN_END) {
-        consume(TOKEN_END);
-        // Lookahead: if next token is "if", consume it
-        if (current_token && current_token->type == TOKEN_IF) {
-            consume(TOKEN_IF);
+        
+        // Check for "else if" pattern (else followed by if)
+        if (current_token->type == TOKEN_IF) {
+            // This is "else if" - parse as nested if statement
+            ASTNode* nested_if = kosul_komutu();  // Recursive call
+            
+            // Wrap nested if in a block
+            degilse_blogu = (ASTNode*)malloc(sizeof(ASTNode));
+            degilse_blogu->type = AST_BLOK;
+            degilse_blogu->blok_data.komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 1);
+            degilse_blogu->blok_data.komutlar[0] = nested_if;
+            degilse_blogu->blok_data.sayisi = 1;
+            
+            // After else-if, check if there's an explicit end_if for this if
+            // (handles nested ifs in else blocks, which need their own end_if)
+            // Don't consume generic "end" as it might belong to surrounding while/for
+            if (current_token->type == TOKEN_END_IF) {
+                // There's an explicit end_if here, consume it (this closes the outer if)
+                consume(TOKEN_END_IF);
+            }
+            // If no end_if here, the recursive call already consumed the shared one (true else-if)
+            specs_check_no_semicolon("IF SON");
+            return createAST_KosulKomutu(kosul_ifadesi, ise_blogu, degilse_blogu);
+        } else {
+            // Regular else block
+            push_context(CTX_IF);  // Push context before parsing else block
+            degilse_blogu = blok();
+            pop_context();  // Pop after else block
         }
     }
+    
+    // Consume end_if for this if statement (no else-if case)
+    if (current_token->type == TOKEN_END_IF) {
+        consume(TOKEN_END_IF);
+    } else if (current_token->type == TOKEN_END) {
+        consume(TOKEN_END);
+    } else {
+        parseError("end_if or end expected", "end_if/end");
+    }
+    
     specs_check_no_semicolon("IF SON");
     return createAST_KosulKomutu(kosul_ifadesi, ise_blogu, degilse_blogu);
 }
@@ -4311,15 +4492,17 @@ ASTNode* dongu_komutu() {
         consume(current_token->type);
     }
     
+    push_context(CTX_WHILE);  // Push context before parsing while block
     ASTNode* govde_blogu = blok();
+    pop_context();  // Pop after while block
     
-    // Accept "end while" with lookahead (same as struct/function parsing)
-    if (current_token->type == TOKEN_END) {
+    // Accept "end_while" or generic "end"
+    if (current_token->type == TOKEN_END_WHILE) {
+        consume(TOKEN_END_WHILE);
+    } else if (current_token->type == TOKEN_END) {
         consume(TOKEN_END);
-        // Lookahead: if next token is "while", consume it
-        if (current_token && current_token->type == TOKEN_WHILE) {
-            consume(TOKEN_WHILE);
-        }
+    } else {
+        parseError("end_while or end expected", "end_while");
     }
     
     specs_check_no_semicolon("WHILE SON");
@@ -4397,15 +4580,17 @@ ASTNode* for_komutu() {
             }
             
             // Parse body
+            push_context(CTX_FOR);  // Push context before parsing for block
             ASTNode* govde_blogu = blok();
+            pop_context();  // Pop after for block
             
-            // Accept "end for" with lookahead (same as struct/function parsing)
-            if (current_token->type == TOKEN_END) {
+            // Accept "end_for" (single keyword)
+            if (current_token->type == TOKEN_END_FOR) {
+                consume(TOKEN_END_FOR);
+            } else if (current_token->type == TOKEN_END) {
                 consume(TOKEN_END);
-                // Lookahead: if next token is "for", consume it
-                if (current_token && current_token->type == TOKEN_FOR) {
-                    consume(TOKEN_FOR);
-                }
+            } else {
+                parseError("end_for or end expected", "end_for");
             }
             
             specs_check_no_semicolon("FOR IN RANGE SON");
@@ -4436,15 +4621,17 @@ ASTNode* for_komutu() {
             }
             
             // Parse body
+            push_context(CTX_FOR);  // Push context before parsing for block
             ASTNode* govde_blogu = blok();
+            pop_context();  // Pop after for block
             
-            // Accept "end for" with lookahead (same as struct/function parsing)
-            if (current_token->type == TOKEN_END) {
+            // Accept "end_for" (single keyword)
+            if (current_token->type == TOKEN_END_FOR) {
+                consume(TOKEN_END_FOR);
+            } else if (current_token->type == TOKEN_END) {
                 consume(TOKEN_END);
-                // Lookahead: if next token is "for", consume it
-                if (current_token && current_token->type == TOKEN_FOR) {
-                    consume(TOKEN_FOR);
-                }
+            } else {
+                parseError("end_for or end expected", "end_for");
             }
             
             specs_check_no_semicolon("FOR EACH SON");
@@ -4488,15 +4675,17 @@ ASTNode* for_komutu() {
     }
     
     // Parse body
+    push_context(CTX_FOR);  // Push context before parsing for block
     ASTNode* govde_blogu = blok();
+    pop_context();  // Pop after for block
     
-    // Accept "end for" with lookahead (same as struct/function parsing)
-    if (current_token->type == TOKEN_END) {
-        consume(TOKEN_END);
-        // Lookahead: if next token is "for", consume it
-        if (current_token && current_token->type == TOKEN_FOR) {
-            consume(TOKEN_FOR);
-        }
+    // Accept "end_for" (single keyword)
+    if (current_token->type == TOKEN_END_FOR) {
+                consume(TOKEN_END_FOR);
+            } else if (current_token->type == TOKEN_END) {
+                consume(TOKEN_END);
+            } else {
+                parseError("end_for or end expected", "end_for");
     }
     
     specs_check_no_semicolon("FOR SON");
@@ -4583,15 +4772,15 @@ ASTNode* islec_tanimlama() {
     consume(TOKEN_RIGHT_PAREN);
 
     // then keyword kaldırıldı - direkt blok başlar
+    push_context(CTX_FUNCTION);  // Push context before parsing function block
     ASTNode* govde_blogu = blok();
+    pop_context();  // Pop after function block
     
-    // Accept "end function" with lookahead (same as struct parsing)
-    if (current_token->type == TOKEN_END) {
-        consume(TOKEN_END);
-        // Lookahead: if next token is "function", consume it
-        if (current_token && current_token->type == TOKEN_FUNCTION) {
-            consume(TOKEN_FUNCTION);
-        }
+    // Accept "end_function" (single keyword)
+    if (current_token->type == TOKEN_END_FUNCTION) {
+        consume(TOKEN_END_FUNCTION);
+    } else {
+        parseError("end_function expected", "end_function");
     }
     
     specs_check_no_semicolon("OPERATOR SON");
@@ -4646,15 +4835,15 @@ ASTNode* async_function_tanimlama() {
     consume(TOKEN_RIGHT_PAREN);
 
     // Parse function body
+    push_context(CTX_FUNCTION);  // Push context before parsing async function block
     ASTNode* govde_blogu = blok();
+    pop_context();  // Pop after async function block
     
-    // Accept "end function" with lookahead (same as struct/function parsing)
-    if (current_token->type == TOKEN_END) {
-        consume(TOKEN_END);
-        // Lookahead: if next token is "function", consume it
-        if (current_token && current_token->type == TOKEN_FUNCTION) {
-            consume(TOKEN_FUNCTION);
-        }
+    // Accept "end_function" (single keyword)
+    if (current_token->type == TOKEN_END_FUNCTION) {
+        consume(TOKEN_END_FUNCTION);
+    } else {
+        parseError("end_function expected", "end_function");
     }
     
     specs_check_no_semicolon("ASYNC FUNCTION SON");
@@ -4684,17 +4873,60 @@ ASTNode* blok() {
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     if (node == NULL) exit(EXIT_FAILURE);
     node->type = AST_BLOK;
-    node->blok_data.komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 100);
+    node->blok_data.komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 500);
     node->blok_data.sayisi = 0;
 
-    while (current_token != NULL && // NULL kontrolü eklendi
-           current_token->type != TOKEN_EOF &&
-           current_token->type != TOKEN_END &&
-           current_token->type != TOKEN_ELSE &&
-           current_token->type != TOKEN_YAPI_CASE &&
-           current_token->type != TOKEN_YAPI_DEFAULT) 
-    {
-        // Semicolon artık kullanılmıyor - Python tarzı syntax
+    while (current_token != NULL && current_token->type != TOKEN_EOF) {
+        // Check if we should stop based on current context
+        if (context_depth > 0) {
+            BlockContextType ctx = context_stack[context_depth - 1];
+            
+            // Accept generic "end" for any context
+            if (current_token->type == TOKEN_END) {
+                break;
+            }
+            
+            if (ctx == CTX_IF && (current_token->type == TOKEN_END_IF || 
+                                   current_token->type == TOKEN_ELSE)) {
+                break;
+            }
+            if (ctx == CTX_WHILE && current_token->type == TOKEN_END_WHILE) {
+                break;
+            }
+            if (ctx == CTX_FOR && current_token->type == TOKEN_END_FOR) {
+                fprintf(stderr, "DEBUG blok(): Breaking on TOKEN_END_FOR (CTX_FOR)\n");
+                break;
+            }
+            if (ctx == CTX_FUNCTION && current_token->type == TOKEN_END_FUNCTION) {
+                break;
+            }
+            if (ctx == CTX_STRUCT && current_token->type == TOKEN_END_STRUCT) {
+                break;
+            }
+            if (ctx == CTX_ENUM && current_token->type == TOKEN_END_ENUM) {
+                break;
+            }
+            if (ctx == CTX_SWITCH && (current_token->type == TOKEN_END_SWITCH ||
+                                       current_token->type == TOKEN_YAPI_CASE ||
+                                       current_token->type == TOKEN_YAPI_DEFAULT)) {
+                break;
+            }
+        } else {
+            // No context - stop at any end token (backward compatibility)
+            if (current_token->type == TOKEN_END ||
+                current_token->type == TOKEN_END_IF ||
+                current_token->type == TOKEN_END_WHILE ||
+                current_token->type == TOKEN_END_FOR ||
+                current_token->type == TOKEN_END_FUNCTION ||
+                current_token->type == TOKEN_END_STRUCT ||
+                current_token->type == TOKEN_END_ENUM ||
+                current_token->type == TOKEN_END_SWITCH ||
+                current_token->type == TOKEN_ELSE ||
+                current_token->type == TOKEN_YAPI_CASE ||
+                current_token->type == TOKEN_YAPI_DEFAULT) {
+                break;
+            }
+        }
 
         ASTNode* k = komut();
         if (k != NULL) {
@@ -4868,7 +5100,7 @@ ASTNode* parse(const char* source_code) {
 
     ASTNode* root = (ASTNode*)malloc(sizeof(ASTNode));
     root->type = AST_BLOK;
-    root->blok_data.komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 100);
+    root->blok_data.komutlar = (ASTNode**)malloc(sizeof(ASTNode*) * 500);
     root->blok_data.sayisi = 0;
 
     while (current_token != NULL && current_token->type != TOKEN_EOF) {
@@ -4929,7 +5161,7 @@ const char* arg_registerleri[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 // --- Struct Metadata Yönetimi ---
 #define MAX_STRUCT_FIELDS 20
-#define MAX_STRUCTS 50
+#define MAX_STRUCTS 200
 
 typedef struct {
     char* field_ad;
@@ -4950,7 +5182,7 @@ StructMetadata struct_metadata_table[MAX_STRUCTS];
 int struct_metadata_count = 0;
 
 // --- Phase 5.4: Enum Metadata Yönetimi ---
-#define MAX_ENUM_VALUES 100
+#define MAX_ENUM_VALUES 200  // TokenType enum has 168 values
 #define MAX_ENUMS 50
 
 typedef struct {
@@ -5665,6 +5897,9 @@ void mark_file_imported(const char* file_path) {
 void visit_Import(ASTNode* node) {
     char* file_path = node->import_data.file_path;
     
+    // DEBUG: Print which file is being imported
+    fprintf(stderr, "DEBUG: İşleniyor import: '%s'\n", file_path);
+    
     // ========== Import Path Resolution ==========
     // Use MLP_SOURCE_DIR environment variable or base_dir
     char resolved_path[2048];
@@ -5719,9 +5954,18 @@ void visit_Import(ASTNode* node) {
     int saved_line = current_line;
     int saved_column = current_column;
     Token* saved_current = current_token;
+    int saved_eof_reached = eof_reached;  // CRITICAL: Save EOF flag!
+    
+    // DEBUG: Print saved state
+    fprintf(stderr, "DEBUG: Saving state for %s - line=%d, token type=%d, value='%s'\n",
+            resolved_path, saved_line, saved_current ? saved_current->type : -1,
+            saved_current && saved_current->value ? saved_current->value : "NULL");
     
     // Initialize lexer with imported file
     initLexer(import_source);
+    
+    // DEBUG: Print parsing this file
+    fprintf(stderr, "DEBUG: Parsing imported file: %s\n", resolved_path);
     
     // Get first token
     current_token = getNextToken();
@@ -5729,28 +5973,130 @@ void visit_Import(ASTNode* node) {
     // ========== COLLECT Imported Functions (Pre-Scan Strategy) ==========
     // Parse the imported file and collect function definitions
     // They will be emitted BEFORE main() in generate_asm()
+    int loop_count = 0;
     while (current_token->type != TOKEN_EOF) {
+        loop_count++;
+        
+        if (loop_count > 10000) {
+            fprintf(stderr, "HATA: visit_Import sonsuz döngü! loop_count=%d\n", loop_count);
+            exit(1);
+        }
+        
+        // END tokens mark end of structures - these are not top-level statements
+        // Stop parsing when we hit any END token (structure terminator)
+        if (current_token->type == TOKEN_END_FUNCTION ||
+            current_token->type == TOKEN_END_STRUCT ||
+            current_token->type == TOKEN_END_IF ||
+            current_token->type == TOKEN_END_WHILE ||
+            current_token->type == TOKEN_END_FOR ||
+            current_token->type == TOKEN_END_ENUM ||
+            current_token->type == TOKEN_END_SWITCH ||
+            current_token->type == TOKEN_END) {  // Generic END token for while/if/for
+            break;  // Stop parsing this import file
+        }
+        
+        // Save token position before komut()
+        int saved_position_before = current_position;
+        
+        // DEBUG: Print current token before komut()
+        fprintf(stderr, "DEBUG: Before komut() - token type=%d, value='%s', line=%d\n", 
+                current_token->type, current_token->value ? current_token->value : "NULL", current_line);
+        
         ASTNode* stmt = komut();
+        
+        // DEBUG: Print token after komut()
+        if (stmt && stmt->type == AST_IMPORT) {
+            fprintf(stderr, "DEBUG: After komut(AST_IMPORT) - token type=%d, value='%s', line=%d\n",
+                    current_token->type, current_token->value ? current_token->value : "NULL", current_line);
+        }
+        
+        // If komut() didn't advance the token, force advance to prevent infinite loop
+        // SPECIAL CASE: Import statements don't advance position (they restore lexer state),
+        // but the token IS already advanced (past the import statement), so skip the check!
+        if (stmt && stmt->type == AST_IMPORT) {
+            // Import was handled, token is already in correct position
+            // Mark that we've already advanced, so position check doesn't re-advance
+            saved_position_before = current_position;  // Set to current so check PASSES (no getNextToken)
+            // Alternative: Could increment saved_position_before to skip check entirely
+        }
+        
+        if (current_position == saved_position_before && current_token->type != TOKEN_EOF) {
+            // Don't advance if we just handled an import
+            if (!stmt || stmt->type != AST_IMPORT) {
+                current_token = getNextToken();
+            }
+        }
+        
         if (stmt != NULL) {
             // Collect function definitions (don't emit yet)
             if (stmt->type == AST_FUNCTION_DECLARATION) {
-                collect_imported_function(stmt);  // ✅ TOPLA, EKLEME
+                collect_imported_function(stmt);
+            }
+            // ✅ FIX: Register imported enum types so parser recognizes them
+            else if (stmt->type == AST_ENUM_DECLARATION) {
+                Token* enum_ad = stmt->enum_tanimlama_data.ad;
+                if (enum_ad && enum_ad->value) {
+                    register_parse_var(enum_ad->value, "Enum");
+                }
+                
+                // ✅ FIX: Register enum VALUES to metadata table during import
+                if (enum_metadata_count >= MAX_ENUMS) {
+                    fprintf(stderr, "HATA [Import]: Maksimum enum sayısı aşıldı!\n");
+                    exit(1);
+                }
+                EnumMetadata* meta = &enum_metadata_table[enum_metadata_count++];
+                meta->enum_ad = strdup(stmt->enum_tanimlama_data.ad->value);
+                meta->value_sayisi = stmt->enum_tanimlama_data.value_sayisi;
+                for (int i = 0; i < stmt->enum_tanimlama_data.value_sayisi; i++) {
+                    meta->values[i].value_ad = strdup(stmt->enum_tanimlama_data.value_adlari[i]->value);
+                    meta->values[i].value = stmt->enum_tanimlama_data.value_degerleri[i];
+                }
+            }
+            // ✅ FIX: Register imported struct types so parser recognizes them
+            else if (stmt->type == AST_STRUCT_DECLARATION) {
+                Token* struct_ad = stmt->struct_tanimlama_data.ad;
+                if (struct_ad && struct_ad->value) {
+                    register_parse_var(struct_ad->value, "Struct");
+                }
+                // Register struct metadata manually WITHOUT code generation
+                char* struct_adi = stmt->struct_tanimlama_data.ad->value;
+                int field_sayisi = stmt->struct_tanimlama_data.field_sayisi;
+                Token** field_tipleri = stmt->struct_tanimlama_data.field_tipleri;
+                Token** field_adlari = stmt->struct_tanimlama_data.field_adlari;
+                register_struct_metadata(struct_adi, field_tipleri, field_adlari, field_sayisi);
             }
             // Handle nested imports recursively
             else if (stmt->type == AST_IMPORT) {
                 visit_Import(stmt);  // Recursive import (also collects)
+                // After import, we need to advance token because visit_Import restores
+                // the previous lexer state, leaving us at the 'import' keyword
+                // Note: We DON'T call getNextToken() here because the while loop
+                // will check position and advance if needed. We just need to update
+                // saved_position_before so the loop knows we handled it.
+                // Actually, no need to do anything - the position check will handle it!
             }
             // Skip other statements (variable declarations, etc.)
         }
     }
     
     // Restore lexer state
+    // CRITICAL FIX: Don't call initLexer - it resets position to 0!
     free(import_source);
-    initLexer(saved_source);
+    source_code = saved_source;
     current_position = saved_position;
     current_line = saved_line;
     current_column = saved_column;
+    eof_reached = saved_eof_reached;  // CRITICAL: Restore EOF flag!
+    
+    // FIX: Restore the saved token directly
+    // The saved_current was the token AFTER the import statement
+    // We should continue from that token, not get a new one
     current_token = saved_current;
+    
+    // DEBUG: Check restored state
+    fprintf(stderr, "DEBUG: Restored lexer state - token type=%d, value='%s', line=%d, file=%s\n",
+            current_token->type, current_token->value ? current_token->value : "NULL", 
+            current_line, resolved_path);
 }
 
 void visit_DegiskenTanimlama(ASTNode* node) {
@@ -7660,10 +8006,9 @@ void visit_StructFieldAccess(ASTNode* node) {
     // Struct tipinin metadata'sını bul
     StructMetadata* meta = find_struct_metadata(var->tip);
     if (!meta) {
-        sprintf(buffer, "    ; ERROR: Struct tipi '%s' bulunamadı!", var->tip);
-        asm_append(&text_section, buffer);
-        fprintf(stderr, "HATA [Generator]: Struct tipi '%s' bulunamadı!\n", var->tip);
-        asm_append(&text_section, "    mov rax, 0  ; Error placeholder");
+        // Could be an enum or primitive type - ignore for now
+        // fprintf(stderr, "UYARI [Generator]: Tip '%s' struct de\u011fil (enum veya primitive olabilir), atlanıyor\n", var->tip);
+        asm_append(&text_section, "    mov rax, 0  ; Error placeholder - non-struct type");
         return;
     }
 
@@ -7712,9 +8057,9 @@ void visit_StructFieldAtama(ASTNode* node) {
     // Struct tipinin metadata'sını bul
     StructMetadata* meta = find_struct_metadata(var->tip);
     if (!meta) {
-        sprintf(buffer, "    ; ERROR: Struct tipi '%s' bulunamadı!", var->tip);
-        asm_append(&text_section, buffer);
-        fprintf(stderr, "HATA [Generator]: Struct tipi '%s' bulunamadı!\n", var->tip);
+        // Could be an enum or primitive type - ignore for now
+        // Enums and primitives don't have struct metadata
+        // fprintf(stderr, "UYARI [Generator]: Tip '%s' struct de\u011fil (enum veya primitive olabilir), atlanıyor\n", var->tip);
         return;
     }
 

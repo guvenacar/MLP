@@ -36,9 +36,9 @@ enum TokenType
     TOKEN_AWAIT
     TOKEN_RETURN
     TOKEN_WHILE
-    TOKEN_DO
-    TOKEN_BREAK    -- while bitir
-    TOKEN_CONTINUE -- while devam
+    TOKEN_YAPI_DO
+    TOKEN_WHILE_BITIR    -- while bitir (break)
+    TOKEN_WHILE_DEVAM    -- while devam (continue)
     TOKEN_FOR
     TOKEN_TO
     TOKEN_STEP
@@ -51,15 +51,15 @@ enum TokenType
     TOKEN_END_ENUM
     TOKEN_END_SWITCH
 
-    TOKEN_STRUCT
+    TOKEN_YAPI_STRUCT
     TOKEN_LIST
     TOKEN_OPTIONAL
     TOKEN_MAP
 
-    TOKEN_ENUM
-    TOKEN_SWITCH
-    TOKEN_CASE
-    TOKEN_DEFAULT
+    TOKEN_YAPI_ENUM
+    TOKEN_YAPI_SWITCH
+    TOKEN_YAPI_CASE
+    TOKEN_YAPI_DEFAULT
 
     TOKEN_CONST
     TOKEN_TYPEOF
@@ -187,8 +187,8 @@ enum TokenType
     TOKEN_GT
     TOKEN_LT
 
-    TOKEN_EQUAL_EQUAL
-    TOKEN_NOT_EQUAL
+    TOKEN_OP_ESIT_KARSILASTIRMA
+    TOKEN_NOT_ESIT
     TOKEN_GTE
     TOKEN_LTE
     TOKEN_MOD
@@ -214,29 +214,29 @@ enum TokenType
     TOKEN_STOP
     TOKEN_GOTO
     TOKEN_LABEL
-end enum
+end_enum
 
 -- -----------------------------------------------------------------------------
 -- Core token structures
 -- -----------------------------------------------------------------------------
 
-struct Token then
+struct Token
     TokenType type
-    string lexeme
-    numeric line
-    numeric column
-    list[string] interpolation_parts
-end struct
+    String lexeme
+    Numeric line
+    Numeric column
+    list interpolation_parts
+end_struct
 
-struct TokenStream then
-    list[Token] tokens
-    numeric index
-end struct
+struct TokenStream
+    list tokens
+    Numeric index
+end_struct
 
-struct TokenStreamTakeResult then
+struct TokenStreamTakeResult
     Token token
     TokenStream stream
-end struct
+end_struct
 
 -- -----------------------------------------------------------------------------
 -- Factory helpers
@@ -248,40 +248,40 @@ function make_token(token_type, lexeme, line, column)
     token.lexeme = lexeme
     token.line = line
     token.column = column
-    token.interpolation_parts = list()
+    token.interpolation_parts = mlp_list_create()
     return token
-end function
+end_function
 
 function make_interpolated_token(token_type, lexeme, line, column, parts)
     Token token
     token = make_token(token_type, lexeme, line, column)
     if mlp_list_length(parts) > 0 then
         token.interpolation_parts = parts
-    end if
+    end_if
     return token
-end function
+end_function
 
 function token_stream_create(token_list)
     TokenStream stream
     stream.tokens = token_list
     stream.index = 0
     return stream
-end function
+end_function
 
 function token_stream_is_end(stream)
     if stream.index >= mlp_list_length(stream.tokens) then
         return 1
-    end if
+    end_if
     return 0
-end function
+end_function
 
 function token_stream_peek(stream)
     if token_stream_is_end(stream) == 1 then
         return make_token(TOKEN_EOF, "", 0, 0)
-    end if
+    end_if
 
     return mlp_list_get(stream.tokens, stream.index)
-end function
+end_function
 
 function token_stream_take(stream)
     TokenStreamTakeResult result
@@ -291,11 +291,11 @@ function token_stream_take(stream)
     next_stream = stream
     if token_stream_is_end(stream) == 0 then
         next_stream.index = next_stream.index + 1
-    end if
+    end_if
 
-    result.remaining = next_stream
+    result.stream = next_stream
     return result
-end function
+end_function
 
 function token_stream_expect(stream, expected_type)
     TokenStreamTakeResult take
@@ -308,6 +308,6 @@ function token_stream_expect(stream, expected_type)
         print " but got: "
         print current_token.type
         panic("token_stream_expect: unexpected token")
-    end if
+    end_if
     return take
-end function
+end_function

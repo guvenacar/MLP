@@ -10,11 +10,11 @@
 import "compiler_core/token_types.mlp"
 import "compiler_core/ast/ast_nodes.mlp"
 import "compiler_core/scope_manager.mlp"
-import "compiler_core/codegen.mlp"
+-- Note: codegen.mlp imports this file, avoid circular dependency
 
 -- Global lambda section (deferred code generation)
-string lambda_section_code = ""
-numeric lambda_counter = 0
+String lambda_section_code = ""
+Numeric lambda_counter = 0
 
 -- -----------------------------------------------------------------------------
 -- Lambda expression code generation with closure support
@@ -29,7 +29,7 @@ function visit_lambda_expression(state, node_id)
     lambda_data = node.lambda_data
     
     -- Detect captured variables at codegen time
-    list[string] captured_vars = list()
+    list captured_vars = list()
     
     if mlp_list_length(lambda_data.captured_vars) == 0 then
         state = find_free_variables(state, lambda_data.body_id, captured_vars, lambda_data.parameters)
@@ -37,29 +37,29 @@ function visit_lambda_expression(state, node_id)
         lambda_data.captured_count = mlp_list_length(captured_vars)
     else
         captured_vars = lambda_data.captured_vars
-    end if
+    end_if
     
-    numeric captured_count = 0
+    Numeric captured_count = 0
     captured_count = mlp_list_length(captured_vars)
     
     -- Generate unique labels
-    string lambda_label = ""
-    lambda_label = "__lambda_" + numeric_to_string(lambda_counter)
-    string closure_label = ""
-    closure_label = "__closure_" + numeric_to_string(lambda_counter)
+    String lambda_label = ""
+    lambda_label = "__lambda_" + numeric_to_metin(lambda_counter)
+    String closure_label = ""
+    closure_label = "__closure_" + numeric_to_metin(lambda_counter)
     lambda_counter = lambda_counter + 1
     
     -- =========================
     -- CLOSURE ALLOCATION (ALWAYS - uniform calling convention)
     -- =========================
     
-    state.code = asm_emit_text(state.code, "    ; --- Closure Allocation (captures: " + numeric_to_string(captured_count) + ") ---")
+    state.code = asm_emit_text(state.code, "    ; --- Closure Allocation (captures: " + numeric_to_metin(captured_count) + ") ---")
     
     -- 1. Allocate closure struct on heap
     -- Layout: [0-7] function_ptr, [8-15] captured_var_1, [16-23] captured_var_2, ...
-    numeric closure_size = 0
+    Numeric closure_size = 0
     closure_size = 8 + (captured_count * 8)
-    state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_string(closure_size) + "  ; Closure size")
+    state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_metin(closure_size) + "  ; Closure size")
     state.code = asm_emit_text(state.code, "    call malloc")
     state.code = asm_emit_text(state.code, "    mov [rel " + closure_label + "], rax  ; Save closure base")
     
@@ -71,7 +71,7 @@ function visit_lambda_expression(state, node_id)
     -- 3. Copy captured variables into closure struct
     if captured_count > 0 then
         for i = 0 to captured_count - 1 do
-            string var_name = ""
+            String var_name = ""
             var_name = mlp_list_get(captured_vars, i)
             Variable var
             var = scope_find_variable(state, var_name)
@@ -79,16 +79,16 @@ function visit_lambda_expression(state, node_id)
             if var == null then
                 yazdir("ERROR: Captured variable '" + var_name + "' not found!")
                 exit(1)
-            end if
+            end_if
             
-            numeric offset = 0
+            Numeric offset = 0
             offset = 8 + (i * 8)
-            state.code = asm_emit_text(state.code, "    ; Capture '" + var_name + "' at offset " + numeric_to_string(offset))
+            state.code = asm_emit_text(state.code, "    ; Capture '" + var_name + "' at offset " + numeric_to_metin(offset))
             state.code = asm_emit_text(state.code, "    mov rbx, " + var.asm_address + "  ; Load variable")
             state.code = asm_emit_text(state.code, "    mov rcx, [rel " + closure_label + "]  ; Load closure base")
-            state.code = asm_emit_text(state.code, "    mov [rcx+" + numeric_to_string(offset) + "], rbx  ; Store in closure")
-        end for
-    end if
+            state.code = asm_emit_text(state.code, "    mov [rcx+" + numeric_to_metin(offset) + "], rbx  ; Store in closure")
+        end
+    end_if
     
     -- 4. Return closure pointer in RAX
     state.code = asm_emit_text(state.code, "    mov rax, [rel " + closure_label + "]  ; Return closure pointer")
@@ -101,8 +101,8 @@ function visit_lambda_expression(state, node_id)
     state.data_code = asm_emit_data(state.data_code, closure_label + ": dq 0  ; Closure pointer")
     
     -- Save current scope context
-    numeric saved_var_count = state.scope_var_count
-    numeric saved_stack_offset = state.scope_stack_offset
+    Numeric saved_var_count = state.scope_var_count
+    Numeric saved_stack_offset = state.scope_stack_offset
     
     -- Keep globals, reset locals
     state = scope_enter(state)
@@ -111,10 +111,10 @@ function visit_lambda_expression(state, node_id)
     lambda_section_code = lambda_section_code + "\n" + lambda_label + ":\n"
     
     if captured_count > 0 then
-        lambda_section_code = lambda_section_code + "    ; --- Lambda with Closure (params: " + numeric_to_string(lambda_data.parameter_count) + ", captured: " + numeric_to_string(captured_count) + ") ---\n"
+        lambda_section_code = lambda_section_code + "    ; --- Lambda with Closure (params: " + numeric_to_metin(lambda_data.parameter_count) + ", captured: " + numeric_to_metin(captured_count) + ") ---\n"
     else
-        lambda_section_code = lambda_section_code + "    ; --- Lambda Expression (params: " + numeric_to_string(lambda_data.parameter_count) + ") ---\n"
-    end if
+        lambda_section_code = lambda_section_code + "    ; --- Lambda Expression (params: " + numeric_to_metin(lambda_data.parameter_count) + ") ---\n"
+    end_if
     
     -- Function prolog
     lambda_section_code = lambda_section_code + "    push rbp\n"
@@ -122,44 +122,44 @@ function visit_lambda_expression(state, node_id)
     lambda_section_code = lambda_section_code + "    sub rsp, 256\n"
     
     -- Save closure pointer (first parameter, always in rdi)
-    string closure_var_addr = ""
+    String closure_var_addr = ""
     closure_var_addr = scope_allocate_variable(state, "__closure", "SAYISAL")
     lambda_section_code = lambda_section_code + "    mov " + closure_var_addr + ", rdi  ; Save closure pointer\n"
     
     -- Save user parameters (rsi, rdx, rcx, ...)
-    list[string] arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
+    list arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
     
     for i = 0 to lambda_data.parameter_count - 1 do
         Token param
         param = mlp_list_get(lambda_data.parameters, i)
-        string param_name = param.lexeme
-        string param_addr = ""
+        String param_name = param.lexeme
+        String param_addr = ""
         param_addr = scope_allocate_variable(state, param_name, "SAYISAL")
-        string reg = ""
+        String reg = ""
         reg = mlp_list_get(arg_regsters, i)
         lambda_section_code = lambda_section_code + "    mov " + param_addr + ", " + reg + "  ; Parameter '" + param_name + "'\n"
-    end for
+    end
     
     -- Load captured variables from closure struct
     if captured_count > 0 then
         for i = 0 to captured_count - 1 do
-            string var_name = ""
+            String var_name = ""
             var_name = mlp_list_get(captured_vars, i)
-            numeric offset = 0
+            Numeric offset = 0
             offset = 8 + (i * 8)
             
-            string var_addr = ""
+            String var_addr = ""
             var_addr = scope_allocate_variable(state, var_name, "SAYISAL")
             
             lambda_section_code = lambda_section_code + "    ; Load captured '" + var_name + "' from closure\n"
             lambda_section_code = lambda_section_code + "    mov rbx, " + closure_var_addr + "  ; Closure pointer\n"
-            lambda_section_code = lambda_section_code + "    mov rax, [rbx+" + numeric_to_string(offset) + "]  ; Load from offset\n"
+            lambda_section_code = lambda_section_code + "    mov rax, [rbx+" + numeric_to_metin(offset) + "]  ; Load from offset\n"
             lambda_section_code = lambda_section_code + "    mov " + var_addr + ", rax  ; Store locally\n"
-        end for
-    end if
+        end
+    end_if
     
     -- CRITICAL: Swap text section to lambda section during body evaluation
-    string saved_text_code = state.code
+    String saved_text_code = state.code
     state.code = lambda_section_code
     
     -- Evaluate body expression
@@ -182,20 +182,20 @@ function visit_lambda_expression(state, node_id)
     state.scope_stack_offset = saved_stack_offset
     
     return state
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Indirect lambda call (through closure pointer)
 -- -----------------------------------------------------------------------------
 
-function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
+function visit_lambda_call(state, closure_var_name, list argument_ids)
     Variable closure_var
     closure_var = scope_find_variable(state, closure_var_name)
     
     if closure_var == null then
         yazdir("ERROR: Closure variable '" + closure_var_name + "' not found!")
         exit(1)
-    end if
+    end_if
     
     state.code = asm_emit_text(state.code, "    ; --- Lambda Indirect Call ---")
     
@@ -206,18 +206,17 @@ function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
     state.code = asm_emit_text(state.code, "    mov r11, [r10]  ; Extract function pointer")
     
     -- 3. Evaluate arguments
-    list[string] arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
+    list arg_registers = list("rsi", "rdx", "rcx", "r8", "r9")
     
-    for i
-    i = 0 to mlp_list_length(argument_ids) - 1 do
-        numeric arg_id = 0
+    for i = 0 to mlp_list_length(argument_ids) - 1 do
+        Numeric arg_id = 0
         arg_id = mlp_list_get(argument_ids, i)
         state = visit_expression(state, arg_id)
         
-        string reg = ""
+        String reg = ""
         reg = mlp_list_get(arg_regsters, i)
-        state.code = asm_emit_text(state.code, "    mov " + reg + ", rax  ; Argument " + numeric_to_string(i + 1))
-    end for
+        state.code = asm_emit_text(state.code, "    mov " + reg + ", rax  ; Argument " + numeric_to_metin(i + 1))
+    end
     
     -- 4. First argument is always closure pointer (rdi)
     state.code = asm_emit_text(state.code, "    mov rdi, r10  ; First arg = closure pointer")
@@ -228,7 +227,7 @@ function visit_lambda_call(state, closure_var_name, list[numeric] argument_ids)
     -- Result in RAX
     
     return state
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Append lambda section to final assembly
@@ -241,7 +240,7 @@ function finalize_lambda_section(state)
         state.code = asm_emit_text(state.code, "; LAMBDA FUNCTIONS (DEFERRED)")
         state.code = asm_emit_text(state.code, "; ========================================")
         state.code = state.code + lambda_section_code
-    end if
+    end_if
     
     return state
-end function
+end_function

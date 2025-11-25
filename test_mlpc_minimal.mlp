@@ -1,0 +1,12 @@
+-- lang: en-US
+-- syntax: mlp
+
+import "compiler_core/token_types.mlp"
+
+function main()
+    print "=== MLP Minimal Test ==="
+    print "✓ Token types loaded"
+    return 0
+end_function
+
+numeric result = main()

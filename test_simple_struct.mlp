@@ -1,0 +1,8 @@
+struct Point
+    numeric x
+    numeric y
+end_struct
+
+function main()
+    print "Hello"
+end_function

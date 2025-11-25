@@ -11,6 +11,6 @@ function main()
     print sum
     
     return 0
-end function
+end_function
 
 main()

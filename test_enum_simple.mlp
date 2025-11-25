@@ -1,16 +1,14 @@
-# lang: en-US
-# syntax: mlp
+enum Color
+    RED
+    GREEN
+    BLUE
+end_enum
 
-enum Status
-    OK
-    ERROR
-    PENDING
-end enum
+struct Point
+    numeric x
+    numeric y
+end_struct
 
 function main()
-    int x = 0
-    print x
-    
-    int y = 1
-    print y
-end function
+    print "Test"
+end_function

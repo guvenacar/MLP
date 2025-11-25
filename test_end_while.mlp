@@ -1,0 +1,10 @@
+function test()
+    numeric x = 0
+    while x < 5
+        x = x + 1
+    end_while
+    return x
+end_function
+
+numeric result = test()
+print result

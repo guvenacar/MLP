@@ -28,7 +28,7 @@
 
 struct HashMap then
     numeric ptr
-end struct
+end_struct
 
 -- -----------------------------------------------------------------------------
 -- Constructors
@@ -40,11 +40,11 @@ function hashmap_create_wrapper(capacity)
     -- map.ptr = hashmap_create(capacity)
     map.ptr = 0
     return map
-end function
+end_function
 
 function hashmap_new()
     return hashmap_create_wrapper(16)
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Operations
@@ -54,51 +54,51 @@ function hashmap_set_wrapper(map, key, value)
     -- TODO: Call C runtime
     -- hashmap_set(map.ptr, key, value)
     return map
-end function
+end_function
 
 function hashmap_get_wrapper(map, key)
     -- TODO: Call C runtime
     -- return hashmap_get(map.ptr, key)
     return 0
-end function
+end_function
 
 function hashmap_has_wrapper(map, key)
     -- TODO: Call C runtime
     -- return hashmap_has(map.ptr, key)
     return 0
-end function
+end_function
 
 function hashmap_remove_wrapper(map, key)
     -- TODO: Call C runtime
     -- return hashmap_remove(map.ptr, key)
     return 0
-end function
+end_function
 
 function hashmap_size_wrapper(map)
     -- TODO: Call C runtime
     -- return hashmap_size(map.ptr)
     return 0
-end function
+end_function
 
 function hashmap_keys_wrapper(map)
     -- TODO: Call C runtime
     -- numeric keys_ptr = hashmap_keys(map.ptr)
-    list[string] keys = list()
+    list[metin] keys = list()
     return keys
-end function
+end_function
 
 function hashmap_values_wrapper(map)
     -- TODO: Call C runtime
     -- numeric values_ptr = hashmap_values(map.ptr)
     list[numeric] values = list()
     return values
-end function
+end_function
 
 function hashmap_clear_wrapper(map)
     -- TODO: Call C runtime
     -- hashmap_clear(map.ptr)
     return map
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Memory management
@@ -109,7 +109,7 @@ function hashmap_destroy(map)
     -- hashmap_free(map.ptr)
     map.ptr = 0
     return map
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Set wrapper (implemented using HashMap with dummy values)
@@ -117,45 +117,45 @@ end function
 
 struct Set then
     HashMap internal_map
-end struct
+end_struct
 
 function set_create_wrapper(capacity)
     Set s
     s.internal_map = hashmap_create_wrapper(capacity)
     return s
-end function
+end_function
 
 function set_new()
     return set_create_wrapper(16)
-end function
+end_function
 
 function set_add_wrapper(s, element)
     s.internal_map = hashmap_set_wrapper(s.internal_map, element, 1)
     return s
-end function
+end_function
 
 function set_has_wrapper(s, element)
     return hashmap_has_wrapper(s.internal_map, element)
-end function
+end_function
 
 function set_remove_wrapper(s, element)
     return hashmap_remove_wrapper(s.internal_map, element)
-end function
+end_function
 
 function set_size_wrapper(s)
     return hashmap_size_wrapper(s.internal_map)
-end function
+end_function
 
 function set_values_wrapper(s)
     return hashmap_keys_wrapper(s.internal_map)
-end function
+end_function
 
 function set_clear_wrapper(s)
     s.internal_map = hashmap_clear_wrapper(s.internal_map)
     return s
-end function
+end_function
 
 function set_destroy(s)
     s.internal_map = hashmap_destroy(s.internal_map)
     return s
-end function
+end_function

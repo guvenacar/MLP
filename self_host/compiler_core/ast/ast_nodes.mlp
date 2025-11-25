@@ -77,7 +77,7 @@ enum ASTNodeType
     AST_LAMBDA
     AST_ASYNC_FUNCTION
     AST_AWAIT_EXPR
-end enum
+end_enum
 
 enum ASTLiteralKind
     AST_LITERAL_NUMBER
@@ -85,7 +85,7 @@ enum ASTLiteralKind
     AST_LITERAL_BOOLEAN
     AST_LITERAL_NULL
     AST_LITERAL_INTERPOLATED
-end enum
+end_enum
 
 enum ASTListOperation
     AST_LIST_OP_ADD
@@ -95,14 +95,14 @@ enum ASTListOperation
     AST_LIST_OP_INSERT
     AST_LIST_OP_SIZE
     AST_LIST_OP_CLEAR
-end enum
+end_enum
 
 enum ASTOptionalOperation
     AST_OPTIONAL_OP_SOME
     AST_OPTIONAL_OP_HAS_VALUE
     AST_OPTIONAL_OP_VALUE
     AST_OPTIONAL_OP_VALUE_OR
-end enum
+end_enum
 
 enum ASTMapOperation
     AST_MAP_OP_SET
@@ -111,30 +111,31 @@ enum ASTMapOperation
     AST_MAP_OP_REMOVE
     AST_MAP_OP_SIZE
     AST_MAP_OP_CLEAR
-end enum
+end_enum
 
 struct ASTLocation then
-    string file_path
-    numeric line
-    numeric column
-end struct
+    metin file_path
+    Numeric line
+    Numeric column
+end_struct
 
 struct ASTNode then
-    numeric id
+    Numeric id
     ASTNodeType type
     ASTLocation location
-    string debug_label
-end struct
+    metin debug_label
+end_struct
 
 struct ASTArena then
-    list[ASTNode] nodes
-    numeric next_id
-end struct
+    list nodes
+    list node_data
+    Numeric next_id
+end_struct
 
 struct ASTArenaInsertResult then
     ASTArena arena
-    numeric node_id
-end struct
+    Numeric node_id
+end_struct
 
 function ast_location(file_path, line, column)
     ASTLocation location
@@ -142,11 +143,11 @@ function ast_location(file_path, line, column)
     location.line = line
     location.column = column
     return location
-end function
+end_function
 
 function ast_location_unknown()
     return ast_location("<unknown>", 0, 0)
-end function
+end_function
 
 function ast_node_create(node_type, location, debug_label)
     ASTNode node
@@ -155,14 +156,15 @@ function ast_node_create(node_type, location, debug_label)
     node.location = location
     node.debug_label = debug_label
     return node
-end function
+end_function
 
 function ast_arena_init()
     ASTArena arena
     arena.nodes = list()
+    arena.node_data = list()
     arena.next_id = 0
     return arena
-end function
+end_function
 
 function ast_arena_insert(arena, node)
     ASTArenaInsertResult result
@@ -172,327 +174,348 @@ function ast_arena_insert(arena, node)
     stored_node.id = arena.next_id
     arena.next_id = arena.next_id + 1
     mlp_list_add(arena.nodes, stored_node)
+    mlp_list_add(arena.node_data, 0)
 
     result.arena = arena
     result.node_id = stored_node.id
     return result
-end function
+end_function
 
 function ast_arena_get(arena, node_id)
     if node_id < 0 then
         panic("ast_arena_get: negative node id")
-    end if
+    end_if
 
     if node_id >= mlp_list_length(arena.nodes) then
         panic("ast_arena_get: node id out of range")
-    end if
+    end_if
 
     return mlp_list_get(arena.nodes, node_id)
-end function
+end_function
+
+function ast_arena_set_data(arena, node_id, data)
+    mlp_list_set(arena.node_data, node_id, data)
+    return arena
+end_function
+
+function ast_arena_get_data(arena, node_id)
+    return mlp_list_get(arena.node_data, node_id)
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Specialized data carriers
 -- -----------------------------------------------------------------------------
 
 struct ASTBlockData then
-    numeric node_id
-    list[numeric] statement_ids
-end struct
+    Numeric node_id
+    list statement_ids
+end_struct
 
 struct ASTLiteralData then
-    numeric node_id
+    Numeric node_id
     ASTLiteralKind kind
-    string raw_value
-    list[string] interpolation_parts
-end struct
+    metin raw_value
+    list interpolation_parts
+end_struct
 
 struct ASTImportData then
-    numeric node_id
-    string file_path
-end struct
+    Numeric node_id
+    metin file_path
+end_struct
 
 struct ASTIdentifierData then
-    numeric node_id
-    string name
-end struct
+    Numeric node_id
+    metin name
+end_struct
 
 struct ASTBinaryData then
-    numeric node_id
-    numeric left_id
-    numeric right_id
+    Numeric node_id
+    Numeric left_id
+    Numeric right_id
     TokenType operator_type
-end struct
+end_struct
 
 struct ASTVariableDeclarationData then
-    numeric node_id
-    string type_name
-    string identifier
-    numeric value_id
-    numeric is_const
-end struct
+    Numeric node_id
+    metin type_name
+    metin identifier
+    Numeric value_id
+    Numeric is_const
+end_struct
 
 struct ASTAssignmentData then
-    numeric node_id
-    string identifier
-    numeric value_id
-end struct
+    Numeric node_id
+    metin identifier
+    Numeric value_id
+end_struct
 
 struct ASTPrintData then
-    numeric node_id
-    numeric expression_id
-end struct
+    Numeric node_id
+    Numeric expression_id
+end_struct
 
 struct ASTReturnData then
-    numeric node_id
-    numeric expression_id
-end struct
+    Numeric node_id
+    Numeric expression_id
+end_struct
 
 struct ASTIfData then
-    numeric node_id
-    numeric condition_id
-    numeric then_block_id
-    numeric else_block_id
-end struct
+    Numeric node_id
+    Numeric condition_id
+    Numeric then_block_id
+    Numeric else_block_id
+end_struct
 
 struct ASTWhileData then
-    numeric node_id
-    numeric condition_id
-    numeric body_block_id
-end struct
+    Numeric node_id
+    Numeric condition_id
+    Numeric body_block_id
+end_struct
 
 struct ASTForData then
-    numeric node_id
-    string iterator_name
-    numeric start_expr_id
-    numeric end_expr_id
-    numeric step_expr_id
-    numeric body_block_id
-end struct
+    Numeric node_id
+    metin iterator_name
+    Numeric start_expr_id
+    Numeric end_expr_id
+    Numeric step_expr_id
+    Numeric body_block_id
+end_struct
 
 struct ASTForInRangeData then
-    numeric node_id
-    string iterator_name
-    numeric start_expr_id
-    numeric end_expr_id
-    numeric step_expr_id
-    numeric body_block_id
-end struct
+    Numeric node_id
+    metin iterator_name
+    Numeric start_expr_id
+    Numeric end_expr_id
+    Numeric step_expr_id
+    Numeric body_block_id
+end_struct
 
 struct ASTForEachData then
-    numeric node_id
-    string iterator_name
-    numeric iterable_expr_id
-    numeric body_block_id
-end struct
+    Numeric node_id
+    metin iterator_name
+    Numeric iterable_expr_id
+    Numeric body_block_id
+end_struct
 
 struct ASTLoopControlData then
-    numeric node_id
-    string label_name
-end struct
+    Numeric node_id
+    metin label_name
+end_struct
 
 struct ASTFunctionParameter then
-    string name
-    numeric is_array
-    numeric default_value_id
-end struct
+    metin name
+    Numeric is_array
+    Numeric default_value_id
+end_struct
 
 struct ASTFunctionData then
-    numeric node_id
-    string name
-    list[ASTFunctionParameter] parameters
-    numeric body_block_id
-end struct
+    Numeric node_id
+    metin name
+    list parameters
+    Numeric body_block_id
+    metin return_type
+    Numeric is_async
+    Numeric is_generator
+end_struct
 
 struct ASTLambdaData then
-    numeric node_id
-    list[ASTFunctionParameter] parameters
-    numeric body_expr_or_block_id
-    numeric is_expression_body
-    list[string] captured_variables
-end struct
+    Numeric node_id
+    list parameters
+    Numeric body_expr_or_block_id
+    Numeric is_expression_body
+    list captured_variables
+end_struct
 
 struct ASTAsyncFunctionData then
-    numeric node_id
-    string name
-    list[ASTFunctionParameter] parameters
-    numeric body_block_id
-end struct
+    Numeric node_id
+    metin name
+    list parameters
+    Numeric body_block_id
+end_struct
 
 struct ASTAwaitData then
-    numeric node_id
-    numeric awaited_expr_id
-end struct
+    Numeric node_id
+    Numeric awaited_expr_id
+end_struct
 
 struct ASTCallData then
-    numeric node_id
-    string target_name
-    list[numeric] argument_ids
-end struct
+    Numeric node_id
+    metin target_name
+    list argument_ids
+end_struct
 
 struct ASTTypeofData then
-    numeric node_id
-    numeric expression_id
-end struct
+    Numeric node_id
+    Numeric expression_id
+end_struct
 
 struct ASTArrayDeclarationData then
-    numeric node_id
-    string element_type
-    string identifier
-    numeric size_expr_id
-end struct
+    Numeric node_id
+    metin element_type
+    metin identifier
+    Numeric size_expr_id
+end_struct
 
 struct ASTArrayAccessData then
-    numeric node_id
-    string identifier
-    numeric index_expr_id
-end struct
+    Numeric node_id
+    metin identifier
+    Numeric index_expr_id
+end_struct
 
 struct ASTArrayAssignmentData then
-    numeric node_id
-    string identifier
-    numeric index_expr_id
-    numeric value_expr_id
-end struct
+    Numeric node_id
+    metin identifier
+    Numeric index_expr_id
+    Numeric value_expr_id
+end_struct
 
 struct ASTArrayLiteralData then
-    numeric node_id
-    list[numeric] element_ids
-end struct
+    Numeric node_id
+    list element_ids
+end_struct
 
 struct ASTStructDeclarationData then
-    numeric node_id
-    string name
-    list[string] field_types
-    list[string] field_names
-end struct
+    Numeric node_id
+    metin name
+    list field_types
+    list field_names
+end_struct
 
 struct ASTStructFieldAccessData then
-    numeric node_id
-    string struct_identifier
-    string field_name
-end struct
+    Numeric node_id
+    metin struct_identifier
+    metin field_name
+end_struct
 
 struct ASTStructFieldAssignmentData then
-    numeric node_id
-    string struct_identifier
-    string field_name
-    numeric value_expr_id
-end struct
+    Numeric node_id
+    metin struct_identifier
+    metin field_name
+    Numeric value_expr_id
+end_struct
 
 struct ASTStructVariableData then
-    numeric node_id
-    string struct_type
-    string identifier
-end struct
+    Numeric node_id
+    metin struct_type
+    metin identifier
+end_struct
 
 struct ASTListDeclarationData then
-    numeric node_id
-    string element_type
-    string identifier
-    numeric capacity_expr_id
-    numeric initializer_expr_id
-end struct
+    Numeric node_id
+    metin element_type
+    metin identifier
+    Numeric capacity_expr_id
+    Numeric initializer_expr_id
+end_struct
 
 struct ASTListLiteralData then
-    numeric node_id
-    list[numeric] element_ids
-end struct
+    Numeric node_id
+    list element_ids
+end_struct
 
 struct ASTListOperationData then
-    numeric node_id
+    Numeric node_id
     ASTListOperation operation
-    string list_identifier
-    numeric index_expr_id
-    numeric value_expr_id
-end struct
+    metin list_identifier
+    Numeric index_expr_id
+    Numeric value_expr_id
+end_struct
 
 struct ASTOptionalDeclarationData then
-    numeric node_id
-    string element_type
-    string identifier
-end struct
+    Numeric node_id
+    metin element_type
+    metin identifier
+end_struct
 
 struct ASTOptionalOperationData then
-    numeric node_id
+    Numeric node_id
     ASTOptionalOperation operation
-    string optional_identifier
-    numeric value_expr_id
-end struct
+    metin optional_identifier
+    Numeric value_expr_id
+end_struct
 
 struct ASTBuiltinCallData then
-    numeric node_id
+    Numeric node_id
     TokenType builtin_type
-    list[numeric] argument_ids
-end struct
+    list argument_ids
+end_struct
 
 struct ASTMapDeclarationData then
-    numeric node_id
-    string key_type
-    string value_type
-    string identifier
-end struct
+    Numeric node_id
+    metin key_type
+    metin value_type
+    metin identifier
+end_struct
 
 struct ASTMapOperationData then
-    numeric node_id
+    Numeric node_id
     ASTMapOperation operation
-    string map_identifier
-    numeric key_expr_id
-    numeric value_expr_id
-end struct
+    metin map_identifier
+    Numeric key_expr_id
+    Numeric value_expr_id
+end_struct
 
 struct ASTEnumDeclarationData then
-    numeric node_id
-    string name
-    list[string] value_names
-    list[numeric] explicit_values
-end struct
+    Numeric node_id
+    metin name
+    list value_names
+    list explicit_values
+end_struct
 
 struct ASTEnumValueData then
-    numeric node_id
-    string enum_name
-    string value_name
-end struct
+    Numeric node_id
+    metin enum_name
+    metin value_name
+end_struct
 
 struct ASTSwitchData then
-    numeric node_id
-    numeric expression_id
-    list[numeric] case_ids
-    numeric default_block_id
-end struct
+    Numeric node_id
+    Numeric expression_id
+    list case_ids
+    Numeric default_block_id
+end_struct
 
 struct ASTCaseData then
-    numeric node_id
-    numeric match_expr_id
-    numeric block_id
-end struct
+    Numeric node_id
+    Numeric match_expr_id
+    Numeric block_id
+end_struct
 
 struct ASTTernaryData then
-    numeric node_id
-    numeric condition_id
-    numeric true_expr_id
-    numeric false_expr_id
-end struct
+    Numeric node_id
+    Numeric condition_id
+    Numeric true_expr_id
+    Numeric false_expr_id
+end_struct
 
 struct ASTGotoData then
-    numeric node_id
-    string label_name
-end struct
+    Numeric node_id
+    metin label_name
+end_struct
 
 struct ASTLabelData then
-    numeric node_id
-    string label_name
-end struct
+    Numeric node_id
+    metin label_name
+end_struct
 
 struct ASTStopData then
-    numeric node_id
-    string message
-end struct
+    Numeric node_id
+    metin message
+end_struct
 
 struct ASTBuiltinArgcData then
-    numeric node_id
-end struct
+    Numeric node_id
+end_struct
 
 struct ASTArgvGetData then
-    numeric node_id
-    numeric index_expr_id
-end struct
+    Numeric node_id
+    Numeric index_expr_id
+end_struct
+
+struct ASTFunctionCallData then
+    Numeric node_id
+    metin function_name
+    list argument_ids
+    Numeric is_method_call
+    Numeric receiver_id
+end_struct

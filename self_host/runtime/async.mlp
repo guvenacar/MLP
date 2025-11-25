@@ -30,7 +30,7 @@ struct Promise then
     numeric ptr
     numeric state
     numeric value
-end struct
+end_struct
 
 -- State constants
 numeric PROMISE_PENDING = 0
@@ -49,7 +49,7 @@ function promise_create()
     p.state = PROMISE_PENDING
     p.value = 0
     return p
-end function
+end_function
 
 function promise_resolve(p, value)
     -- TODO: Call C runtime
@@ -57,7 +57,7 @@ function promise_resolve(p, value)
     p.state = PROMISE_RESOLVED
     p.value = value
     return p
-end function
+end_function
 
 function promise_reject(p, error)
     -- TODO: Call C runtime
@@ -65,13 +65,13 @@ function promise_reject(p, error)
     p.state = PROMISE_REJECTED
     p.value = error
     return p
-end function
+end_function
 
 function promise_await(p)
     -- TODO: Call C runtime
     -- return async_await_promise(p.ptr)
     return p.value
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Task wrapper type
@@ -81,7 +81,7 @@ struct Task then
     numeric ptr
     numeric function_ptr
     numeric state
-end struct
+end_struct
 
 -- Task state constants
 numeric TASK_PENDING = 0
@@ -101,14 +101,14 @@ function task_create(function_ptr)
     t.function_ptr = function_ptr
     t.state = TASK_PENDING
     return t
-end function
+end_function
 
 function task_schedule(t)
     -- TODO: Call C runtime
     -- async_schedule_task(t.ptr)
     t.state = TASK_RUNNING
     return t
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Event loop operations
@@ -118,18 +118,18 @@ function async_run_loop()
     -- TODO: Call C runtime
     -- async_run_event_loop()
     print "Event loop started"
-end function
+end_function
 
 function async_stop_loop()
     -- TODO: Call C runtime
     -- async_stop_event_loop()
     print "Event loop stopped"
-end function
+end_function
 
 function async_yield_control()
     -- TODO: Call C runtime
     -- async_yield()
-end function
+end_function
 
 function async_sleep_ms(milliseconds)
     Promise p = promise_create()
@@ -137,7 +137,7 @@ function async_sleep_ms(milliseconds)
     -- numeric sleep_ptr = async_sleep(milliseconds)
     -- p.ptr = sleep_ptr
     return p
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Async function state machine
@@ -149,7 +149,7 @@ struct AsyncState then
     numeric result_value
     list[numeric] local_vars
     list[Promise] pending_promises
-end struct
+end_struct
 
 function async_state_create()
     AsyncState state
@@ -159,25 +159,27 @@ function async_state_create()
     state.local_vars = list()
     state.pending_promises = list()
     return state
-end function
+end_function
 
 function async_state_save_local(state, value)
-    state.local_vars.add(value)
+    list[numeric] vars = state.local_vars
+    vars.add(value)
     return state
-end function
+end_function
 
 function async_state_restore_local(state, index)
-    if index < state.local_vars.size() then
-        return state.local_vars.get(index)
-    end if
+    list[numeric] vars = state.local_vars
+    if index < vars.size() then
+        return vars.get(index)
+    end_if
     return 0
-end function
+end_function
 
 function async_state_complete(state, result)
     state.is_completed = 1
     state.result_value = result
     return state
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Async/Await helper macros (code generation support)
@@ -188,11 +190,11 @@ function async_wrap_function(function_ptr)
     Task t = task_create(function_ptr)
     t = task_schedule(t)
     return p
-end function
+end_function
 
 function await_expression(promise)
     return promise_await(promise)
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Generator support (yield)
@@ -203,7 +205,7 @@ struct Generator then
     numeric state_index
     numeric is_exhausted
     list[numeric] yielded_values
-end struct
+end_struct
 
 function generator_create()
     Generator g
@@ -212,26 +214,28 @@ function generator_create()
     g.is_exhausted = 0
     g.yielded_values = list()
     return g
-end function
+end_function
 
 function generator_next(g)
     if g.is_exhausted == 1 then
         return -1
-    end if
+    end_if
     
     -- TODO: Resume generator and get next value
-    if g.yielded_values.size() > 0 then
-        return g.yielded_values.get(0)
-    end if
+    list[numeric] values = g.yielded_values
+    if values.size() > 0 then
+        return values.get(0)
+    end_if
     
     g.is_exhausted = 1
     return -1
-end function
+end_function
 
 function generator_yield(g, value)
-    g.yielded_values.add(value)
+    list[numeric] values = g.yielded_values
+    values.add(value)
     return g
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Async I/O operations
@@ -244,7 +248,7 @@ function async_read_file(filepath)
     -- Schedule I/O task
     
     return p
-end function
+end_function
 
 function async_write_file(filepath, content)
     Promise p = promise_create()
@@ -253,7 +257,7 @@ function async_write_file(filepath, content)
     -- Schedule I/O task
     
     return p
-end function
+end_function
 
 function async_http_get(url)
     Promise p = promise_create()
@@ -262,7 +266,7 @@ function async_http_get(url)
     -- Schedule network task
     
     return p
-end function
+end_function
 
 function async_http_post(url, data)
     Promise p = promise_create()
@@ -271,7 +275,7 @@ function async_http_post(url, data)
     -- Schedule network task
     
     return p
-end function
+end_function
 
 -- -----------------------------------------------------------------------------
 -- Async timeout operations
@@ -284,7 +288,7 @@ function async_timeout(milliseconds, promise)
     -- TODO: Implement promise.race logic
     
     return promise
-end function
+end_function
 
 function async_all(promises)
     Promise combined = promise_create()
@@ -293,7 +297,7 @@ function async_all(promises)
     -- TODO: Implement promise.all logic
     
     return combined
-end function
+end_function
 
 function async_any(promises)
     Promise first = promise_create()
@@ -302,4 +306,4 @@ function async_any(promises)
     -- TODO: Implement promise.race logic
     
     return first
-end function
+end_function
