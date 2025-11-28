@@ -406,16 +406,18 @@ end_for
 
 ```mlp
 -- Boş liste
-list[Numeric] numbers = list()
+Numeric list() numbers = list()
 
 -- Başlangıç değerleri ile
-list[String] names = ["Alice", "Bob", "Charlie"]
+String list() names = ("Alice", "Bob", "Charlie")
+
+Numeric c() -- boş list
 ```
 
 ### Liste Metodları
 
 ```mlp
-list[Numeric] nums = list()
+Numeric list() nums = list()
 
 -- Eleman ekleme
 nums.add(10)
@@ -444,7 +446,7 @@ Boolean is_empty = (nums.size() == 0)
 ### Liste Üzerinde Döngü
 
 ```mlp
-list[String] fruits = ["Elma", "Armut", "Kiraz"]
+String list() fruits = ("Elma", "Armut", "Kiraz")
 
 for i = 0 to fruits.size()
     print fruits.get(i)
