@@ -1,7 +1,8 @@
 # MLP Kurallar Kitabı (AI Agent Referansı)
 
 **Son Güncelleme:** 28 Kasım 2025  
-**Versiyon:** 1.0  
+**Versiyon:** 3.0  
+**Milestone:** Phase 3 Complete - MELP is Turing-complete! 🎉  
 **Amaç:** Tüm kritik proje bilgisini tek merkezi dokümanda toplamak
 
 ---
@@ -41,10 +42,10 @@
 ## 2. Proje Durumu
 
 ### Genel Durum
-- **MELP (Minimal):** Phase 0-1 tamamlandı, kademeli self-hosting başladı
+- **MELP (Minimal):** Phase 3 tamamlandı - Turing Complete! 🎉
 - **Dosya Uzantısı:** `.mlp` (tüm MLP/MELP dosyaları için standart)
-- **Eski Proje:** `ornekler/` dizininde arşivlendi
-- **Yeni Yaklaşım:** Sıfırdan minimal dil, her phase self-hosting
+- **Bootstrap Compiler:** C ile yazıldı, x86-64 assembly üretiyor
+- **Milestone:** Variables, conditionals, loops, arithmetic, I/O çalışıyor
 
 ### Dosya Yapısı
 ```
@@ -76,8 +77,23 @@ MLP/
 ```
 
 ### Aktif Durum
-**MELP Phase 0:** ✅ Tamamlandı
-- Deklarasyonlar çalışıyor
+
+**Phase 3 Complete! (28 Kasım 2025)** ✅
+
+Tamamlanan Özellikler:
+- ✅ Phase 0: Deklarasyonlar (numeric, decimal, boolean)
+- ✅ Phase 1: Assignment, print, expressions
+- ✅ Phase 2: If/else, comparison operators (==, !=, <, <=, >, >=)
+- ✅ Phase 3: For loops (with step), while loops, exit, continue
+- ✅ Arithmetic operators: +, -, *, /
+- ✅ Nested loops with context tracking
+
+**MELP is now Turing-complete!** 🚀
+
+Sırada:
+- ⏳ Debug features (debug goto, debug pause, debug label)
+- ⏳ Phase 4: Functions (func/return)
+- ⏳ Phase 5+: Structs, arrays, advanced features
 - Bootstrap compiler hazır
 - İlk self-hosting: `compiler_state.mlp` derlendi
 

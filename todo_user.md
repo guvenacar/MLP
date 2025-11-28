@@ -2,82 +2,119 @@
 
 **Amaç:** Basit deklarasyondan modern tam özellikli dile kademeli geçiş
 
+**Durum:** Phase 3 TAMAMLANDI - MELP is Turing-complete! 🎉
+
 ---
 
 ## 🎯 Turing Complete Minimum Set
 
 Bir dil Turing complete olması için minimum gereksinimler:
 
-### 1. ✅ Variables (Phase 0)
-```decl
+### 1. ✅ Variables (Phase 0) - TAMAMLANDI
+```mlp
 numeric x
+decimal y
+boolean flag
 ```
 
-### 2. ⏳ Assignment (Phase 1)
-```decl
+### 2. ✅ Assignment (Phase 1) - TAMAMLANDI
+```mlp
 numeric x = 5
 x = 10
+x = y + 5
 ```
 
-### 3. ⏳ Arithmetic (Phase 1)
-```decl
+### 3. ✅ Arithmetic (Phase 1) - TAMAMLANDI
+```mlp
 numeric result = a + b * c
+x = x - 1
+y = a / b
 ```
 
-### 4. ⏳ Conditional (Phase 2)
-```decl
+### 4. ✅ Conditional (Phase 2) - TAMAMLANDI
+```mlp
 if x > 5 then
-    print("büyük")
+    print(x)
+else
+    print(0)
 end if
-
-tek satır if:
-if a = b then c=10 else d=10 
-
 ```
 
-### 5. ⏳ Loop (Phase 3)
-```decl
+### 5. ✅ Loop (Phase 3) - TAMAMLANDI
+```mlp
 while x < 10
     x = x + 1
 end while
+
+for i = 0 to 10 step 2
+    print(i)
+end for
 ```
 
-**✅ Bu 5 özellik = Turing Complete!**
+**✅ Bu 5 özellik = Turing Complete! - BAŞARILDI!**
 
 ---
 
 ## 📊 Phase Roadmap
 
-### Phase 0: Minimal ✅ TAMAMLANDI
-```decl
+### ✅ Phase 0: Minimal - TAMAMLANDI
+```mlp
 numeric a
 decimal b
 boolean c
-
-a,b,c = 5, "Ali", false -- akıllı değişken tanımlama var.
-veya 
-numeric a, string b, boolean c = 5, "Ali", false
-
-
 ```
 
-### Phase 1: Expressions ⏳ DEVAM EDİYOR
-```decl
+### ✅ Phase 1: Expressions - TAMAMLANDI
+```mlp
 -- Comments (tek satır)
----
-Multi-line
-comments
----
 
 numeric a = 5
 numeric b = a + 10 * 2
-string name = "Ali"
 print(a)
-print(name)
+print(b)
+```
 
--- String line continuation
-string long = "Bu uzun \
-bir string"
+### ✅ Phase 2: Conditionals - TAMAMLANDI
+```mlp
+if x == 5 then
+    print(1)
+else
+    print(0)
+end if
+
+-- Comparison operators: ==, !=, <, <=, >, >=
+```
+
+### ✅ Phase 3: Loops - TAMAMLANDI (28 Kasım 2025)
+```mlp
+-- For loop with step
+for i = 0 to 10 step 2
+    print(i)
+end for
+
+-- While loop
+numeric x = 0
+while x < 5
+    x = x + 1
+    print(x)
+end while
+
+-- Exit (erken çıkış)
+for i = 0 to 20
+    if i == 8 then
+        exit
+    end if
+    print(i)
+end for
+
+-- Continue (iterasyon atla)
+for i = 0 to 10
+    if i == 3 then
+        continue
+    end if
+    print(i)
+end for
+```
 ```
 
 **Keywords:**

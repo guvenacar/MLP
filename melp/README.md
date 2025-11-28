@@ -1,14 +1,20 @@
-# MELP Phase 0: Minimal Self-Hosting Compiler
+# MELP Phase 3: Turing-Complete Bootstrap Compiler
 
 ## 🎯 Proje Amacı
 
 MELP, **kademeli self-hosting** stratejisi ile gelişen bir programlama dilidir.  
-Phase 0'da **sadece değişken deklarasyonları** desteklenir:
+**Phase 3 tamamlandı** - MELP artık **Turing-complete**! 🎉
 
-```decl
-numeric x
-decimal y
-boolean flag
+```mlp
+-- Variables, conditionals, loops, arithmetic, I/O
+numeric sum = 0
+for i = 0 to 10 step 2
+    if i > 5 then
+        exit
+    end if
+    sum = sum + i
+    print(sum)
+end for
 ```
 
 ## 📁 Dizin Yapısı
@@ -74,27 +80,42 @@ Bu dosya (`compiler_state.mlp`), compiler'ın state değişkenlerini tanımlar!
 
 ## 📊 Desteklenen Özellikler
 
-### Phase 0 (ŞU AN)
-- ✅ Deklarasyonlar: `numeric`, `decimal`, `boolean`
-- ✅ x86-64 Assembly üretimi
-- ✅ Stack allocation
-- ✅ Minimal self-hosting (state tanımları)
+### ✅ Phase 0 - Deklarasyonlar
+- Değişken tipleri: `numeric`, `decimal`, `boolean`
+- x86-64 Assembly üretimi
+- Stack allocation
 
-### Phase 1 (SONRAKI)
-- ⏳ Assignment: `x = 42`
-- ⏳ Arithmetic: `x = a + b`
+### ✅ Phase 1 - Assignment ve Print
+- Assignment: `x = 42`, `x = y + 10`
+- Print: `print(x)`
+- Expression evaluation
 
-### Phase 2 (GELECEK)
-- ⏳ If-then: `if x > 5 then ... end if`
-- ⏳ Comparison: `>`, `<`, `==`
+### ✅ Phase 2 - Conditionals
+- If-then-else: `if x > 5 then ... else ... end if`
+- Comparison operators: `==`, `!=`, `<`, `<=`, `>`, `>=`
+- Conditional jumps
 
-### Phase 3 (GELECEK)
-- ⏳ For loop: `for i = 0 to 10 ... end for`
-- ⏳ While loop: `while x < 10 ... end while`
+### ✅ Phase 3 - Loops (TAMAMLANDI!)
+- **For loops**: `for i = 0 to 10 step 2 ... end for`
+- **While loops**: `while x < 10 ... end while`
+- **Exit**: Döngüden erken çıkış
+- **Continue**: Sonraki iterasyona geç
+- Arithmetic operators: `+`, `-`, `*`, `/`
+- Nested loop support
 
-### Phase 4 (GELECEK)
-- ⏳ Functions: `function add(numeric a, numeric b) ... end function`
-- ⏳ Return: `return a + b`
+### 🎯 MELP TURING-COMPLETE! 
+Variables + Conditionals + Loops + Arithmetic + I/O = Turing Completeness
+
+### ⏳ Phase 4 (SONRAKİ)
+- Functions: `func add(numeric a, numeric b) ... end func`
+- Return: `return a + b`
+- Function calls: `x = add(5, 3)`
+
+### ⏳ Phase 5+ (GELECEK)
+- Structs ve OOP
+- Arrays
+- String manipulation
+- Advanced features
 
 ## 🎓 Mimari
 
@@ -132,4 +153,5 @@ Bu eğitim projesidir.
 ---
 
 **Son Güncelleme:** 28 Kasım 2025  
-**Versiyon:** 0.1.0 (Phase 0)
+**Versiyon:** 0.3.0 (Phase 3 - Turing Complete!)  
+**Milestone:** Variables, conditionals, loops, arithmetic, I/O - MELP is now Turing-complete! 🎉
