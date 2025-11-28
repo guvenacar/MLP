@@ -1,0 +1,810 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Code Generator Module - AST → x86-64 Assembly
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki code generator mantığını MLP'ye taşır.
+-- AST traversal, assembly generation, register allocation.
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/scope_manager.mlp"
+import "compiler_core/codegen_functions.mlp"
+import "compiler_core/codegen_structures.mlp"
+import "compiler_core/codegen_control.mlp"
+import "compiler_core/import_handler.mlp"
+
+-- Import runtime helpers
+-- import "runtime/bigdecimal.mlp" -- TEMP DISABLED
+-- import "runtime/bigstring.mlp" -- TEMP DISABLED
+-- import "runtime/hashmap.mlp" -- TEMP DISABLED
+-- import "runtime/async.mlp"
+-- import "runtime/gc.mlp"
+-- import "runtime/file_io.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Assembly code sections
+-- -----------------------------------------------------------------------------
+
+struct AsmCode then
+    list data_section
+    list text_section
+    list lambda_section
+    list imports
+end_struct
+
+function asm_code_create()
+    AsmCode code
+    code.data_section = list()
+    code.text_section = list()
+    code.lambda_section = list()
+    code.imports = list()
+    return code
+end_function
+
+function asm_emit_data(code, line)
+    mlp_list_add(code.data_secton, line)
+    return code
+end_function
+
+function asm_emit_text(code, line)
+    mlp_list_add(code.text_secton, line)
+    return code
+end_function
+
+function asm_emit_lambda(code, line)
+    mlp_list_add(code.lambda_secton, line)
+    return code
+end_function
+
+function asm_to_metin(code)
+    String result = ""
+    
+    -- Imports
+    for i = 0 to mlp_list_length(code, mports) - 1 do
+        result = result + mlp_list_get(code, mports, i) + "\n"
+    end
+    
+    -- Data section
+    result = result + "\nsection .data\n"
+    for i = 0 to mlp_list_length(code.data_secton) - 1 do
+        result = result + "    " + mlp_list_get(code.data_secton, i) + "\n"
+    end
+    
+    -- Text section
+    result = result + "\nsection .text\n"
+    result = result + "    global _start\n\n"
+    
+    for i = 0 to mlp_list_length(code.text_secton) - 1 do
+        result = result + mlp_list_get(code.text_secton, i) + "\n"
+    end
+    
+    -- Lambda section
+    if mlp_list_length(code.lambda_secton) > 0 then
+        result = result + "\n; Lambda functions\n"
+        for i = 0 to mlp_list_length(code.lambda_secton) - 1 do
+            result = result + mlp_list_get(code.lambda_secton, i) + "\n"
+        end
+    end_if
+    
+    return result
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Code Generator state
+-- -----------------------------------------------------------------------------
+
+struct CodeGenState then
+    AsmCode code
+    ScopeManager scope
+    ASTArena arena
+    Numeric string_counter
+    Numeric label_counter
+    list register_stack
+end_struct
+
+function codegen_create(arena)
+    CodeGenState state
+    state.code = asm_code_create()
+    state.scope = scope_manager_create()
+    state.arena = arena
+    state.string_counter = 0
+    state.label_counter = 0
+    state.register_stack = list()
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- String literal registration
+-- -----------------------------------------------------------------------------
+
+function codegen_register_metin(state, str_value)
+    String label = ""
+    label = "str_" + numeric_to_metin(state.string_counter)
+    state.string_counter = state.string_counter + 1
+    
+    String data_line = label + ": db \"" + str_value + "\", 0"
+    state.code = asm_emit_data(state.code, data_line)
+    
+    return label
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Label generation
+-- -----------------------------------------------------------------------------
+
+function codegen_generate_label(state, prefix)
+    Numeric id = state.label_counter
+    state.label_counter = state.label_counter + 1
+    
+    String label = ""
+    label = prefix + "_" + numeric_to_metin(id)
+    return label
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Visit functions (AST node handlers)
+-- -----------------------------------------------------------------------------
+
+function visit_number(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    -- Get literal value
+    String value = "0"
+    
+    state.code = asm_emit_text(state.code, "    ; Number literal: " + value)
+    state.code = asm_emit_text(state.code, "    mov rax, " + value)
+    
+    return state
+end_function
+
+function visit_metin(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    String value = "Hello"
+    String label = ""
+    label = register_string_literal(state, value)
+    
+    state.code = asm_emit_text(state.code, "    ; String literal")
+    
+    -- RUNTIME: Call bigstring_create(str)
+    state.code = asm_emit_text(state.code, "    ; Create BigString")
+    state.code = asm_emit_text(state.code, "    lea rdi, [rel " + label + "]")
+    state.code = asm_emit_text(state.code, "    call bigstring_create")
+    state.code = asm_emit_text(state.code, "    ; BigString ptr in rax")
+    
+    return state
+end_function
+
+function visit_variable(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    String var_name = "x"
+    
+    VariableInfo info
+    info = scope_lookup_variable(state.scope, var_name)
+    
+    state.code = asm_emit_text(state.code, "    ; Load variable: " + var_name)
+    state.code = asm_emit_text(state.code, "    mov rax, [rbp - " + numeric_to_metin(info.stack_offset) + "]")
+    
+    return state
+end_function
+
+function visit_binary_op(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric left_id = 1
+    Numeric right_id = 2
+    String operator = "+"
+    
+    state.code = asm_emit_text(state.code, "    ; Binary operation: " + operator)
+    
+    -- Evaluate left (BigDecimal ptr in rax)
+    state = visit_expression(state, left_id)
+    state.code = asm_emit_text(state.code, "    push rax")
+    
+    -- Evaluate right (BigDecimal ptr in rax)
+    state = visit_expression(state, right_id)
+    state.code = asm_emit_text(state.code, "    mov rsi, rax")
+    state.code = asm_emit_text(state.code, "    pop rdi")
+    
+    -- RUNTIME: Call bigdecimal arithmetic operations
+    if operator == "+" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_add")
+    end_if
+    
+    if operator == "-" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_sub")
+    end_if
+    
+    if operator == "*" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_mul")
+    end_if
+    
+    if operator == "/" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_div")
+    end_if
+    
+    if operator == "%" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_mod")
+    end_if
+    
+    -- Comparison operators
+    if operator == "==" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_eq")
+    end_if
+    
+    if operator == "<" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_lt")
+    end_if
+    
+    if operator == ">" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_gt")
+    end_if
+    
+    if operator == "<=" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_lte")
+    end_if
+    
+    if operator == ">=" then
+        state.code = asm_emit_text(state.code, "    call bigdecimal_gte")
+    end_if
+    
+    state.code = asm_emit_text(state.code, "    ; Result BigDecimal ptr in rax")
+    
+    return state
+end_function
+
+function visit_expression(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    if node.type == AST_SAYI then
+        return visit_number(state, node_id)
+    end_if
+    
+    if node.type == AST_METIN then
+        return visit_metin(state, node_id)
+    end_if
+    
+    if node.type == AST_INTERPOLATED_STRING then
+        return visit_metin(state, node_id)
+    end_if
+    
+    if node.type == AST_DEGISKEN then
+        return visit_variable(state, node_id)
+    end_if
+    
+    if node.type == AST_IKILI_ISLEM then
+        return visit_binary_op(state, node_id)
+    end_if
+    
+    if node.type == AST_UNARY_OP then
+        return visit_unary_op(state, node_id)
+    end_if
+    
+    if node.type == AST_FUNCTION_CALL then
+        return visit_function_call(state, node_id)
+    end_if
+    
+    if node.type == AST_LAMBDA then
+        return visit_lambda(state, node_id)
+    end_if
+    
+    if node.type == AST_LIST_LITERAL then
+        return visit_list_literal(state, node_id)
+    end_if
+    
+    if node.type == AST_HASHMAP_LITERAL then
+        return visit_hashmap_literal(state, node_id)
+    end_if
+    
+    if node.type == AST_SET_LITERAL then
+        return visit_set_literal(state, node_id)
+    end_if
+    
+    if node.type == AST_ARRAY_ACCESS then
+        return visit_array_access(state, node_id)
+    end_if
+    
+    if node.type == AST_MEMBER_ACCESS then
+        return visit_member_access(state, node_id)
+    end_if
+    
+    if node.type == AST_RANGE then
+        return visit_range(state, node_id)
+    end_if
+    
+    if node.type == AST_STRUCT_INSTANTIATION then
+        return visit_struct_instantiation(state, node_id)
+    end_if
+    
+    if node.type == AST_AWAIT then
+        return visit_await(state, node_id)
+    end_if
+    
+    if node.type == AST_YIELD then
+        return visit_yield(state, node_id)
+    end_if
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Statement visitors
+-- -----------------------------------------------------------------------------
+
+function visit_print(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric expr_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Print statement")
+    
+    -- Evaluate expression (BigDecimal or BigString ptr in rax)
+    state = visit_expression(state, expr_id)
+    
+    -- RUNTIME: Convert to string for printing
+    state.code = asm_emit_text(state.code, "    mov rdi, rax")
+    state.code = asm_emit_text(state.code, "    call bigstring_to_cstr")
+    state.code = asm_emit_text(state.code, "    ; C string ptr in rax")
+    
+    -- RUNTIME: Call printf or write syscall
+    state.code = asm_emit_text(state.code, "    mov rdi, rax")
+    state.code = asm_emit_text(state.code, "    call puts")
+    
+    return state
+end_function
+
+function visit_return(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric expr_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Return statement")
+    
+    -- Evaluate expression
+    state = visit_expression(state, expr_id)
+    
+    -- Cleanup and return
+    state.code = asm_emit_text(state.code, "    mov rsp, rbp")
+    state.code = asm_emit_text(state.code, "    pop rbp")
+    state.code = asm_emit_text(state.code, "    ret")
+    
+    return state
+end_function
+
+function visit_variable_declaration(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    String var_name = "x"
+    String type_name = "numeric"
+    Numeric value_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Variable declaration: " + var_name)
+    
+    -- Register variable
+    state.scope = scope_register_variable(state.scope, var_name, type_name, 0)
+    VariableInfo info
+    info = scope_lookup_variable(state.scope, var_name)
+    
+    -- Evaluate initializer
+    if value_id >= 0 then
+        state = visit_expression(state, value_id)
+        state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_metin(info.stack_offset) + "], rax")
+    end_if
+    
+    return state
+end_function
+
+function visit_assignment(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    String var_name = "x"
+    Numeric value_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Assignment: " + var_name)
+    
+    -- Evaluate value
+    state = visit_expression(state, value_id)
+    
+    -- Store to variable
+    VariableInfo info
+    info = scope_lookup_variable(state.scope, var_name)
+    state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_metin(info.stack_offset) + "], rax")
+    
+    return state
+end_function
+
+function visit_if_statement(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric condition_id = 1
+    Numeric then_block_id = 2
+    Numeric else_block_id = -1
+    
+    String else_label = ""
+    else_label = codegen_generate_label(state, "else")
+    String end_label = ""
+    end_label = codegen_generate_label(state, "endif")
+    
+    state.code = asm_emit_text(state.code, "    ; If statement")
+    
+    -- Evaluate condition
+    state = visit_expression(state, condition_id)
+    state.code = asm_emit_text(state.code, "    cmp rax, 0")
+    state.code = asm_emit_text(state.code, "    je " + else_label)
+    
+    -- Then block
+    state = visit_block(state, then_block_id)
+    state.code = asm_emit_text(state.code, "    jmp " + end_label)
+    
+    -- Else block
+    state.code = asm_emit_text(state.code, else_label + ":")
+    if else_block_id >= 0 then
+        state = visit_block(state, else_block_id)
+    end_if
+    
+    state.code = asm_emit_text(state.code, end_label + ":")
+    
+    return state
+end_function
+
+function visit_while_loop(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric condition_id = 1
+    Numeric body_id = 2
+    
+    String loop_label = ""
+    loop_label = codegen_generate_label(state, "while_loop")
+    String end_label = ""
+    end_label = codegen_generate_label(state, "while_end")
+    
+    state.code = asm_emit_text(state.code, "    ; While loop")
+    state.code = asm_emit_text(state.code, loop_label + ":")
+    
+    -- Evaluate condition
+    state = visit_expression(state, condition_id)
+    state.code = asm_emit_text(state.code, "    cmp rax, 0")
+    state.code = asm_emit_text(state.code, "    je " + end_label)
+    
+    -- Body
+    state = visit_block(state, body_id)
+    state.code = asm_emit_text(state.code, "    jmp " + loop_label)
+    
+    state.code = asm_emit_text(state.code, end_label + ":")
+    
+    return state
+end_function
+
+function visit_statement(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    if node.type == AST_IMPORT_STATEMENT then
+        return visit_import(state, node_id)
+    end_if
+    
+    if node.type == AST_FUNCTION_DECLARATION then
+        return visit_function_declaration(state, node_id)
+    end_if
+    
+    if node.type == AST_STRUCT_DEFINITION then
+        return visit_struct_definition(state, node_id)
+    end_if
+    
+    if node.type == AST_ENUM_DEFINITION then
+        return visit_enum_definition(state, node_id)
+    end_if
+    
+    if node.type == AST_TYPE_ALIAS then
+        return visit_type_alias(state, node_id)
+    end_if
+    
+    if node.type == AST_PRINT_STATEMENT then
+        return visit_print(state, node_id)
+    end_if
+    
+    if node.type == AST_RETURN_STATEMENT_KOMUTU then
+        return visit_return(state, node_id)
+    end_if
+    
+    if node.type == AST_VARIABLE_DECLARATION then
+        return visit_variable_declaration(state, node_id)
+    end_if
+    
+    if node.type == AST_ASSIGNMENT_KOMUTU then
+        return visit_assignment(state, node_id)
+    end_if
+    
+    if node.type == AST_IF_STATEMENT_KOMUTU then
+        return visit_if_statement(state, node_id)
+    end_if
+    
+    if node.type == AST_WHILE_LOOP_KOMUTU then
+        return visit_while_loop(state, node_id)
+    end_if
+    
+    if node.type == AST_FOR_LOOP then
+        return visit_for_loop(state, node_id)
+    end_if
+    
+    if node.type == AST_FOR_EACH_LOOP then
+        return visit_foreach_loop(state, node_id)
+    end_if
+    
+    if node.type == AST_TRY_CATCH then
+        return visit_try_catch(state, node_id)
+    end_if
+    
+    if node.type == AST_THROW then
+        return visit_throw(state, node_id)
+    end_if
+    
+    if node.type == AST_BREAK then
+        return visit_break(state, node_id)
+    end_if
+    
+    if node.type == AST_CONTINUE then
+        return visit_continue(state, node_id)
+    end_if
+    
+    if node.type == AST_MATCH then
+        return visit_match(state, node_id)
+    end_if
+    
+    if node.type == AST_DEFER then
+        return visit_defer(state, node_id)
+    end_if
+    
+    if node.type == AST_WITH then
+        return visit_with(state, node_id)
+    end_if
+    
+    if node.type == AST_PANIC then
+        return visit_panic(state, node_id)
+    end_if
+    
+    if node.type == AST_EXPRESSION_STATEMENT then
+        return visit_expression_statement(state, node_id)
+    end_if
+    
+    return state
+end_function
+
+function visit_block(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    ASTBlockData data
+    data = ast_arena_get_data(state.arena, node_id)
+    -- list statement_ids = list()  -- TODO: Get from struct field
+    list statement_ids = list()  -- TODO: Get from data.statement_ids
+    
+    state.scope = scope_enter(state.scope)
+    
+    for i = 0 to mlp_list_length(statement_ids) - 1 do
+        Numeric stmt_id = 0
+        stmt_id = mlp_list_get(statement_ids, i)
+        state = visit_statement(state, stmt_id)
+    end
+    
+    state.scope = scope_exit(state.scope)
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Main code generation entry point (5-PHASE PRE-SCAN STRATEGY)
+-- -----------------------------------------------------------------------------
+-- Port from: mlp_compiler.c generate_asm() lines 8920-9250
+-- 
+-- Phase 1: Collect imports (don't emit assembly)
+-- Phase 2: Emit imported functions BEFORE main
+-- Phase 3: Main entry point (prolog)
+-- Phase 4: Main body (skip imports & functions)
+-- Phase 5: User-defined functions
+-- -----------------------------------------------------------------------------
+
+function generate_code(arena, lexer, parser, base_dir)
+    CodeGenState state
+    state = codegen_create(arena)
+    
+    -- Get root block
+    ASTNode root
+    root = ast_arena_get(arena, 0)
+    
+    -- ========== PHASE 1: COLLECT IMPORTS ==========
+    -- Parse root AST and collect imported functions WITHOUT emitting assembly
+    ImportContext import_ctx
+    import_ctx = create_import_context(base_dir)
+    
+    if root.type == AST_BLOK then
+        ASTBlockData root_data
+        root_data = ast_arena_get_data(arena, root.id)
+        -- TODO: list stmts = list()  -- TODO: Get from struct field
+list list stmts = list()  -- TODO: Get from struct field = list()ids
+        Numeric count = mlp_list_length(stmts)
+        
+        for i = 0 to count - 1 do
+            Numeric stmt_id = mlp_list_get(stmts, i)
+            ASTNode stmt
+            stmt = ast_arena_get(arena, stmt_id)
+            
+            if stmt.type == AST_IMPORT_STATEMENT then
+                handle_import(import_ctx, stmt, lexer, parser)
+            end_if
+        end
+    end_if
+    
+    -- ========== PHASE 2: EMIT IMPORTED FUNCTIONS (BEFORE MAIN) ==========
+    state.code = asm_emit_text(state.code, "section .text")
+    state.code = asm_emit_text(state.code, "global main")
+    state.code = asm_emit_text(state.code, "")
+    
+    Numeric imported_count
+    imported_count = get_imported_count(import_ctx)
+    if imported_count > 0 then
+        state.code = asm_emit_text(state.code, "    ; === Imported Functions ===")
+        
+        list imported_funcs = get_imported_functions(import_ctx)
+        for i = 0 to imported_count - 1 do
+            ASTNode func_node = mlp_list_get(imported_funcs, i)
+            -- Emit function (call visit_statement for each imported function)
+            state = visit_statement(state, func_node.id)
+        end
+        
+        state.code = asm_emit_text(state.code, "    ; === End Imported Functions ===")
+        state.code = asm_emit_text(state.code, "")
+    end_if
+    
+    -- ========== PHASE 3: MAIN ENTRY POINT ==========
+    state.code = asm_emit_text(state.code, "main:")
+    state.code = asm_emit_text(state.code, "    push rbp")
+    state.code = asm_emit_text(state.code, "    mov rbp, rsp")
+    state.code = asm_emit_text(state.code, "    sub rsp, 256")
+    state.code = asm_emit_text(state.code, "    call mlp_set_args")
+    state.code = asm_emit_text(state.code, "    call tyd_fix_cwd")
+    state.code = asm_emit_text(state.code, "")
+    
+    -- ========== PHASE 4: MAIN BODY (SKIP IMPORTS AND FUNCTIONS) ==========
+    state.code = asm_emit_text(state.code, "    ; --- Ana Program Akışı ---")
+    
+    -- Check if there's a main function
+    Numeric has_main = 0
+    Numeric main_is_async = 0
+    
+    if root.type == AST_BLOK then
+        ASTBlockData root_data
+        root_data = ast_arena_get_data(arena, root.id)
+        -- TODO: list stmts = list()  -- TODO: Get from struct field
+list list stmts = list()  -- TODO: Get from struct field = list()ids
+        Numeric count = mlp_list_length(stmts)
+        
+        for i = 0 to count - 1 do
+            Numeric stmt_id = mlp_list_get(stmts, i)
+            ASTNode stmt
+            stmt = ast_arena_get(arena, stmt_id)
+            
+            if stmt.type == AST_FUNCTION_DECLARATION then
+                ASTFunctionData func_data
+                func_data = ast_arena_get_data(arena, stmt.id)
+                if func_data.name == "main" then
+                    has_main = 1
+                end_if
+            end_if
+            
+            if stmt.type == AST_ASYNC_FUNCTION then
+                ASTAsyncFunctionData async_data
+                async_data = ast_arena_get_data(arena, stmt.id)
+                if async_data.name == "main" then
+                    has_main = 1
+                    main_is_async = 1
+                end_if
+            end_if
+        end
+    end_if
+    
+    if has_main then
+        if main_is_async then
+            -- Async main with blocking await
+            state.code = asm_emit_text(state.code, "    ; Async main (blocking await)")
+            state.code = asm_emit_text(state.code, "    call mlp_main")
+            state.code = asm_emit_text(state.code, "    mov rbx, rax  ; Save promise")
+            state.code = asm_emit_text(state.code, "__main_wait:")
+            state.code = asm_emit_text(state.code, "    mov rdi, rbx")
+            state.code = asm_emit_text(state.code, "    call promise_is_resolved")
+            state.code = asm_emit_text(state.code, "    test rax, rax")
+            state.code = asm_emit_text(state.code, "    jz __main_wait")
+            state.code = asm_emit_text(state.code, "    mov rdi, rbx")
+            state.code = asm_emit_text(state.code, "    call promise_get_value")
+        else
+            -- Regular synchronous main
+            state.code = asm_emit_text(state.code, "    call mlp_main")
+        end_if
+    else
+        -- No main - execute top level commands (SKIP IMPORTS)
+        if root.type == AST_BLOK then
+            ASTBlockData root_data
+            root_data = ast_arena_get_data(arena, root.id)
+            -- TODO: list stmts = list()  -- TODO: Get from struct field
+list list stmts = list()  -- TODO: Get from struct field = list()ids
+            Numeric count = mlp_list_length(stmts)
+            
+            for i = 0 to count - 1 do
+                Numeric stmt_id = mlp_list_get(stmts, i)
+                ASTNode stmt
+                stmt = ast_arena_get(arena, stmt_id)
+                
+                -- SKIP: Import statements (already processed in Phase 1)
+                if stmt.type == AST_IMPORT_STATEMENT then
+                    continue
+                end_if
+                
+                -- SKIP: Function declarations (will be emitted in Phase 5)
+                if stmt.type == AST_FUNCTION_DECLARATION then
+                    continue
+                end_if
+                if stmt.type == AST_ASYNC_FUNCTION then
+                    continue
+                end_if
+                
+                -- Execute other top-level statements
+                state = visit_statement(state, stmt_id)
+            end
+        else
+            state = visit_statement(state, 0)
+        end_if
+    end_if
+    
+    -- Program exit (epilog)
+    state.code = asm_emit_text(state.code, "    ; --- Program Sonu ---")
+    state.code = asm_emit_text(state.code, "    xor rax, rax")
+    state.code = asm_emit_text(state.code, "    mov rsp, rbp")
+    state.code = asm_emit_text(state.code, "    pop rbp")
+    state.code = asm_emit_text(state.code, "    ret")
+    state.code = asm_emit_text(state.code, "")
+    
+    -- ========== PHASE 5: USER-DEFINED FUNCTIONS ==========
+    if root.type == AST_BLOK then
+        state.code = asm_emit_text(state.code, "; === Fonksiyon Tanımları ===")
+        
+        ASTBlockData root_data
+        root_data = ast_arena_get_data(arena, root.id)
+        -- TODO: list stmts = list()  -- TODO: Get from struct field
+list list stmts = list()  -- TODO: Get from struct field = list()ids
+        Numeric count = mlp_list_length(stmts)
+        
+        for i = 0 to count - 1 do
+            Numeric stmt_id = mlp_list_get(stmts, i)
+            ASTNode stmt
+            stmt = ast_arena_get(arena, stmt_id)
+            
+            if stmt.type == AST_FUNCTION_DECLARATION then
+                state = visit_statement(state, stmt_id)
+            end_if
+            if stmt.type == AST_ASYNC_FUNCTION then
+                state = visit_statement(state, stmt_id)
+            end_if
+        end
+    end_if
+    
+    -- Cleanup imports
+    cleanup_imports(import_ctx)
+    
+    return asm_to_metin(state.code)
+end_function

@@ -1,0 +1,661 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Parser Module - Tam Entegre (Part 1: Core)
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki parser mantığını MLP'ye taşır.
+-- Pratt parsing, AST oluşturma, scope yönetimi.
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/function_registry.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Parser durumu
+-- -----------------------------------------------------------------------------
+
+struct ParserState then
+    TokenStream stream
+    Numeric current_index
+    Token current_token
+    ASTArena arena
+    FunctionRegistry registry
+    Numeric scope_level
+    list scope_stack_offsets
+end_struct
+
+function parser_state_create(stream)
+    ParserState state
+    state.stream = stream
+    state.current_index = 0
+    state.current_token = token_stream_peek(stream)
+    state.arena = ast_arena_init()
+    state.registry = function_registry_create()
+    state.scope_level = 0
+    state.scope_stack_offsets = list()
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Token navigation
+-- -----------------------------------------------------------------------------
+
+function parser_advance(state)
+    TokenStreamTakeResult result
+    result = token_stream_take(state.stream)
+    state.stream = result.stream
+    state.current_token = result.token
+    state.current_index = state.current_index + 1
+    return state
+end_function
+
+function parser_peek(state)
+    return state.current_token
+end_function
+
+function parser_check(state, expected_type)
+    Token current_token
+    current_token = state.current_token
+    if current_token.type == expected_type then
+        return 1
+    end_if
+    return 0
+end_function
+
+function parser_expect(state, expected_type)
+    if parser_check(state, expected_type) == 0 then
+        Token current_token
+        current_token = state.current_token
+        print "Parser error: Expected token type "
+        print expected_type
+        print " but got "
+        print current_token.type
+        print " at line "
+        print current_token.line
+        panic("parser_expect: token mismatch")
+    end_if
+    
+    state = parser_advance(state)
+    return state
+end_function
+
+function parser_match(state, token_type)
+    if parser_check(state, token_type) == 1 then
+        state = parser_advance(state)
+        return 1
+    end_if
+    return 0
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Scope yönetimi
+-- -----------------------------------------------------------------------------
+
+function parser_enter_scope(state)
+    mlp_list_add(state.scope_stack_offsets, 0)
+    state.scope_level = state.scope_level + 1
+    return state
+end_function
+
+function parser_exit_scope(state)
+    if state.scope_level > 0 then
+        state.scope_level = state.scope_level - 1
+        Numeric size = 0
+        size = mlp_list_length(state.scope_stack_offsets)
+        if size > 0 then
+            mlp_list_remove(state.scope_stack_offsets, size - 1)
+        end_if
+    end_if
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- AST node creation helpers
+-- -----------------------------------------------------------------------------
+
+function parser_create_node(state, node_type, debug_label)
+    Token current_token
+    current_token = state.current_token
+    ASTLocation location
+    location = ast_location(
+        "<source>",
+        current_token.line,
+        current_token.column
+    )
+    
+    ASTNode node
+    node = ast_node_create(node_type, location, debug_label)
+    ASTArenaInsertResult result
+    result = ast_arena_insert(state.arena, node)
+    
+    state.arena = result.arena
+    return result.node_id
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Expression parsing (Pratt-style precedence climbing)
+-- -----------------------------------------------------------------------------
+
+function get_precedence(token_type)
+    if token_type == TOKEN_OR then return 10 end_if
+    if token_type == TOKEN_AND then return 20 end_if
+    if token_type == TOKEN_BITWISE_OR then return 30 end_if
+    if token_type == TOKEN_BITWISE_XOR then return 40 end_if
+    if token_type == TOKEN_BITWISE_AND then return 50 end_if
+    if token_type == TOKEN_EQUAL_EQUAL then return 60 end_if
+    if token_type == TOKEN_NOT_EQUAL then return 60 end_if
+    if token_type == TOKEN_LT then return 70 end_if
+    if token_type == TOKEN_GT then return 70 end_if
+    if token_type == TOKEN_LTE then return 70 end_if
+    if token_type == TOKEN_GTE then return 70 end_if
+    if token_type == TOKEN_LSHIFT then return 80 end_if
+    if token_type == TOKEN_RSHIFT then return 80 end_if
+    if token_type == TOKEN_PLUS then return 90 end_if
+    if token_type == TOKEN_MINUS then return 90 end_if
+    if token_type == TOKEN_MUL then return 100 end_if
+    if token_type == TOKEN_DIV then return 100 end_if
+    if token_type == TOKEN_MOD then return 100 end_if
+    return 0
+end_function
+
+function is_binary_operator(token_type)
+    Numeric prec = 0
+    prec = get_precedence(token_type)
+    if prec > 0 then
+        return 1
+    end_if
+    return 0
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Forward declarations (diğer modüllerden import edilecek)
+-- -----------------------------------------------------------------------------
+-- parser_functions.mlp: parse_function_call, parse_postfix_expression, parse_lambda_expression
+-- parser_structures.mlp: parse_list_literal, parse_hashmap_literal, parse_for_loop
+-- parser_advanced.mlp: parse_import_statement, parse_try_catch, parse_unary_expression
+
+-- -----------------------------------------------------------------------------
+-- Primary expressions (literals, identifiers, parenthesized expressions)
+-- -----------------------------------------------------------------------------
+
+function parse_primary(state)
+    Token token
+    token = parser_peek(state)
+    
+    if token.type == TOKEN_NUMBER then
+        Numeric node_id = 0
+        node_id = parser_create_node(state, AST_SAYI, "number_literal")
+        state = parser_advance(state)
+        
+        ASTLiteralData data
+        data.node_id = node_id
+        data.kind = AST_LITERAL_NUMBER
+        data.raw_value = token.lexeme
+        data.interpolation_parts = list()
+        
+        state.arena = ast_arena_set_data(state.arena, node_id, data)
+        
+        return node_id
+    end_if
+    
+    if token.type == TOKEN_STRING then
+        Numeric node_id = 0
+        node_id = parser_create_node(state, AST_METIN, "string_literal")
+        state = parser_advance(state)
+        
+        ASTLiteralData data
+        data.node_id = node_id
+        data.kind = AST_LITERAL_STRING
+        data.raw_value = token.lexeme
+        data.interpolation_parts = list()
+        
+        state.arena = ast_arena_set_data(state.arena, node_id, data)
+        
+        return node_id
+    end_if
+    
+    if token.type == TOKEN_INTERPOLATED_STRING then
+        Numeric node_id = 0
+        node_id = parser_create_node(state, AST_INTERPOLATED_STRING, "interpolated_string")
+        state = parser_advance(state)
+        
+        ASTLiteralData data
+        data.node_id = node_id
+        data.kind = AST_LITERAL_INTERPOLATED
+        data.raw_value = ""
+        data.interpolation_parts = token.interpolation_parts
+        
+        state.arena = ast_arena_set_data(state.arena, node_id, data)
+        
+        return node_id
+    end_if
+    
+    if token.type == TOKEN_TRUE then
+        Numeric node_id = 0
+        node_id = parser_create_node(state, AST_SAYI, "boolean_true")
+        state = parser_advance(state)
+        return node_id
+    end_if
+    
+    if token.type == TOKEN_FALSE then
+        Numeric node_id = 0
+        node_id = parser_create_node(state, AST_SAYI, "boolean_false")
+        state = parser_advance(state)
+        return node_id
+    end_if
+    
+    if token.type == TOKEN_NULL then
+        Numeric node_id = 0
+        node_id = parser_create_node(state, AST_SAYI, "null_literal")
+        state = parser_advance(state)
+        return node_id
+    end_if
+    
+    if token.type == TOKEN_IDENTIFIER then
+        Numeric node_id = 0
+        node_id = parser_create_node(state, AST_DEGISKEN, "identifier")
+        state = parser_advance(state)
+        
+        ASTIdentifierData data
+        data.node_id = node_id
+        data.name = token.lexeme
+        
+        state.arena = ast_arena_set_data(state.arena, node_id, data)
+        
+        return node_id
+    end_if
+    
+    if token.type == TOKEN_LEFT_PAREN then
+        state = parser_advance(state)
+        Numeric expr_id = 0
+        expr_id = parse_expression(state, 0)
+        state = parser_expect(state, TOKEN_RIGHT_PAREN)
+        return expr_id
+    end_if
+    
+    if token.type == TOKEN_LEFT_BRACKET then
+        return parse_list_literal(state)
+    end_if
+    
+    if token.type == TOKEN_LEFT_BRACE then
+        return parse_hashmap_literal(state)
+    end_if
+    
+    if token.type == TOKEN_LAMBDA then
+        return parse_lambda_expression(state)
+    end_if
+    
+    if token.type == TOKEN_AWAIT then
+        return parse_await_expression(state)
+    end_if
+    
+    print "Parser error: Unexpected token in primary expression"
+    print "Token type: "
+    print token.type
+    print " at line "
+    print token.line
+    panic("parse_primary: unexpected token")
+    
+    return -1
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Binary expression parsing (precedence climbing)
+-- -----------------------------------------------------------------------------
+
+function parse_expression(state, min_precedence)
+    Numeric left_id = 0
+    left_id = parse_primary(state)
+    
+    while 1 == 1
+        Token op_token
+        op_token = parser_peek(state)
+        
+        if is_binary_operator(op_token.type) == 0 then
+            break
+        end_if
+        
+        Numeric op_prec = 0
+        op_prec = get_precedence(op_token.type)
+        if op_prec < min_precedence then
+            break
+        end_if
+        
+        TokenType op_type
+        op_type = op_token.type
+        state = parser_advance(state)
+        
+        Numeric right_id = 0
+        right_id = parse_expression(state, op_prec + 1)
+        
+        Numeric binary_id = 0
+        binary_id = parser_create_node(state, AST_IKILI_ISLEM, "binary_op")
+        
+        ASTBinaryData data
+        data.node_id = binary_id
+        data.left_id = left_id
+        data.right_id = right_id
+        data.operator_type = op_type
+        
+        state.arena = ast_arena_set_data(state.arena, binary_id, data)
+        
+        left_id = binary_id
+    end
+    
+    return left_id
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Statement parsing
+-- -----------------------------------------------------------------------------
+
+function parse_print_statement(state)
+    state = parser_expect(state, TOKEN_PRINT)
+    Numeric expr_id = 0
+    expr_id = parse_expression(state, 0)
+    
+    Numeric print_id = 0
+    print_id = parser_create_node(state, AST_PRINT_STATEMENT, "print")
+    
+    ASTPrintData data
+    data.node_id = print_id
+    data.expression_id = expr_id
+    
+    state.arena = ast_arena_set_data(state.arena, print_id, data)
+    
+    return print_id
+end_function
+
+function parse_return_statement(state)
+    state = parser_expect(state, TOKEN_RETURN)
+    Numeric expr_id = 0
+    expr_id = parse_expression(state, 0)
+    
+    Numeric return_id = 0
+    return_id = parser_create_node(state, AST_RETURN_STATEMENT_KOMUTU, "return")
+    
+    ASTReturnData data
+    data.node_id = return_id
+    data.expression_id = expr_id
+    
+    state.arena = ast_arena_set_data(state.arena, return_id, data)
+    
+    return return_id
+end_function
+
+function parse_variable_declaration(state)
+    Token type_token
+    type_token = parser_peek(state)
+    state = parser_advance(state)
+    
+    Token name_token
+    name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    Numeric value_id = -1
+    if parser_match(state, TOKEN_ASSIGN) == 1 then
+        value_id = parse_expression(state, 0)
+    end_if
+    
+    Numeric decl_id = 0
+    decl_id = parser_create_node(state, AST_VARIABLE_DECLARATION, "var_decl")
+    
+    ASTVariableDeclarationData data
+    data.node_id = decl_id
+    data.type_name = type_token.lexeme
+    data.identifier = name_token.lexeme
+    data.value_id = value_id
+    data.is_const = 0
+    
+    state.arena = ast_arena_set_data(state.arena, decl_id, data)
+    
+    return decl_id
+end_function
+
+function parse_assignment(state)
+    Token name_token
+    name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    state = parser_expect(state, TOKEN_ASSIGN)
+    
+    Numeric value_id = 0
+    value_id = parse_expression(state, 0)
+    
+    Numeric assign_id = 0
+    assign_id = parser_create_node(state, AST_ASSIGNMENT_KOMUTU, "assignment")
+    
+    ASTAssignmentData data
+    data.node_id = assign_id
+    data.identifier = name_token.lexeme
+    data.value_id = value_id
+    
+    state.arena = ast_arena_set_data(state.arena, assign_id, data)
+    
+    return assign_id
+end_function
+
+function parse_if_statement(state)
+    state = parser_expect(state, TOKEN_IF)
+    Numeric condition_id = 0
+    condition_id = parse_expression(state, 0)
+    state = parser_expect(state, TOKEN_THEN)
+    
+    state = parser_enter_scope(state)
+    Numeric then_block_id = 0
+    then_block_id = parse_block(state, TOKEN_END, TOKEN_ELSE)
+    state = parser_exit_scope(state)
+    
+    Numeric else_block_id = -1
+    if parser_match(state, TOKEN_ELSE) == 1 then
+        state = parser_enter_scope(state)
+        else_block_id = parse_block(state, TOKEN_END)
+        state = parser_exit_scope(state)
+    end_if
+    
+    state = parser_expect(state, TOKEN_END)
+    
+    Numeric if_id = 0
+    if_id = parser_create_node(state, AST_IF_STATEMENT_KOMUTU, "if_stmt")
+    
+    ASTIfData data
+    data.node_id = if_id
+    data.condition_id = condition_id
+    data.then_block_id = then_block_id
+    data.else_block_id = else_block_id
+    
+    state.arena = ast_arena_set_data(state.arena, if_id, data)
+    
+    return if_id
+end_function
+
+function parse_while_statement(state)
+    state = parser_expect(state, TOKEN_WHILE)
+    Numeric condition_id = 0
+    condition_id = parse_expression(state, 0)
+    state = parser_expect(state, TOKEN_DO)
+    
+    state = parser_enter_scope(state)
+    Numeric body_id = 0
+    body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    
+    Numeric while_id = 0
+    while_id = parser_create_node(state, AST_WHILE_LOOP_KOMUTU, "while_loop")
+    
+    ASTWhileData data
+    data.node_id = while_id
+    data.condition_id = condition_id
+    data.body_block_id = body_id
+    
+    state.arena = ast_arena_set_data(state.arena, while_id, data)
+    
+    return while_id
+end_function
+
+function parse_statement(state)
+    Token token
+    token = parser_peek(state)
+    
+    if token.type == TOKEN_IMPORT then
+        return parse_import_statement(state)
+    end_if
+    
+    if token.type == TOKEN_FUNCTION then
+        return parse_function_declaration(state)
+    end_if
+    
+    if token.type == TOKEN_ASYNC then
+        return parse_async_function(state)
+    end_if
+    
+    if token.type == TOKEN_STRUCT then
+        return parse_struct_definition(state)
+    end_if
+    
+    if token.type == TOKEN_ENUM then
+        return parse_enum_definition(state)
+    end_if
+    
+    if token.type == TOKEN_PRINT then
+        return parse_print_statement(state)
+    end_if
+    
+    if token.type == TOKEN_RETURN then
+        return parse_return_statement(state)
+    end_if
+    
+    if token.type == TOKEN_TYPE_NUMERIC then
+        return parse_variable_declaration(state)
+    end_if
+    
+    if token.type == TOKEN_TYPE_STRING then
+        return parse_variable_declaration(state)
+    end_if
+    
+    if token.type == TOKEN_TYPE_BOOLEAN then
+        return parse_variable_declaration(state)
+    end_if
+    
+    if token.type == TOKEN_IF then
+        return parse_if_statement(state)
+    end_if
+    
+    if token.type == TOKEN_WHILE then
+        return parse_while_statement(state)
+    end_if
+    
+    if token.type == TOKEN_FOR then
+        return parse_for_loop(state)
+    end_if
+    
+    if token.type == TOKEN_TRY then
+        return parse_try_catch(state)
+    end_if
+    
+    if token.type == TOKEN_THROW then
+        return parse_throw_statement(state)
+    end_if
+    
+    if token.type == TOKEN_BREAK then
+        return parse_break_statement(state)
+    end_if
+    
+    if token.type == TOKEN_CONTINUE then
+        return parse_continue_statement(state)
+    end_if
+    
+    if token.type == TOKEN_DEFER then
+        return parse_defer_statement(state)
+    end_if
+    
+    if token.type == TOKEN_WITH then
+        return parse_with_statement(state)
+    end_if
+    
+    if token.type == TOKEN_MATCH then
+        return parse_match_statement(state)
+    end_if
+    
+    if token.type == TOKEN_TYPE then
+        return parse_type_alias(state)
+    end_if
+    
+    if token.type == TOKEN_PANIC then
+        return parse_panic_statement(state)
+    end_if
+    
+    if token.type == TOKEN_IDENTIFIER then
+        return parse_assignment(state)
+    end_if
+    
+    print "Parser error: Unexpected statement token"
+    print "Token type: "
+    print token.type
+    panic("parse_statement: unexpected token")
+    
+    return -1
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Block parsing (overload for multiple end tokens)
+-- -----------------------------------------------------------------------------
+
+function parse_block(state, end_token1)
+    return parse_block_multi(state, end_token1, TOKEN_EOF)
+end_function
+
+function parse_block_multi(state, end_token1, end_token2)
+    list statement_ids = list()
+    
+    while 1 == 1
+        Token token
+        token = parser_peek(state)
+        
+        if token.type == TOKEN_EOF then
+            break
+        end_if
+        
+        if token.type == end_token1 then
+            break
+        end_if
+        
+        if token.type == end_token2 then
+            break
+        end_if
+        
+        Numeric stmt_id = 0
+        stmt_id = parse_statement(state)
+        mlp_list_add(statement_ids, stmt_id)
+    end
+    
+    Numeric block_id = 0
+    block_id = parser_create_node(state, AST_BLOK, "block")
+    
+    ASTBlockData data
+    data.node_id = block_id
+    data.statement_ids = statement_ids
+    
+    state.arena = ast_arena_set_data(state.arena, block_id, data)
+    
+    return block_id
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Top-level parsing
+-- -----------------------------------------------------------------------------
+
+function parse(source_code)
+    TokenStream stream
+    stream = tokenize(source_code)
+    ParserState state
+    state = parser_state_create(stream)
+    
+    Numeric root_id = 0
+    root_id = parse_block(state, TOKEN_EOF)
+    
+    return state.arena
+end_function

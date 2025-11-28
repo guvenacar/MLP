@@ -1,0 +1,496 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Code Generator - Data Structures Module
+-- -----------------------------------------------------------------------------
+-- List, HashMap, Set, Struct operations code generation
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/scope_manager.mlp"
+-- Note: codegen.mlp imports this file, so we don't import it back (circular dependency)
+
+-- -----------------------------------------------------------------------------
+-- Struct metadata registry (Phase 6.2: Nested Structs + Methods)
+-- -----------------------------------------------------------------------------
+-- Port from: mlp_compiler.c struct_registry (lines 7580-7615)
+-- Tracks struct definitions for field offset calculation
+-- -----------------------------------------------------------------------------
+
+struct StructFieldMetadata then
+    String field_name
+    String field_type      -- "numeric", "string", "boolean", or struct name
+    Numeric offset        -- Byte offset from struct base
+    Boolean is_method        -- True if this is a method
+    String method_label    -- Assembly label for method (if is_method)
+end_struct
+
+struct StructMetadata then
+    String struct_name
+    list fields
+    Numeric field_count
+    Numeric total_size    -- Total bytes for this struct
+end_struct
+
+-- Global struct registry (managed by scope_manager)
+list global_struct_registry = list()
+
+function register_struct_metadata(struct_name, fields)
+    StructMetadata meta
+    meta.struct_name = struct_name
+    meta.fields = fields
+    meta.field_count = mlp_list_length(fields)
+    
+    -- Calculate total size (8 bytes per field)
+    Numeric total_bytes = 0
+    for i = 0 to mlp_list_length(fields) - 1 do
+        StructFieldMetadata field
+        field = mlp_list_get(fields, i)
+        if field.is_method == false then
+            total_bytes = total_bytes + 8  -- Each field is 8 bytes
+        end_if
+    end
+    meta.total_size = total_bytes
+    
+    -- Add to registry
+    mlp_list_add(global_struct_registry, meta)
+end_function
+
+function find_struct_metadata(struct_name)
+    for i = 0 to mlp_list_length(global_struct_registry) - 1 do
+        StructMetadata meta
+        meta = mlp_list_get(global_struct_registry, i)
+        if meta.struct_name == struct_name then
+            return meta
+        end_if
+    end
+    return null  -- Not found
+end_function
+
+function find_field_in_struct(meta, field_name)
+    for i = 0 to meta.field_count - 1 do
+        StructFieldMetadata field
+        field = mlp_list_get(meta.fields, i)
+        if field.field_name == field_name then
+            return field
+        end_if
+    end
+    return null  -- Not found
+end_function
+
+-- -----------------------------------------------------------------------------
+-- List literal code generation
+-- -----------------------------------------------------------------------------
+
+function visit_list_literal(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    list element_ids = list()
+    
+    Numeric count = 0
+    count = mlp_list_length(element_ids)
+    
+    state.code = asm_emit_text(state.code, "    ; List literal with " + numeric_to_metin(count) + " elements")
+    
+    -- RUNTIME: Call list_create(capacity)
+    state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_metin(count))
+    state.code = asm_emit_text(state.code, "    call list_create")
+    state.code = asm_emit_text(state.code, "    mov rbx, rax")
+    
+    -- Add elements
+    for i = 0 to mlp_list_length(element_ids) - 1 do
+        Numeric elem_id = 0
+        elem_id = mlp_list_get(element_ids, i)
+        state = visit_expression(state, elem_id)
+        
+        -- RUNTIME: Call list_add(list, element)
+        state.code = asm_emit_text(state.code, "    mov rdi, rbx")
+        state.code = asm_emit_text(state.code, "    mov rsi, rax")
+        state.code = asm_emit_text(state.code, "    call list_add")
+        state.code = asm_emit_text(state.code, "    mov rbx, rax")
+    end
+    
+    -- Return list pointer in rax
+    state.code = asm_emit_text(state.code, "    mov rax, rbx")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- List access (array[index])
+-- -----------------------------------------------------------------------------
+
+function visit_array_access(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric array_id = 1
+    Numeric index_id = 2
+    
+    state.code = asm_emit_text(state.code, "    ; Array access")
+    
+    -- Evaluate array
+    state = visit_expression(state, array_id)
+    state.code = asm_emit_text(state.code, "    push rax")
+    
+    -- Evaluate index
+    state = visit_expression(state, index_id)
+    state.code = asm_emit_text(state.code, "    mov rcx, rax")
+    state.code = asm_emit_text(state.code, "    pop rbx")
+    
+    -- Bounds check
+    state.code = asm_emit_text(state.code, "    mov rdx, [rbx]")
+    state.code = asm_emit_text(state.code, "    cmp rcx, rdx")
+    state.code = asm_emit_text(state.code, "    jge array_bounds_error")
+    
+    -- Calculate offset and load
+    state.code = asm_emit_text(state.code, "    imul rcx, 8")
+    state.code = asm_emit_text(state.code, "    add rcx, 16")
+    state.code = asm_emit_text(state.code, "    add rbx, rcx")
+    state.code = asm_emit_text(state.code, "    mov rax, [rbx]")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- HashMap literal code generation
+-- -----------------------------------------------------------------------------
+
+function visit_hashmap_literal(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    list key_ids = list()
+    list value_ids = list()
+    
+    state.code = asm_emit_text(state.code, "    ; HashMap literal")
+    
+    -- Allocate HashMap structure
+    state.code = asm_emit_text(state.code, "    mov rdi, 32")
+    state.code = asm_emit_text(state.code, "    call hashmap_create")
+    state.code = asm_emit_text(state.code, "    mov rbx, rax")
+    
+    -- Insert key-value pairs
+    for i = 0 to mlp_list_length(key_ids) - 1 do
+        Numeric key_id = 0
+        key_id = mlp_list_get(key_ids, i)
+        Numeric value_id = 0
+        value_id = mlp_list_get(value_ids, i)
+        
+        -- Evaluate key
+        state = visit_expression(state, key_id)
+        state.code = asm_emit_text(state.code, "    push rax")
+        
+        -- Evaluate value
+        state = visit_expression(state, value_id)
+        state.code = asm_emit_text(state.code, "    mov rsi, rax")
+        state.code = asm_emit_text(state.code, "    pop rdi")
+        
+        -- Insert into map
+        state.code = asm_emit_text(state.code, "    push rbx")
+        state.code = asm_emit_text(state.code, "    mov rdi, rbx")
+        state.code = asm_emit_text(state.code, "    call hashmap_set")
+        state.code = asm_emit_text(state.code, "    pop rbx")
+    end
+    
+    -- Return map pointer in rax
+    state.code = asm_emit_text(state.code, "    mov rax, rbx")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- HashMap access (mlp_list_get(map, key))
+-- -----------------------------------------------------------------------------
+
+function visit_hashmap_get(state, map_id, key_id)
+    state.code = asm_emit_text(state.code, "    ; HashMap get")
+    
+    -- Evaluate map
+    state = visit_expression(state, map_id)
+    state.code = asm_emit_text(state.code, "    push rax")
+    
+    -- Evaluate key
+    state = visit_expression(state, key_id)
+    state.code = asm_emit_text(state.code, "    mov rsi, rax")
+    state.code = asm_emit_text(state.code, "    pop rdi")
+    
+    -- Call hashmap_get
+    state.code = asm_emit_text(state.code, "    call hashmap_get")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Set literal code generation
+-- -----------------------------------------------------------------------------
+
+function visit_set_literal(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    list element_ids = list()
+    
+    state.code = asm_emit_text(state.code, "    ; Set literal")
+    
+    -- Allocate Set structure
+    state.code = asm_emit_text(state.code, "    mov rdi, 32")
+    state.code = asm_emit_text(state.code, "    call set_create")
+    state.code = asm_emit_text(state.code, "    mov rbx, rax")
+    
+    -- Insert elements
+    for i = 0 to mlp_list_length(element_ids) - 1 do
+        Numeric elem_id = 0
+        elem_id = mlp_list_get(element_ids, i)
+        
+        -- Evaluate element
+        state = visit_expression(state, elem_id)
+        state.code = asm_emit_text(state.code, "    mov rsi, rax")
+        state.code = asm_emit_text(state.code, "    mov rdi, rbx")
+        
+        -- Insert into set
+        state.code = asm_emit_text(state.code, "    push rbx")
+        state.code = asm_emit_text(state.code, "    call set_add")
+        state.code = asm_emit_text(state.code, "    pop rbx")
+    end
+    
+    -- Return set pointer in rax
+    state.code = asm_emit_text(state.code, "    mov rax, rbx")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Struct instantiation code generation
+-- -----------------------------------------------------------------------------
+
+function visit_struct_instantiation(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    String type_name = "MyStruct"
+    list field_names = list()
+    list field_value_ids = list()
+    
+    state.code = asm_emit_text(state.code, "    ; Struct instantiation: " + type_name)
+    
+    -- Allocate struct (assuming 8 bytes per field)
+    Numeric bytes = 0
+    bytes = mlp_list_length(feld_names) * 8
+    state.code = asm_emit_text(state.code, "    mov rdi, " + numeric_to_metin(bytes))
+    state.code = asm_emit_text(state.code, "    call malloc")
+    state.code = asm_emit_text(state.code, "    mov rbx, rax")
+    
+    -- Initialize fields
+    for i = 0 to mlp_list_length(feld_names) - 1 do
+        Numeric value_id = 0
+        value_id = mlp_list_get(field_value_ids, i)
+        
+        -- Evaluate field value
+        state = visit_expression(state, value_id)
+        
+        -- Store in struct
+        Numeric offset = i * 8
+        state.code = asm_emit_text(state.code, "    mov [rbx + " + numeric_to_metin(offset) + "], rax")
+    end
+    
+    -- Return struct pointer in rax
+    state.code = asm_emit_text(state.code, "    mov rax, rbx")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Member access code generation (struct.field)
+-- -----------------------------------------------------------------------------
+
+function visit_member_access(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric object_id = 1
+    String member_name = "field"
+    
+    state.code = asm_emit_text(state.code, "    ; Member access: " + member_name)
+    
+    -- Evaluate object
+    state = visit_expression(state, object_id)
+    
+    -- Calculate field offset (hardcoded for now)
+    Numeric field_offset = 0
+    
+    -- Load field
+    state.code = asm_emit_text(state.code, "    mov rax, [rax + " + numeric_to_metin(field_offset) + "]")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Range expression code generation (1..10)
+-- -----------------------------------------------------------------------------
+
+function visit_range(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    Numeric start_id = 1
+    Numeric end_id = 2
+    
+    state.code = asm_emit_text(state.code, "    ; Range expression")
+    
+    -- Allocate range structure (start, end, current)
+    state.code = asm_emit_text(state.code, "    mov rdi, 24")
+    state.code = asm_emit_text(state.code, "    call malloc")
+    state.code = asm_emit_text(state.code, "    mov rbx, rax")
+    
+    -- Evaluate and store start
+    state = visit_expression(state, start_id)
+    state.code = asm_emit_text(state.code, "    mov [rbx], rax")
+    state.code = asm_emit_text(state.code, "    mov [rbx + 16], rax")
+    
+    -- Evaluate and store end
+    state = visit_expression(state, end_id)
+    state.code = asm_emit_text(state.code, "    mov [rbx + 8], rax")
+    
+    -- Return range pointer in rax
+    state.code = asm_emit_text(state.code, "    mov rax, rbx")
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- For loop code generation
+-- -----------------------------------------------------------------------------
+
+function visit_for_loop(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    String iterator_name = "i"
+    Numeric init_id = 1
+    Numeric condition_id = 2
+    Numeric step_id = -1
+    Numeric body_id = 3
+    
+    String loop_label = ""
+    loop_label = codegen_generate_label(state, "for_loop")
+    String end_label = ""
+    end_label = codegen_generate_label(state, "for_end")
+    
+    state.code = asm_emit_text(state.code, "    ; For loop")
+    
+    -- Enter scope
+    state.scope = scope_enter(state.scope)
+    
+    -- Initialize iterator
+    state = visit_expression(state, init_id)
+    state.scope = scope_register_variable(state.scope, iterator_name, "numeric", 0)
+    VariableInfo iter_info
+    iter_info = scope_lookup_variable(state.scope, iterator_name)
+    state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_metin(iter_info.stack_offset) + "], rax")
+    
+    -- Loop start
+    state.code = asm_emit_text(state.code, loop_label + ":")
+    
+    -- Check condition
+    state.code = asm_emit_text(state.code, "    mov rax, [rbp - " + numeric_to_metin(iter_info.stack_offset) + "]")
+    state = visit_expression(state, condition_id)
+    state.code = asm_emit_text(state.code, "    pop rbx")
+    state.code = asm_emit_text(state.code, "    cmp rbx, rax")
+    state.code = asm_emit_text(state.code, "    jge " + end_label)
+    
+    -- Body
+    state = visit_block(state, body_id)
+    
+    -- Step (increment)
+    if step_id >= 0 then
+        state = visit_expression(state, step_id)
+        state.code = asm_emit_text(state.code, "    mov rbx, [rbp - " + numeric_to_metin(iter_info.stack_offset) + "]")
+        state.code = asm_emit_text(state.code, "    add rbx, rax")
+        state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_metin(iter_info.stack_offset) + "], rbx")
+    else
+        state.code = asm_emit_text(state.code, "    inc qword [rbp - " + numeric_to_metin(iter_info.stack_offset) + "]")
+    end_if
+    
+    -- Loop back
+    state.code = asm_emit_text(state.code, "    jmp " + loop_label)
+    
+    -- End
+    state.code = asm_emit_text(state.code, end_label + ":")
+    
+    -- Exit scope
+    state.scope = scope_exit(state.scope)
+    
+    return state
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Foreach loop code generation
+-- -----------------------------------------------------------------------------
+
+function visit_foreach_loop(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    String iterator_name = "item"
+    Numeric iterable_id = 1
+    Numeric body_id = 2
+    
+    String loop_label = ""
+    loop_label = codegen_generate_label(state, "foreach_loop")
+    String end_label = ""
+    end_label = codegen_generate_label(state, "foreach_end")
+    
+    state.code = asm_emit_text(state.code, "    ; Foreach loop")
+    
+    -- Enter scope
+    state.scope = scope_enter(state.scope)
+    
+    -- Evaluate iterable
+    state = visit_expression(state, iterable_id)
+    state.code = asm_emit_text(state.code, "    mov [rbp - 8], rax")
+    
+    -- Initialize index
+    state.code = asm_emit_text(state.code, "    xor rcx, rcx")
+    
+    -- Loop start
+    state.code = asm_emit_text(state.code, loop_label + ":")
+    
+    -- Check bounds
+    state.code = asm_emit_text(state.code, "    mov rbx, [rbp - 8]")
+    state.code = asm_emit_text(state.code, "    mov rdx, [rbx]")
+    state.code = asm_emit_text(state.code, "    cmp rcx, rdx")
+    state.code = asm_emit_text(state.code, "    jge " + end_label)
+    
+    -- Get current element
+    state.code = asm_emit_text(state.code, "    push rcx")
+    state.code = asm_emit_text(state.code, "    imul rcx, 8")
+    state.code = asm_emit_text(state.code, "    add rcx, 16")
+    state.code = asm_emit_text(state.code, "    add rbx, rcx")
+    state.code = asm_emit_text(state.code, "    mov rax, [rbx]")
+    
+    -- Store in iterator variable
+    state.scope = scope_register_variable(state.scope, iterator_name, "numeric", 0)
+    VariableInfo iter_info
+    iter_info = scope_lookup_variable(state.scope, iterator_name)
+    state.code = asm_emit_text(state.code, "    mov [rbp - " + numeric_to_metin(iter_info.stack_offset) + "], rax")
+    
+    -- Body
+    state = visit_block(state, body_id)
+    
+    -- Increment index
+    state.code = asm_emit_text(state.code, "    pop rcx")
+    state.code = asm_emit_text(state.code, "    inc rcx")
+    state.code = asm_emit_text(state.code, "    jmp " + loop_label)
+    
+    -- End
+    state.code = asm_emit_text(state.code, end_label + ":")
+    
+    -- Exit scope
+    state.scope = scope_exit(state.scope)
+    
+    return state
+end_function

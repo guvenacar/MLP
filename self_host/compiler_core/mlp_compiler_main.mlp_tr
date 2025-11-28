@@ -1,0 +1,342 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- MLP Compiler Main Pipeline
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisini MLP'ye taşıyan ana derleyici.
+-- Lexer → Parser → Code Generator → Assembly output
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/lexer.mlp"
+import "compiler_core/parser.mlp"
+import "compiler_core/codegen.mlp"
+import "compiler_core/scope_manager.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Compiler options
+-- -----------------------------------------------------------------------------
+
+yapı CompilerOptions ise
+    metin input_file
+    metin output_file
+    sayısal verbose
+    sayısal debug_tokens
+    sayısal debug_ast
+    sayısal debug_scope
+    sayısal optimize
+son_yapı
+
+fonksiyon compiler_options_default()
+    CompilerOptions opts
+    opts.input_file = "input.mlp"
+    opts.output_file = "output.asm"
+    opts.verbose = 0
+    opts.debug_tokens = 0
+    opts.debug_ast = 0
+    opts.debug_scope = 0
+    opts.optimize = 0
+    döndür opts
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- File I/O helpers
+-- -----------------------------------------------------------------------------
+
+fonksiyon read_file(filepath)
+    metin content = ""
+    
+    -- TODO: Implement actual file reading
+    -- For now, döndür empty metin
+    
+    döndür content
+son_fonksiyon
+
+fonksiyon write_file(filepath, content)
+    -- TODO: Implement actual file writing
+    
+    yaz "Writing için file: "
+    yaz filepath
+    
+    döndür 1
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Compilation pipeline
+-- -----------------------------------------------------------------------------
+
+yapı CompilationResult ise
+    sayısal success
+    metin output_asm
+    metin error_message
+    sayısal token_count
+    sayısal ast_node_count
+son_yapı
+
+fonksiyon compile(source_code, options)
+    CompilationResult result
+    result.success = 0
+    result.output_asm = ""
+    result.error_message = ""
+    result.token_count = 0
+    result.ast_node_count = 0
+    
+    eğer options.verbose == 1 ise
+        yaz "=== MLP Compiler Pipeline ==="
+        yaz "Input length: "
+        yaz source_code.length()
+        yaz " characters"
+        yaz ""
+    son_eğer
+    
+    -- Phase 1: Lexical analysis
+    eğer options.verbose == 1 ise
+        yaz "[1/3] Lexing..."
+    son_eğer
+    
+    TokenStream token_stream
+    token_stream = tokenize(source_code)
+    result.token_count = token_stream_count(token_stream)
+    
+    eğer options.debug_tokens == 1 ise
+        yaz "Tokens generated: "
+        yaz result.token_count
+        token_stream_dump(token_stream)
+    son_eğer
+    
+    -- Phase 2: Parsing
+    eğer options.verbose == 1 ise
+        yaz "[2/3] Parsing..."
+    son_eğer
+    
+    ASTArena arena
+    arena = parse(source_code)
+    result.ast_node_count = ast_arena_size(arena)
+    
+    eğer options.debug_ast == 1 ise
+        yaz "AST nodes created: "
+        yaz result.ast_node_count
+        ast_arena_dump(arena)
+    son_eğer
+    
+    -- Phase 3: Code generation
+    eğer options.verbose == 1 ise
+        yaz "[3/3] Generating assembly..."
+    son_eğer
+    
+    metin assembly = ""
+    assembly = generate_code(arena)
+    result.output_asm = assembly
+    
+    eğer options.verbose == 1 ise
+        yaz "Assembly generated: "
+        yaz assembly.length()
+        yaz " characters"
+        yaz ""
+    son_eğer
+    
+    result.success = 1
+    
+    döndür result
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Main compiler entry point
+-- -----------------------------------------------------------------------------
+
+fonksiyon compile_file(input_path, output_path, verbose)
+    CompilerOptions options
+    options = compiler_options_default()
+    options.input_file = input_path
+    options.output_file = output_path
+    options.verbose = verbose
+    
+    yaz "Compiling: "
+    yaz input_path
+    yaz " → "
+    yaz output_path
+    yaz ""
+    
+    -- Read source file
+    metin source_code = ""
+    source_code = read_file(input_path)
+    
+    eğer source_code.length() == 0 ise
+        yaz "Error: Could not read file or file is empty"
+        döndür 0
+    son_eğer
+    
+    -- Compile
+    CompilationResult result
+    result = compile(source_code, options)
+    
+    eğer result.success == 0 ise
+        yaz "Compilation failed: "
+        yaz result.error_message
+        döndür 0
+    son_eğer
+    
+    -- Write output
+    sayısal write_success = 0
+    write_success = write_file(output_path, result.output_asm)
+    
+    eğer write_success == 0 ise
+        yaz "Error: Could not write output file"
+        döndür 0
+    son_eğer
+    
+    yaz "Compilation successful!"
+    yaz "Tokens: "
+    yaz result.token_count
+    yaz ", AST nodes: "
+    yaz result.ast_node_count
+    yaz ""
+    
+    döndür 1
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Interactive REPL mode
+-- -----------------------------------------------------------------------------
+
+fonksiyon repl_mode()
+    yaz "=== MLP Compiler REPL ==="
+    yaz "Type 'exit' için quit"
+    yaz ""
+    
+    CompilerOptions options
+    options = compiler_options_default()
+    options.verbose = 0
+    options.debug_ast = 0
+    
+    döngü 1 == 1
+        yaz "mlp> "
+        
+        -- TODO: Read line from stdin
+        metin input = ""
+        
+        eğer input == "exit" ise
+            break
+        son_eğer
+        
+        eğer input == "" ise
+            continue
+        son_eğer
+        
+        -- Compile and show result
+        CompilationResult result
+        result = compile(input, options)
+        
+        eğer result.success == 1 ise
+            yaz "Assembly output:"
+            yaz result.output_asm
+        değilse
+            yaz "Error: "
+            yaz result.error_message
+        son_eğer
+        
+        yaz ""
+    son
+    
+    yaz "Goodbye!"
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Command line argument parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_args(args)
+    CompilerOptions options
+    options = compiler_options_default()
+    
+    sayısal i = 0
+    döngü i < mlp_list_length(args)
+        metin arg = ""
+        arg = mlp_list_get(args, i)
+        
+        eğer arg == "-v" ise
+            options.verbose = 1
+        değilse eğer arg == "--verbose" ise
+            options.verbose = 1
+        değilse eğer arg == "--debug-tokens" ise
+            options.debug_tokens = 1
+        değilse eğer arg == "--debug-ast" ise
+            options.debug_ast = 1
+        değilse eğer arg == "--debug-scope" ise
+            options.debug_scope = 1
+        değilse eğer arg == "-O" ise
+            options.optimize = 1
+        değilse eğer arg == "-o" ise
+            i = i + 1
+            eğer i < mlp_list_length(args) ise
+                options.output_file = mlp_list_get(args, i)
+            son_eğer
+        değilse
+            options.input_file = arg
+        son_eğer
+        
+        i = i + 1
+    son
+    
+    döndür options
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Main fonksiyon
+-- -----------------------------------------------------------------------------
+
+fonksiyon main(args)
+    eğer mlp_list_length(args) == 0 ise
+        yaz "Usage: mlp_compiler [options] <input.mlp>"
+        yaz ""
+        yaz "Options:"
+        yaz "  -v, --verbose       Enable verbose output"
+        yaz "  -o <file>           Specify output file"
+        yaz "  --debug-tokens      Show token stream"
+        yaz "  --debug-ast         Show AST structure"
+        yaz "  --debug-scope       Show scope information"
+        yaz "  -O                  Enable optimizations"
+        yaz ""
+        yaz "  --repl              Start interactive REPL mode"
+        yaz ""
+        döndür 1
+    son_eğer
+    
+    -- Check için REPL mode
+    metin first_arg = ""
+    first_arg = mlp_list_get(args, 0)
+    eğer first_arg == "--repl" ise
+        repl_mode()
+        döndür 0
+    son_eğer
+    
+    -- Parse arguments
+    CompilerOptions options
+    options = parse_args(args)
+    
+    -- Compile file
+    sayısal success = 0
+    success = compile_file(options.input_file, options.output_file, options.verbose)
+    
+    eğer success == 1 ise
+        döndür 0
+    değilse
+        döndür 1
+    son_eğer
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Bootstrap entry point (when compiled with C compiler)
+-- -----------------------------------------------------------------------------
+
+yaz "MLP Self-Hosting Compiler v0.1"
+yaz "Initializing..."
+yaz ""
+
+-- For now, just compile a test file
+sayısal exit_code = compile_file("test.mlp", "test.asm", 1)
+
+yaz "Exit code: "
+yaz exit_code

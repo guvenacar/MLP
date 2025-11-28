@@ -1,0 +1,482 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Code Generator - Control Flow & Advanced Module
+-- -----------------------------------------------------------------------------
+-- Try-catch, match, defer, with, break, continue code generation
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/scope_manager.mlp"
+import "compiler_core/codegen.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Try-catch code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_try_catch(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal try_block_id = 1
+    liste catch_block_ids = liste()
+    liste exception_types = liste()
+    
+    metin catch_label = ""
+    catch_label = codegen_generate_label(state, "catch")
+    metin end_label = ""
+    end_label = codegen_generate_label(state, "try_end")
+    
+    state.code = asm_emit_text(state.code, "    ; Try-catch block")
+    
+    -- Setup exception handler
+    state.code = asm_emit_text(state.code, "    lea rax, [rel " + catch_label + "]")
+    state.code = asm_emit_text(state.code, "    push rax")
+    state.code = asm_emit_text(state.code, "    call exception_push_handler")
+    
+    -- Try block
+    state = visit_block(state, try_block_id)
+    
+    -- Pop exception handler
+    state.code = asm_emit_text(state.code, "    call exception_pop_handler")
+    state.code = asm_emit_text(state.code, "    jmp " + end_label)
+    
+    -- Catch block
+    state.code = asm_emit_text(state.code, catch_label + ":")
+    
+    -- Get exception object
+    state.code = asm_emit_text(state.code, "    call exception_get_current")
+    state.code = asm_emit_text(state.code, "    mov [rbp - 8], rax")
+    
+    -- Generate catch handlers
+    için i = 0 için mlp_list_length(catch_block_ds) - 1 do
+        sayısal catch_id = 0
+        catch_id = mlp_list_get(catch_block_ds, i)
+        metin exc_type = ""
+        exc_type = mlp_list_get(excepton_types, i)
+        
+        metin next_catch = ""
+        next_catch = codegen_generate_label(state, "catch_next")
+        
+        -- Check exception type
+        state.code = asm_emit_text(state.code, "    ; Check exception type: " + exc_type)
+        state.code = asm_emit_text(state.code, "    mov rax, [rbp - 8]")
+        state.code = asm_emit_text(state.code, "    mov rdi, rax")
+        state.code = asm_emit_text(state.code, "    lea rsi, [rel exc_type_" + exc_type + "]")
+        state.code = asm_emit_text(state.code, "    call exception_matches")
+        state.code = asm_emit_text(state.code, "    test rax, rax")
+        state.code = asm_emit_text(state.code, "    jz " + next_catch)
+        
+        -- Handle exception
+        state = visit_block(state, catch_id)
+        state.code = asm_emit_text(state.code, "    jmp " + end_label)
+        
+        state.code = asm_emit_text(state.code, next_catch + ":")
+    son
+    
+    -- Rethrow eğer not handled
+    state.code = asm_emit_text(state.code, "    call exception_rethrow")
+    
+    -- End
+    state.code = asm_emit_text(state.code, end_label + ":")
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Throw statement code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_throw(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal expr_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Throw exception")
+    
+    -- Evaluate exception object
+    state = visit_expression(state, expr_id)
+    
+    -- Call throw
+    state.code = asm_emit_text(state.code, "    mov rdi, rax")
+    state.code = asm_emit_text(state.code, "    call exception_throw")
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Break statement code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_break(state, node_id)
+    state.code = asm_emit_text(state.code, "    ; Break")
+    
+    -- TODO: Track loop son labels in state
+    metin loop_end = "loop_end_0"
+    state.code = asm_emit_text(state.code, "    jmp " + loop_end)
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Continue statement code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_continue(state, node_id)
+    state.code = asm_emit_text(state.code, "    ; Continue")
+    
+    -- TODO: Track loop start labels in state
+    metin loop_start = "loop_start_0"
+    state.code = asm_emit_text(state.code, "    jmp " + loop_start)
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Match statement code generation (pattern matching)
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_match(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal expr_id = 1
+    liste pattern_ids = liste()
+    liste body_ids = liste()
+    
+    metin end_label = ""
+    end_label = codegen_generate_label(state, "match_end")
+    
+    state.code = asm_emit_text(state.code, "    ; Match statement")
+    
+    -- Evaluate match expression
+    state = visit_expression(state, expr_id)
+    state.code = asm_emit_text(state.code, "    mov [rbp - 8], rax")
+    
+    -- Generate pattern checks
+    için i = 0 için mlp_list_length(pattern_ds) - 1 do
+        sayısal pattern_id = 0
+        pattern_id = mlp_list_get(pattern_ds, i)
+        sayısal body_id = 0
+        body_id = mlp_list_get(body_ds, i)
+        
+        metin next_case = ""
+        next_case = codegen_generate_label(state, "match_case")
+        
+        -- Evaluate pattern
+        state = visit_expression(state, pattern_id)
+        
+        -- Compare
+        state.code = asm_emit_text(state.code, "    mov rbx, [rbp - 8]")
+        state.code = asm_emit_text(state.code, "    cmp rbx, rax")
+        state.code = asm_emit_text(state.code, "    jne " + next_case)
+        
+        -- Execute body
+        state = visit_block(state, body_id)
+        state.code = asm_emit_text(state.code, "    jmp " + end_label)
+        
+        state.code = asm_emit_text(state.code, next_case + ":")
+    son
+    
+    -- No match (panic or default)
+    state.code = asm_emit_text(state.code, "    lea rdi, [rel match_error_msg]")
+    state.code = asm_emit_text(state.code, "    call panic")
+    
+    -- End
+    state.code = asm_emit_text(state.code, end_label + ":")
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Defer statement code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_defer(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal stmt_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Defer statement")
+    
+    -- TODO: Track deferred statements in stack
+    -- For now, just emit at fonksiyon exit
+    metin defer_label = ""
+    defer_label = codegen_generate_label(state, "defer")
+    
+    state.code = asm_emit_text(state.code, "    lea rax, [rel " + defer_label + "]")
+    state.code = asm_emit_text(state.code, "    push rax")
+    state.code = asm_emit_text(state.code, "    call defer_push")
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- With statement code generation (resource management)
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_with(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    liste resource_ids = liste()
+    sayısal body_id = 1
+    
+    metin cleanup_label = ""
+    cleanup_label = codegen_generate_label(state, "with_cleanup")
+    metin end_label = ""
+    end_label = codegen_generate_label(state, "with_end")
+    
+    state.code = asm_emit_text(state.code, "    ; With statement")
+    
+    -- Acquire resources
+    için i = 0 için mlp_list_length(resource_ds) - 1 do
+        sayısal res_id = 0
+        res_id = mlp_list_get(resource_ds, i)
+        state = visit_expression(state, res_id)
+        state.code = asm_emit_text(state.code, "    push rax")
+    son
+    
+    -- Setup cleanup handler
+    state.code = asm_emit_text(state.code, "    lea rax, [rel " + cleanup_label + "]")
+    state.code = asm_emit_text(state.code, "    push rax")
+    state.code = asm_emit_text(state.code, "    call exception_push_handler")
+    
+    -- Body
+    state = visit_block(state, body_id)
+    
+    -- Pop handler
+    state.code = asm_emit_text(state.code, "    call exception_pop_handler")
+    state.code = asm_emit_text(state.code, "    jmp " + end_label)
+    
+    -- Cleanup
+    state.code = asm_emit_text(state.code, cleanup_label + ":")
+    
+    -- Release resources (reverse order)
+    için i = mlp_list_length(resource_ds) - 1 için 0 adım -1 do
+        state.code = asm_emit_text(state.code, "    pop rdi")
+        state.code = asm_emit_text(state.code, "    call resource_close")
+    son
+    
+    -- End
+    state.code = asm_emit_text(state.code, end_label + ":")
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Panic statement code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_panic(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal message_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Panic")
+    
+    -- Evaluate message
+    state = visit_expression(state, message_id)
+    
+    -- Call panic
+    state.code = asm_emit_text(state.code, "    mov rdi, rax")
+    state.code = asm_emit_text(state.code, "    call panic")
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Unary expression code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_unary_op(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal operand_id = 1
+    TokenType operator_type = TOKEN_NOT
+    
+    state.code = asm_emit_text(state.code, "    ; Unary operation")
+    
+    -- Evaluate operand
+    state = visit_expression(state, operand_id)
+    
+    -- Apply operator
+    eğer operator_type == TOKEN_NOT ise
+        state.code = asm_emit_text(state.code, "    test rax, rax")
+        state.code = asm_emit_text(state.code, "    setz al")
+        state.code = asm_emit_text(state.code, "    movzx rax, al")
+    değilse eğer operator_type == TOKEN_MINUS ise
+        state.code = asm_emit_text(state.code, "    neg rax")
+    değilse eğer operator_type == TOKEN_BITWISE_NOT ise
+        state.code = asm_emit_text(state.code, "    not rax")
+    son_eğer
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Expression statement code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_expression_statement(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal expr_id = 1
+    
+    state.code = asm_emit_text(state.code, "    ; Expression statement")
+    
+    -- Evaluate expression (discard result)
+    state = visit_expression(state, expr_id)
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Import statement code generation (runtime linking)
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_import(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    metin module_path = "module"
+    
+    state.code = asm_emit_text(state.code, "    ; Import: " + module_path)
+    
+    -- Add için imports section
+    metin import_line = "extern " + module_path + "_init"
+    
+    -- TODO: Track imports properly
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Type alias (no codegen, only için type checking)
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_type_alias(state, node_id)
+    -- Type aliases don't generate code
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Struct definition (no codegen, only metadata)
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_struct_definition(state, node_id)
+    -- Struct definitions don't generate code
+    -- Only used için type checking and layout calculation
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Enum definition (generate value constants)
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_enum_definition(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    metin enum_name = "MyEnum"
+    liste variant_names = liste()
+    liste variant_values = liste()
+    
+    state.code = asm_emit_text(state.code, "")
+    state.code = asm_emit_text(state.code, "; Enum: " + enum_name)
+    
+    -- Generate constants in data section
+    için i = 0 için mlp_list_length(varant_names) - 1 do
+        metin var_name = ""
+        var_name = mlp_list_get(varant_names, i)
+        sayısal value = 0
+        value = mlp_list_get(varant_values, i)
+        
+        metin const_name = enum_name + "_" + var_name
+        state.code = asm_emit_data(state.code, const_name + ": dq " + numeric_to_metin(value))
+    son
+    
+    döndür state
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Switch statement code generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon visit_switch_statement(state, node_id)
+    ASTNode node
+    node = ast_arena_get(state.arena, node_id)
+    
+    sayısal switch_expr_id = 1
+    liste case_values = liste()
+    liste case_block_ids = liste()
+    sayısal default_block_id = -1
+    
+    sayısal switch_id = state.label_counter
+    state.label_counter = state.label_counter + 1
+    
+    metin switch_end = ""
+    switch_end = ".switch_" + numeric_to_metin(switch_id) + "_end"
+    metin switch_default = ""
+    switch_default = ".switch_" + numeric_to_metin(switch_id) + "_default"
+    
+    state.code = asm_emit_text(state.code, "")
+    state.code = asm_emit_text(state.code, "    ; Switch statement")
+    
+    -- Evaluate switch expression
+    state = visit_expression(state, switch_expr_id)
+    
+    -- Push switch value için stack (preserve için all comparisons)
+    state.code = asm_emit_text(state.code, "    push rax")
+    
+    -- Generate case comparisons
+    için i = 0 için mlp_list_length(case_values) - 1 do
+        sayısal case_value = 0
+        case_value = mlp_list_get(case_values, i)
+        sayısal case_block_id = 0
+        case_block_id = mlp_list_get(case_block_ds, i)
+        
+        metin case_label = ""
+        case_label = ".case_" + numeric_to_metin(switch_id) + "_" + numeric_to_metin(i)
+        metin case_skip = ""
+        case_skip = ".case_" + numeric_to_metin(switch_id) + "_" + numeric_to_metin(i) + "_skip"
+        
+        -- Compare switch value with case value
+        state.code = asm_emit_text(state.code, "    mov rax, [rsp]")
+        state.code = asm_emit_text(state.code, "    cmp rax, " + numeric_to_metin(case_value))
+        state.code = asm_emit_text(state.code, "    jne " + case_skip)
+        
+        -- Case body
+        state.code = asm_emit_text(state.code, case_label + ":")
+        state = visit_block(state, case_block_id)
+        state.code = asm_emit_text(state.code, "    jmp " + switch_end)
+        
+        -- Skip için next case
+        state.code = asm_emit_text(state.code, case_skip + ":")
+    son
+    
+    -- Default case
+    eğer default_block_id != -1 ise
+        state.code = asm_emit_text(state.code, switch_default + ":")
+        state = visit_block(state, default_block_id)
+        state.code = asm_emit_text(state.code, "    jmp " + switch_end)
+    değilse
+        -- No default, jump için son
+        state.code = asm_emit_text(state.code, "    jmp " + switch_end)
+    son_eğer
+    
+    -- End label
+    state.code = asm_emit_text(state.code, switch_end + ":")
+    
+    -- Clean up stack (pop switch value)
+    state.code = asm_emit_text(state.code, "    add rsp, 8")
+    
+    döndür state
+son_fonksiyon

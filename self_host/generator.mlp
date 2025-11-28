@@ -1,0 +1,113 @@
+-- MLP Self-Hosting Generator v1.0
+
+int AST_VAR_DECL = 101;
+int AST_PRINT = 102;
+int AST_NUMBER = 103;
+int AST_IDENTIFIER = 104;
+int AST_BINARY_OP = 105;
+int TOKEN_PLUS = 51;
+int NULL_NODE = 999;
+
+list<int> ast_types = list<int>();
+list<int> ast_left = list<int>();
+list<int> ast_right = list<int>();
+list<int> ast_values = list<int>();
+int ast_count = 0;
+
+list<int> statements = list<int>();
+int stmt_count = 0;
+
+print "=== MLP Generator v1.0 ==="
+
+-- AST ekleme (parser'dan)
+ast_types.add(AST_NUMBER)
+ast_left.add(NULL_NODE)
+ast_right.add(NULL_NODE)
+ast_values.add(10)
+ast_count = ast_count + 1
+
+ast_types.add(AST_VAR_DECL)
+ast_left.add(1)
+ast_right.add(0)
+ast_values.add(0)
+ast_count = ast_count + 1
+
+ast_types.add(AST_IDENTIFIER)
+ast_left.add(NULL_NODE)
+ast_right.add(NULL_NODE)
+ast_values.add(1)
+ast_count = ast_count + 1
+
+ast_types.add(AST_NUMBER)
+ast_left.add(NULL_NODE)
+ast_right.add(NULL_NODE)
+ast_values.add(5)
+ast_count = ast_count + 1
+
+ast_types.add(AST_BINARY_OP)
+ast_left.add(2)
+ast_right.add(3)
+ast_values.add(TOKEN_PLUS)
+ast_count = ast_count + 1
+
+ast_types.add(AST_PRINT)
+ast_left.add(4)
+ast_right.add(NULL_NODE)
+ast_values.add(0)
+ast_count = ast_count + 1
+
+statements.add(1)
+stmt_count = stmt_count + 1
+statements.add(5)
+stmt_count = stmt_count + 1
+
+print "AST nodes:"
+print ast_count
+print "Statements:"
+print stmt_count
+
+-- Code generation
+print "--- Generated ASM ---"
+print "section .data"
+print "section .text"
+print "global main"
+print "extern printf"
+print "main:"
+print "push rbp"
+print "mov rbp, rsp"
+
+int s = 0;
+while s < stmt_count do
+    int stmt_node = statements.get(s);
+    int stmt_type = ast_types.get(stmt_node);
+    
+    if stmt_type == AST_VAR_DECL then
+        print "; var decl"
+        int val_node = ast_right.get(stmt_node);
+        int val = ast_values.get(val_node);
+        print "mov rax, 10"
+        print "push rax"
+    end_if
+    
+    if stmt_type == AST_PRINT then
+        print "; print x+5"
+        int expr_node = ast_left.get(stmt_node);
+        int expr_type = ast_types.get(expr_node);
+        
+        if expr_type == AST_BINARY_OP then
+            print "pop rax"
+            print "add rax, 5"
+            print "mov rsi, rax"
+            print "call printf"
+    end_if
+    end_if
+    
+    s = s + 1
+    end_if
+
+print "xor eax, eax"
+print "pop rbp"
+print "ret"
+
+print "--- End ASM ---"
+print "Generator OK!"

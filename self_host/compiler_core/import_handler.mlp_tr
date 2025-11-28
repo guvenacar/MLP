@@ -1,0 +1,256 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- ============================================================================
+-- MELP Import Handler Module
+-- ============================================================================
+-- Port from: mlp_compiler.c (lines 42-72, 5625-5715)
+-- Date: 24 Kasım 2025
+-- Strategy: Pre-Scan Import Strategy (Phase 5.10)
+--
+-- Bu modül import statement'ları yönetir:
+-- 1. Import path resolution (MLP_SOURCE_DIR kullanarak)
+-- 2. Circular import detection
+-- 3. Imported fonksiyon collection (Pre-Scan strategy)
+-- 4. Recursive import handling
+-- ============================================================================
+
+import "ast_nodes.mlp"
+import "lexer.mlp"
+import "parser.mlp"
+
+-- ========== Import Context ==========
+-- C'deki global state'i yapı olarak kapsülledik
+
+yapı ImportContext ise
+    -- Imported fonksiyon AST nodes (Pre-Scan strategy)
+    liste imported_functions
+    sayisal imported_count
+    
+    -- Imported sıralı definitions (CRITICAL FIX!)
+    liste imported_enums
+    sayisal enum_count
+    
+    -- Imported yapı definitions (CRITICAL FIX!)
+    liste imported_structs
+    sayisal struct_count
+    
+    -- Circular import detection
+    liste imported_files
+    sayisal file_count
+    
+    -- Base directory için relative imports
+    metin base_dir
+son_yapı
+
+-- ========== Constructor ==========
+
+fonksiyon create_import_context(base_directory)
+    ImportContext ctx
+    
+    -- Initialize arrays (empty)
+    ctx.imported_functions = liste()
+    ctx.imported_count = 0
+    
+    ctx.imported_enums = liste()
+    ctx.enum_count = 0
+    
+    ctx.imported_structs = liste()
+    ctx.struct_count = 0
+    
+    ctx.imported_files = liste()
+    ctx.file_count = 0
+    
+    ctx.base_dir = base_directory
+    
+    döndür ctx
+son_fonksiyon
+
+-- ========== Circular Import Detection ==========
+
+fonksiyon is_file_imported(ctx, file_path)
+    için i = 0 için ctx.file_count - 1 do
+        eğer mlp_list_get(ctx.imported_files, i) == file_path ise
+            döndür true  -- Already imported
+        son_eğer
+    son
+    döndür false
+son_fonksiyon
+
+fonksiyon mark_file_imported(ctx, file_path)
+    -- Add için imported files liste
+    mlp_list_add(ctx.imported_files, file_path)
+    ctx.file_count = ctx.file_count + 1
+son_fonksiyon
+
+-- ========== Import Path Resolution ==========
+
+fonksiyon resolve_import_path(import_path, base_dir)
+    metin resolved_path
+    
+    -- Check eğer absolute path
+    eğer string_alt(import_path, 0, 1) == "/" ise
+        -- Absolute path - use as is
+        resolved_path = import_path
+    değilse
+        -- Relative path - try MLP_SOURCE_DIR first
+        metin source_dir
+        source_dir = ortam_degiskeni_al("MLP_SOURCE_DIR")
+        
+        eğer source_dir != "" ise
+            -- Use MLP_SOURCE_DIR
+            resolved_path = source_dir + "/" + import_path
+        değilse
+            eğer base_dir != "" ise
+                -- Use base_dir
+                resolved_path = base_dir + "/" + import_path
+            değilse
+                -- No base, use as is (current directory)
+                resolved_path = import_path
+            son_eğer
+        son_eğer
+    son_eğer
+    
+    döndür resolved_path
+son_fonksiyon
+
+-- ========== Collect Imported Function ==========
+-- Pre-Scan Strategy: Collect AST nodes, don't emit assembly yet
+
+fonksiyon collect_imported_function(ctx, func_node)
+    -- Add için imported functions array
+    mlp_list_add(ctx.imported_functions, func_node)
+    ctx.imported_count = ctx.imported_count + 1
+son_fonksiyon
+
+-- ========== Collect Imported Enum (CRITICAL FIX!) ==========
+fonksiyon collect_imported_enum(ctx, enum_node)
+    -- Add için imported enums array
+    mlp_list_add(ctx.imported_enums, enum_node)
+    ctx.enum_count = ctx.enum_count + 1
+son_fonksiyon
+
+-- ========== Collect Imported Struct (CRITICAL FIX!) ==========
+fonksiyon collect_imported_struct(ctx, struct_node)
+    -- Add için imported structs array
+    mlp_list_add(ctx.imported_structs, struct_node)
+    ctx.struct_count = ctx.struct_count + 1
+son_fonksiyon
+
+-- ========== Handle Import Statement ==========
+-- C'deki visit_Import() fonksiyonunun MELP versiyonu
+
+fonksiyon handle_import(ctx, import_node, lexer, parser)
+    metin file_path = import_node.import_path
+    
+    -- ========== Import Path Resolution ==========
+    metin resolved_path
+    resolved_path = resolve_import_path(file_path, ctx.base_dir)
+    
+    -- ========== Circular Import Detection ==========
+    eğer is_file_imported(ctx, resolved_path) ise
+        döndür 0  -- Already imported, skip
+    son_eğer
+    
+    -- Mark as imported
+    mark_file_imported(ctx, resolved_path)
+    
+    -- ========== Parse Imported File ==========
+    metin import_source
+    import_source = dosya_oku(resolved_path)
+    
+    eğer import_source == "" ise
+        yaz("ERROR: Cannot open import file '" + resolved_path + "'")
+        döndür 0
+    son_eğer
+    
+    -- Save current lexer state
+    metin saved_source = lexer.source_code
+    sayisal saved_position = lexer.current_position
+    sayisal saved_line = lexer.current_line
+    sayisal saved_column = lexer.current_column
+    Token saved_token
+    saved_token = lexer.current_token
+    
+    -- Initialize lexer with imported file
+    lexer = create_lexer(import_source)
+    
+    -- Get first token
+    lexer.current_token = get_next_token(lexer)
+    
+    -- ========== COLLECT Imported Functions (Pre-Scan Strategy) ==========
+    -- Parse the imported file and collect fonksiyon definitions
+    -- They will be emitted BEFORE main() in codegen
+    
+    Token lex_token
+    lex_token = lexer.current_token
+    döngü lex_token.type != TOKEN_EOF do
+        ASTNode stmt
+        stmt = parse_statement(parser, lexer)
+        
+        eğer stmt != null ise
+            -- Collect fonksiyon definitions (don't emit yet)
+            eğer stmt.type == AST_FUNCTION_DECLARATION ise
+                collect_imported_function(ctx, stmt)
+            değilse eğer stmt.type == AST_ENUM_DECLARATION ise
+                -- CRITICAL FIX: Collect sıralı definitions!
+                collect_imported_enum(ctx, stmt)
+            değilse eğer stmt.type == AST_STRUCT_DECLARATION ise
+                -- CRITICAL FIX: Collect yapı definitions!
+                collect_imported_struct(ctx, stmt)
+            değilse eğer stmt.type == AST_IMPORT_STATEMENT ise
+                -- Handle nested imports recursively
+                handle_import(ctx, stmt, lexer, parser)  -- Recursive
+            son_eğer
+            -- Skip other statements (variable declarations, etc.)
+        son_eğer
+        
+        -- Update token için next iteration
+        lex_token = lexer.current_token
+    son
+    
+    -- Restore lexer state
+    lexer.source_code = saved_source
+    lexer.current_position = saved_position
+    lexer.current_line = saved_line
+    lexer.current_column = saved_column
+    lexer.current_token = saved_token
+son_fonksiyon
+
+-- ========== Get Imported Functions ==========
+-- Returns collected imported functions için codegen
+
+fonksiyon get_imported_functions(ctx)
+    döndür ctx.imported_functions
+son_fonksiyon
+
+fonksiyon get_imported_count(ctx)
+    döndür ctx.imported_count
+son_fonksiyon
+
+-- ========== Get Imported Enums (CRITICAL FIX!) ==========
+fonksiyon get_imported_enums(ctx)
+    döndür ctx.imported_enums
+son_fonksiyon
+
+fonksiyon get_enum_count(ctx)
+    döndür ctx.enum_count
+son_fonksiyon
+
+-- ========== Get Imported Structs (CRITICAL FIX!) ==========
+fonksiyon get_imported_structs(ctx)
+    döndür ctx.imported_structs
+son_fonksiyon
+
+fonksiyon get_struct_count(ctx)
+    döndür ctx.struct_count
+son_fonksiyon
+
+-- ========== Cleanup ==========
+
+fonksiyon cleanup_imports(ctx)
+    -- MELP has automatic memory management
+    -- Just reset counters
+    ctx.imported_count = 0
+    ctx.file_count = 0
+son_fonksiyon

@@ -1,0 +1,361 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Scope Manager Module - Symbol table ve değişken tracking
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki kapsam yönetimi mantığını MLP'ye taşır.
+-- Variable tracking, scope levels, symbol resolution, offset calculation.
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Variable information
+-- -----------------------------------------------------------------------------
+
+struct VariableInfo then
+    String name
+    String type_name
+    Numeric scope_level
+    Numeric stack_offset
+    Numeric is_parameter
+    Numeric is_captured
+    Numeric size_bytes
+end_struct
+
+-- -----------------------------------------------------------------------------
+-- Scope information
+-- -----------------------------------------------------------------------------
+
+struct ScopeInfo then
+    Numeric level
+    Numeric parent_scope
+    list variable_names
+    Numeric stack_frame_size
+end_struct
+
+-- -----------------------------------------------------------------------------
+-- Scope Manager state
+-- -----------------------------------------------------------------------------
+
+struct ScopeManager then
+    HashMap variable_map
+    list scope_stack
+    Numeric current_level
+    Numeric next_offset
+    Numeric label_counter
+end_struct
+
+-- -----------------------------------------------------------------------------
+-- Scope Manager initialization
+-- -----------------------------------------------------------------------------
+
+function scope_manager_create()
+    ScopeManager manager
+    manager.variable_map = HashMap()
+    manager.scope_stack = list()
+    manager.current_level = 0
+    manager.next_offset = 0
+    manager.label_counter = 0
+    
+    -- Global scope
+    ScopeInfo global_scope
+    global_scope.level = 0
+    global_scope.parent_scope = -1
+    global_scope.variable_names = list()
+    global_scope.stack_frame_size = 0
+    
+    mlp_list_add(manager.scope_stack, global_scope)
+    
+    return manager
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Scope operations
+-- -----------------------------------------------------------------------------
+
+function scope_enter(manager)
+    manager.current_level = manager.current_level + 1
+    
+    ScopeInfo new_scope
+    new_scope.level = manager.current_level
+    new_scope.parent_scope = mlp_list_length(manager.scope_stack) - 1
+    new_scope.variable_names = list()
+    new_scope.stack_frame_size = 0
+    
+    mlp_list_add(manager.scope_stack, new_scope)
+    
+    return manager
+end_function
+
+function scope_exit(manager)
+    if manager.current_level == 0 then
+        print "Scope error: Cannot exit global scope"
+        panic("scope_exit: already at global scope")
+    end_if
+    
+    -- Remove variables from current scope
+    Numeric scope_index = 0
+    scope_index = mlp_list_length(manager.scope_stack) - 1
+    ScopeInfo current
+    current = mlp_list_get(manager.scope_stack, scope_index)
+    
+    for i = 0 to mlp_list_length(current.varable_names) - 1 do
+        String var_name = ""
+        var_name = mlp_list_get(current.varable_names, i)
+        mlp_map_remove(manager.varable_map, var_name)
+    end
+    
+    mlp_list_remove(manager.scope_stack, scope_index)
+    manager.current_level = manager.current_level - 1
+    
+    return manager
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Variable registration
+-- -----------------------------------------------------------------------------
+
+function scope_register_variable(manager, var_name, type_name, is_param)
+    if hashmap_has(manager.variable_map, var_name) == 1 then
+        VariableInfo existing
+        existing = mlp_map_get(manager.varable_map, var_name)
+        if existing.scope_level == manager.current_level then
+            print "Scope error: Variable already declared in current scope: "
+            print var_name
+            panic("scope_register_variable: duplicate variable")
+        end_if
+    end_if
+    
+    -- Calculate size
+    Numeric size = 8
+    if type_name == "string" then
+        size = 8
+    else if type_name == "numeric" then
+        size = 8
+    else if type_name == "boolean" then
+        size = 8
+    else
+        size = 8
+    end_if
+    
+    -- Create variable info
+    VariableInfo info
+    info.name = var_name
+    info.type_name = type_name
+    info.scope_level = manager.current_level
+    info.stack_offset = manager.next_offset
+    info.is_parameter = is_param
+    info.is_captured = 0
+    info.size_bytes = size
+    
+    -- Update manager
+    mlp_map_set(manager.varable_map, var_name, info)
+    manager.next_offset = manager.next_offset + size
+    
+    -- Add to current scope
+    Numeric scope_index = 0
+    scope_index = mlp_list_length(manager.scope_stack) - 1
+    ScopeInfo current
+    current = mlp_list_get(manager.scope_stack, scope_index)
+    mlp_list_add(current.varable_names, var_name)
+    current.stack_frame_size = current.stack_frame_size + size
+    mlp_list_set(manager.scope_stack, scope_index, current)
+    
+    return manager
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Variable lookup
+-- -----------------------------------------------------------------------------
+
+function scope_lookup_variable(manager, var_name)
+    if hashmap_has(manager.variable_map, var_name) == 0 then
+        print "Scope error: Undefined variable: "
+        print var_name
+        panic("scope_lookup_variable: undefined variable")
+    end_if
+    
+    VariableInfo info
+    info = mlp_map_get(manager.varable_map, var_name)
+    return info
+end_function
+
+function scope_has_variable(manager, var_name)
+    return hashmap_has(manager.variable_map, var_name)
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Label generation
+-- -----------------------------------------------------------------------------
+
+function scope_generate_label(manager, prefix)
+    Numeric id = manager.label_counter
+    manager.label_counter = manager.label_counter + 1
+    
+    String label = ""
+    label = prefix + "_" + numeric_to_metin(id)
+    return label
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Stack frame calculation
+-- -----------------------------------------------------------------------------
+
+function scope_get_current_frame_size(manager)
+    if mlp_list_length(manager.scope_stack) == 0 then
+        return 0
+    end_if
+    
+    Numeric scope_index = 0
+    scope_index = mlp_list_length(manager.scope_stack) - 1
+    ScopeInfo current
+    current = mlp_list_get(manager.scope_stack, scope_index)
+    return current.stack_frame_size
+end_function
+
+function scope_get_total_stack_size(manager)
+    Numeric total = 0
+    for i = 0 to mlp_list_length(manager.scope_stack) - 1 do
+        ScopeInfo scope
+        scope = mlp_list_get(manager.scope_stack, i)
+        total = total + scope.stack_frame_size
+    end
+    return total
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Variable capture (for closures)
+-- -----------------------------------------------------------------------------
+
+function scope_mark_captured(manager, var_name)
+    if hashmap_has(manager.variable_map, var_name) == 0 then
+        print "Scope error: Cannot capture undefined variable: "
+        print var_name
+        panic("scope_mark_captured: undefined variable")
+    end_if
+    
+    VariableInfo info
+    info = mlp_map_get(manager.varable_map, var_name)
+    info.is_captured = 1
+    mlp_map_set(manager.varable_map, var_name, info)
+    
+    return manager
+end_function
+
+function scope_get_captured_variables(manager)
+    list captured = list()
+    
+    list keys = hashmap_keys(manager.variable_map)
+    for i = 0 to mlp_list_length(keys) - 1 do
+        String key = ""
+        key = mlp_list_get(keys, i)
+        VariableInfo info
+        info = mlp_map_get(manager.varable_map, key)
+        if info.is_captured == 1 then
+            mlp_list_add(captured, info)
+        end_if
+    end
+    
+    return captured
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Debug utilities
+-- -----------------------------------------------------------------------------
+
+function scope_dump_variables(manager)
+    print "=== Scope Manager Dump ==="
+    print "Current level: "
+    print manager.current_level
+    print "Next offset: "
+    print manager.next_offset
+    print ""
+    
+    list keys = hashmap_keys(manager.variable_map)
+    for i = 0 to mlp_list_length(keys) - 1 do
+        String key = ""
+        key = mlp_list_get(keys, i)
+        VariableInfo info
+        info = mlp_map_get(manager.varable_map, key)
+        
+        print "Variable: "
+        print info.name
+        print " (type: "
+        print info.type_name
+        print ", level: "
+        print info.scope_level
+        print ", offset: "
+        print info.stack_offset
+        print ", captured: "
+        print info.is_captured
+        print ")"
+    end
+    
+    print "=========================="
+    
+    return manager
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Helper: numeric to string conversion
+-- -----------------------------------------------------------------------------
+
+function numeric_to_metin(n)
+    if n == 0 then return "0" end_if
+    if n == 1 then return "1" end_if
+    if n == 2 then return "2" end_if
+    if n == 3 then return "3" end_if
+    if n == 4 then return "4" end_if
+    if n == 5 then return "5" end_if
+    if n == 6 then return "6" end_if
+    if n == 7 then return "7" end_if
+    if n == 8 then return "8" end_if
+    if n == 9 then return "9" end_if
+    if n == 10 then return "10" end_if
+    
+    -- For larger numbers, use string concatenation
+    String result = ""
+    Numeric temp = n
+    
+    while temp > 0
+        Numeric digit = temp % 10
+        temp = temp / 10
+        
+        if digit == 0 then result = "0" + result end_if
+        if digit == 1 then result = "1" + result end_if
+        if digit == 2 then result = "2" + result end_if
+        if digit == 3 then result = "3" + result end_if
+        if digit == 4 then result = "4" + result end_if
+        if digit == 5 then result = "5" + result end_if
+        if digit == 6 then result = "6" + result end_if
+        if digit == 7 then result = "7" + result end_if
+        if digit == 8 then result = "8" + result end_if
+        if digit == 9 then result = "9" + result end_if
+    end
+    
+    return result
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Scope reset (for new compilation units)
+-- -----------------------------------------------------------------------------
+
+function scope_reset(manager)
+    manager.variable_map = HashMap()
+    manager.scope_stack = list()
+    manager.current_level = 0
+    manager.next_offset = 0
+    
+    ScopeInfo global_scope
+    global_scope.level = 0
+    global_scope.parent_scope = -1
+    global_scope.variable_names = list()
+    global_scope.stack_frame_size = 0
+    
+    mlp_list_add(manager.scope_stack, global_scope)
+    
+    return manager
+end_function

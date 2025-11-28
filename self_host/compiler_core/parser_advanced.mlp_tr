@@ -1,0 +1,719 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Parser Advanced Module - Import, Try-Catch, Continue, Break
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki advanced parsing mantığını MLP'ye taşır.
+-- Import statements, exception handling, loop control.
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/parser.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Import statement parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_import_statement(state)
+    state = parser_expect(state, TOKEN_IMPORT)
+    
+    Token module_token
+    module_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_STRING)
+    
+    metin module_path = module_token.lexeme
+    
+    liste imported_symbols = liste()
+    
+    eğer parser_match(state, TOKEN_AS) == 1 ise
+        Token alias_token
+        alias_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        mlp_list_add(imported_symbols, alias_token.lexeme)
+    değilse eğer parser_match(state, TOKEN_LEFT_BRACE) == 1 ise
+        döngü parser_check(state, TOKEN_RIGHT_BRACE) == 0
+            Token symbol_token
+            symbol_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            mlp_list_add(imported_symbols, symbol_token.lexeme)
+            
+            eğer parser_match(state, TOKEN_COMMA) == 0 ise
+                break
+            son_eğer
+        son
+        
+        state = parser_expect(state, TOKEN_RIGHT_BRACE)
+    son_eğer
+    
+    sayısal import_id = 0
+    import_id = parser_create_node(state, AST_IMPORT_STATEMENT, "import_stmt")
+    
+    ASTImportData data
+    data.node_id = import_id
+    data.module_path = module_path
+    data.imported_symbols = imported_symbols
+    data.alias = ""
+    data.is_wildcard = 0
+    
+    state.arena = ast_arena_set_data(state.arena, import_id, data)
+    
+    döndür import_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Try-catch statement parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_try_catch(state)
+    state = parser_expect(state, TOKEN_TRY)
+    
+    state = parser_enter_scope(state)
+    sayısal try_block_id = 0
+    try_block_id = parse_block(state, TOKEN_CATCH, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    liste catch_block_ids = liste()
+    liste exception_types = liste()
+    liste exception_vars = liste()
+    
+    döngü parser_match(state, TOKEN_CATCH) == 1
+        metin exception_type = "Exception"
+        metin exception_var = "e"
+        
+        eğer parser_check(state, TOKEN_IDENTIFIER) == 1 ise
+            Token type_token
+            type_token = parser_peek(state)
+            state = parser_advance(state)
+            exception_type = type_token.lexeme
+            
+            eğer parser_check(state, TOKEN_IDENTIFIER) == 1 ise
+                Token var_token
+                var_token = parser_peek(state)
+                state = parser_advance(state)
+                exception_var = var_token.lexeme
+            son_eğer
+        son_eğer
+        
+        state = parser_enter_scope(state)
+        sayısal catch_block_id = 0
+        catch_block_id = parse_block(state, TOKEN_CATCH, TOKEN_END)
+        state = parser_exit_scope(state)
+        
+        mlp_list_add(catch_block_ds, catch_block_id)
+        mlp_list_add(excepton_types, exception_type)
+        mlp_list_add(excepton_vars, exception_var)
+    son
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_TRY)
+    
+    sayısal try_id = 0
+    try_id = parser_create_node(state, AST_TRY_CATCH, "try_catch")
+    
+    ASTTryCatchData data
+    data.node_id = try_id
+    data.try_block_id = try_block_id
+    data.catch_block_ids = catch_block_ids
+    data.exception_types = exception_types
+    data.exception_vars = exception_vars
+    data.finally_block_id = -1
+    
+    döndür try_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Throw statement
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_throw_statement(state)
+    state = parser_expect(state, TOKEN_THROW)
+    sayısal expr_id = 0
+    expr_id = parse_expression(state, 0)
+    
+    sayısal throw_id = 0
+    throw_id = parser_create_node(state, AST_THROW, "throw_stmt")
+    
+    ASTThrowData data
+    data.node_id = throw_id
+    data.expression_id = expr_id
+    
+    döndür throw_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Break statement
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_break_statement(state)
+    state = parser_expect(state, TOKEN_BREAK)
+    
+    sayısal break_id = 0
+    break_id = parser_create_node(state, AST_BREAK, "break_stmt")
+    
+    ASTBreakData data
+    data.node_id = break_id
+    
+    döndür break_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Continue statement
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_continue_statement(state)
+    state = parser_expect(state, TOKEN_CONTINUE)
+    
+    sayısal continue_id = 0
+    continue_id = parser_create_node(state, AST_CONTINUE, "continue_stmt")
+    
+    ASTContinueData data
+    data.node_id = continue_id
+    
+    döndür continue_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Match statement (pattern matching)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_match_statement(state)
+    state = parser_expect(state, TOKEN_MATCH)
+    sayısal expr_id = 0
+    expr_id = parse_expression(state, 0)
+    
+    liste pattern_ids = liste()
+    liste body_ids = liste()
+    
+    döngü parser_match(state, TOKEN_CASE) == 1
+        sayısal pattern_id = 0
+        pattern_id = parse_expression(state, 0)
+        state = parser_expect(state, TOKEN_ARROW)
+        
+        state = parser_enter_scope(state)
+        sayısal body_id = 0
+        body_id = parse_block(state, TOKEN_CASE, TOKEN_END)
+        state = parser_exit_scope(state)
+        
+        mlp_list_add(pattern_ds, pattern_id)
+        mlp_list_add(body_ds, body_id)
+    son
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_MATCH)
+    
+    sayısal match_id = 0
+    match_id = parser_create_node(state, AST_MATCH, "match_stmt")
+    
+    ASTMatchData data
+    data.node_id = match_id
+    data.expression_id = expr_id
+    data.pattern_ids = pattern_ids
+    data.body_ids = body_ids
+    
+    döndür match_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Defer statement (cleanup guarantee)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_defer_statement(state)
+    state = parser_expect(state, TOKEN_DEFER)
+    sayısal stmt_id = 0
+    stmt_id = parse_statement(state)
+    
+    sayısal defer_id = 0
+    defer_id = parser_create_node(state, AST_DEFER, "defer_stmt")
+    
+    ASTDeferData data
+    data.node_id = defer_id
+    data.statement_id = stmt_id
+    
+    döndür defer_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- With statement (resource management)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_with_statement(state)
+    state = parser_expect(state, TOKEN_WITH)
+    
+    liste resource_ids = liste()
+    
+    döngü 1 == 1
+        sayısal resource_id = 0
+        resource_id = parse_expression(state, 0)
+        mlp_list_add(resource_ds, resource_id)
+        
+        eğer parser_match(state, TOKEN_COMMA) == 0 ise
+            break
+        son_eğer
+    son
+    
+    state = parser_expect(state, TOKEN_DO)
+    
+    state = parser_enter_scope(state)
+    sayısal body_id = 0
+    body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_WITH)
+    
+    sayısal with_id = 0
+    with_id = parser_create_node(state, AST_WITH, "with_stmt")
+    
+    ASTWithData data
+    data.node_id = with_id
+    data.resource_ids = resource_ids
+    data.body_block_id = body_id
+    
+    döndür with_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Type alias declaration
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_type_alias(state)
+    state = parser_expect(state, TOKEN_TYPE)
+    
+    Token name_token
+    name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    
+    state = parser_expect(state, TOKEN_ASSIGN)
+    
+    metin aliased_type = ""
+    aliased_type = parse_type_annotation(state)
+    
+    sayısal alias_id = 0
+    alias_id = parser_create_node(state, AST_TYPE_ALIAS, "type_alias")
+    
+    ASTTypeAliasData data
+    data.node_id = alias_id
+    data.name = name_token.lexeme
+    data.aliased_type = aliased_type
+    
+    döndür alias_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Unary expressions (!, -, ~)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_unary_expression(state)
+    Token token
+    token = parser_peek(state)
+    
+    eğer token.type == TOKEN_NOT ise
+        state = parser_advance(state)
+        sayısal operand_id = 0
+        operand_id = parse_unary_expression(state)
+        
+        sayısal unary_id = 0
+        unary_id = parser_create_node(state, AST_UNARY_OP, "unary_not")
+        
+        ASTUnaryData data
+        data.node_id = unary_id
+        data.operand_id = operand_id
+        data.operator_type = TOKEN_NOT
+        
+        döndür unary_id
+    son_eğer
+    
+    eğer token.type == TOKEN_MINUS ise
+        state = parser_advance(state)
+        sayısal operand_id = 0
+        operand_id = parse_unary_expression(state)
+        
+        sayısal unary_id = 0
+        unary_id = parser_create_node(state, AST_UNARY_OP, "unary_minus")
+        
+        ASTUnaryData data
+        data.node_id = unary_id
+        data.operand_id = operand_id
+        data.operator_type = TOKEN_MINUS
+        
+        döndür unary_id
+    son_eğer
+    
+    eğer token.type == TOKEN_BITWISE_NOT ise
+        state = parser_advance(state)
+        sayısal operand_id = 0
+        operand_id = parse_unary_expression(state)
+        
+        sayısal unary_id = 0
+        unary_id = parser_create_node(state, AST_UNARY_OP, "unary_bitwise_not")
+        
+        ASTUnaryData data
+        data.node_id = unary_id
+        data.operand_id = operand_id
+        data.operator_type = TOKEN_BITWISE_NOT
+        
+        döndür unary_id
+    son_eğer
+    
+    döndür parse_postfix_expression(state)
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Panic statement (fatal error)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_panic_statement(state)
+    state = parser_expect(state, TOKEN_PANIC)
+    state = parser_expect(state, TOKEN_LEFT_PAREN)
+    sayısal message_id = 0
+    message_id = parse_expression(state, 0)
+    state = parser_expect(state, TOKEN_RIGHT_PAREN)
+    
+    sayısal panic_id = 0
+    panic_id = parser_create_node(state, AST_PANIC, "panic_stmt")
+    
+    ASTPanicData data
+    data.node_id = panic_id
+    data.message_id = message_id
+    
+    döndür panic_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Expression statement (fonksiyon call without assignment)
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_expression_statement(state)
+    sayısal expr_id = 0
+    expr_id = parse_expression(state, 0)
+    
+    sayısal expr_stmt_id = 0
+    expr_stmt_id = parser_create_node(state, AST_EXPRESSION_STATEMENT, "expr_stmt")
+    
+    ASTExpressionStatementData data
+    data.node_id = expr_stmt_id
+    data.expression_id = expr_id
+    
+    döndür expr_stmt_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Enum declaration parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_enum_declaration(state)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    Token name_token
+    name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    metin enum_name = name_token.lexeme
+    
+    state = parser_expect(state, TOKEN_THEN)
+    
+    liste value_names = liste()
+    liste value_values = liste()
+    sayısal next_value = 0
+    
+    döngü parser_check(state, TOKEN_END) == 0
+        Token value_token
+        value_token = parser_peek(state)
+        state = parser_expect(state, TOKEN_IDENTIFIER)
+        
+        metin value_name = value_token.lexeme
+        sayısal value_int = next_value
+        
+        eğer parser_match(state, TOKEN_ASSIGN) == 1 ise
+            Token num_token
+            num_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_NUMBER)
+            value_int = parse_int(num_token.lexeme)
+        son_eğer
+        
+        mlp_list_add(value_names, value_name)
+        mlp_list_add(value_values, value_int)
+        
+        next_value = value_int + 1
+    son
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_ENUM)
+    
+    sayısal enum_id = 0
+    enum_id = parser_create_node(state, AST_ENUM_DECLARATION, "enum_decl")
+    
+    ASTEnumData data
+    data.node_id = enum_id
+    data.enum_name = enum_name
+    data.value_names = value_names
+    data.value_values = value_values
+    
+    döndür enum_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Switch statement parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_switch_statement(state)
+    state = parser_expect(state, TOKEN_SWITCH)
+    
+    sayısal switch_expr_id = 0
+    switch_expr_id = parse_expression(state, 0)
+    
+    state = parser_expect(state, TOKEN_THEN)
+    
+    liste case_values = liste()
+    liste case_block_ids = liste()
+    sayısal default_block_id = -1
+    
+    döngü parser_check(state, TOKEN_END) == 0
+        eğer parser_match(state, TOKEN_CASE) == 1 ise
+            Token value_token
+            value_token = parser_peek(state)
+            state = parser_advance(state)
+            
+            sayısal case_value = -1
+            eğer value_token.type == TOKEN_NUMBER ise
+                case_value = parse_int(value_token.lexeme)
+            değilse eğer value_token.type == TOKEN_IDENTIFIER ise
+                case_value = resolve_enum_value(state, value_token.lexeme)
+            son_eğer
+            
+            state = parser_expect(state, TOKEN_THEN)
+            
+            state = parser_enter_scope(state)
+            sayısal case_block_id = 0
+            case_block_id = parse_block(state, TOKEN_CASE, TOKEN_DEFAULT, TOKEN_END)
+            state = parser_exit_scope(state)
+            
+            mlp_list_add(case_values, case_value)
+            mlp_list_add(case_block_ds, case_block_id)
+            
+        değilse eğer parser_match(state, TOKEN_DEFAULT) == 1 ise
+            state = parser_expect(state, TOKEN_THEN)
+            
+            state = parser_enter_scope(state)
+            default_block_id = parse_block(state, TOKEN_END)
+            state = parser_exit_scope(state)
+            
+            break
+        son_eğer
+    son
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_SWITCH)
+    
+    sayısal switch_id = 0
+    switch_id = parser_create_node(state, AST_SWITCH_KOMUTU, "switch_stmt")
+    
+    ASTSwitchData data
+    data.node_id = switch_id
+    data.switch_expression_id = switch_expr_id
+    data.case_values = case_values
+    data.case_block_ids = case_block_ids
+    data.default_block_id = default_block_id
+    
+    döndür switch_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Helper: Resolve sıralı value from identifier
+-- -----------------------------------------------------------------------------
+
+fonksiyon resolve_enum_value(state, identifier)
+    sayısal value = 0
+    
+    döndür value
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Lambda expression parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_lambda_expression(state)
+    state = parser_expect(state, TOKEN_LAMBDA)
+    state = parser_expect(state, TOKEN_LEFT_PAREN)
+    
+    liste parameters = liste()
+    
+    eğer parser_check(state, TOKEN_RIGHT_PAREN) == 0 ise
+        döngü 1 == 1
+            Token param_token
+            param_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            
+            mlp_list_add(parameters, param_token)
+            
+            eğer parser_match(state, TOKEN_COMMA) == 0 ise
+                break
+            son_eğer
+        son
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_RIGHT_PAREN)
+    state = parser_expect(state, TOKEN_ARROW)
+    
+    sayısal body_id = 0
+    body_id = parse_expression(state, 0)
+    
+    sayısal lambda_id = 0
+    lambda_id = parser_create_node(state, AST_LAMBDA, "lambda_expr")
+    
+    ASTLambdaData data
+    data.node_id = lambda_id
+    data.parameters = parameters
+    data.parameter_count = mlp_list_length(parameters)
+    data.body_id = body_id
+    data.is_expression = 1
+    data.captured_vars = liste()
+    data.captured_count = 0
+    
+    döndür lambda_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Async fonksiyon parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_async_function(state)
+    state = parser_expect(state, TOKEN_ASYNC)
+    state = parser_expect(state, TOKEN_FUNCTION)
+    
+    Token name_token
+    name_token = parser_peek(state)
+    state = parser_expect(state, TOKEN_IDENTIFIER)
+    metin func_name = name_token.lexeme
+    
+    state = parser_expect(state, TOKEN_LEFT_PAREN)
+    
+    liste parameters = liste()
+    liste parameter_types = liste()
+    
+    eğer parser_check(state, TOKEN_RIGHT_PAREN) == 0 ise
+        döngü 1 == 1
+            -- Optional type annotation
+            metin param_type = "SAYISAL"
+            eğer parser_match(state, TOKEN_TYPE_NUMERIC) == 1 ise
+                param_type = "SAYISAL"
+            değilse eğer parser_match(state, TOKEN_TYPE_STRING) == 1 ise
+                param_type = "METIN"
+            değilse eğer parser_match(state, TOKEN_TYPE_BOOLEAN) == 1 ise
+                param_type = "BOOLEAN"
+            son_eğer
+            
+            Token param_token
+            param_token = parser_peek(state)
+            state = parser_expect(state, TOKEN_IDENTIFIER)
+            
+            mlp_list_add(parameters, param_token)
+            mlp_list_add(parameter_types, param_type)
+            
+            eğer parser_match(state, TOKEN_COMMA) == 0 ise
+                break
+            son_eğer
+        son
+    son_eğer
+    
+    state = parser_expect(state, TOKEN_RIGHT_PAREN)
+    
+    state = parser_enter_scope(state)
+    sayısal body_id = 0
+    body_id = parse_block(state, TOKEN_END)
+    state = parser_exit_scope(state)
+    
+    state = parser_expect(state, TOKEN_END)
+    state = parser_expect(state, TOKEN_FUNCTION)
+    
+    sayısal async_id = 0
+    async_id = parser_create_node(state, AST_ASYNC_FUNCTION, "async_func")
+    
+    ASTAsyncFunctionData data
+    data.node_id = async_id
+    data.name = func_name
+    data.parameters = parameters
+    data.parameter_count = mlp_list_length(parameters)
+    data.parameter_types = parameter_types
+    data.body_id = body_id
+    
+    state.arena = ast_arena_set_data(state.arena, async_id, data)
+    
+    döndür async_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Await expression parsing
+-- -----------------------------------------------------------------------------
+
+fonksiyon parse_await_expression(state)
+    state = parser_expect(state, TOKEN_AWAIT)
+    
+    sayısal expr_id = 0
+    expr_id = parse_expression(state, 0)
+    
+    sayısal await_id = 0
+    await_id = parser_create_node(state, AST_AWAIT_EXPR, "await_expr")
+    
+    ASTAwaitData data
+    data.node_id = await_id
+    data.expression_id = expr_id
+    
+    döndür await_id
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Closure capture analysis (called at codegen time)
+-- -----------------------------------------------------------------------------
+
+fonksiyon find_free_variables(state, node_id, free_vars, lambda_params)
+    ASTNode node
+    node = parser_get_node(state, node_id)
+    
+    eğer node.type == AST_DEGISKEN ise
+        metin var_name = node.variable_name
+        
+        sayısal is_param = 0
+        için i = 0 için mlp_list_length(lambda_params) - 1 do
+            Token param = mlp_list_get(lambda_params, i)
+            eğer param.lexeme == var_name ise
+                is_param = 1
+                break
+            son_eğer
+        son
+        
+        eğer is_param == 0 ise
+            sayısal var_exists = 0
+            var_exists = scope_variable_exists(state, var_name)
+            eğer var_exists == 1 ise
+                sayısal already_captured = 0
+                için i = 0 için mlp_list_length(free_vars) - 1 do
+                    eğer mlp_list_get(free_vars, i) == var_name ise
+                        already_captured = 1
+                        break
+                    son_eğer
+                son
+                
+                eğer already_captured == 0 ise
+                    mlp_list_add(free_vars, var_name)
+                son_eğer
+            son_eğer
+        son_eğer
+        
+        döndür state
+    son_eğer
+    
+    eğer node.type == AST_IKILI_ISLEM ise
+        state = find_free_variables(state, node.left_id, free_vars, lambda_params)
+        state = find_free_variables(state, node.right_id, free_vars, lambda_params)
+    değilse eğer node.type == AST_ISLEC_CAGIRMA ise
+        için i = 0 için node.argument_count - 1 do
+            sayısal arg_id = 0
+            arg_id = mlp_list_get(node.arguments, i)
+            state = find_free_variables(state, arg_id, free_vars, lambda_params)
+        son
+    son_eğer
+    
+    döndür state
+son_fonksiyon

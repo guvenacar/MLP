@@ -1,0 +1,495 @@
+-- MLP Self-Hosting Lexer v2.0
+-- GERÇEK SYNTAX (BASE_LANGUAGE.md + AI_RULES.md)
+-- NO SEMICOLONS | numeric (not int) | explicit ends
+
+-- ========================================
+-- TOKEN TYPES
+-- ========================================
+numeric TOKEN_EOF = 0
+numeric TOKEN_NUMBER = 1
+numeric TOKEN_STRING = 2
+numeric TOKEN_IDENTIFIER = 3
+
+-- Data types
+numeric TOKEN_NUMERIC = 10
+numeric TOKEN_STRING_TYPE = 11
+numeric TOKEN_BOOLEAN = 12
+numeric TOKEN_CONST = 13
+
+-- Keywords
+numeric TOKEN_IF = 20
+numeric TOKEN_THEN = 21
+numeric TOKEN_ELSE = 22
+numeric TOKEN_END = 23
+numeric TOKEN_WHILE = 24
+numeric TOKEN_FOR = 25
+numeric TOKEN_TO = 26
+numeric TOKEN_STEP = 27
+numeric TOKEN_FUNCTION = 28
+numeric TOKEN_RETURN = 29
+numeric TOKEN_PRINT = 30
+numeric TOKEN_BREAK = 31
+numeric TOKEN_CONTINUE = 32
+numeric TOKEN_STRUCT = 33
+numeric TOKEN_ENUM = 34
+
+-- Literals
+numeric TOKEN_TRUE = 40
+numeric TOKEN_FALSE = 41
+
+-- Operators
+numeric TOKEN_ASSIGN = 50
+numeric TOKEN_PLUS = 51
+numeric TOKEN_MINUS = 52
+numeric TOKEN_STAR = 53
+numeric TOKEN_SLASH = 54
+numeric TOKEN_MOD = 55
+numeric TOKEN_EQ = 56
+numeric TOKEN_NEQ = 57
+numeric TOKEN_LT = 58
+numeric TOKEN_GT = 59
+numeric TOKEN_LTE = 60
+numeric TOKEN_GTE = 61
+numeric TOKEN_AND = 62
+numeric TOKEN_OR = 63
+numeric TOKEN_NOT = 64
+
+-- Delimiters
+numeric TOKEN_LPAREN = 70
+numeric TOKEN_RPAREN = 71
+numeric TOKEN_LBRACE = 72
+numeric TOKEN_RBRACE = 73
+numeric TOKEN_COMMA = 74
+numeric TOKEN_DOT = 75
+
+-- ========================================
+-- HELPER FUNCTIONS
+-- ========================================
+
+-- Check if character is whitespace
+function is_whitespace(ch) then
+    numeric code = char_code(ch)
+    
+    if code == 32 then return 1 end_if    -- space
+    if code == 9 then return 1 end_if     -- tab
+    if code == 10 then return 1 end_if    -- newline
+    if code == 13 then return 1 end_if    -- carriage return
+    
+    return 0
+end_function
+
+-- Check if character is digit
+function is_digit(ch) then
+    numeric code = char_code(ch)
+    if code >= 48 then
+        if code <= 57 then
+            return 1
+        end_if
+    end_if
+    return 0
+end_function
+
+-- Check if character is letter or underscore
+function is_alpha(ch) then
+    numeric code = char_code(ch)
+    
+    -- A-Z
+    if code >= 65 then
+        if code <= 90 then
+            return 1
+        end_if
+    end_if
+    
+    -- a-z
+    if code >= 97 then
+        if code <= 122 then
+            return 1
+        end_if
+    end_if
+    
+    -- underscore
+    if code == 95 then
+        return 1
+    end_if
+    
+    return 0
+end_function
+
+-- Check if character is alphanumeric
+function is_alnum(ch) then
+    if is_alpha(ch) == 1 then
+        return 1
+    end_if
+    if is_digit(ch) == 1 then
+        return 1
+    end_if
+    return 0
+end_function
+
+-- Skip whitespace and return new position
+function skip_whitespace(text, pos, len) then
+    while pos < len
+        string ch = substring(text, pos, 1)
+        if is_whitespace(ch) == 0 then
+            return pos
+        end_if
+        pos = pos + 1
+    end_while
+    return pos
+end_function
+
+-- ========================================
+-- TOKEN SCANNING
+-- ========================================
+
+-- Scan number literal
+function scan_number(text, start_pos, len) then
+    numeric pos = start_pos
+    
+    while pos < len
+        string ch = substring(text, pos, 1)
+        if is_digit(ch) == 0 then
+            numeric code = char_code(ch)
+            if code == 46 then
+                pos = pos + 1  -- Allow decimal point
+            else
+                return pos
+            end_if
+        else
+            pos = pos + 1
+        end_if
+    end_while
+    
+    return pos
+end_function
+
+-- Scan string literal
+function scan_string(text, start_pos, len) then
+    numeric pos = start_pos + 1  -- Skip opening quote
+    
+    while pos < len
+        string ch = substring(text, pos, 1)
+        if ch == "\"" then
+            return pos + 1  -- Include closing quote
+        end_if
+        pos = pos + 1
+    end_while
+    
+    print "ERROR: Unclosed string at position "
+    print start_pos
+    return pos
+end_function
+
+-- Scan identifier or keyword
+function scan_identifier(text, start_pos, len) then
+    numeric pos = start_pos
+    
+    while pos < len
+        string ch = substring(text, pos, 1)
+        if is_alnum(ch) == 0 then
+            return pos
+        end_if
+        pos = pos + 1
+    end_while
+    
+    return pos
+end_function
+
+-- Match keyword
+function match_keyword(text, pos, keyword) then
+    numeric kw_len = string_length(keyword)
+    numeric text_len = string_length(text)
+    
+    if pos + kw_len > text_len then
+        return 0
+    end_if
+    
+    string substr = substring(text, pos, kw_len)
+    
+    if substr == keyword then
+        return 1
+    end_if
+    
+    return 0
+end_function
+
+-- Get keyword token type
+function get_keyword_token(word) then
+    -- Data types
+    if word == "numeric" then return TOKEN_NUMERIC end_if
+    if word == "string" then return TOKEN_STRING_TYPE end_if
+    if word == "boolean" then return TOKEN_BOOLEAN end_if
+    if word == "const" then return TOKEN_CONST end_if
+    
+    -- Control flow
+    if word == "if" then return TOKEN_IF end_if
+    if word == "then" then return TOKEN_THEN end_if
+    if word == "else" then return TOKEN_ELSE end_if
+    if word == "end" then return TOKEN_END end_if
+    if word == "while" then return TOKEN_WHILE end_if
+    if word == "for" then return TOKEN_FOR end_if
+    if word == "to" then return TOKEN_TO end_if
+    if word == "step" then return TOKEN_STEP end_if
+    if word == "break" then return TOKEN_BREAK end_if
+    if word == "continue" then return TOKEN_CONTINUE end_if
+    
+    -- Functions
+    if word == "function" then return TOKEN_FUNCTION end_if
+    if word == "return" then return TOKEN_RETURN end_if
+    
+    -- Built-ins
+    if word == "print" then return TOKEN_PRINT end_if
+    
+    -- Literals
+    if word == "true" then return TOKEN_TRUE end_if
+    if word == "false" then return TOKEN_FALSE end_if
+    
+    -- Logical operators (keywords)
+    if word == "and" then return TOKEN_AND end_if
+    if word == "or" then return TOKEN_OR end_if
+    if word == "not" then return TOKEN_NOT end_if
+    if word == "mod" then return TOKEN_MOD end_if
+    
+    -- Compound types
+    if word == "struct" then return TOKEN_STRUCT end_if
+    if word == "enum" then return TOKEN_ENUM end_if
+    
+    -- Not a keyword, it's an identifier
+    return TOKEN_IDENTIFIER
+end_function
+
+-- ========================================
+-- MAIN TOKENIZER
+-- ========================================
+
+function tokenize(text) then
+    numeric pos = 0
+    numeric len = string_length(text)
+    numeric token_count = 0
+    
+    print "=== MLP Lexer v2.0 ==="
+    print "Input length: "
+    print len
+    print ""
+    print "Tokens:"
+    print "--------"
+    
+    while pos < len
+        pos = skip_whitespace(text, pos, len)
+        
+        if pos >= len then
+            break
+        end_if
+        
+        string ch = substring(text, pos, 1)
+        numeric code = char_code(ch)
+        
+        -- Single-character tokens
+        if ch == "(" then
+            print "LPAREN"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == ")" then
+            print "RPAREN"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "{" then
+            print "LBRACE"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "}" then
+            print "RBRACE"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "," then
+            print "COMMA"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "." then
+            print "DOT"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "+" then
+            print "PLUS"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "-" then
+            print "MINUS"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "*" then
+            print "STAR"
+            token_count = token_count + 1
+            pos = pos + 1
+        else if ch == "/" then
+            print "SLASH"
+            token_count = token_count + 1
+            pos = pos + 1
+        
+        -- Two-character operators
+        else if ch == "=" then
+            if pos + 1 < len then
+                string next = substring(text, pos + 1, 1)
+                if next == "=" then
+                    print "EQ"
+                    token_count = token_count + 1
+                    pos = pos + 2
+                else
+                    print "ASSIGN"
+                    token_count = token_count + 1
+                    pos = pos + 1
+                end_if
+            else
+                print "ASSIGN"
+                token_count = token_count + 1
+                pos = pos + 1
+            end_if
+        
+        else if ch == "!" then
+            if pos + 1 < len then
+                string next = substring(text, pos + 1, 1)
+                if next == "=" then
+                    print "NEQ"
+                    token_count = token_count + 1
+                    pos = pos + 2
+                else
+                    print "ERROR: Expected '=' after '!'"
+                    pos = pos + 1
+                end_if
+            else
+                print "ERROR: Expected '=' after '!'"
+                pos = pos + 1
+            end_if
+        
+        else if ch == "<" then
+            if pos + 1 < len then
+                string next = substring(text, pos + 1, 1)
+                if next == "=" then
+                    print "LTE"
+                    token_count = token_count + 1
+                    pos = pos + 2
+                else
+                    print "LT"
+                    token_count = token_count + 1
+                    pos = pos + 1
+                end_if
+            else
+                print "LT"
+                token_count = token_count + 1
+                pos = pos + 1
+            end_if
+        
+        else if ch == ">" then
+            if pos + 1 < len then
+                string next = substring(text, pos + 1, 1)
+                if next == "=" then
+                    print "GTE"
+                    token_count = token_count + 1
+                    pos = pos + 2
+                else
+                    print "GT"
+                    token_count = token_count + 1
+                    pos = pos + 1
+                end_if
+            else
+                print "GT"
+                token_count = token_count + 1
+                pos = pos + 1
+            end_if
+        
+        -- String literal
+        else if ch == "\"" then
+            numeric start = pos
+            numeric end_pos = scan_string(text, pos, len)
+            numeric value_len = end_pos - start
+            string value = substring(text, start, value_len)
+            print "STRING: "
+            print value
+            token_count = token_count + 1
+            pos = end_pos
+        
+        -- Number literal
+        else if is_digit(ch) == 1 then
+            numeric start = pos
+            numeric end_pos = scan_number(text, pos, len)
+            numeric value_len = end_pos - start
+            string value = substring(text, start, value_len)
+            print "NUMBER: "
+            print value
+            token_count = token_count + 1
+            pos = end_pos
+        
+        -- Identifier or keyword
+        else if is_alpha(ch) == 1 then
+            numeric start = pos
+            numeric end_pos = scan_identifier(text, pos, len)
+            numeric value_len = end_pos - start
+            string word = substring(text, start, value_len)
+            numeric tok_type = get_keyword_token(word)
+            
+            if tok_type == TOKEN_IDENTIFIER then
+                print "IDENTIFIER: "
+                print word
+            else
+                print "KEYWORD: "
+                print word
+            end_if
+            
+            token_count = token_count + 1
+            pos = end_pos
+        
+        else
+            print "ERROR: Unexpected character at position "
+            print pos
+            pos = pos + 1
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+        end_if
+    end_while
+    
+    print "--------"
+    print "Total tokens: "
+    print token_count
+    print ""
+    
+    return token_count
+end_function
+
+-- ========================================
+-- TESTS
+-- ========================================
+
+print "========================================="
+print "Test 1: Variable declaration"
+print "========================================="
+string test1 = "numeric x = 42"
+numeric count1 = tokenize(test1)
+
+print "========================================="
+print "Test 2: Function definition"
+print "========================================="
+string test2 = "function add(a, b) then return a + b end_function"
+numeric count2 = tokenize(test2)
+
+print "========================================="
+print "Test 3: If statement"
+print "========================================="
+string test3 = "if x > 10 then print x end_if"
+numeric count3 = tokenize(test3)
+
+print "========================================="
+print "All tests complete!"
+print "========================================="

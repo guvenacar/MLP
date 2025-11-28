@@ -1,0 +1,22 @@
+numeric lexer_pos
+numeric lexer_line
+numeric lexer_token_count
+
+numeric parser_current_token
+numeric parser_token_index
+
+numeric ast_declaration_count
+numeric ast_capacity
+
+numeric codegen_stack_offset
+numeric codegen_label_count
+
+numeric TYPE_NUMERIC
+numeric TYPE_DECIMAL
+numeric TYPE_BOOLEAN
+
+numeric TOKEN_NUMERIC
+numeric TOKEN_DECIMAL  
+numeric TOKEN_BOOLEAN
+numeric TOKEN_IDENTIFIER
+numeric TOKEN_EOF

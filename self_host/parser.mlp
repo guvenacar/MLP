@@ -1,0 +1,228 @@
+-- MLP Self-Hosting Parser v1.0
+-- Token listesinden AST oluşturur
+
+-- Token türleri
+int TOKEN_EOF = 0;
+int TOKEN_SAYI = 1;
+int TOKEN_IDENTIFIER = 3;
+int TOKEN_INT = 10;
+int TOKEN_PRINT = 20;
+int TOKEN_SEMICOLON = 48;
+int TOKEN_ASSIGN = 50;
+int TOKEN_PLUS = 51;
+
+-- AST Node türleri
+int AST_PROGRAM = 100;
+int AST_VAR_DECL = 101;
+int AST_PRINT = 102;
+int AST_NUMBER = 103;
+int AST_IDENTIFIER = 104;
+int AST_BINARY_OP = 105;
+
+-- NULL değeri (negatif sayı yok)
+int NULL_NODE = 999;
+
+-- AST Node listeleri
+list<int> ast_types = list<int>();
+list<int> ast_left = list<int>();
+list<int> ast_right = list<int>();
+list<int> ast_values = list<int>();
+int ast_count = 0;
+
+-- Token listeleri
+list<int> token_types = list<int>();
+list<int> token_values = list<int>();
+int token_count = 0;
+int token_pos = 0;
+
+print "=== MLP Parser v1.0 ==="
+
+-- Tokenları manuel ekle: int x = 10; print x + 5
+token_types.add(10)
+token_values.add(0)
+token_count = token_count + 1
+
+token_types.add(3)
+token_values.add(1)
+token_count = token_count + 1
+
+token_types.add(50)
+token_values.add(0)
+token_count = token_count + 1
+
+token_types.add(1)
+token_values.add(10)
+token_count = token_count + 1
+
+token_types.add(48)
+token_values.add(0)
+token_count = token_count + 1
+
+token_types.add(20)
+token_values.add(0)
+token_count = token_count + 1
+
+token_types.add(3)
+token_values.add(1)
+token_count = token_count + 1
+
+token_types.add(51)
+token_values.add(0)
+token_count = token_count + 1
+
+token_types.add(1)
+token_values.add(5)
+token_count = token_count + 1
+
+token_types.add(0)
+token_values.add(0)
+token_count = token_count + 1
+
+print "Token sayisi:"
+print token_count
+
+-- Statement listesi
+list<int> statements = list<int>();
+int stmt_count = 0;
+
+int current_type = 0;
+int current_value = 0;
+
+-- Parser ana döngüsü
+while token_pos < token_count do
+    current_type = token_types.get(token_pos)
+    current_value = token_values.get(token_pos)
+    
+    if current_type == TOKEN_EOF then
+        print "EOF"
+        break
+    end_if
+    
+    -- Variable declaration: int x = value;
+    if current_type == TOKEN_INT then
+        print "var decl"
+        token_pos = token_pos + 1
+        
+        int var_id = token_values.get(token_pos);
+        token_pos = token_pos + 1
+        token_pos = token_pos + 1
+        
+        int var_value = token_values.get(token_pos);
+        token_pos = token_pos + 1
+        token_pos = token_pos + 1
+        
+        -- Number node
+        ast_types.add(AST_NUMBER)
+        ast_left.add(NULL_NODE)
+        ast_right.add(NULL_NODE)
+        ast_values.add(var_value)
+        int num_node = ast_count;
+        ast_count = ast_count + 1
+        
+        -- VarDecl node
+        ast_types.add(AST_VAR_DECL)
+        ast_left.add(var_id)
+        ast_right.add(num_node)
+        ast_values.add(0)
+        int decl_node = ast_count;
+        ast_count = ast_count + 1
+        
+        statements.add(decl_node)
+        stmt_count = stmt_count + 1
+    else
+        if current_type == TOKEN_PRINT then
+            print "print stmt"
+            token_pos = token_pos + 1
+            
+            int left_type = token_types.get(token_pos);
+            int left_val = token_values.get(token_pos);
+            token_pos = token_pos + 1
+            
+            int left_node_type = AST_NUMBER;
+            if left_type == TOKEN_IDENTIFIER then
+                left_node_type = AST_IDENTIFIER
+    end_if
+            
+            ast_types.add(left_node_type)
+            ast_left.add(NULL_NODE)
+            ast_right.add(NULL_NODE)
+            ast_values.add(left_val)
+            int left_node = ast_count;
+            ast_count = ast_count + 1
+            
+            int next_type = token_types.get(token_pos);
+            
+            if next_type == TOKEN_PLUS then
+                token_pos = token_pos + 1
+                
+                int right_val = token_values.get(token_pos);
+                int right_type = token_types.get(token_pos);
+                token_pos = token_pos + 1
+                
+                int right_node_type = AST_NUMBER;
+                if right_type == TOKEN_IDENTIFIER then
+                    right_node_type = AST_IDENTIFIER
+    end_if
+                
+                ast_types.add(right_node_type)
+                ast_left.add(NULL_NODE)
+                ast_right.add(NULL_NODE)
+                ast_values.add(right_val)
+                int right_node = ast_count;
+                ast_count = ast_count + 1
+                
+                ast_types.add(AST_BINARY_OP)
+                ast_left.add(left_node)
+                ast_right.add(right_node)
+                ast_values.add(TOKEN_PLUS)
+                int binop_node = ast_count;
+                ast_count = ast_count + 1
+                
+                ast_types.add(AST_PRINT)
+                ast_left.add(binop_node)
+                ast_right.add(NULL_NODE)
+                ast_values.add(0)
+                int print_node = ast_count;
+                ast_count = ast_count + 1
+                
+                statements.add(print_node)
+                stmt_count = stmt_count + 1
+            else
+                ast_types.add(AST_PRINT)
+                ast_left.add(left_node)
+                ast_right.add(NULL_NODE)
+                ast_values.add(0)
+                int print_node2 = ast_count;
+                ast_count = ast_count + 1
+                
+                statements.add(print_node2)
+                stmt_count = stmt_count + 1
+    end_if
+        else
+            token_pos = token_pos + 1
+    end_if
+    end_if
+    end_if
+
+print "---"
+print "AST nodes:"
+print ast_count
+print "Statements:"
+print stmt_count
+
+int i = 0;
+while i < ast_count do
+    int t = ast_types.get(i);
+    int l = ast_left.get(i);
+    int r = ast_right.get(i);
+    int v = ast_values.get(i);
+    print "Node"
+    print i
+    print t
+    print l
+    print r
+    print v
+    i = i + 1
+    end_if
+
+print "Parser OK!"
