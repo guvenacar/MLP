@@ -1,0 +1,12 @@
+-- MELP Phase 5: Simple String Test
+
+-- Simple string literal
+print("Hello, MELP!")
+
+text msg = "Merhaba Dünya"
+print(msg)
+
+numeric x = 42
+print(x)
+
+print("String test complete")

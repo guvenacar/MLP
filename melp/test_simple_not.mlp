@@ -1,0 +1,6 @@
+func main()
+    numeric x = 1
+    numeric y = not x
+    print(y)
+    return 0
+end func

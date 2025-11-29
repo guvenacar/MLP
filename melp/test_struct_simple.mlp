@@ -1,0 +1,13 @@
+struct Point
+    numeric x
+    numeric y
+end struct
+
+func main()
+    Point p
+    p.x = 10
+    p.y = 20
+    print(p.x)
+    print(p.y)
+    return 0
+end func

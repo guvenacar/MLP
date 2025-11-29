@@ -1,0 +1,17 @@
+-- Test: Multiple Return Values
+-- Simple function with 2 return values
+
+numeric x
+numeric y
+
+func get_coords() returns numeric, numeric
+    return 10, 20
+end func
+
+x, y = get_coords()
+
+print(x)
+print(y)
+
+-- Marker
+print(999)

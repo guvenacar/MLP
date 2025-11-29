@@ -1,0 +1,9 @@
+func main()
+    numeric x = 10
+    numeric* ptr = &x
+    
+    *ptr = 20
+    print(x)
+    
+    return 0
+end func

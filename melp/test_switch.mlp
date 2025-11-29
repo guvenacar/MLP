@@ -1,0 +1,26 @@
+-- Test switch/case statement
+numeric x = 2
+
+switch x
+    case 1
+        print(10)
+    case 2
+        print(20)
+    case 3
+        print(30)
+    default
+        print(0)
+end switch
+
+numeric y = 5
+
+switch y
+    case 1
+        print(100)
+    case 2
+        print(200)
+    default
+        print(999)
+end switch
+
+print(777)

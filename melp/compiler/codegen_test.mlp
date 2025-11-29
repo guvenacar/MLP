@@ -1,0 +1,75 @@
+-- MLP Self-Hosting Codegen - Ultra Simple
+-- Generate assembly for: numeric x = 42
+
+func main()
+    -- Parse info (from parser)
+    text var_name = "x"
+    text var_value = "42"
+    
+    print("=== CODEGEN START ===")
+    print("Generating assembly for: numeric ")
+    print(var_name)
+    print(" = ")
+    print(var_value)
+    print(" ")
+    
+    -- Output file
+    text output_file = "compiler/generated.s"
+    
+    -- Write assembly header
+    write_file(output_file, "section .data
+")
+    append_file(output_file, "
+")
+    append_file(output_file, "section .text
+")
+    append_file(output_file, "    global _start
+")
+    append_file(output_file, "    extern mlp_print_num
+")
+    append_file(output_file, "
+")
+    append_file(output_file, "_start:
+")
+    append_file(output_file, "    push rbp
+")
+    append_file(output_file, "    mov rbp, rsp
+")
+    append_file(output_file, "    sub rsp, 16
+")
+    append_file(output_file, "
+")
+    
+    -- Variable declaration: numeric x = 42
+    append_file(output_file, "    ; Declaration: numeric x = 42
+")
+    append_file(output_file, "    mov rax, 42
+")
+    append_file(output_file, "    mov [rbp-8], rax
+")
+    append_file(output_file, "
+")
+    
+    -- Exit
+    append_file(output_file, "    ; Exit
+")
+    append_file(output_file, "    mov rsp, rbp
+")
+    append_file(output_file, "    pop rbp
+")
+    append_file(output_file, "    mov rax, 60
+")
+    append_file(output_file, "    xor rdi, rdi
+")
+    append_file(output_file, "    syscall
+")
+    
+    print("✓ Assembly written to: ")
+    print(output_file)
+    print(" ")
+    
+    print("=== CODEGEN SUCCESS ===")
+    print(" ")
+    
+    return 0
+end func

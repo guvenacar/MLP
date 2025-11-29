@@ -1,0 +1,2291 @@
+// MELP Phase 1 - Bootstrap Compiler
+// Parser: Deklarasyonlar + Assignment + Print
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "lexer.c"
+
+typedef enum {
+    TYPE_NUMERIC,
+    TYPE_DECIMAL,
+    TYPE_BOOLEAN,
+    TYPE_STRING  // Phase 5: String type
+} VarType;
+
+typedef enum {
+    STMT_DECLARATION,
+    STMT_ASSIGNMENT,
+    STMT_MULTI_ASSIGNMENT,  // Multiple variable assignment (a, b = func())
+    STMT_PRINT,
+    STMT_IF,
+    STMT_FOR,
+    STMT_WHILE,
+    STMT_DO_WHILE,
+    STMT_SWITCH,
+    STMT_EXIT,
+    STMT_CONTINUE,
+    STMT_FUNC_DEF,
+    STMT_RETURN,
+    STMT_EXPR_STMT,  // Expression statement (e.g., function call)
+    STMT_STRUCT_DEF,  // Phase 6: Struct definition
+    STMT_ENUM_DEF,    // Phase 10: Enum definition
+    STMT_TYPE_ALIAS,  // Phase 11: Type alias
+    STMT_TRY_CATCH,   // Phase 12: Try-catch block
+    STMT_THROW        // Phase 12: Throw statement
+} StmtType;
+
+typedef enum {
+    EXPR_NUMBER,
+    EXPR_VARIABLE,
+    EXPR_COMPARISON,
+    EXPR_BINARY_OP,
+    EXPR_FUNC_CALL,
+    EXPR_STRING,     // Phase 5: String literal
+    EXPR_NULL,       // Phase 10: null literal
+    EXPR_FIELD_ACCESS, // Phase 6: Struct field access (e.g., person.name)
+    EXPR_TERNARY,    // Ternary operator (condition ? true_val : false_val)
+    EXPR_ARRAY_INDEX, // Phase 8: Array indexing (e.g., arr[0])
+    EXPR_ADDRESS_OF, // Phase 10: Address-of operator (&var)
+    EXPR_DEREFERENCE, // Phase 10: Dereference operator (*ptr)
+    EXPR_LOGICAL_AND, // Logical AND (&&)
+    EXPR_LOGICAL_OR,  // Logical OR (||)
+    EXPR_LOGICAL_NOT, // Logical NOT (!)
+    EXPR_LAMBDA       // Phase 12: Lambda function (inline anonymous function)
+} ExprType;
+
+typedef enum {
+    BIN_OP_ADD,
+    BIN_OP_SUB,
+    BIN_OP_MUL,
+    BIN_OP_DIV
+} BinaryOp;
+
+typedef enum {
+    CMP_EQUAL,
+    CMP_NOT_EQUAL,
+    CMP_LESS,
+    CMP_LESS_EQUAL,
+    CMP_GREATER,
+    CMP_GREATER_EQUAL
+} ComparisonOp;
+
+typedef struct Expression {
+    ExprType type;
+    union {
+        long number_value;
+        char* var_name;
+        char* string_value;  // Phase 5: String literal value
+        struct {
+            struct Expression* left;
+            struct Expression* right;
+            ComparisonOp op;
+        } comparison;
+        struct {
+            struct Expression* left;
+            struct Expression* right;
+            BinaryOp op;
+        } binary_op;
+        struct {
+            char* func_name;
+            struct Expression** args;
+            int arg_count;
+        } func_call;
+        struct {
+            char* object_name;  // Variable name (e.g., "person")
+            char* field_name;   // Field name (e.g., "name")
+        } field_access;
+        struct {
+            struct Expression* condition;
+            struct Expression* true_expr;
+            struct Expression* false_expr;
+        } ternary;
+        struct {
+            char* array_name;           // Array variable name
+            struct Expression* index;   // Index expression
+        } array_index;
+        struct Expression* unary_operand;  // Phase 10: For & and * operators
+        struct {
+            struct Expression* left;   // For AND/OR
+            struct Expression* right;  // For AND/OR
+        } logical_binary;
+        struct Expression* logical_not_operand;  // For NOT
+        struct {
+            char** param_names;        // Parameter names
+            int param_count;           // Number of parameters
+            struct Expression* body;   // Lambda body (single expression)
+        } lambda;
+    };
+} Expression;
+
+typedef struct {
+    VarType type;
+    char* name;
+    char* struct_name;       // NULL for non-struct types, struct type name for struct instances
+    int is_array;            // 1 if array type, 0 otherwise
+    int array_size;          // Array size (0 = dynamic/unknown)
+    Expression** array_init; // Array literal values (NULL if no literal)
+    int array_init_count;    // Number of elements in array_init
+    int is_pointer;          // Phase 10: 1 if pointer type, 0 otherwise
+    int is_nullable;         // Phase 10: 1 if nullable type (type?), 0 otherwise
+    int is_union;            // Phase 11: 1 if union type (type1 | type2), 0 otherwise
+    VarType* union_types;    // Phase 11: Array of union types (NULL if not union)
+    int union_count;         // Phase 11: Number of types in union
+    Expression* init_value;  // NULL if no initialization
+} Declaration;
+
+// Phase 6: Struct field definition
+typedef struct {
+    VarType type;
+    char* name;
+} StructField;
+
+// Phase 10: Enum member definition
+typedef struct {
+    char* name;     // Member name (e.g., "Active")
+    long value;     // Member value (e.g., 1)
+} EnumMember;
+
+// Switch case definition
+typedef struct SwitchCase {
+    Expression* value;      // Case value to match
+    struct Statement** body;  // Case body statements
+    int body_count;
+} SwitchCase;
+
+typedef struct Statement {
+    StmtType type;
+    union {
+        Declaration* declaration;
+        struct {
+            char* var_name;
+            char* field_name;      // NULL for regular assignment, field name for field assignment
+            Expression* array_index; // NULL for regular assignment, index expr for array assignment
+            Expression* dereference_target; // Phase 10: NULL for regular, ptr expr for *ptr = value
+            Expression* value;
+        } assignment;
+        struct {
+            char** var_names;      // Array of variable names (e.g., ["a", "b", "c"])
+            int var_count;         // Number of variables
+            Expression* func_call; // Function call that returns multiple values
+        } multi_assignment;
+        struct {
+            Expression* expr;
+        } print_stmt;
+        struct {
+            Expression* condition;
+            struct Statement** then_body;
+            int then_count;
+            struct Statement** else_body;
+            int else_count;
+        } if_stmt;
+        struct {
+            char* var_name;       // Loop variable (e.g., "i")
+            Expression* start;     // Start value
+            Expression* end;       // End value
+            Expression* step;      // Step value (NULL = default 1)
+            struct Statement** body;
+            int body_count;
+        } for_stmt;
+        struct {
+            Expression* condition;
+            struct Statement** body;
+            int body_count;
+        } while_stmt;
+        struct {
+            Expression* condition;
+            struct Statement** body;
+            int body_count;
+        } do_while_stmt;
+        struct {
+            Expression* value;      // Switch expression to evaluate
+            struct SwitchCase** cases;  // Array of cases
+            int case_count;
+            struct Statement** default_body;  // Default case body (NULL if no default)
+            int default_count;
+        } switch_stmt;
+        struct {
+            char* func_name;
+            VarType* param_types;   // Parameter types
+            char** param_names;     // Parameter names
+            int param_count;
+            VarType* return_types;  // Return types (NULL if no return type specified)
+            int return_count;       // Number of return values (0 if void)
+            struct Statement** body;
+            int body_count;
+        } func_def;
+        struct {
+            Expression** values;    // Return values (multiple for multi-return)
+            int value_count;        // Number of return values
+        } return_stmt;
+        struct {
+            char* struct_name;
+            StructField* fields;
+            int field_count;
+        } struct_def;
+        struct {
+            char* enum_name;
+            EnumMember* members;
+            int member_count;
+        } enum_def;
+        struct {
+            char* alias_name;  // e.g., "PersonId"
+            VarType base_type; // e.g., TYPE_NUMERIC
+            char* struct_name; // NULL for primitive types, struct name for TYPE_STRUCT
+        } type_alias;
+        struct {
+            struct Statement** try_body;
+            int try_count;
+            char* exception_var;       // Variable name to catch exception (optional)
+            struct Statement** catch_body;
+            int catch_count;
+        } try_catch;
+        struct {
+            Expression* error_expr;    // Error message/value to throw
+        } throw_stmt;
+    };
+} Statement;
+
+typedef struct {
+    Statement** statements;
+    int count;
+    int capacity;
+} AST;
+
+typedef struct {
+    Lexer* lexer;
+    Token* current_token;
+} Parser;
+
+Parser* parser_create(Lexer* lexer) {
+    Parser* parser = malloc(sizeof(Parser));
+    parser->lexer = lexer;
+    parser->current_token = lexer_next_token(lexer);
+    return parser;
+}
+
+void parser_advance(Parser* parser) {
+    token_free(parser->current_token);
+    parser->current_token = lexer_next_token(parser->lexer);
+}
+
+AST* ast_create() {
+    AST* ast = malloc(sizeof(AST));
+    ast->statements = malloc(sizeof(Statement*) * 10);
+    ast->count = 0;
+    ast->capacity = 10;
+    return ast;
+}
+
+void ast_add_statement(AST* ast, Statement* stmt) {
+    if (ast->count >= ast->capacity) {
+        ast->capacity *= 2;
+        ast->statements = realloc(ast->statements, 
+                                   sizeof(Statement*) * ast->capacity);
+    }
+    ast->statements[ast->count++] = stmt;
+}
+
+Expression* expression_create_number(long value) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_NUMBER;
+    expr->number_value = value;
+    return expr;
+}
+
+Expression* expression_create_variable(const char* name) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_VARIABLE;
+    expr->var_name = malloc(strlen(name) + 1);
+    strcpy(expr->var_name, name);
+    return expr;
+}
+
+Expression* expression_create_string(const char* value) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_STRING;
+    expr->string_value = malloc(strlen(value) + 1);
+    strcpy(expr->string_value, value);
+    return expr;
+}
+
+Expression* expression_create_field_access(const char* object_name, const char* field_name) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_FIELD_ACCESS;
+    expr->field_access.object_name = malloc(strlen(object_name) + 1);
+    strcpy(expr->field_access.object_name, object_name);
+    expr->field_access.field_name = malloc(strlen(field_name) + 1);
+    strcpy(expr->field_access.field_name, field_name);
+    return expr;
+}
+
+Expression* expression_create_ternary(Expression* condition, Expression* true_expr, Expression* false_expr) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_TERNARY;
+    expr->ternary.condition = condition;
+    expr->ternary.true_expr = true_expr;
+    expr->ternary.false_expr = false_expr;
+    return expr;
+}
+
+Expression* expression_create_comparison(Expression* left, Expression* right, ComparisonOp op) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_COMPARISON;
+    expr->comparison.left = left;
+    expr->comparison.right = right;
+    expr->comparison.op = op;
+    return expr;
+}
+
+Expression* expression_create_binary_op(Expression* left, Expression* right, BinaryOp op) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_BINARY_OP;
+    expr->binary_op.left = left;
+    expr->binary_op.right = right;
+    expr->binary_op.op = op;
+    return expr;
+}
+
+Expression* expression_create_func_call(const char* func_name, Expression** args, int arg_count) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_FUNC_CALL;
+    expr->func_call.func_name = malloc(strlen(func_name) + 1);
+    strcpy(expr->func_call.func_name, func_name);
+    expr->func_call.args = args;
+    expr->func_call.arg_count = arg_count;
+    return expr;
+}
+
+// Phase 10: Create address-of expression (&var)
+Expression* expression_create_address_of(Expression* operand) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_ADDRESS_OF;
+    expr->unary_operand = operand;
+    return expr;
+}
+
+// Phase 10: Create dereference expression (*ptr)
+Expression* expression_create_dereference(Expression* operand) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_DEREFERENCE;
+    expr->unary_operand = operand;
+    return expr;
+}
+
+// Logical operators: AND, OR, NOT
+Expression* expression_create_logical_and(Expression* left, Expression* right) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_LOGICAL_AND;
+    expr->logical_binary.left = left;
+    expr->logical_binary.right = right;
+    return expr;
+}
+
+Expression* expression_create_logical_or(Expression* left, Expression* right) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_LOGICAL_OR;
+    expr->logical_binary.left = left;
+    expr->logical_binary.right = right;
+    return expr;
+}
+
+Expression* expression_create_logical_not(Expression* operand) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_LOGICAL_NOT;
+    expr->logical_not_operand = operand;
+    return expr;
+}
+
+// Forward declarations
+Expression* parser_parse_expression(Parser* parser);
+Expression* parser_parse_and_expression(Parser* parser);
+Expression* parser_parse_comparison_expression(Parser* parser);
+Expression* parser_parse_arithmetic_expression(Parser* parser);
+Statement* parser_parse_else_if_chain(Parser* parser);  // Helper for else-if chains
+
+// Parse interpolated string: $"text {expr} text"
+// String value contains: TEXT\1EXPR\2TEXT format
+// Returns concatenation expression
+Expression* parser_parse_interpolated_string(Parser* parser, const char* str_value) {
+    Expression* result = NULL;
+    int i = 0;
+    int len = strlen(str_value);
+    
+    while (i < len) {
+        // Find next expression marker or end
+        int text_start = i;
+        while (i < len && str_value[i] != '\1') {
+            i++;
+        }
+        
+        // Add text literal if any
+        if (i > text_start) {
+            int text_len = i - text_start;
+            char* text = malloc(text_len + 1);
+            strncpy(text, str_value + text_start, text_len);
+            text[text_len] = '\0';
+            
+            Expression* str_expr = expression_create_string(text);
+            free(text);
+            
+            if (result == NULL) {
+                result = str_expr;
+            } else {
+                result = expression_create_binary_op(result, str_expr, BIN_OP_ADD);
+            }
+        }
+        
+        // If we found expression marker
+        if (i < len && str_value[i] == '\1') {
+            i++;  // Skip \1
+            
+            // Find expression end marker \2
+            int expr_start = i;
+            while (i < len && str_value[i] != '\2') {
+                i++;
+            }
+            
+            if (i > expr_start) {
+                int expr_len = i - expr_start;
+                char* expr_code = malloc(expr_len + 1);
+                strncpy(expr_code, str_value + expr_start, expr_len);
+                expr_code[expr_len] = '\0';
+                
+                // Parse the expression by creating a temporary lexer/parser
+                Lexer* expr_lexer = lexer_create(expr_code);
+                Parser* expr_parser = parser_create(expr_lexer);
+                
+                Expression* expr = parser_parse_expression(expr_parser);
+                
+                // Free temporary parser/lexer
+                free(expr_parser);
+                free(expr_lexer);
+                free(expr_code);
+                
+                // TODO: Convert numeric expressions to string
+                // For now, we'll handle this in codegen
+                
+                if (result == NULL) {
+                    result = expr;
+                } else {
+                    result = expression_create_binary_op(result, expr, BIN_OP_ADD);
+                }
+            }
+            
+            if (i < len && str_value[i] == '\2') {
+                i++;  // Skip \2
+            }
+        }
+    }
+    
+    return result != NULL ? result : expression_create_string("");
+}
+
+Expression* parser_parse_primary_expression(Parser* parser) {
+    if (parser->current_token->type == TOKEN_FUNC) {
+        // Lambda function: func(x, y) = x + y
+        parser_advance(parser); // skip 'func'
+        
+        if (parser->current_token->type != TOKEN_LPAREN) {
+            fprintf(stderr, "Parser error: Expected '(' after 'func' in lambda at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip '('
+        
+        // Parse parameters
+        char** param_names = malloc(sizeof(char*) * 10);
+        int param_count = 0;
+        int param_capacity = 10;
+        
+        if (parser->current_token->type != TOKEN_RPAREN) {
+            while (1) {
+                if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                    fprintf(stderr, "Parser error: Expected parameter name in lambda at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                
+                if (param_count >= param_capacity) {
+                    param_capacity *= 2;
+                    param_names = realloc(param_names, sizeof(char*) * param_capacity);
+                }
+                
+                param_names[param_count] = malloc(strlen(parser->current_token->value) + 1);
+                strcpy(param_names[param_count], parser->current_token->value);
+                param_count++;
+                
+                parser_advance(parser);
+                
+                if (parser->current_token->type == TOKEN_COMMA) {
+                    parser_advance(parser);
+                } else {
+                    break;
+                }
+            }
+        }
+        
+        if (parser->current_token->type != TOKEN_RPAREN) {
+            fprintf(stderr, "Parser error: Expected ')' after lambda parameters at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip ')'
+        
+        // Expect '='
+        if (parser->current_token->type != TOKEN_ASSIGN) {
+            fprintf(stderr, "Parser error: Expected '=' after lambda parameters at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip '='
+        
+        // Parse body expression
+        Expression* body = parser_parse_expression(parser);
+        
+        // Create lambda expression
+        Expression* lambda = malloc(sizeof(Expression));
+        lambda->type = EXPR_LAMBDA;
+        lambda->lambda.param_names = param_names;
+        lambda->lambda.param_count = param_count;
+        lambda->lambda.body = body;
+        
+        return lambda;
+    } else if (parser->current_token->type == TOKEN_NUMBER) {
+        long value = atol(parser->current_token->value);
+        parser_advance(parser);
+        return expression_create_number(value);
+    } else if (parser->current_token->type == TOKEN_NULL) {
+        // null literal
+        parser_advance(parser);
+        Expression* expr = malloc(sizeof(Expression));
+        expr->type = EXPR_NULL;
+        return expr;
+    } else if (parser->current_token->type == TOKEN_INTERPOLATED_STRING) {
+        // Interpolated string: $"text {expr} text"
+        char* str_value = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(str_value, parser->current_token->value);
+        parser_advance(parser);
+        Expression* expr = parser_parse_interpolated_string(parser, str_value);
+        free(str_value);
+        return expr;
+    } else if (parser->current_token->type == TOKEN_STRING) {
+        // String literal
+        char* str_value = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(str_value, parser->current_token->value);
+        parser_advance(parser);
+        Expression* expr = expression_create_string(str_value);
+        free(str_value);
+        return expr;
+    } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        char* name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(name, parser->current_token->value);
+        parser_advance(parser);
+        
+        // Check for function call
+        if (parser->current_token->type == TOKEN_LPAREN) {
+            parser_advance(parser); // skip '('
+            
+            // Parse arguments
+            Expression** args = malloc(sizeof(Expression*) * 10);
+            int arg_count = 0;
+            int arg_capacity = 10;
+            
+            if (parser->current_token->type != TOKEN_RPAREN) {
+                while (1) {
+                    if (arg_count >= arg_capacity) {
+                        arg_capacity *= 2;
+                        args = realloc(args, sizeof(Expression*) * arg_capacity);
+                    }
+                    args[arg_count++] = parser_parse_expression(parser);
+                    
+                    if (parser->current_token->type == TOKEN_COMMA) {
+                        parser_advance(parser);
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            if (parser->current_token->type != TOKEN_RPAREN) {
+                fprintf(stderr, "Parser error: Expected ')' after function arguments at line %d\\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip ')'
+            
+            Expression* expr = expression_create_func_call(name, args, arg_count);
+            free(name);
+            return expr;
+        } else if (parser->current_token->type == TOKEN_LBRACKET) {
+            // Array indexing: arr[index]
+            parser_advance(parser); // skip '['
+            
+            Expression* index = parser_parse_expression(parser);
+            
+            if (parser->current_token->type != TOKEN_RBRACKET) {
+                fprintf(stderr, "Parser error: Expected ']' after array index at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip ']'
+            
+            Expression* expr = malloc(sizeof(Expression));
+            expr->type = EXPR_ARRAY_INDEX;
+            expr->array_index.array_name = name; // Takes ownership
+            expr->array_index.index = index;
+            return expr;
+        } else if (parser->current_token->type == TOKEN_DOT) {
+            // Field access: object.field
+            parser_advance(parser); // skip '.'
+            
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected field name after '.' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            char* field_name = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(field_name, parser->current_token->value);
+            parser_advance(parser);
+            
+            Expression* expr = expression_create_field_access(name, field_name);
+            free(name);
+            free(field_name);
+            return expr;
+        } else {
+            // Variable
+            Expression* expr = expression_create_variable(name);
+            free(name);
+            return expr;
+        }
+    } else if (parser->current_token->type == TOKEN_LPAREN) {
+        // Parenthesized expression: (expr)
+        parser_advance(parser); // skip '('
+        Expression* expr = parser_parse_expression(parser);
+        
+        if (parser->current_token->type != TOKEN_RPAREN) {
+            fprintf(stderr, "Parser error: Expected ')' after expression at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip ')'
+        return expr;
+    } else {
+        fprintf(stderr, "Parser error: Expected expression at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+}
+
+// Phase 10: Parse unary expressions (& and * prefix operators)
+Expression* parser_parse_unary_expression(Parser* parser) {
+    // Check for logical NOT operator: not expression
+    if (parser->current_token->type == TOKEN_NOT) {
+        parser_advance(parser); // skip 'not'
+        Expression* operand = parser_parse_unary_expression(parser); // Recursive for multiple nots
+        return expression_create_logical_not(operand);
+    }
+    
+    // Check for address-of operator: &variable
+    if (parser->current_token->type == TOKEN_AMPERSAND) {
+        parser_advance(parser); // skip '&'
+        Expression* operand = parser_parse_primary_expression(parser);
+        return expression_create_address_of(operand);
+    }
+    
+    // Check for dereference operator: *pointer
+    if (parser->current_token->type == TOKEN_MULTIPLY) {
+        parser_advance(parser); // skip '*'
+        Expression* operand = parser_parse_primary_expression(parser);
+        return expression_create_dereference(operand);
+    }
+    
+    // Otherwise, parse as primary expression
+    return parser_parse_primary_expression(parser);
+}
+
+Expression* parser_parse_expression(Parser* parser) {
+    // Parse OR level (lowest precedence)
+    Expression* left = parser_parse_and_expression(parser);
+    
+    while (parser->current_token->type == TOKEN_OR) {
+        parser_advance(parser);
+        Expression* right = parser_parse_and_expression(parser);
+        left = expression_create_logical_or(left, right);
+    }
+    
+    return left;
+}
+
+// Parse AND expressions (higher precedence than OR)
+Expression* parser_parse_and_expression(Parser* parser) {
+    Expression* left = parser_parse_comparison_expression(parser);
+    
+    while (parser->current_token->type == TOKEN_AND) {
+        parser_advance(parser);
+        Expression* right = parser_parse_comparison_expression(parser);
+        left = expression_create_logical_and(left, right);
+    }
+    
+    return left;
+}
+
+// Parse comparison and arithmetic expressions
+Expression* parser_parse_comparison_expression(Parser* parser) {
+    Expression* left = parser_parse_arithmetic_expression(parser);
+    
+    // Check for comparison operators
+    ComparisonOp op;
+    int has_comparison = 0;
+    
+    if (parser->current_token->type == TOKEN_EQUAL) {
+        op = CMP_EQUAL;
+        has_comparison = 1;
+    } else if (parser->current_token->type == TOKEN_NOT_EQUAL) {
+        op = CMP_NOT_EQUAL;
+        has_comparison = 1;
+    } else if (parser->current_token->type == TOKEN_LESS) {
+        op = CMP_LESS;
+        has_comparison = 1;
+    } else if (parser->current_token->type == TOKEN_LESS_EQUAL) {
+        op = CMP_LESS_EQUAL;
+        has_comparison = 1;
+    } else if (parser->current_token->type == TOKEN_GREATER) {
+        op = CMP_GREATER;
+        has_comparison = 1;
+    } else if (parser->current_token->type == TOKEN_GREATER_EQUAL) {
+        op = CMP_GREATER_EQUAL;
+        has_comparison = 1;
+    }
+    
+    if (has_comparison) {
+        parser_advance(parser);
+        Expression* right = parser_parse_arithmetic_expression(parser);
+        left = expression_create_comparison(left, right, op);
+    }
+    
+    // Check for ternary operator (? :)
+    if (parser->current_token->type == TOKEN_QUESTION) {
+        parser_advance(parser);
+        Expression* true_expr = parser_parse_expression(parser);
+        
+        if (parser->current_token->type != TOKEN_COLON) {
+            fprintf(stderr, "Parser error: Expected ':' in ternary expression at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+        
+        Expression* false_expr = parser_parse_expression(parser);
+        return expression_create_ternary(left, true_expr, false_expr);
+    }
+    
+    return left;
+}
+
+// Parse arithmetic expressions (+, -, *, /)
+Expression* parser_parse_arithmetic_expression(Parser* parser) {
+    Expression* left = parser_parse_unary_expression(parser);
+    
+    // Check for arithmetic operators (+, -, *, /) in a loop for left-associativity
+    while (1) {
+        BinaryOp bin_op;
+        int has_bin_op = 0;
+        
+        if (parser->current_token->type == TOKEN_PLUS) {
+            bin_op = BIN_OP_ADD;
+            has_bin_op = 1;
+        } else if (parser->current_token->type == TOKEN_MINUS) {
+            bin_op = BIN_OP_SUB;
+            has_bin_op = 1;
+        } else if (parser->current_token->type == TOKEN_MULTIPLY) {
+            bin_op = BIN_OP_MUL;
+            has_bin_op = 1;
+        } else if (parser->current_token->type == TOKEN_DIVIDE) {
+            bin_op = BIN_OP_DIV;
+            has_bin_op = 1;
+        }
+        
+        if (has_bin_op) {
+            parser_advance(parser);
+            Expression* right = parser_parse_unary_expression(parser);
+            left = expression_create_binary_op(left, right, bin_op);
+        } else {
+            break;
+        }
+    }
+    
+    return left;
+}
+
+Declaration* parser_parse_declaration(Parser* parser) {
+    Declaration* decl = malloc(sizeof(Declaration));
+    decl->struct_name = NULL;
+    decl->is_array = 0;
+    decl->array_size = 0;
+    decl->array_init = NULL;
+    decl->array_init_count = 0;
+    decl->is_pointer = 0;
+    decl->is_nullable = 0;
+    decl->is_union = 0;
+    decl->union_types = NULL;
+    decl->union_count = 0;
+    decl->init_value = NULL;
+    
+    // Type keyword or struct name
+    if (parser->current_token->type == TOKEN_NUMERIC) {
+        decl->type = TYPE_NUMERIC;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_DECIMAL) {
+        decl->type = TYPE_DECIMAL;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+        decl->type = TYPE_BOOLEAN;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_TEXT) {
+        decl->type = TYPE_STRING;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        // Struct instance (e.g., Person p)
+        decl->struct_name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(decl->struct_name, parser->current_token->value);
+        decl->type = TYPE_NUMERIC; // Placeholder, actual type is struct
+        parser_advance(parser);
+    } else {
+        fprintf(stderr, "Parser error: Expected type keyword at line %d\n", 
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    // Phase 11: Check for union type: numeric | string | boolean
+    if (parser->current_token->type == TOKEN_PIPE) {
+        decl->is_union = 1;
+        int capacity = 10;
+        decl->union_types = malloc(sizeof(VarType) * capacity);
+        decl->union_count = 0;
+        
+        // First type already parsed
+        decl->union_types[decl->union_count++] = decl->type;
+        
+        // Parse remaining types
+        while (parser->current_token->type == TOKEN_PIPE) {
+            parser_advance(parser); // skip '|'
+            
+            VarType union_type;
+            if (parser->current_token->type == TOKEN_NUMERIC) {
+                union_type = TYPE_NUMERIC;
+                parser_advance(parser);
+            } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                union_type = TYPE_DECIMAL;
+                parser_advance(parser);
+            } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                union_type = TYPE_BOOLEAN;
+                parser_advance(parser);
+            } else if (parser->current_token->type == TOKEN_TEXT) {
+                union_type = TYPE_STRING;
+                parser_advance(parser);
+            } else {
+                fprintf(stderr, "Parser error: Expected type after '|' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            if (decl->union_count >= capacity) {
+                capacity *= 2;
+                decl->union_types = realloc(decl->union_types, sizeof(VarType) * capacity);
+            }
+            
+            decl->union_types[decl->union_count++] = union_type;
+        }
+    }
+    
+    // Phase 10: Check for pointer type: *
+    if (parser->current_token->type == TOKEN_MULTIPLY) {
+        decl->is_pointer = 1;
+        parser_advance(parser); // skip '*'
+    }
+    
+    // Phase 10: Check for nullable type: ?
+    if (parser->current_token->type == TOKEN_QUESTION) {
+        decl->is_nullable = 1;
+        parser_advance(parser); // skip '?'
+    }
+    
+    // Check for array type: []
+    if (parser->current_token->type == TOKEN_LBRACKET) {
+        decl->is_array = 1;
+        parser_advance(parser); // skip '['
+        
+        // Check for sized array: [size]
+        if (parser->current_token->type == TOKEN_NUMBER) {
+            decl->array_size = atoi(parser->current_token->value);
+            parser_advance(parser);
+        }
+        
+        if (parser->current_token->type != TOKEN_RBRACKET) {
+            fprintf(stderr, "Parser error: Expected ']' after '[' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip ']'
+    }
+    
+    // Variable name
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected identifier at line %d\n", 
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    decl->name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(decl->name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Check for initialization (= value)
+    if (parser->current_token->type == TOKEN_ASSIGN) {
+        parser_advance(parser);
+        
+        // Check for array literal: [1, 2, 3]
+        if (decl->is_array && parser->current_token->type == TOKEN_LBRACKET) {
+            parser_advance(parser); // skip '['
+            
+            // Parse array elements
+            int capacity = 10;
+            decl->array_init = malloc(sizeof(Expression*) * capacity);
+            decl->array_init_count = 0;
+            
+            if (parser->current_token->type != TOKEN_RBRACKET) {
+                while (1) {
+                    if (decl->array_init_count >= capacity) {
+                        capacity *= 2;
+                        decl->array_init = realloc(decl->array_init, sizeof(Expression*) * capacity);
+                    }
+                    
+                    decl->array_init[decl->array_init_count++] = parser_parse_expression(parser);
+                    
+                    if (parser->current_token->type == TOKEN_COMMA) {
+                        parser_advance(parser);
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            if (parser->current_token->type != TOKEN_RBRACKET) {
+                fprintf(stderr, "Parser error: Expected ']' after array elements at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip ']'
+            
+            // Set array size from literal if not specified
+            if (decl->array_size == 0) {
+                decl->array_size = decl->array_init_count;
+            }
+        } else {
+            decl->init_value = parser_parse_expression(parser);
+        }
+    }
+    
+    return decl;
+}
+
+Statement* parser_parse_statement(Parser* parser);  // Forward declaration
+Statement* parser_parse_try_catch(Parser* parser);  // Forward declaration
+
+// Helper function to parse else-if chain recursively
+Statement* parser_parse_else_if_chain(Parser* parser) {
+    Statement* nested_if = malloc(sizeof(Statement));
+    nested_if->type = STMT_IF;
+    
+    // Parse condition (we're already past 'else if')
+    nested_if->if_stmt.condition = parser_parse_expression(parser);
+    
+    // Expect 'then'
+    if (parser->current_token->type != TOKEN_THEN) {
+        fprintf(stderr, "Parser error: Expected 'then' after else if condition at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse then body
+    nested_if->if_stmt.then_body = malloc(sizeof(Statement*) * 10);
+    nested_if->if_stmt.then_count = 0;
+    int then_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_ELSE && 
+           parser->current_token->type != TOKEN_ELSE_IF &&
+           parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (nested_if->if_stmt.then_count >= then_capacity) {
+            then_capacity *= 2;
+            nested_if->if_stmt.then_body = realloc(nested_if->if_stmt.then_body,
+                                                  sizeof(Statement*) * then_capacity);
+        }
+        nested_if->if_stmt.then_body[nested_if->if_stmt.then_count++] = body_stmt;
+    }
+    
+    // Check for more else if or final else
+    nested_if->if_stmt.else_body = NULL;
+    nested_if->if_stmt.else_count = 0;
+    
+    if (parser->current_token->type == TOKEN_ELSE_IF) {
+        parser_advance(parser); // Skip 'else if'
+        
+        // Recursively parse the next else if
+        nested_if->if_stmt.else_body = malloc(sizeof(Statement*) * 1);
+        nested_if->if_stmt.else_count = 1;
+        nested_if->if_stmt.else_body[0] = parser_parse_else_if_chain(parser);
+        
+    } else if (parser->current_token->type == TOKEN_ELSE) {
+        parser_advance(parser); // Skip 'else'
+        
+        // Parse final else body
+        nested_if->if_stmt.else_body = malloc(sizeof(Statement*) * 10);
+        int else_capacity = 10;
+        
+        while (parser->current_token->type != TOKEN_END &&
+               parser->current_token->type != TOKEN_EOF) {
+            
+            Statement* body_stmt = parser_parse_statement(parser);
+            
+            if (nested_if->if_stmt.else_count >= else_capacity) {
+                else_capacity *= 2;
+                nested_if->if_stmt.else_body = realloc(nested_if->if_stmt.else_body,
+                                                      sizeof(Statement*) * else_capacity);
+            }
+            nested_if->if_stmt.else_body[nested_if->if_stmt.else_count++] = body_stmt;
+        }
+    }
+    
+    return nested_if;
+}
+
+Statement* parser_parse_if_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_IF;
+    
+    // Skip 'if'
+    parser_advance(parser);
+    
+    // Parse condition
+    stmt->if_stmt.condition = parser_parse_expression(parser);
+    
+    // Expect 'then'
+    if (parser->current_token->type != TOKEN_THEN) {
+        fprintf(stderr, "Parser error: Expected 'then' after if condition at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse then body
+    stmt->if_stmt.then_body = malloc(sizeof(Statement*) * 10);
+    stmt->if_stmt.then_count = 0;
+    int then_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_ELSE && 
+           parser->current_token->type != TOKEN_ELSE_IF &&
+           parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (stmt->if_stmt.then_count >= then_capacity) {
+            then_capacity *= 2;
+            stmt->if_stmt.then_body = realloc(stmt->if_stmt.then_body,
+                                              sizeof(Statement*) * then_capacity);
+        }
+        stmt->if_stmt.then_body[stmt->if_stmt.then_count++] = body_stmt;
+    }
+    
+    // Check for else if or else
+    stmt->if_stmt.else_body = NULL;
+    stmt->if_stmt.else_count = 0;
+    
+    if (parser->current_token->type == TOKEN_ELSE_IF) {
+        parser_advance(parser); // Skip 'else if'
+        
+        // Use helper function to handle else if chain recursively
+        stmt->if_stmt.else_body = malloc(sizeof(Statement*) * 1);
+        stmt->if_stmt.else_count = 1;
+        stmt->if_stmt.else_body[0] = parser_parse_else_if_chain(parser);
+        
+    } else if (parser->current_token->type == TOKEN_ELSE) {
+        parser_advance(parser);
+        
+        stmt->if_stmt.else_body = malloc(sizeof(Statement*) * 10);
+        int else_capacity = 10;
+        
+        while (parser->current_token->type != TOKEN_END &&
+               parser->current_token->type != TOKEN_EOF) {
+            
+            Statement* body_stmt = parser_parse_statement(parser);
+            
+            if (stmt->if_stmt.else_count >= else_capacity) {
+                else_capacity *= 2;
+                stmt->if_stmt.else_body = realloc(stmt->if_stmt.else_body,
+                                                  sizeof(Statement*) * else_capacity);
+            }
+            stmt->if_stmt.else_body[stmt->if_stmt.else_count++] = body_stmt;
+        }
+    }
+    
+    // Expect 'end' 'if'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after if block at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_IF) {
+        fprintf(stderr, "Parser error: Expected 'if' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_for_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_FOR;
+    
+    // Skip 'for'
+    parser_advance(parser);
+    
+    // Parse loop variable
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected identifier after 'for' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    stmt->for_stmt.var_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->for_stmt.var_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Expect '='
+    if (parser->current_token->type != TOKEN_ASSIGN) {
+        fprintf(stderr, "Parser error: Expected '=' after loop variable at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse start value
+    stmt->for_stmt.start = parser_parse_expression(parser);
+    
+    // Expect 'to'
+    if (parser->current_token->type != TOKEN_TO) {
+        fprintf(stderr, "Parser error: Expected 'to' in for loop at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse end value
+    stmt->for_stmt.end = parser_parse_expression(parser);
+    
+    // Check for optional 'step'
+    stmt->for_stmt.step = NULL;
+    if (parser->current_token->type == TOKEN_STEP) {
+        parser_advance(parser);
+        stmt->for_stmt.step = parser_parse_expression(parser);
+    }
+    
+    // Parse body
+    stmt->for_stmt.body = malloc(sizeof(Statement*) * 10);
+    stmt->for_stmt.body_count = 0;
+    int body_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (stmt->for_stmt.body_count >= body_capacity) {
+            body_capacity *= 2;
+            stmt->for_stmt.body = realloc(stmt->for_stmt.body,
+                                          sizeof(Statement*) * body_capacity);
+        }
+        stmt->for_stmt.body[stmt->for_stmt.body_count++] = body_stmt;
+    }
+    
+    // Expect 'end' 'for'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after for loop body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_FOR) {
+        fprintf(stderr, "Parser error: Expected 'for' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_while_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_WHILE;
+    
+    // Skip 'while'
+    parser_advance(parser);
+    
+    // Parse condition
+    stmt->while_stmt.condition = parser_parse_expression(parser);
+    
+    // Parse body
+    stmt->while_stmt.body = malloc(sizeof(Statement*) * 10);
+    stmt->while_stmt.body_count = 0;
+    int body_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (stmt->while_stmt.body_count >= body_capacity) {
+            body_capacity *= 2;
+            stmt->while_stmt.body = realloc(stmt->while_stmt.body,
+                                           sizeof(Statement*) * body_capacity);
+        }
+        stmt->while_stmt.body[stmt->while_stmt.body_count++] = body_stmt;
+    }
+    
+    // Expect 'end' 'while'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after while loop body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_WHILE) {
+        fprintf(stderr, "Parser error: Expected 'while' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_do_while_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_DO_WHILE;
+    
+    // Skip 'do'
+    parser_advance(parser);
+    
+    // Parse body
+    stmt->do_while_stmt.body = malloc(sizeof(Statement*) * 10);
+    stmt->do_while_stmt.body_count = 0;
+    int body_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_WHILE &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (stmt->do_while_stmt.body_count >= body_capacity) {
+            body_capacity *= 2;
+            stmt->do_while_stmt.body = realloc(stmt->do_while_stmt.body,
+                                              sizeof(Statement*) * body_capacity);
+        }
+        stmt->do_while_stmt.body[stmt->do_while_stmt.body_count++] = body_stmt;
+    }
+    
+    // Expect 'while'
+    if (parser->current_token->type != TOKEN_WHILE) {
+        fprintf(stderr, "Parser error: Expected 'while' after do block at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse condition
+    stmt->do_while_stmt.condition = parser_parse_expression(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_switch_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_SWITCH;
+    
+    // Skip 'switch'
+    parser_advance(parser);
+    
+    // Parse switch expression
+    stmt->switch_stmt.value = parser_parse_expression(parser);
+    
+    // Initialize cases array
+    stmt->switch_stmt.cases = malloc(sizeof(SwitchCase*) * 10);
+    stmt->switch_stmt.case_count = 0;
+    int case_capacity = 10;
+    
+    stmt->switch_stmt.default_body = NULL;
+    stmt->switch_stmt.default_count = 0;
+    
+    // Parse cases until we hit 'end'
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        if (parser->current_token->type == TOKEN_CASE) {
+            parser_advance(parser); // Skip 'case'
+            
+            // Allocate new case
+            SwitchCase* switch_case = malloc(sizeof(SwitchCase));
+            switch_case->value = parser_parse_expression(parser);
+            switch_case->body = malloc(sizeof(Statement*) * 10);
+            switch_case->body_count = 0;
+            int body_capacity = 10;
+            
+            // Parse case body until next case, default, or end
+            while (parser->current_token->type != TOKEN_CASE &&
+                   parser->current_token->type != TOKEN_DEFAULT &&
+                   parser->current_token->type != TOKEN_END &&
+                   parser->current_token->type != TOKEN_EOF) {
+                
+                Statement* body_stmt = parser_parse_statement(parser);
+                
+                if (switch_case->body_count >= body_capacity) {
+                    body_capacity *= 2;
+                    switch_case->body = realloc(switch_case->body,
+                                               sizeof(Statement*) * body_capacity);
+                }
+                switch_case->body[switch_case->body_count++] = body_stmt;
+            }
+            
+            // Add case to cases array
+            if (stmt->switch_stmt.case_count >= case_capacity) {
+                case_capacity *= 2;
+                stmt->switch_stmt.cases = realloc(stmt->switch_stmt.cases,
+                                                  sizeof(SwitchCase*) * case_capacity);
+            }
+            stmt->switch_stmt.cases[stmt->switch_stmt.case_count++] = switch_case;
+            
+        } else if (parser->current_token->type == TOKEN_DEFAULT) {
+            parser_advance(parser); // Skip 'default'
+            
+            // Parse default body
+            stmt->switch_stmt.default_body = malloc(sizeof(Statement*) * 10);
+            int default_capacity = 10;
+            
+            while (parser->current_token->type != TOKEN_CASE &&
+                   parser->current_token->type != TOKEN_DEFAULT &&
+                   parser->current_token->type != TOKEN_END &&
+                   parser->current_token->type != TOKEN_EOF) {
+                
+                Statement* body_stmt = parser_parse_statement(parser);
+                
+                if (stmt->switch_stmt.default_count >= default_capacity) {
+                    default_capacity *= 2;
+                    stmt->switch_stmt.default_body = realloc(stmt->switch_stmt.default_body,
+                                                            sizeof(Statement*) * default_capacity);
+                }
+                stmt->switch_stmt.default_body[stmt->switch_stmt.default_count++] = body_stmt;
+            }
+        } else {
+            fprintf(stderr, "Parser error: Expected 'case' or 'default' in switch at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+    }
+    
+    // Expect 'end' 'switch'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after switch block at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_SWITCH) {
+        fprintf(stderr, "Parser error: Expected 'switch' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_try_catch(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_TRY_CATCH;
+    
+    // Skip 'try'
+    parser_advance(parser);
+    
+    // Parse try body
+    stmt->try_catch.try_body = malloc(sizeof(Statement*) * 10);
+    stmt->try_catch.try_count = 0;
+    int try_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_CATCH &&
+           parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (stmt->try_catch.try_count >= try_capacity) {
+            try_capacity *= 2;
+            stmt->try_catch.try_body = realloc(stmt->try_catch.try_body,
+                                               sizeof(Statement*) * try_capacity);
+        }
+        stmt->try_catch.try_body[stmt->try_catch.try_count++] = body_stmt;
+    }
+    
+    // Expect 'catch'
+    if (parser->current_token->type != TOKEN_CATCH) {
+        fprintf(stderr, "Parser error: Expected 'catch' after try block at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser); // skip 'catch'
+    
+    // Optional: parse exception variable (catch e)
+    stmt->try_catch.exception_var = NULL;
+    if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        stmt->try_catch.exception_var = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->try_catch.exception_var, parser->current_token->value);
+        parser_advance(parser);
+    }
+    
+    // Parse catch body
+    stmt->try_catch.catch_body = malloc(sizeof(Statement*) * 10);
+    stmt->try_catch.catch_count = 0;
+    int catch_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (stmt->try_catch.catch_count >= catch_capacity) {
+            catch_capacity *= 2;
+            stmt->try_catch.catch_body = realloc(stmt->try_catch.catch_body,
+                                                 sizeof(Statement*) * catch_capacity);
+        }
+        stmt->try_catch.catch_body[stmt->try_catch.catch_count++] = body_stmt;
+    }
+    
+    // Expect 'end'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after catch block at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser); // skip 'end'
+    
+    // Expect 'try' (end try)
+    if (parser->current_token->type != TOKEN_TRY) {
+        fprintf(stderr, "Parser error: Expected 'try' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_func_definition(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_FUNC_DEF;
+    
+    // Skip 'func'
+    parser_advance(parser);
+    
+    // Parse function name
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected function name after 'func' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    stmt->func_def.func_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->func_def.func_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Expect '('
+    if (parser->current_token->type != TOKEN_LPAREN) {
+        fprintf(stderr, "Parser error: Expected '(' after function name at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse parameters
+    stmt->func_def.param_types = malloc(sizeof(VarType) * 10);
+    stmt->func_def.param_names = malloc(sizeof(char*) * 10);
+    stmt->func_def.param_count = 0;
+    int param_capacity = 10;
+    
+    if (parser->current_token->type != TOKEN_RPAREN) {
+        while (1) {
+            // Parse parameter type
+            VarType param_type;
+            if (parser->current_token->type == TOKEN_NUMERIC) {
+                param_type = TYPE_NUMERIC;
+            } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                param_type = TYPE_DECIMAL;
+            } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                param_type = TYPE_BOOLEAN;
+            } else if (parser->current_token->type == TOKEN_TEXT) {
+                param_type = TYPE_STRING;
+            } else {
+                fprintf(stderr, "Parser error: Expected parameter type at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser);
+            
+            // Phase 10: Check for pointer type (*)
+            if (parser->current_token->type == TOKEN_MULTIPLY) {
+                parser_advance(parser); // skip '*'
+                // For now, pointer types are stored the same as regular types
+                // In future, we may need to track this differently
+            }
+            
+            // Parse parameter name
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected parameter name at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            if (stmt->func_def.param_count >= param_capacity) {
+                param_capacity *= 2;
+                stmt->func_def.param_types = realloc(stmt->func_def.param_types,
+                                                    sizeof(VarType) * param_capacity);
+                stmt->func_def.param_names = realloc(stmt->func_def.param_names,
+                                                     sizeof(char*) * param_capacity);
+            }
+            
+            stmt->func_def.param_types[stmt->func_def.param_count] = param_type;
+            stmt->func_def.param_names[stmt->func_def.param_count] = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(stmt->func_def.param_names[stmt->func_def.param_count], parser->current_token->value);
+            stmt->func_def.param_count++;
+            parser_advance(parser);
+            
+            if (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser);
+            } else {
+                break;
+            }
+        }
+    }
+    
+    // Expect ')'
+    if (parser->current_token->type != TOKEN_RPAREN) {
+        fprintf(stderr, "Parser error: Expected ')' after parameters at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse return type(s) if present (returns type1, type2, ...)
+    stmt->func_def.return_types = NULL;
+    stmt->func_def.return_count = 0;
+    
+    if (parser->current_token->type == TOKEN_RETURNS) {
+        parser_advance(parser); // skip 'returns'
+        
+        stmt->func_def.return_types = malloc(sizeof(VarType) * 10);
+        int return_capacity = 10;
+        
+        // Parse first return type
+        VarType ret_type;
+        if (parser->current_token->type == TOKEN_NUMERIC) {
+            ret_type = TYPE_NUMERIC;
+        } else if (parser->current_token->type == TOKEN_DECIMAL) {
+            ret_type = TYPE_DECIMAL;
+        } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+            ret_type = TYPE_BOOLEAN;
+        } else if (parser->current_token->type == TOKEN_TEXT) {
+            ret_type = TYPE_STRING;
+        } else {
+            fprintf(stderr, "Parser error: Expected return type after 'returns' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        stmt->func_def.return_types[stmt->func_def.return_count++] = ret_type;
+        parser_advance(parser);
+        
+        // Parse additional return types if comma-separated
+        while (parser->current_token->type == TOKEN_COMMA) {
+            parser_advance(parser); // skip ','
+            
+            if (stmt->func_def.return_count >= return_capacity) {
+                return_capacity *= 2;
+                stmt->func_def.return_types = realloc(stmt->func_def.return_types,
+                                                     sizeof(VarType) * return_capacity);
+            }
+            
+            if (parser->current_token->type == TOKEN_NUMERIC) {
+                ret_type = TYPE_NUMERIC;
+            } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                ret_type = TYPE_DECIMAL;
+            } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                ret_type = TYPE_BOOLEAN;
+            } else if (parser->current_token->type == TOKEN_TEXT) {
+                ret_type = TYPE_STRING;
+            } else {
+                fprintf(stderr, "Parser error: Expected return type after ',' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            stmt->func_def.return_types[stmt->func_def.return_count++] = ret_type;
+            parser_advance(parser);
+        }
+    }
+    
+    // Parse function body
+    stmt->func_def.body = malloc(sizeof(Statement*) * 10);
+    stmt->func_def.body_count = 0;
+    int body_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        Statement* body_stmt = parser_parse_statement(parser);
+        
+        if (stmt->func_def.body_count >= body_capacity) {
+            body_capacity *= 2;
+            stmt->func_def.body = realloc(stmt->func_def.body,
+                                         sizeof(Statement*) * body_capacity);
+        }
+        stmt->func_def.body[stmt->func_def.body_count++] = body_stmt;
+    }
+    
+    // Expect 'end' 'func'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after function body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_FUNC) {
+        fprintf(stderr, "Parser error: Expected 'func' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_struct_definition(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_STRUCT_DEF;
+    
+    // Skip 'struct'
+    parser_advance(parser);
+    
+    // Parse struct name
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected struct name after 'struct' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    stmt->struct_def.struct_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->struct_def.struct_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Parse struct fields (no 'then' keyword, unlike if statement)
+    stmt->struct_def.fields = malloc(sizeof(StructField) * 10);
+    stmt->struct_def.field_count = 0;
+    int field_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        // Parse field type
+        VarType field_type;
+        if (parser->current_token->type == TOKEN_NUMERIC) {
+            field_type = TYPE_NUMERIC;
+        } else if (parser->current_token->type == TOKEN_DECIMAL) {
+            field_type = TYPE_DECIMAL;
+        } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+            field_type = TYPE_BOOLEAN;
+        } else if (parser->current_token->type == TOKEN_TEXT) {
+            field_type = TYPE_STRING;
+        } else {
+            // Must be 'end' keyword
+            break;
+        }
+        parser_advance(parser);
+        
+        // Parse field name
+        if (parser->current_token->type != TOKEN_IDENTIFIER) {
+            fprintf(stderr, "Parser error: Expected field name at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        
+        if (stmt->struct_def.field_count >= field_capacity) {
+            field_capacity *= 2;
+            stmt->struct_def.fields = realloc(stmt->struct_def.fields,
+                                             sizeof(StructField) * field_capacity);
+        }
+        
+        stmt->struct_def.fields[stmt->struct_def.field_count].type = field_type;
+        stmt->struct_def.fields[stmt->struct_def.field_count].name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->struct_def.fields[stmt->struct_def.field_count].name, parser->current_token->value);
+        stmt->struct_def.field_count++;
+        parser_advance(parser);
+    }
+    
+    // Expect 'end' 'struct'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after struct body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_STRUCT) {
+        fprintf(stderr, "Parser error: Expected 'struct' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_type_alias(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_TYPE_ALIAS;
+    
+    // Skip 'type'
+    parser_advance(parser);
+    
+    // Parse alias name (e.g., PersonId)
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected alias name after 'type' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    stmt->type_alias.alias_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->type_alias.alias_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Expect '='
+    if (parser->current_token->type != TOKEN_ASSIGN) {
+        fprintf(stderr, "Parser error: Expected '=' after alias name at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse base type (numeric, text, boolean, struct Name, etc.)
+    stmt->type_alias.struct_name = NULL; // Default for primitive types
+    
+    if (parser->current_token->type == TOKEN_NUMERIC) {
+        stmt->type_alias.base_type = TYPE_NUMERIC;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_DECIMAL) {
+        stmt->type_alias.base_type = TYPE_DECIMAL;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_TEXT) {
+        stmt->type_alias.base_type = TYPE_STRING;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+        stmt->type_alias.base_type = TYPE_BOOLEAN;
+        parser_advance(parser);
+    } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        // Assume it's a struct type or another alias (e.g., type PersonRef = Person)
+        // We'll store as TYPE_NUMERIC placeholder and use struct_name
+        stmt->type_alias.base_type = TYPE_NUMERIC;
+        stmt->type_alias.struct_name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->type_alias.struct_name, parser->current_token->value);
+        parser_advance(parser);
+    } else {
+        fprintf(stderr, "Parser error: Expected type name after '=' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    return stmt;
+}
+
+Statement* parser_parse_enum_definition(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_ENUM_DEF;
+    
+    // Skip 'enum'
+    parser_advance(parser);
+    
+    // Parse enum name
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected enum name after 'enum' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    stmt->enum_def.enum_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->enum_def.enum_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Parse enum members
+    stmt->enum_def.members = malloc(sizeof(EnumMember) * 10);
+    stmt->enum_def.member_count = 0;
+    int member_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        // Parse member name
+        if (parser->current_token->type != TOKEN_IDENTIFIER) {
+            // Must be 'end' keyword
+            break;
+        }
+        
+        if (stmt->enum_def.member_count >= member_capacity) {
+            member_capacity *= 2;
+            stmt->enum_def.members = realloc(stmt->enum_def.members,
+                                             sizeof(EnumMember) * member_capacity);
+        }
+        
+        stmt->enum_def.members[stmt->enum_def.member_count].name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->enum_def.members[stmt->enum_def.member_count].name, parser->current_token->value);
+        parser_advance(parser);
+        
+        // Expect '=' and value
+        if (parser->current_token->type != TOKEN_ASSIGN) {
+            fprintf(stderr, "Parser error: Expected '=' after enum member name at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+        
+        if (parser->current_token->type != TOKEN_NUMBER) {
+            fprintf(stderr, "Parser error: Expected number after '=' in enum definition at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        stmt->enum_def.members[stmt->enum_def.member_count].value = atol(parser->current_token->value);
+        stmt->enum_def.member_count++;
+        parser_advance(parser);
+    }
+    
+    // Expect 'end' 'enum'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after enum body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_ENUM) {
+        fprintf(stderr, "Parser error: Expected 'enum' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    
+    // Check for func
+    if (parser->current_token->type == TOKEN_FUNC) {
+        free(stmt);
+        return parser_parse_func_definition(parser);
+    }
+    // Check for struct
+    else if (parser->current_token->type == TOKEN_STRUCT) {
+        free(stmt);
+        return parser_parse_struct_definition(parser);
+    }
+    // Check for type alias
+    else if (parser->current_token->type == TOKEN_TYPE) {
+        free(stmt);
+        return parser_parse_type_alias(parser);
+    }
+    // Check for enum
+    else if (parser->current_token->type == TOKEN_ENUM) {
+        free(stmt);
+        return parser_parse_enum_definition(parser);
+    }
+    // Check for return
+    else if (parser->current_token->type == TOKEN_RETURN) {
+        stmt->type = STMT_RETURN;
+        parser_advance(parser);
+        
+        // Parse return value(s) - support multiple values separated by comma
+        stmt->return_stmt.values = NULL;
+        stmt->return_stmt.value_count = 0;
+        
+        if (parser->current_token->type != TOKEN_EOF && 
+            parser->current_token->type != TOKEN_END) {
+            
+            stmt->return_stmt.values = malloc(sizeof(Expression*) * 10);
+            int value_capacity = 10;
+            
+            // Parse first return value
+            stmt->return_stmt.values[stmt->return_stmt.value_count++] = parser_parse_expression(parser);
+            
+            // Parse additional return values if comma-separated
+            while (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+                
+                if (stmt->return_stmt.value_count >= value_capacity) {
+                    value_capacity *= 2;
+                    stmt->return_stmt.values = realloc(stmt->return_stmt.values,
+                                                       sizeof(Expression*) * value_capacity);
+                }
+                
+                stmt->return_stmt.values[stmt->return_stmt.value_count++] = parser_parse_expression(parser);
+            }
+        }
+        return stmt;
+    }
+    // Check for if
+    else if (parser->current_token->type == TOKEN_IF) {
+        free(stmt);
+        return parser_parse_if_statement(parser);
+    }
+    // Check for for loop
+    else if (parser->current_token->type == TOKEN_FOR) {
+        free(stmt);
+        return parser_parse_for_statement(parser);
+    }
+    // Check for while loop
+    else if (parser->current_token->type == TOKEN_WHILE) {
+        free(stmt);
+        return parser_parse_while_statement(parser);
+    }
+    // Check for do-while loop
+    else if (parser->current_token->type == TOKEN_DO) {
+        free(stmt);
+        return parser_parse_do_while_statement(parser);
+    }
+    // Check for switch statement
+    else if (parser->current_token->type == TOKEN_SWITCH) {
+        free(stmt);
+        return parser_parse_switch_statement(parser);
+    }
+    // Check for try-catch
+    else if (parser->current_token->type == TOKEN_TRY) {
+        free(stmt);
+        return parser_parse_try_catch(parser);
+    }
+    // Check for throw
+    else if (parser->current_token->type == TOKEN_THROW) {
+        stmt->type = STMT_THROW;
+        parser_advance(parser); // skip 'throw'
+        stmt->throw_stmt.error_expr = parser_parse_expression(parser);
+        return stmt;
+    }
+    // Check for exit
+    else if (parser->current_token->type == TOKEN_EXIT) {
+        stmt->type = STMT_EXIT;
+        parser_advance(parser);
+        return stmt;
+    }
+    // Check for continue
+    else if (parser->current_token->type == TOKEN_CONTINUE) {
+        stmt->type = STMT_CONTINUE;
+        parser_advance(parser);
+        return stmt;
+    }
+    // Check for type keywords (declaration)
+    else if (parser->current_token->type == TOKEN_NUMERIC ||
+        parser->current_token->type == TOKEN_DECIMAL ||
+        parser->current_token->type == TOKEN_BOOLEAN ||
+        parser->current_token->type == TOKEN_TEXT) {
+        stmt->type = STMT_DECLARATION;
+        stmt->declaration = parser_parse_declaration(parser);
+    }
+    // Check for print
+    else if (parser->current_token->type == TOKEN_PRINT) {
+        parser_advance(parser);
+        if (parser->current_token->type != TOKEN_LPAREN) {
+            fprintf(stderr, "Parser error: Expected '(' after print at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+        
+        stmt->type = STMT_PRINT;
+        stmt->print_stmt.expr = parser_parse_expression(parser);
+        
+        if (parser->current_token->type != TOKEN_RPAREN) {
+            fprintf(stderr, "Parser error: Expected ')' after print expression at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+    }
+    // Phase 10: Check for pointer dereference assignment: *ptr = value
+    else if (parser->current_token->type == TOKEN_MULTIPLY) {
+        parser_advance(parser); // skip '*'
+        
+        // Parse the pointer expression (for now, just support identifiers)
+        Expression* ptr_expr = parser_parse_unary_expression(parser);
+        
+        if (parser->current_token->type != TOKEN_ASSIGN) {
+            fprintf(stderr, "Parser error: Expected '=' after dereference at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip '='
+        
+        stmt->type = STMT_ASSIGNMENT;
+        stmt->assignment.var_name = NULL;
+        stmt->assignment.field_name = NULL;
+        stmt->assignment.array_index = NULL;
+        stmt->assignment.dereference_target = ptr_expr;
+        stmt->assignment.value = parser_parse_expression(parser);
+    }
+    // Check for assignment or function call (identifier)
+    else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        char* name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(name, parser->current_token->value);
+        parser_advance(parser);
+        
+        // Check if it's a struct/type alias instance declaration (e.g., "Person p" or "PersonId id")
+        if (parser->current_token->type == TOKEN_IDENTIFIER) {
+            // This is a struct/alias instance: "TypeName varName"
+            // name = type name (struct or alias), current_token = variable name
+            stmt->type = STMT_DECLARATION;
+            Declaration* decl = malloc(sizeof(Declaration));
+            decl->struct_name = name; // Type name (struct or alias)
+            decl->type = TYPE_NUMERIC; // Placeholder
+            decl->name = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(decl->name, parser->current_token->value);
+            decl->is_array = 0;
+            decl->array_size = 0;
+            decl->is_pointer = 0;
+            decl->is_nullable = 0;
+            decl->init_value = NULL;
+            parser_advance(parser);
+            
+            // Check for initialization
+            if (parser->current_token->type == TOKEN_ASSIGN) {
+                parser_advance(parser);
+                decl->init_value = parser_parse_expression(parser);
+            }
+            
+            stmt->declaration = decl;
+        }
+        // Check if it's a function call (followed by '(')
+        else if (parser->current_token->type == TOKEN_LPAREN) {
+            parser_advance(parser); // skip '('
+            
+            // Parse arguments
+            Expression** args = malloc(sizeof(Expression*) * 10);
+            int arg_count = 0;
+            int arg_capacity = 10;
+            
+            if (parser->current_token->type != TOKEN_RPAREN) {
+                while (1) {
+                    if (arg_count >= arg_capacity) {
+                        arg_capacity *= 2;
+                        args = realloc(args, sizeof(Expression*) * arg_capacity);
+                    }
+                    args[arg_count++] = parser_parse_expression(parser);
+                    
+                    if (parser->current_token->type == TOKEN_COMMA) {
+                        parser_advance(parser);
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            if (parser->current_token->type != TOKEN_RPAREN) {
+                fprintf(stderr, "Parser error: Expected ')' after function arguments at line %d\\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip ')'
+            
+            // Statement-level function call (discard return value)
+            stmt->type = STMT_EXPR_STMT;
+            stmt->print_stmt.expr = expression_create_func_call(name, args, arg_count);
+            free(name);
+        } else if (parser->current_token->type == TOKEN_LBRACKET) {
+            // Array assignment: arr[index] = value
+            parser_advance(parser); // skip '['
+            
+            Expression* index = parser_parse_expression(parser);
+            
+            if (parser->current_token->type != TOKEN_RBRACKET) {
+                fprintf(stderr, "Parser error: Expected ']' after array index at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip ']'
+            
+            if (parser->current_token->type != TOKEN_ASSIGN) {
+                fprintf(stderr, "Parser error: Expected '=' after array index at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip '='
+            
+            stmt->type = STMT_ASSIGNMENT;
+            stmt->assignment.var_name = name;
+            stmt->assignment.field_name = NULL;
+            stmt->assignment.array_index = index;  // Set array index
+            stmt->assignment.dereference_target = NULL;
+            stmt->assignment.value = parser_parse_expression(parser);
+        } else if (parser->current_token->type == TOKEN_DOT) {
+            // Field assignment: object.field = value
+            parser_advance(parser); // skip '.'
+            
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected field name after '.' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            char* field_name = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(field_name, parser->current_token->value);
+            parser_advance(parser);
+            
+            if (parser->current_token->type != TOKEN_ASSIGN) {
+                fprintf(stderr, "Parser error: Expected '=' after field name at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip '='
+            
+            stmt->type = STMT_ASSIGNMENT;
+            stmt->assignment.var_name = name;
+            stmt->assignment.field_name = field_name;  // Set field name
+            stmt->assignment.array_index = NULL;
+            stmt->assignment.dereference_target = NULL;
+            stmt->assignment.value = parser_parse_expression(parser);
+        } else if (parser->current_token->type == TOKEN_COMMA) {
+            // Multi-assignment: a, b, c = func()
+            stmt->type = STMT_MULTI_ASSIGNMENT;
+            stmt->multi_assignment.var_names = malloc(sizeof(char*) * 10);
+            stmt->multi_assignment.var_count = 0;
+            int var_capacity = 10;
+            
+            // First variable (already parsed)
+            stmt->multi_assignment.var_names[stmt->multi_assignment.var_count++] = name;
+            
+            // Parse remaining variables
+            while (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+                
+                if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                    fprintf(stderr, "Parser error: Expected variable name after ',' at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                
+                if (stmt->multi_assignment.var_count >= var_capacity) {
+                    var_capacity *= 2;
+                    stmt->multi_assignment.var_names = realloc(stmt->multi_assignment.var_names,
+                                                              sizeof(char*) * var_capacity);
+                }
+                
+                stmt->multi_assignment.var_names[stmt->multi_assignment.var_count] = 
+                    malloc(strlen(parser->current_token->value) + 1);
+                strcpy(stmt->multi_assignment.var_names[stmt->multi_assignment.var_count],
+                       parser->current_token->value);
+                stmt->multi_assignment.var_count++;
+                parser_advance(parser);
+            }
+            
+            // Expect '='
+            if (parser->current_token->type != TOKEN_ASSIGN) {
+                fprintf(stderr, "Parser error: Expected '=' after variable list at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser);
+            
+            // Parse right-hand side (should be a function call)
+            stmt->multi_assignment.func_call = parser_parse_expression(parser);
+        } else if (parser->current_token->type == TOKEN_ASSIGN) {
+            // Assignment
+            parser_advance(parser);
+            stmt->type = STMT_ASSIGNMENT;
+            stmt->assignment.var_name = name;
+            stmt->assignment.field_name = NULL;  // Regular variable assignment
+            stmt->assignment.array_index = NULL;
+            stmt->assignment.dereference_target = NULL;
+            stmt->assignment.value = parser_parse_expression(parser);
+        } else {
+            fprintf(stderr, "Parser error: Expected '=' or '(' after identifier at line %d\n",
+                    parser->current_token->line);
+            free(name);
+            exit(1);
+        }
+    }
+    else {
+        fprintf(stderr, "Parser error: Unexpected token at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    return stmt;
+}
+
+AST* parser_parse(Parser* parser) {
+    AST* ast = ast_create();
+    
+    while (parser->current_token->type != TOKEN_EOF) {
+        Statement* stmt = parser_parse_statement(parser);
+        ast_add_statement(ast, stmt);
+    }
+    
+    return ast;
+}
+
+void parser_free(Parser* parser) {
+    token_free(parser->current_token);
+    free(parser);
+}
+
+void ast_free(AST* ast) {
+    for (int i = 0; i < ast->count; i++) {
+        Statement* stmt = ast->statements[i];
+        if (stmt->type == STMT_DECLARATION) {
+            free(stmt->declaration->name);
+            if (stmt->declaration->init_value) {
+                if (stmt->declaration->init_value->type == EXPR_VARIABLE) {
+                    free(stmt->declaration->init_value->var_name);
+                }
+                free(stmt->declaration->init_value);
+            }
+            free(stmt->declaration);
+        } else if (stmt->type == STMT_ASSIGNMENT) {
+            free(stmt->assignment.var_name);
+            if (stmt->assignment.value->type == EXPR_VARIABLE) {
+                free(stmt->assignment.value->var_name);
+            }
+            free(stmt->assignment.value);
+        } else if (stmt->type == STMT_PRINT) {
+            if (stmt->print_stmt.expr->type == EXPR_VARIABLE) {
+                free(stmt->print_stmt.expr->var_name);
+            }
+            free(stmt->print_stmt.expr);
+        }
+        free(stmt);
+    }
+    free(ast->statements);
+    free(ast);
+}

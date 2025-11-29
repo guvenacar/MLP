@@ -1,0 +1,24 @@
+-- Phase 12: Try-Catch Exception Handling Test
+-- Tests basic exception handling syntax
+
+-- Test 1: Simple try-catch (no exception)
+try
+    print(100)
+catch
+    print(999)
+end try
+
+-- Test 2: Try-catch with throw
+try
+    print(200)
+    throw 777
+    print(201)
+catch
+    print(888)
+end try
+
+-- Note: Current implementation of throw exits the program
+-- Real exception handling with stack unwinding would require
+-- more complex runtime support
+
+print(300)

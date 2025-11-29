@@ -1,0 +1,5 @@
+-- Direct string_concat call test
+text a = "Hello"
+text b = " World"  
+print(a)
+print(b)

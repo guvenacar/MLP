@@ -1,0 +1,278 @@
+-- Token type constants (matching bootstrap lexer)
+numeric TOKEN_EOF = 0
+numeric TOKEN_NUMERIC = 1
+numeric TOKEN_TEXT = 2
+numeric TOKEN_NUMBER = 3
+numeric TOKEN_STRING = 4
+numeric TOKEN_IDENTIFIER = 5
+numeric TOKEN_PRINT = 6
+numeric TOKEN_IF = 7
+numeric TOKEN_THEN = 8
+numeric TOKEN_ELSE = 9
+numeric TOKEN_END = 10
+numeric TOKEN_FOR = 11
+numeric TOKEN_TO = 12
+numeric TOKEN_WHILE = 13
+numeric TOKEN_FUNC = 14
+numeric TOKEN_RETURN = 15
+numeric TOKEN_ASSIGN = 20
+numeric TOKEN_PLUS = 21
+numeric TOKEN_MINUS = 22
+numeric TOKEN_MULTIPLY = 23
+numeric TOKEN_DIVIDE = 24
+numeric TOKEN_LPAREN = 25
+numeric TOKEN_RPAREN = 26
+numeric TOKEN_COMMA = 27
+numeric TOKEN_LBRACKET = 28
+numeric TOKEN_RBRACKET = 29
+
+-- Global state
+text source_code
+numeric source_len
+numeric pos
+numeric line
+
+-- Token storage (parallel arrays)
+numeric[] token_types
+numeric[] token_lines
+text[] token_values
+numeric token_count
+numeric token_capacity
+
+-- Initialize lexer (returns 1)
+func lexer_init(text src)
+    source_code = src
+    source_len = str_length(src)
+    pos = 0
+    line = 1
+    token_count = 0
+    token_capacity = 1000
+    
+    token_types = malloc(token_capacity)
+    token_lines = malloc(token_capacity)
+    token_values = malloc(token_capacity)
+    return 1
+end func
+
+-- Add token (returns 1)
+func add_token(numeric ttype, text tvalue)
+    token_types[token_count] = ttype
+    token_values[token_count] = tvalue
+    token_lines[token_count] = line
+    token_count = token_count + 1
+    return 1
+end func
+
+-- Get character at position (returns text)
+func get_char(numeric p)
+    if p >= source_len then
+        return ""
+    end if
+    return charAt(source_code, p)
+end func
+
+-- Advance position (returns 1)
+func do_advance()
+    text c = get_char(pos)
+    if c == "\n" then
+        line = line + 1
+    end if
+    pos = pos + 1
+    return 1
+end func
+
+-- Check if character is digit (returns 1 or 0)
+func is_digit(text c)
+    if c == "0" then return 1 end if
+    if c == "1" then return 1 end if
+    if c == "2" then return 1 end if
+    if c == "3" then return 1 end if
+    if c == "4" then return 1 end if
+    if c == "5" then return 1 end if
+    if c == "6" then return 1 end if
+    if c == "7" then return 1 end if
+    if c == "8" then return 1 end if
+    if c == "9" then return 1 end if
+    return 0
+end func
+
+-- Check if character is alpha (returns 1 or 0)
+func is_alpha(text c)
+    if c == "a" then return 1 end if
+    if c == "b" then return 1 end if
+    if c == "c" then return 1 end if
+    if c == "d" then return 1 end if
+    if c == "e" then return 1 end if
+    if c == "f" then return 1 end if
+    if c == "g" then return 1 end if
+    if c == "h" then return 1 end if
+    if c == "i" then return 1 end if
+    if c == "j" then return 1 end if
+    if c == "k" then return 1 end if
+    if c == "l" then return 1 end if
+    if c == "m" then return 1 end if
+    if c == "n" then return 1 end if
+    if c == "o" then return 1 end if
+    if c == "p" then return 1 end if
+    if c == "q" then return 1 end if
+    if c == "r" then return 1 end if
+    if c == "s" then return 1 end if
+    if c == "t" then return 1 end if
+    if c == "u" then return 1 end if
+    if c == "v" then return 1 end if
+    if c == "w" then return 1 end if
+    if c == "x" then return 1 end if
+    if c == "y" then return 1 end if
+    if c == "z" then return 1 end if
+    if c == "_" then return 1 end if
+    return 0
+end func
+
+-- Skip whitespace (returns 1)
+func skip_ws()
+    while pos < source_len
+        text c = get_char(pos)
+        if c == " " then
+            numeric tmp = do_advance()
+        else if c == "\t" then
+            numeric tmp = do_advance()
+        else if c == "\r" then
+            numeric tmp = do_advance()
+        else if c == "\n" then
+            numeric tmp = do_advance()
+        else
+            return 1
+        end if
+    end while
+    return 1
+end func
+
+-- Tokenize (returns token count)
+func tokenize()
+    while pos < source_len
+        numeric tmp = skip_ws()
+        
+        if pos >= source_len then
+            return token_count
+        end if
+        
+        text ch = get_char(pos)
+        
+        -- Single char tokens
+        if ch == "=" then
+            numeric t1 = add_token(TOKEN_ASSIGN, "=")
+            numeric t2 = do_advance()
+        else if ch == "+" then
+            numeric t1 = add_token(TOKEN_PLUS, "+")
+            numeric t2 = do_advance()
+        else if ch == "-" then
+            numeric t1 = add_token(TOKEN_MINUS, "-")
+            numeric t2 = do_advance()
+        else if ch == "*" then
+            numeric t1 = add_token(TOKEN_MULTIPLY, "*")
+            numeric t2 = do_advance()
+        else if ch == "/" then
+            numeric t1 = add_token(TOKEN_DIVIDE, "/")
+            numeric t2 = do_advance()
+        else if ch == "(" then
+            numeric t1 = add_token(TOKEN_LPAREN, "(")
+            numeric t2 = do_advance()
+        else if ch == ")" then
+            numeric t1 = add_token(TOKEN_RPAREN, ")")
+            numeric t2 = do_advance()
+        else if ch == "," then
+            numeric t1 = add_token(TOKEN_COMMA, ",")
+            numeric t2 = do_advance()
+        else if ch == "[" then
+            numeric t1 = add_token(TOKEN_LBRACKET, "[")
+            numeric t2 = do_advance()
+        else if ch == "]" then
+            numeric t1 = add_token(TOKEN_RBRACKET, "]")
+            numeric t2 = do_advance()
+        else if is_digit(ch) == 1 then
+            -- Number
+            numeric start = pos
+            while pos < source_len
+                if is_digit(get_char(pos)) == 1 then
+                    numeric t = do_advance()
+                else
+                    return 1
+                end if
+            end while
+            numeric len = pos - start
+            text num_str = substring(source_code, start, len)
+            numeric t = add_token(TOKEN_NUMBER, num_str)
+        else if is_alpha(ch) == 1 then
+            -- Identifier or keyword
+            numeric start = pos
+            while pos < source_len
+                text c = get_char(pos)
+                if is_alpha(c) == 1 then
+                    numeric t = do_advance()
+                else if is_digit(c) == 1 then
+                    numeric t = do_advance()
+                else
+                    return 1
+                end if
+            end while
+            numeric len = pos - start
+            text word = substring(source_code, start, len)
+            
+            -- Keywords
+            if word == "numeric" then
+                numeric t = add_token(TOKEN_NUMERIC, word)
+            else if word == "text" then
+                numeric t = add_token(TOKEN_TEXT, word)
+            else if word == "print" then
+                numeric t = add_token(TOKEN_PRINT, word)
+            else if word == "if" then
+                numeric t = add_token(TOKEN_IF, word)
+            else if word == "then" then
+                numeric t = add_token(TOKEN_THEN, word)
+            else if word == "else" then
+                numeric t = add_token(TOKEN_ELSE, word)
+            else if word == "end" then
+                numeric t = add_token(TOKEN_END, word)
+            else if word == "for" then
+                numeric t = add_token(TOKEN_FOR, word)
+            else if word == "to" then
+                numeric t = add_token(TOKEN_TO, word)
+            else if word == "while" then
+                numeric t = add_token(TOKEN_WHILE, word)
+            else if word == "func" then
+                numeric t = add_token(TOKEN_FUNC, word)
+            else if word == "return" then
+                numeric t = add_token(TOKEN_RETURN, word)
+            else
+                numeric t = add_token(TOKEN_IDENTIFIER, word)
+            end if
+        else
+            -- Unknown
+            numeric t = do_advance()
+        end if
+    end while
+    
+    -- EOF
+    numeric t = add_token(TOKEN_EOF, "")
+    return token_count
+end func
+
+-- Print tokens (returns 1)
+func print_tokens()
+    print(token_count)
+    numeric i = 0
+    while i < token_count
+        print(token_types[i])
+        i = i + 1
+    end while
+    return 1
+end func
+
+-- Main
+func main()
+    text source = read_file("compiler/test_simple.mlp")
+    numeric t = lexer_init(source)
+    numeric count = tokenize()
+    numeric t2 = print_tokens()
+    return 0
+end func

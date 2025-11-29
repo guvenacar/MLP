@@ -1,0 +1,13 @@
+func main()
+    text path = "test_file_read.mlp"
+    
+    if file_exists(path) == 1 then
+        print("File exists, reading...")
+        text content = read_file(path)
+        print(content)
+    else
+        print("File not found!")
+    end if
+    
+    return 0
+end func

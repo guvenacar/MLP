@@ -1,0 +1,137 @@
+-- MLP Self-Hosting Lexer - Debug Version
+-- Minimal test: just count tokens
+
+-- Helper: Check if character is digit
+func is_digit(text c)
+    if c == "0" then return 1 end if
+    if c == "1" then return 1 end if
+    if c == "2" then return 1 end if
+    if c == "3" then return 1 end if
+    if c == "4" then return 1 end if
+    if c == "5" then return 1 end if
+    if c == "6" then return 1 end if
+    if c == "7" then return 1 end if
+    if c == "8" then return 1 end if
+    if c == "9" then return 1 end if
+    return 0
+end func
+
+-- Helper: Check if character is alpha
+func is_alpha(text c)
+    numeric idx = indexOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", c)
+    if idx >= 0 then
+        return 1
+    end if
+    return 0
+end func
+
+-- Helper: Check if character is alphanumeric
+func is_alnum(text c)
+    numeric d = is_digit(c)
+    if d == 1 then
+        return 1
+    end if
+    return is_alpha(c)
+end func
+
+-- Helper: Check if character is whitespace
+func is_whitespace(text c)
+    if c == " " then return 1 end if
+    if c == "	" then return 1 end if
+    if str_length(c) == 0 then return 1 end if
+    return 0
+end func
+
+-- Main entry point
+func main()
+    text source_code = read_file("compiler/test_simple.mlp")
+    numeric source_len = str_length(source_code)
+    
+    print("Source length: ")
+    print(source_len)
+    print(" ")
+    
+    numeric pos = 0
+    numeric token_count = 0
+    
+    -- Simple tokenization: just count
+    while pos < source_len
+        text ch = charAt(source_code, pos)
+        
+        -- Skip whitespace
+        numeric is_ws = is_whitespace(ch)
+        if is_ws == 1 then
+            pos = pos + 1
+        else
+            -- Check for numbers
+            numeric is_d = is_digit(ch)
+            if is_d == 1 then
+                token_count = token_count + 1
+                -- Skip number
+                numeric done = 0
+                while done == 0
+                    if pos >= source_len then
+                        done = 1
+                    else
+                        text numch = charAt(source_code, pos)
+                        numeric is_numchar = is_digit(numch)
+                        if is_numchar == 1 then
+                            pos = pos + 1
+                        else
+                            done = 1
+                        end if
+                    end if
+                end while
+            else
+                -- Check for identifiers
+                numeric is_a = is_alpha(ch)
+                if is_a == 1 then
+                    token_count = token_count + 1
+                    -- Skip identifier
+                    numeric done = 0
+                    while done == 0
+                        if pos >= source_len then
+                            done = 1
+                        else
+                            text idch = charAt(source_code, pos)
+                            numeric is_idchar = is_alnum(idch)
+                            if is_idchar == 1 then
+                                pos = pos + 1
+                            else
+                                done = 1
+                            end if
+                        end if
+                    end while
+                else
+                    -- Operator
+                    if ch == "=" then
+                        token_count = token_count + 1
+                        pos = pos + 1
+                    else
+                        if ch == "(" then
+                            token_count = token_count + 1
+                            pos = pos + 1
+                        else
+                            if ch == ")" then
+                                token_count = token_count + 1
+                                pos = pos + 1
+                            else
+                                -- Unknown, skip
+                                pos = pos + 1
+                            end if
+                        end if
+                    end if
+                end if
+            end if
+        end if
+    end while
+    
+    -- EOF token
+    token_count = token_count + 1
+    
+    print("Token count: ")
+    print(token_count)
+    print(" ")
+    
+    return 0
+end func

@@ -1,0 +1,24 @@
+func test_logical()
+    numeric x = 5
+    numeric y = 10
+    
+    if x > 0 and y > 0 then
+        print(1)
+    end if
+    
+    if x > 0 or y < 0 then
+        print(2)
+    end if
+    
+    numeric flag = 1
+    if not flag == 0 then
+        print(3)
+    end if
+    
+    return 0
+end func
+
+func main()
+    numeric result = test_logical()
+    return 0
+end func

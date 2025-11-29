@@ -1,0 +1,20 @@
+func main()
+    text path = "test_output.txt"
+    text content = "Hello from MELP! This is a test file."
+    
+    numeric result = write_file(path, content)
+    
+    if result == 1 then
+        print("File written successfully!")
+        
+        if file_exists(path) == 1 then
+            print("File exists, reading back...")
+            text read_content = read_file(path)
+            print(read_content)
+        end if
+    else
+        print("Failed to write file!")
+    end if
+    
+    return 0
+end func

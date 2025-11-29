@@ -1,0 +1,43 @@
+-- Test: Type Aliases - Advanced
+-- Test struct aliases and nullable aliases
+
+-- Define a struct
+struct Person
+    numeric age
+    numeric score
+end struct
+
+-- Define type aliases for struct
+type Employee = Person
+type Student = Person
+
+-- Create instances using aliases
+Employee emp
+emp.age = 30
+emp.score = 85
+
+Student stu
+stu.age = 20
+stu.score = 95
+
+-- Print struct fields
+print(emp.age)
+print(emp.score)
+print(stu.age)
+print(stu.score)
+
+-- Primitive aliases
+type UserId = numeric
+type AccountName = text
+
+UserId uid = 100
+print(uid)
+
+-- Another alias
+type Count = numeric
+Count items = 5
+Count total = items + 10
+print(total)
+
+-- Marker
+print(999)

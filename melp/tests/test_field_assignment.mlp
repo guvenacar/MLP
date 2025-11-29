@@ -1,0 +1,20 @@
+-- Test field assignment
+
+struct Person
+    text name
+    numeric age
+end struct
+
+Person alice
+
+-- Assign to fields
+alice.name = "Alice"
+alice.age = 30
+
+-- Read fields and print
+print(alice.name)
+print(alice.age)
+
+-- Modify fields
+alice.age = alice.age + 1
+print(alice.age)

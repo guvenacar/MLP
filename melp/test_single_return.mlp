@@ -1,0 +1,8 @@
+-- Test: Simple return type
+func get_value() returns numeric
+    return 42
+end func
+
+numeric x = get_value()
+print(x)
+print(999)

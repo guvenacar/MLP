@@ -1,0 +1,15 @@
+func main()
+    text path = "test_append.txt"
+    
+    write_file(path, "Line 1")
+    append_file(path, "Line 2")
+    append_file(path, "Line 3")
+    
+    if file_exists(path) == 1 then
+        print("Reading appended file...")
+        text content = read_file(path)
+        print(content)
+    end if
+    
+    return 0
+end func

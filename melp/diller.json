@@ -1,0 +1,17 @@
+{
+  "description": "MELP-DECL Phase 0 - Language Translation Rules",
+  "version": "0.1.0",
+  "supported_languages": ["tr", "en"],
+  "translations": {
+    "tr": {
+      "sayısal": "numeric",
+      "ondalık": "decimal",
+      "mantıksal": "boolean"
+    },
+    "en": {
+      "numeric": "numeric",
+      "decimal": "decimal",
+      "boolean": "boolean"
+    }
+  }
+}

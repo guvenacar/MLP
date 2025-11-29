@@ -1,0 +1,17 @@
+func main()
+    numeric[] arr = malloc(5)
+    
+    arr[0] = 100
+    arr[1] = 200
+    arr[2] = 300
+    arr[3] = 400
+    arr[4] = 500
+    
+    print(arr[0])
+    print(arr[2])
+    print(arr[4])
+    
+    free(arr)
+    
+    return 0
+end func

@@ -1,0 +1,28 @@
+-- MELP Phase 4: Simple Function Test
+
+-- Simple function without parameters
+func print_hello()
+    print(42)
+end func
+
+-- Function with parameters
+func add(numeric a, numeric b)
+    numeric result = a + b
+    return result
+end func
+
+-- Function with return value
+func double(numeric x)
+    return x * 2
+end func
+
+-- Main program
+print_hello()
+
+numeric sum = add(5, 3)
+print(sum)
+
+numeric val = double(10)
+print(val)
+
+print(999)

@@ -1,0 +1,25 @@
+func main()
+    text str = "Hello World"
+    
+    print(str_length(str))
+    
+    text sub = substring(str, 0, 5)
+    print(sub)
+    
+    text sub2 = substring(str, 6, 5)
+    print(sub2)
+    
+    numeric idx = indexOf(str, "World")
+    print(idx)
+    
+    numeric idx2 = indexOf(str, "xyz")
+    print(idx2)
+    
+    text ch = charAt(str, 0)
+    print(ch)
+    
+    text ch2 = charAt(str, 6)
+    print(ch2)
+    
+    return 0
+end func

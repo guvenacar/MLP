@@ -1,0 +1,6 @@
+func main()
+    numeric x = 10
+    numeric y = 20
+    print(x)
+    return 0
+end func

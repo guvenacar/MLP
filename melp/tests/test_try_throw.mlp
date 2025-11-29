@@ -1,0 +1,11 @@
+-- Try-Catch with Throw Test
+
+try
+    print(10)
+    throw 999
+    print(20)
+catch
+    print(30)
+end try
+
+print(40)

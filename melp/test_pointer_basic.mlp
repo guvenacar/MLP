@@ -1,0 +1,15 @@
+func main()
+    numeric x = 42
+    numeric* ptr = &x
+    
+    print(*ptr)
+    
+    *ptr = 100
+    print(x)
+    
+    numeric y = 7
+    ptr = &y
+    print(*ptr)
+    
+    return 0
+end func

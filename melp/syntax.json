@@ -1,0 +1,13 @@
+{
+  "description": "MELP-DECL Phase 0 - Syntax Normalization Rules",
+  "version": "0.1.0",
+  "rules": {
+    "comment": "Phase 0: Sadece deklarasyon desteklenir",
+    "note": "İleride if/for/function eklendiğinde buraya kurallar eklenecek"
+  },
+  "types": {
+    "numeric": "numeric",
+    "decimal": "decimal", 
+    "boolean": "boolean"
+  }
+}

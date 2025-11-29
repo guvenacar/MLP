@@ -1,0 +1,2 @@
+text msg = "A" + "B" + "C"
+print(msg)

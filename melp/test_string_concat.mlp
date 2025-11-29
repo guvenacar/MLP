@@ -1,0 +1,7 @@
+func main()
+    text a = "Hello"
+    text b = "World"
+    text c = a + " " + b
+    print(c)
+    return 0
+end func

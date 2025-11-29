@@ -1,0 +1,14 @@
+-- MELP Phase 5: String Concatenation Test
+
+text first = "Hello"
+text second = " World"
+text result = first + second
+print(result)
+
+text msg = "MELP" + " " + "Rocks!"
+print(msg)
+
+numeric x = 10
+numeric y = 20
+numeric sum = x + y
+print(sum)

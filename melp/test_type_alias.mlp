@@ -1,0 +1,25 @@
+-- Test: Type Aliases
+-- Basic type aliases for primitives
+
+-- Define type aliases
+type PersonId = numeric
+type Score = numeric
+type Username = text
+type IsActive = boolean
+
+-- Use aliases in variable declarations
+PersonId user_id = 42
+Score final_score = 95
+IsActive active = 1
+
+-- Print to verify
+print(user_id)
+print(final_score)
+print(active)
+
+-- Aliases should work in expressions
+PersonId another_id = user_id + 10
+print(another_id)
+
+-- Marker
+print(999)

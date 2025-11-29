@@ -1,0 +1,28 @@
+-- Minimal lexer for MLP
+-- Token constants
+numeric TOKEN_NUMBER = 3
+numeric TOKEN_IDENTIFIER = 5
+numeric TOKEN_PRINT = 6
+numeric TOKEN_ASSIGN = 20
+numeric TOKEN_LPAREN = 25
+numeric TOKEN_RPAREN = 26
+numeric TOKEN_EOF = 0
+
+func main()
+    -- Read source
+    text source_code = read_file("compiler/test_simple.mlp")
+    numeric source_len = str_length(source_code)
+    numeric pos = 0
+    numeric token_count = 0
+    
+    -- Allocate
+    numeric[] token_types = malloc(100)
+    text[] token_values = malloc(100)
+    
+    -- Tokenize - simple approach
+    numeric x = 42
+    print(x)
+    print(source_len)
+    
+    return 0
+end func

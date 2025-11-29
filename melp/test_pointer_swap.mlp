@@ -1,0 +1,22 @@
+func swap(numeric* a, numeric* b)
+    numeric temp = 0
+    temp = *a
+    *a = *b
+    *b = temp
+    return 0
+end func
+
+func main()
+    numeric x = 10
+    numeric y = 20
+    
+    print(x)
+    print(y)
+    
+    swap(&x, &y)
+    
+    print(x)
+    print(y)
+    
+    return 0
+end func

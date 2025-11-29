@@ -1,0 +1,43 @@
+#ifndef RUNTIME_H
+#define RUNTIME_H
+
+#include <stddef.h>
+
+// Phase 1: Memory + Print
+void* mlp_malloc(size_t size);
+void mlp_free(void* ptr);
+void print_number(long num);
+
+// Phase 5: String operations
+void print_string(const char* str);
+long string_length(const char* str);
+char* string_concat(const char* str1, const char* str2);
+long string_equal(const char* str1, const char* str2);
+long string_not_equal(const char* str1, const char* str2);
+
+// Phase 7: String interpolation
+char* int_to_string(long num);
+
+// Phase 8B: Dynamic arrays
+void* mlp_array_alloc(long size);
+void mlp_array_free(void* data);
+long mlp_array_length(void* data);
+void* mlp_array_resize(void* data, long new_size);
+
+// Phase 9: File I/O
+char* mlp_file_read(const char* path);
+long mlp_file_write(const char* path, const char* content);
+long mlp_file_exists(const char* path);
+long mlp_file_append(const char* path, const char* content);
+
+// Phase 11: String utilities
+char* mlp_substring(const char* str, long start, long length);
+long mlp_indexOf(const char* str, const char* substr);
+char* mlp_charAt(const char* str, long index);
+long mlp_string_length(const char* str);
+
+// Phase 12: CLI arguments
+char** mlp_get_argv(long argc, char** argv_c);
+long mlp_get_argc(void);
+
+#endif // RUNTIME_H
