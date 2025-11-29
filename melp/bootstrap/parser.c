@@ -162,7 +162,12 @@ typedef struct {
 
 // Switch case definition
 typedef struct SwitchCase {
-    Expression* value;      // Case value to match
+    Expression* value;      // Case value to match (NULL for range or type matching)
+    Expression* guard;      // Guard condition (if clause) - NULL if no guard
+    Expression* range_start; // Range start (for case 1..10) - NULL if not range
+    Expression* range_end;   // Range end (for case 1..10) - NULL if not range
+    int is_type_check;      // 1 if this is "case is Type", 0 otherwise
+    char* type_name;        // Type name for type checking (NULL if not type check)
     struct Statement** body;  // Case body statements
     int body_count;
 } SwitchCase;
@@ -1543,7 +1548,54 @@ Statement* parser_parse_switch_statement(Parser* parser) {
             
             // Allocate new case
             SwitchCase* switch_case = malloc(sizeof(SwitchCase));
-            switch_case->value = parser_parse_expression(parser);
+            switch_case->value = NULL;
+            switch_case->guard = NULL;
+            switch_case->range_start = NULL;
+            switch_case->range_end = NULL;
+            switch_case->is_type_check = 0;
+            switch_case->type_name = NULL;
+            
+            // Check for type matching: case is null
+            if (parser->current_token->type == TOKEN_IDENTIFIER &&
+                strcmp(parser->current_token->value, "is") == 0) {
+                parser_advance(parser); // Skip 'is'
+                switch_case->is_type_check = 1;
+                
+                // Check for "null" keyword
+                if (parser->current_token->type == TOKEN_NULL) {
+                    switch_case->type_name = malloc(5);
+                    strcpy(switch_case->type_name, "null");
+                    parser_advance(parser);
+                } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+                    switch_case->type_name = malloc(strlen(parser->current_token->value) + 1);
+                    strcpy(switch_case->type_name, parser->current_token->value);
+                    parser_advance(parser);
+                } else {
+                    fprintf(stderr, "Parser error: Expected type name or 'null' after 'is' at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+            } else {
+                // Parse case value (could be start of range)
+                switch_case->value = parser_parse_expression(parser);
+                
+                // Check for range: case 1 to 10
+                if (parser->current_token->type == TOKEN_TO) {
+                    // Found 'to' for range
+                    parser_advance(parser); // Skip 'to'
+                    
+                    switch_case->range_start = switch_case->value;
+                    switch_case->range_end = parser_parse_expression(parser);
+                    switch_case->value = NULL; // Clear value since we're using range
+                }
+            }
+            
+            // Check for guard condition: case x if x > 10
+            if (parser->current_token->type == TOKEN_IF) {
+                parser_advance(parser); // Skip 'if'
+                switch_case->guard = parser_parse_expression(parser);
+            }
+            
             switch_case->body = malloc(sizeof(Statement*) * 10);
             switch_case->body_count = 0;
             int body_capacity = 10;

@@ -49,101 +49,294 @@ _start:
 
     ; Declaration: numeric x
     sub rsp, 8         ; Allocate space for x
-    mov rax, 0
+    mov rax, 3
     mov [rbp-8], rax   ; Initialize x
 
-    ; Print statement
+    ; Switch statement
     mov rax, [rbp-8]
-    push rax
-    mov rax, 0
+    push rax         ; Save switch value
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    ; Range match
+    mov rax, 1
     mov rbx, rax
-    pop rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
     cmp rax, rbx
-    mov rax, 0      ; Default false
-    mov rbx, 1      ; True value
-    cmove rax, rbx  ; If equal, set rax=1
-    mov rdi, rax
-    call print_number
-    ; Declaration: numeric y
-    sub rsp, 8         ; Allocate space for y
-    mov rax, 42
-    mov [rbp-16], rax   ; Initialize y
-
-    ; Print statement
-    mov rax, [rbp-16]
-    push rax
-    mov rax, 0
+    jl .L4          ; Skip if value < start
+    mov rax, 5
     mov rbx, rax
-    pop rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
     cmp rax, rbx
-    mov rax, 0      ; Default false
-    mov rbx, 1      ; True value
-    cmove rax, rbx  ; If equal, set rax=1
-    mov rdi, rax
-    call print_number
-
-    ; Print statement
-    mov rax, [rbp-16]
-    mov rdi, rax
-    call print_number
-
-    ; If statement
-
-    ; Evaluate comparison
-    mov rax, [rbp-16]
-    push rax
-    mov rax, 0
+    jle .L1         ; Range matched, execute case
+.L4:  ; Skip label
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    ; Range match
+    mov rax, 6
     mov rbx, rax
-    pop rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
     cmp rax, rbx
-    je .L2
-    ; Then body
+    jl .L5          ; Skip if value < start
+    mov rax, 10
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    jle .L2         ; Range matched, execute case
+.L5:  ; Skip label
+    pop rax          ; Clean up switch value
+    jmp .L3         ; Jump to default/end
+.L1:  ; case 0
 
     ; Print statement
     mov rax, 100
     mov rdi, rax
     call print_number
-.L2:
-
-    ; If statement
-
-    ; Evaluate comparison
-    mov rax, [rbp-8]
-    push rax
-    mov rax, 0
-    mov rbx, rax
-    pop rax
-    cmp rax, rbx
-    jne .L4
-    ; Then body
+    jmp .L0         ; Fall through to end
+.L2:  ; case 1
 
     ; Print statement
     mov rax, 200
     mov rdi, rax
     call print_number
-.L4:
-
-    ; Assignment: x = ...
-    mov rax, 99
-    mov [rbp-8], rax   ; Store to x
+    jmp .L0         ; Fall through to end
+.L3:  ; default
 
     ; Print statement
-    mov rax, [rbp-8]
-    push rax
     mov rax, 0
+    mov rdi, rax
+    call print_number
+.L0:  ; switch_end
+    ; Declaration: numeric y
+    sub rsp, 8         ; Allocate space for y
+    mov rax, 15
+    mov [rbp-16], rax   ; Initialize y
+
+    ; Switch statement
+    mov rax, [rbp-16]
+    push rax         ; Save switch value
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    mov rax, 10
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    je .L10          ; Value matched, check guard
+.L10:  ; Guard check
+    ; Evaluate guard condition
+    mov rax, [rbp-16]
+    push rax
+    mov rax, 12
     mov rbx, rax
     pop rax
     cmp rax, rbx
-    mov rax, 0      ; Default false
-    mov rbx, 1      ; True value
-    cmove rax, rbx  ; If equal, set rax=1
-    mov rdi, rax
-    call print_number
+    mov rax, 0
+    mov rbx, 1
+    cmovg rax, rbx
+    cmp rax, 0
+    jne .L7         ; Guard passed, execute case
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    mov rax, 20
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    je .L8          ; Value matched, execute case
+    pop rax          ; Clean up switch value
+    jmp .L9         ; Jump to default/end
+.L7:  ; case 0
 
     ; Print statement
-    mov rax, [rbp-8]
+    mov rax, 300
     mov rdi, rax
     call print_number
+    jmp .L6         ; Fall through to end
+.L8:  ; case 1
+
+    ; Print statement
+    mov rax, 400
+    mov rdi, rax
+    call print_number
+    jmp .L6         ; Fall through to end
+.L9:  ; default
+
+    ; Print statement
+    mov rax, 0
+    mov rdi, rax
+    call print_number
+.L6:  ; switch_end
+    ; Declaration: numeric z
+    sub rsp, 8         ; Allocate space for z
+    mov rax, 0
+    mov [rbp-24], rax   ; Initialize z
+
+    ; Switch statement
+    mov rax, [rbp-24]
+    push rax         ; Save switch value
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    ; Type check (null)
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, 0
+    je .L13          ; Null matched, execute case
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    mov rax, 1
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    je .L14          ; Value matched, execute case
+    pop rax          ; Clean up switch value
+    jmp .L15         ; Jump to default/end
+.L13:  ; case 0
+
+    ; Print statement
+    mov rax, 500
+    mov rdi, rax
+    call print_number
+    jmp .L12         ; Fall through to end
+.L14:  ; case 1
+
+    ; Print statement
+    mov rax, 600
+    mov rdi, rax
+    call print_number
+    jmp .L12         ; Fall through to end
+.L15:  ; default
+
+    ; Print statement
+    mov rax, 0
+    mov rdi, rax
+    call print_number
+.L12:  ; switch_end
+    ; Declaration: numeric w
+    sub rsp, 8         ; Allocate space for w
+    mov rax, 7
+    mov [rbp-32], rax   ; Initialize w
+
+    ; Switch statement
+    mov rax, [rbp-32]
+    push rax         ; Save switch value
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    ; Range match
+    mov rax, 1
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    jl .L21          ; Skip if value < start
+    mov rax, 5
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    jle .L17         ; Range matched, execute case
+.L21:  ; Skip label
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    ; Range match
+    mov rax, 6
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    jl .L23          ; Skip if value < start
+    mov rax, 10
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    jle .L22         ; Range matched, check guard
+.L23:  ; Skip label
+.L22:  ; Guard check
+    ; Evaluate guard condition
+    mov rax, [rbp-32]
+    push rax
+    mov rax, 8
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    mov rax, 0
+    mov rbx, 1
+    cmovg rax, rbx
+    cmp rax, 0
+    jne .L18         ; Guard passed, execute case
+    ; Case comparison
+    pop rax          ; Restore switch value
+    push rax         ; Save again for next comparison
+    ; Range match
+    mov rax, 6
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    jl .L26          ; Skip if value < start
+    mov rax, 10
+    mov rbx, rax
+    pop rax          ; Get switch value
+    push rax         ; Save again
+    cmp rax, rbx
+    jle .L25         ; Range matched, check guard
+.L26:  ; Skip label
+.L25:  ; Guard check
+    ; Evaluate guard condition
+    mov rax, [rbp-32]
+    push rax
+    mov rax, 8
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    mov rax, 0
+    mov rbx, 1
+    cmovle rax, rbx
+    cmp rax, 0
+    jne .L19         ; Guard passed, execute case
+    pop rax          ; Clean up switch value
+    jmp .L20         ; Jump to default/end
+.L17:  ; case 0
+
+    ; Print statement
+    mov rax, 700
+    mov rdi, rax
+    call print_number
+    jmp .L16         ; Fall through to end
+.L18:  ; case 1
+
+    ; Print statement
+    mov rax, 800
+    mov rdi, rax
+    call print_number
+    jmp .L16         ; Fall through to end
+.L19:  ; case 2
+
+    ; Print statement
+    mov rax, 900
+    mov rdi, rax
+    call print_number
+    jmp .L16         ; Fall through to end
+.L20:  ; default
+
+    ; Print statement
+    mov rax, 0
+    mov rdi, rax
+    call print_number
+.L16:  ; switch_end
 
     ; Print statement
     mov rax, 999
