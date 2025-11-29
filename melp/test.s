@@ -38,78 +38,6 @@ extern mlp_exception_has_parent_handler
 global _start
 
 
-global func_multiply
-; Async function: multiply (compiled as sync for now)
-func_multiply:
-    push rbp
-    mov rbp, rsp
-    mov rax, [rbp+16]   ; Load param a
-    sub rsp, 8
-    mov [rbp-8], rax   ; Store param a locally
-    mov rax, [rbp+24]   ; Load param b
-    sub rsp, 8
-    mov [rbp-16], rax   ; Store param b locally
-    mov rax, [rbp-8]
-    push rax
-    mov rax, [rbp-16]
-    mov rbx, rax
-    pop rax
-    imul rax, rbx
-    mov rsp, rbp
-    pop rbp
-    ret
-
-global func_add
-; Async function: add (compiled as sync for now)
-func_add:
-    push rbp
-    mov rbp, rsp
-    mov rax, [rbp+16]   ; Load param x
-    sub rsp, 8
-    mov [rbp-8], rax   ; Store param x locally
-    mov rax, [rbp+24]   ; Load param y
-    sub rsp, 8
-    mov [rbp-16], rax   ; Store param y locally
-    mov rax, [rbp-8]
-    push rax
-    mov rax, [rbp-16]
-    mov rbx, rax
-    pop rax
-    add rax, rbx
-    mov rsp, rbp
-    pop rbp
-    ret
-
-global func_calculate
-; Async function: calculate (compiled as sync for now)
-func_calculate:
-    push rbp
-    mov rbp, rsp
-    ; Declaration: numeric mult
-    sub rsp, 8         ; Allocate space for mult
-    ; Await expression (compiled as sync call for now)
-    mov rax, 4
-    push rax
-    mov rax, 3
-    push rax
-    call func_multiply
-    add rsp, 16
-    mov [rbp-8], rax   ; Initialize mult
-    ; Declaration: numeric sum
-    sub rsp, 8         ; Allocate space for sum
-    ; Await expression (compiled as sync call for now)
-    mov rax, 10
-    push rax
-    mov rax, [rbp-8]
-    push rax
-    call func_add
-    add rsp, 16
-    mov [rbp-16], rax   ; Initialize sum
-    mov rax, [rbp-16]
-    mov rsp, rbp
-    pop rbp
-    ret
-
 _start:
     ; Get argc and argv from stack
     pop rdi               ; argc (first item on stack)
@@ -119,28 +47,106 @@ _start:
     push rbp
     mov rbp, rsp
 
-    ; Declaration: numeric result
-    sub rsp, 8         ; Allocate space for result
-    call func_calculate
-    mov [rbp-8], rax   ; Initialize result
+    ; Declaration: numeric x
+    sub rsp, 8         ; Allocate space for x
+    mov rax, 0
+    mov [rbp-8], rax   ; Initialize x
+
+    ; Print statement
+    mov rax, [rbp-8]
+    push rax
+    mov rax, 0
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    mov rax, 0      ; Default false
+    mov rbx, 1      ; True value
+    cmove rax, rbx  ; If equal, set rax=1
+    mov rdi, rax
+    call print_number
+    ; Declaration: numeric y
+    sub rsp, 8         ; Allocate space for y
+    mov rax, 42
+    mov [rbp-16], rax   ; Initialize y
+
+    ; Print statement
+    mov rax, [rbp-16]
+    push rax
+    mov rax, 0
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    mov rax, 0      ; Default false
+    mov rbx, 1      ; True value
+    cmove rax, rbx  ; If equal, set rax=1
+    mov rdi, rax
+    call print_number
+
+    ; Print statement
+    mov rax, [rbp-16]
+    mov rdi, rax
+    call print_number
+
+    ; If statement
+
+    ; Evaluate comparison
+    mov rax, [rbp-16]
+    push rax
+    mov rax, 0
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    je .L2
+    ; Then body
+
+    ; Print statement
+    mov rax, 100
+    mov rdi, rax
+    call print_number
+.L2:
+
+    ; If statement
+
+    ; Evaluate comparison
+    mov rax, [rbp-8]
+    push rax
+    mov rax, 0
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    jne .L4
+    ; Then body
+
+    ; Print statement
+    mov rax, 200
+    mov rdi, rax
+    call print_number
+.L4:
+
+    ; Assignment: x = ...
+    mov rax, 99
+    mov [rbp-8], rax   ; Store to x
+
+    ; Print statement
+    mov rax, [rbp-8]
+    push rax
+    mov rax, 0
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    mov rax, 0      ; Default false
+    mov rbx, 1      ; True value
+    cmove rax, rbx  ; If equal, set rax=1
+    mov rdi, rax
+    call print_number
 
     ; Print statement
     mov rax, [rbp-8]
     mov rdi, rax
     call print_number
-    ; Declaration: numeric direct
-    sub rsp, 8         ; Allocate space for direct
-    ; Await expression (compiled as sync call for now)
-    mov rax, 6
-    push rax
-    mov rax, 5
-    push rax
-    call func_multiply
-    add rsp, 16
-    mov [rbp-16], rax   ; Initialize direct
 
     ; Print statement
-    mov rax, [rbp-16]
+    mov rax, 999
     mov rdi, rax
     call print_number
 

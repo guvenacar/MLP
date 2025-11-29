@@ -1146,6 +1146,49 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 codegen_emit(gen, buffer);
             }
         }
+    } else if (expr->type == EXPR_COMPARISON) {
+        // Comparison expression - evaluate to 1 (true) or 0 (false)
+        codegen_generate_expression_value(gen, expr->comparison.left);
+        codegen_emit(gen, "    push rax");
+        codegen_generate_expression_value(gen, expr->comparison.right);
+        codegen_emit(gen, "    mov rbx, rax");
+        codegen_emit(gen, "    pop rax");
+        codegen_emit(gen, "    cmp rax, rbx");
+        
+        // Use conditional move to set rax to 1 or 0
+        int label = gen->label_counter++;
+        switch (expr->comparison.op) {
+            case CMP_EQUAL:
+                codegen_emit(gen, "    mov rax, 0      ; Default false");
+                codegen_emit(gen, "    mov rbx, 1      ; True value");
+                codegen_emit(gen, "    cmove rax, rbx  ; If equal, set rax=1");
+                break;
+            case CMP_NOT_EQUAL:
+                codegen_emit(gen, "    mov rax, 0");
+                codegen_emit(gen, "    mov rbx, 1");
+                codegen_emit(gen, "    cmovne rax, rbx");
+                break;
+            case CMP_LESS:
+                codegen_emit(gen, "    mov rax, 0");
+                codegen_emit(gen, "    mov rbx, 1");
+                codegen_emit(gen, "    cmovl rax, rbx");
+                break;
+            case CMP_LESS_EQUAL:
+                codegen_emit(gen, "    mov rax, 0");
+                codegen_emit(gen, "    mov rbx, 1");
+                codegen_emit(gen, "    cmovle rax, rbx");
+                break;
+            case CMP_GREATER:
+                codegen_emit(gen, "    mov rax, 0");
+                codegen_emit(gen, "    mov rbx, 1");
+                codegen_emit(gen, "    cmovg rax, rbx");
+                break;
+            case CMP_GREATER_EQUAL:
+                codegen_emit(gen, "    mov rax, 0");
+                codegen_emit(gen, "    mov rbx, 1");
+                codegen_emit(gen, "    cmovge rax, rbx");
+                break;
+        }
     } else if (expr->type == EXPR_TERNARY) {
         // Ternary operator: condition ? true_expr : false_expr
         int false_label = gen->label_counter++;

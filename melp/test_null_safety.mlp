@@ -1,0 +1,26 @@
+-- Test null safety
+
+-- Nullable variable (numeric?)
+numeric? x = null
+print(x == null)  -- Should print 1 (true)
+
+-- Non-null value
+numeric? y = 42
+print(y == null)  -- Should print 0 (false)
+print(y)          -- Should print 42
+
+-- Null check before use
+if y != null then
+    print(100)    -- Should print 100
+end if
+
+if x == null then
+    print(200)    -- Should print 200
+end if
+
+-- Reassignment
+x = 99
+print(x == null)  -- Should print 0 (false)
+print(x)          -- Should print 99
+
+print(999)  -- Final marker

@@ -206,13 +206,69 @@ Bu bir **"async syntax with sync execution"** implementasyonu. Production async 
 | Debug Features | ✅ | ✅ | ✅ | TAM ✅ |
 | Async/Await (Sync mode) | ✅ | ✅ | ✅ | TAM ✅ |
 | Lambda/Closure | ✅ | ✅ | ✅ | TAM ✅ |
-| Enum | ✅ | ✅ | ✅? | BELİRSİZ |
+| Enum | ✅ | ✅ | ✅ | TAM ✅ |
+| String Interpolation | ✅ | ✅ | ✅ | TAM ✅ |
+| Null Safety | ✅ | ✅ | ✅ | TAM ✅ |
+
+#### 5. STRING INTERPOLATION - TAM ✅
+**Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
+
+**Detaylar:**
+- **Lexer:** TOKEN_INTERPOLATED_STRING tanımlı, $"..." syntax ✅
+- **Parser:** parser_parse_interpolated_string() fonksiyonu mevcut ✅
+- **Codegen:** String concatenation ile implement edilmiş ✅
+- **Test:** $"Hello {name}" → "Hello, Alice!" ✅
+
+**Test Sonuçları:**
+```mlp
+text name = "Alice"
+numeric age = 25
+text greeting = $"Hello, {name}!"
+text info = $"Name: {name}, Age: {age}"
+# Çıktı: Hello, Alice! / Name: Alice, Age: 25 ✅
+```
+
+#### 6. NULL SAFETY - TAM ✅
+**Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
+
+**Detaylar:**
+- **Lexer:** TOKEN_NULL, TOKEN_QUESTION tanımlı ✅
+- **Parser:** nullable syntax (numeric?) parse ediliyor ✅
+- **Codegen:** null = 0, comparison expressions 0/1 döndürüyor ✅
+- **Test:** null checks çalışıyor ✅
+
+**Test Sonuçları:**
+```mlp
+numeric? x = null
+print(x == null)  # 1 (true) ✅
+numeric? y = 42
+print(y == null)  # 0 (false) ✅
+# Çıktı: 1, 0, 42, 100, 200, 0, 99, 999 ✅
+```
+
+**ÖNEMLİ NOT:**
+- null değeri 0 olarak represent ediliyor (C-style)
+- nullable syntax (?) destekleniyor ama runtime'da özel null handling yok
+- Basit null checks (== null, != null) çalışıyor
+
+#### 7. ENUM - TAM ✅ (Validated)
+**Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
+
+**Test Sonuçları:**
+```mlp
+enum Status
+    Pending = 0
+    Active = 1
+    Done = 2
+end enum
+numeric x = Status.Pending
+# Çıktı: 0, 1, 2, 10, 30, 200, 999 ✅
+```
 
 ### 2. Token Tanımları - Kullanılmayan Tokenlar
 
 Aşağıdaki tokenlar lexer'da tanımlı ama muhtemelen hiç kullanılmıyor:
 
-- `TOKEN_INTERPOLATED_STRING` - String interpolation ($"text {expr}")
 - `TOKEN_END_TRY` - "end try" birleşik token (kullanılmıyor, ayrı parse ediliyor)
 - `TOKEN_END_ENUM` - "end enum" birleşik token
 
