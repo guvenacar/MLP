@@ -1,0 +1,10 @@
+numeric x = 5
+
+debug mylabel
+
+if x > 3 then
+    print(100)
+    debug goto mylabel
+end if
+
+print(777)

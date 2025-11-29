@@ -1,0 +1,16 @@
+-- Test Export/Private Visibility
+module Utils
+    export func public_add(numeric a, numeric b)
+        return a + b
+    end func
+    
+    private func internal_helper(numeric x)
+        return x * 2
+    end func
+    
+    export numeric public_var = 100
+    private numeric internal_var = 42
+end module
+
+numeric result = 50
+print(result)

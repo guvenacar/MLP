@@ -1,0 +1,7 @@
+numeric x = 5
+
+debug if x < 10 then
+    print(999)
+debug end if
+
+print(777)

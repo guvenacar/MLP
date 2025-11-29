@@ -1,9 +1,14 @@
 # MLP Kurallar Kitabı (AI Agent Referansı)
 
-**Son Güncelleme:** 28 Kasım 2025  
-**Versiyon:** 3.0  
-**Milestone:** Phase 3 Complete - MELP is Turing-complete! 🎉  
+**Son Güncelleme:** 29 Kasım 2025  
+**Versiyon:** 3.1  
+**Milestone:** Phase 12 Complete + Exception Handling Complete! 🎉  
 **Amaç:** Tüm kritik proje bilgisini tek merkezi dokümanda toplamak
+
+**⚠️ ÖNEMLİ:** Yeni dökümanlar eklendi:
+- `TODO.md` - Tüm gelecek özellikler ve öncelikler
+- `EXCEPTION_HANDLING_COMPLETE.md` - Exception handling detaylı dokümantasyon
+- `AI_HANDOFF_NOTES.md` - Sonraki AI için özel notlar ve başlangıç rehberi
 
 ---
 
@@ -1203,14 +1208,81 @@ Yeni session'a başlıyorsan:
 4. **DOCS UPDATE**
    - Bu dosyayı oku ve eksikleri tamamla
 
+---
+
+## 12. Exception Handling (29 Kasım 2025) ✅
+
+### Genel Bakış
+MELP'e tam özellikli istisna yönetimi eklendi. setjmp/longjmp tabanlı, modern try-catch-finally syntax destekliyor.
+
+### Sözdizimi
+```mlp
+try
+    throw RuntimeError("Hata!")
+catch RuntimeError e
+    print("Runtime error yakalandı")
+catch ValueError e
+    print("Value error yakalandı")
+catch e
+    print("Diğer hatalar")
+finally
+    print("Her zaman çalışır")
+end try
+```
+
+### Özellikler
+- ✅ Çoklu catch blokları (tip kontrolü)
+- ✅ Finally blokları
+- ✅ throw Type("message") syntax
+- ✅ Yakalanmamış istisna handling
+- ✅ İç içe try-catch (re-throw)
+- ✅ Type-specific exception matching
+
+### Dosya Değişiklikleri
+
+**Lexer:** TOKEN_TRY, TOKEN_CATCH, TOKEN_THROW, TOKEN_FINALLY  
+**Parser:** CatchBlock struct, try_catch parsing, throw parsing  
+**Runtime:** ExceptionHandler, mlp_exception_* functions, setjmp/longjmp  
+**Codegen:** Try-catch-finally assembly generation
+
+### Test Dosyaları
+- `test_exception_simple.mlp` - Temel test
+- `test_exception_full.mlp` - Finally ile
+- `test_exception_multi_catch.mlp` - Çoklu catch
+- `test_exception_uncaught.mlp` - Yakalanmamış
+
+**Detaylı Dokümantasyon:** `EXCEPTION_HANDLING_COMPLETE.md`
+
+### Bilinen Limitasyonlar
+- Exception variable kullanılamıyor (catch e sonrası e.message yok)
+- Stack trace yok
+- Thread-safe değil
+
+---
+
+## 13. Sıradaki Özellikler
+
+**⚠️ Detaylı liste için:** `TODO.md` dosyasına bak
+
+### Öncelik Sırası
+1. **Module System** (HIGH) - import/export, multi-file support
+2. **Generics** (MEDIUM-HIGH) - Type parameters
+3. **Pattern Matching** (MEDIUM) - match/case
+4. **Operator Overloading** (LOW) - Custom operators
+5. **Interface/Trait** (LOW) - Polymorphism
+
+**Başlangıç için:** `AI_HANDOFF_NOTES.md` dosyasını oku!
+
+---
+
 ### 💪 Motivasyon
 
-MELP harika durumda! Phase 12 complete:
-- ✅ Pointers, arrays, file I/O
-- ✅ String utilities, CLI args
-- ✅ Text parameters
+MELP muhteşem durumda! Phase 12 + Exception Handling complete:
+- ✅ Pointers, arrays, file I/O, strings
+- ✅ Lambda, closures, CLI args
+- ✅ **Exception handling (try-catch-finally)** 🎉
 
-Self-hosting için tüm araçlar hazır. Sadece MLP'nin kendi syntax kısıtlamalarını aşmak gerekiyor - ki bu da mümkün, yukarıdaki örneklerde gösterildi.
+Modern dil özelliklerinde son adım: **Module System**
 
 **Bir sonraki AI: Sen devralıyorsun. Başarılar! 🚀**
 

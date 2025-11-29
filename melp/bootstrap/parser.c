@@ -33,7 +33,13 @@ typedef enum {
     STMT_ENUM_DEF,    // Phase 10: Enum definition
     STMT_TYPE_ALIAS,  // Phase 11: Type alias
     STMT_TRY_CATCH,   // Phase 12: Try-catch block
-    STMT_THROW        // Phase 12: Throw statement
+    STMT_THROW,       // Phase 12: Throw statement
+    STMT_DEBUG_LABEL, // Debug label definition
+    STMT_DEBUG_GOTO,  // Debug goto statement
+    STMT_DEBUG_IF,    // Debug conditional block
+    STMT_DEBUG_PAUSE, // Debug pause (breakpoint)
+    STMT_IMPORT,      // Import statement (import math, import string as str)
+    STMT_MODULE_DEF   // Module definition (module MyModule...end module)
 } StmtType;
 
 typedef enum {
@@ -52,7 +58,8 @@ typedef enum {
     EXPR_LOGICAL_AND, // Logical AND (&&)
     EXPR_LOGICAL_OR,  // Logical OR (||)
     EXPR_LOGICAL_NOT, // Logical NOT (!)
-    EXPR_LAMBDA       // Phase 12: Lambda function (inline anonymous function)
+    EXPR_LAMBDA,      // Phase 12: Lambda function (inline anonymous function)
+    EXPR_AWAIT        // Phase 12: Await expression (await async_call())
 } ExprType;
 
 typedef enum {
@@ -115,7 +122,12 @@ typedef struct Expression {
             char** param_names;        // Parameter names
             int param_count;           // Number of parameters
             struct Expression* body;   // Lambda body (single expression)
+            char** captured_vars;      // Captured variable names (for closures)
+            int captured_count;        // Number of captured variables
         } lambda;
+        struct {
+            struct Expression* awaited_expr;  // Expression to await (usually func call)
+        } await_expr;
     };
 } Expression;
 
@@ -133,6 +145,7 @@ typedef struct {
     VarType* union_types;    // Phase 11: Array of union types (NULL if not union)
     int union_count;         // Phase 11: Number of types in union
     Expression* init_value;  // NULL if no initialization
+    int is_exported;         // Phase 9: 1 if export, 0 if private (default export in modules)
 } Declaration;
 
 // Phase 6: Struct field definition
@@ -214,6 +227,8 @@ typedef struct Statement {
             int return_count;       // Number of return values (0 if void)
             struct Statement** body;
             int body_count;
+            int is_exported;        // Phase 9: 1 if export, 0 if private
+            int is_async;           // Phase 12: 1 if async, 0 if sync
         } func_def;
         struct {
             Expression** values;    // Return values (multiple for multi-return)
@@ -237,13 +252,43 @@ typedef struct Statement {
         struct {
             struct Statement** try_body;
             int try_count;
-            char* exception_var;       // Variable name to catch exception (optional)
-            struct Statement** catch_body;
+            // Multiple catch blocks
+            struct {
+                char* exception_type;      // Exception type (NULL = catch all)
+                char* exception_var;       // Variable name to hold exception
+                struct Statement** body;
+                int body_count;
+            }* catch_blocks;
             int catch_count;
+            // Finally block
+            struct Statement** finally_body;
+            int finally_count;
         } try_catch;
         struct {
-            Expression* error_expr;    // Error message/value to throw
+            char* error_type;          // Exception type
+            Expression* error_message; // Error message expression
         } throw_stmt;
+        struct {
+            char* label_name;          // Debug label name
+        } debug_label;
+        struct {
+            char* target_label;        // Debug goto target label
+        } debug_goto;
+        struct {
+            Expression* condition;     // Debug if condition
+            struct Statement** body;   // Debug if body
+            int body_count;
+        } debug_if;
+        // No data needed for debug pause - just a statement marker
+        struct {
+            char* module_name;         // Module name to import (e.g., "math")
+            char* alias;               // Alias (e.g., "str" for "import string as str"), NULL if no alias
+        } import_stmt;
+        struct {
+            char* module_name;         // Module name (e.g., "MyModule")
+            struct Statement** body;   // Module body (functions, structs, etc.)
+            int body_count;
+        } module_def;
     };
 } Statement;
 
@@ -482,7 +527,75 @@ Expression* parser_parse_interpolated_string(Parser* parser, const char* str_val
     return result != NULL ? result : expression_create_string("");
 }
 
+// Helper: Find variables used in an expression (for closure capture)
+void find_variables_in_expression(Expression* expr, char*** vars, int* count, int* capacity) {
+    if (!expr) return;
+    
+    if (expr->type == EXPR_VARIABLE) {
+        // Check if already in list
+        for (int i = 0; i < *count; i++) {
+            if (strcmp((*vars)[i], expr->var_name) == 0) {
+                return;  // Already captured
+            }
+        }
+        
+        // Add to list
+        if (*count >= *capacity) {
+            *capacity *= 2;
+            *vars = realloc(*vars, sizeof(char*) * (*capacity));
+        }
+        (*vars)[*count] = malloc(strlen(expr->var_name) + 1);
+        strcpy((*vars)[*count], expr->var_name);
+        (*count)++;
+    } else if (expr->type == EXPR_BINARY_OP) {
+        find_variables_in_expression(expr->binary_op.left, vars, count, capacity);
+        find_variables_in_expression(expr->binary_op.right, vars, count, capacity);
+    } else if (expr->type == EXPR_COMPARISON) {
+        find_variables_in_expression(expr->comparison.left, vars, count, capacity);
+        find_variables_in_expression(expr->comparison.right, vars, count, capacity);
+    } else if (expr->type == EXPR_FUNC_CALL) {
+        for (int i = 0; i < expr->func_call.arg_count; i++) {
+            find_variables_in_expression(expr->func_call.args[i], vars, count, capacity);
+        }
+    } else if (expr->type == EXPR_TERNARY) {
+        find_variables_in_expression(expr->ternary.condition, vars, count, capacity);
+        find_variables_in_expression(expr->ternary.true_expr, vars, count, capacity);
+        find_variables_in_expression(expr->ternary.false_expr, vars, count, capacity);
+    } else if (expr->type == EXPR_LOGICAL_AND || expr->type == EXPR_LOGICAL_OR) {
+        find_variables_in_expression(expr->logical_binary.left, vars, count, capacity);
+        find_variables_in_expression(expr->logical_binary.right, vars, count, capacity);
+    } else if (expr->type == EXPR_LOGICAL_NOT) {
+        find_variables_in_expression(expr->logical_not_operand, vars, count, capacity);
+    } else if (expr->type == EXPR_ARRAY_INDEX) {
+        find_variables_in_expression(expr->array_index.index, vars, count, capacity);
+    } else if (expr->type == EXPR_FIELD_ACCESS) {
+        // Field access: object_name is a variable
+        for (int i = 0; i < *count; i++) {
+            if (strcmp((*vars)[i], expr->field_access.object_name) == 0) {
+                return;
+            }
+        }
+        if (*count >= *capacity) {
+            *capacity *= 2;
+            *vars = realloc(*vars, sizeof(char*) * (*capacity));
+        }
+        (*vars)[*count] = malloc(strlen(expr->field_access.object_name) + 1);
+        strcpy((*vars)[*count], expr->field_access.object_name);
+        (*count)++;
+    }
+}
+
 Expression* parser_parse_primary_expression(Parser* parser) {
+    // Check for await expression
+    if (parser->current_token->type == TOKEN_AWAIT) {
+        parser_advance(parser);  // skip 'await'
+        
+        Expression* expr = malloc(sizeof(Expression));
+        expr->type = EXPR_AWAIT;
+        expr->await_expr.awaited_expr = parser_parse_primary_expression(parser);
+        return expr;
+    }
+    
     if (parser->current_token->type == TOKEN_FUNC) {
         // Lambda function: func(x, y) = x + y
         parser_advance(parser); // skip 'func'
@@ -550,6 +663,37 @@ Expression* parser_parse_primary_expression(Parser* parser) {
         lambda->lambda.param_names = param_names;
         lambda->lambda.param_count = param_count;
         lambda->lambda.body = body;
+        
+        // Detect captured variables (closure)
+        char** all_vars = malloc(sizeof(char*) * 10);
+        int all_vars_count = 0;
+        int all_vars_capacity = 10;
+        find_variables_in_expression(body, &all_vars, &all_vars_count, &all_vars_capacity);
+        
+        // Filter out parameters to get only captured variables
+        char** captured = malloc(sizeof(char*) * all_vars_count);
+        int captured_count = 0;
+        
+        for (int i = 0; i < all_vars_count; i++) {
+            int is_param = 0;
+            for (int j = 0; j < param_count; j++) {
+                if (strcmp(all_vars[i], param_names[j]) == 0) {
+                    is_param = 1;
+                    break;
+                }
+            }
+            
+            if (!is_param) {
+                captured[captured_count] = all_vars[i];
+                captured_count++;
+            } else {
+                free(all_vars[i]);
+            }
+        }
+        
+        free(all_vars);
+        lambda->lambda.captured_vars = captured;
+        lambda->lambda.captured_count = captured_count;
         
         return lambda;
     } else if (parser->current_token->type == TOKEN_NUMBER) {
@@ -833,6 +977,7 @@ Declaration* parser_parse_declaration(Parser* parser) {
     decl->union_types = NULL;
     decl->union_count = 0;
     decl->init_value = NULL;
+    decl->is_exported = 1;  // Default: exported (public)
     
     // Type keyword or struct name
     if (parser->current_token->type == TOKEN_NUMERIC) {
@@ -994,6 +1139,9 @@ Declaration* parser_parse_declaration(Parser* parser) {
 
 Statement* parser_parse_statement(Parser* parser);  // Forward declaration
 Statement* parser_parse_try_catch(Parser* parser);  // Forward declaration
+Statement* parser_parse_import_statement(Parser* parser);  // Forward declaration
+Statement* parser_parse_module_definition(Parser* parser);  // Forward declaration
+Statement* parser_parse_debug_statement(Parser* parser);  // Forward declaration
 
 // Helper function to parse else-if chain recursively
 Statement* parser_parse_else_if_chain(Parser* parser) {
@@ -1437,6 +1585,7 @@ Statement* parser_parse_try_catch(Parser* parser) {
     int try_capacity = 10;
     
     while (parser->current_token->type != TOKEN_CATCH &&
+           parser->current_token->type != TOKEN_FINALLY &&
            parser->current_token->type != TOKEN_END &&
            parser->current_token->type != TOKEN_EOF) {
         
@@ -1450,43 +1599,101 @@ Statement* parser_parse_try_catch(Parser* parser) {
         stmt->try_catch.try_body[stmt->try_catch.try_count++] = body_stmt;
     }
     
-    // Expect 'catch'
-    if (parser->current_token->type != TOKEN_CATCH) {
-        fprintf(stderr, "Parser error: Expected 'catch' after try block at line %d\n",
-                parser->current_token->line);
-        exit(1);
-    }
-    parser_advance(parser); // skip 'catch'
-    
-    // Optional: parse exception variable (catch e)
-    stmt->try_catch.exception_var = NULL;
-    if (parser->current_token->type == TOKEN_IDENTIFIER) {
-        stmt->try_catch.exception_var = malloc(strlen(parser->current_token->value) + 1);
-        strcpy(stmt->try_catch.exception_var, parser->current_token->value);
-        parser_advance(parser);
-    }
-    
-    // Parse catch body
-    stmt->try_catch.catch_body = malloc(sizeof(Statement*) * 10);
+    // Parse multiple catch blocks
+    stmt->try_catch.catch_blocks = NULL;
     stmt->try_catch.catch_count = 0;
-    int catch_capacity = 10;
+    int catch_capacity = 2;
     
-    while (parser->current_token->type != TOKEN_END &&
-           parser->current_token->type != TOKEN_EOF) {
+    while (parser->current_token->type == TOKEN_CATCH) {
+        parser_advance(parser); // skip 'catch'
         
-        Statement* body_stmt = parser_parse_statement(parser);
+        // Allocate catch blocks array
+        if (stmt->try_catch.catch_blocks == NULL) {
+            stmt->try_catch.catch_blocks = malloc(sizeof(*stmt->try_catch.catch_blocks) * catch_capacity);
+        }
         
         if (stmt->try_catch.catch_count >= catch_capacity) {
             catch_capacity *= 2;
-            stmt->try_catch.catch_body = realloc(stmt->try_catch.catch_body,
-                                                 sizeof(Statement*) * catch_capacity);
+            stmt->try_catch.catch_blocks = realloc(stmt->try_catch.catch_blocks,
+                                                    sizeof(*stmt->try_catch.catch_blocks) * catch_capacity);
         }
-        stmt->try_catch.catch_body[stmt->try_catch.catch_count++] = body_stmt;
+        
+        int catch_idx = stmt->try_catch.catch_count++;
+        stmt->try_catch.catch_blocks[catch_idx].exception_type = NULL;
+        stmt->try_catch.catch_blocks[catch_idx].exception_var = NULL;
+        
+        // Parse exception type (optional)
+        if (parser->current_token->type == TOKEN_IDENTIFIER) {
+            // Could be: catch ErrorType e OR catch e
+            // Look ahead to distinguish
+            char* first_id = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(first_id, parser->current_token->value);
+            parser_advance(parser);
+            
+            if (parser->current_token->type == TOKEN_IDENTIFIER) {
+                // catch ErrorType e
+                stmt->try_catch.catch_blocks[catch_idx].exception_type = first_id;
+                stmt->try_catch.catch_blocks[catch_idx].exception_var = 
+                    malloc(strlen(parser->current_token->value) + 1);
+                strcpy(stmt->try_catch.catch_blocks[catch_idx].exception_var, 
+                       parser->current_token->value);
+                parser_advance(parser);
+            } else {
+                // catch e (no type)
+                stmt->try_catch.catch_blocks[catch_idx].exception_var = first_id;
+            }
+        }
+        
+        // Parse catch body
+        stmt->try_catch.catch_blocks[catch_idx].body = malloc(sizeof(Statement*) * 10);
+        stmt->try_catch.catch_blocks[catch_idx].body_count = 0;
+        int body_capacity = 10;
+        
+        while (parser->current_token->type != TOKEN_CATCH &&
+               parser->current_token->type != TOKEN_FINALLY &&
+               parser->current_token->type != TOKEN_END &&
+               parser->current_token->type != TOKEN_EOF) {
+            
+            Statement* body_stmt = parser_parse_statement(parser);
+            
+            if (stmt->try_catch.catch_blocks[catch_idx].body_count >= body_capacity) {
+                body_capacity *= 2;
+                stmt->try_catch.catch_blocks[catch_idx].body = 
+                    realloc(stmt->try_catch.catch_blocks[catch_idx].body,
+                            sizeof(Statement*) * body_capacity);
+            }
+            stmt->try_catch.catch_blocks[catch_idx].body[
+                stmt->try_catch.catch_blocks[catch_idx].body_count++] = body_stmt;
+        }
+    }
+    
+    // Parse finally block (optional)
+    stmt->try_catch.finally_body = NULL;
+    stmt->try_catch.finally_count = 0;
+    
+    if (parser->current_token->type == TOKEN_FINALLY) {
+        parser_advance(parser); // skip 'finally'
+        
+        stmt->try_catch.finally_body = malloc(sizeof(Statement*) * 10);
+        int finally_capacity = 10;
+        
+        while (parser->current_token->type != TOKEN_END &&
+               parser->current_token->type != TOKEN_EOF) {
+            
+            Statement* body_stmt = parser_parse_statement(parser);
+            
+            if (stmt->try_catch.finally_count >= finally_capacity) {
+                finally_capacity *= 2;
+                stmt->try_catch.finally_body = realloc(stmt->try_catch.finally_body,
+                                                       sizeof(Statement*) * finally_capacity);
+            }
+            stmt->try_catch.finally_body[stmt->try_catch.finally_count++] = body_stmt;
+        }
     }
     
     // Expect 'end'
     if (parser->current_token->type != TOKEN_END) {
-        fprintf(stderr, "Parser error: Expected 'end' after catch block at line %d\n",
+        fprintf(stderr, "Parser error: Expected 'end' after try-catch at line %d\n",
                 parser->current_token->line);
         exit(1);
     }
@@ -1503,9 +1710,214 @@ Statement* parser_parse_try_catch(Parser* parser) {
     return stmt;
 }
 
-Statement* parser_parse_func_definition(Parser* parser) {
+// Parse import statement: import math or import string as str
+Statement* parser_parse_import_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_IMPORT;
+    
+    parser_advance(parser); // skip 'import'
+    
+    // Expect module name (identifier)
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected module name after 'import' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    stmt->import_stmt.module_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->import_stmt.module_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Check for 'as' alias
+    stmt->import_stmt.alias = NULL;
+    if (parser->current_token->type == TOKEN_AS) {
+        parser_advance(parser); // skip 'as'
+        
+        if (parser->current_token->type != TOKEN_IDENTIFIER) {
+            fprintf(stderr, "Parser error: Expected alias name after 'as' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        
+        stmt->import_stmt.alias = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->import_stmt.alias, parser->current_token->value);
+        parser_advance(parser);
+    }
+    
+    return stmt;
+}
+
+// Parse module definition: module MyModule ... end module
+Statement* parser_parse_module_definition(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_MODULE_DEF;
+    
+    parser_advance(parser); // skip 'module'
+    
+    // Expect module name (identifier)
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected module name after 'module' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    stmt->module_def.module_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->module_def.module_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Parse module body (functions, structs, etc.) until 'end module'
+    int body_capacity = 10;
+    stmt->module_def.body = malloc(sizeof(Statement*) * body_capacity);
+    stmt->module_def.body_count = 0;
+    
+    while (parser->current_token->type != TOKEN_END && 
+           parser->current_token->type != TOKEN_EOF) {
+        
+        if (stmt->module_def.body_count >= body_capacity) {
+            body_capacity *= 2;
+            stmt->module_def.body = realloc(stmt->module_def.body,
+                                           sizeof(Statement*) * body_capacity);
+        }
+        
+        stmt->module_def.body[stmt->module_def.body_count++] = parser_parse_statement(parser);
+    }
+    
+    // Expect 'end' 'module'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after module body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_MODULE) {
+        fprintf(stderr, "Parser error: Expected 'module' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+Statement* parser_parse_debug_statement(Parser* parser) {
+    parser_advance(parser); // skip 'debug'
+    
+    Statement* stmt = malloc(sizeof(Statement));
+    
+    // Check what debug statement it is
+    if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        // debug mylabel - Label definition
+        stmt->type = STMT_DEBUG_LABEL;
+        stmt->debug_label.label_name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->debug_label.label_name, parser->current_token->value);
+        parser_advance(parser);
+    }
+    else if (parser->current_token->type == TOKEN_GOTO) {
+        // debug goto mylabel
+        stmt->type = STMT_DEBUG_GOTO;
+        parser_advance(parser); // skip 'goto'
+        
+        if (parser->current_token->type != TOKEN_IDENTIFIER) {
+            fprintf(stderr, "Parser error: Expected label name after debug goto at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        
+        stmt->debug_goto.target_label = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->debug_goto.target_label, parser->current_token->value);
+        parser_advance(parser);
+    }
+    else if (parser->current_token->type == TOKEN_IF) {
+        // debug if condition then ... end if
+        stmt->type = STMT_DEBUG_IF;
+        parser_advance(parser); // skip 'if'
+        
+        stmt->debug_if.condition = parser_parse_expression(parser);
+        
+        if (parser->current_token->type != TOKEN_THEN) {
+            fprintf(stderr, "Parser error: Expected 'then' after debug if condition at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip 'then'
+        
+        // Parse debug if body
+        stmt->debug_if.body = malloc(sizeof(Statement*) * 10);
+        stmt->debug_if.body_count = 0;
+        int capacity = 10;
+        
+        // Inside debug if block, parse statements until we see "debug end if"
+        while (parser->current_token->type != TOKEN_EOF) {
+            // Check if this is "debug end if"
+            if (parser->current_token->type == TOKEN_DEBUG) {
+                // Peek ahead to see if next token is 'end'
+                // We need to check if this is "debug end if" or another debug statement
+                int saved_pos = parser->lexer->pos;
+                Token* next_token = lexer_next_token(parser->lexer);
+                int is_end = (next_token->type == TOKEN_END);
+                token_free(next_token);
+                parser->lexer->pos = saved_pos; // Restore position
+                
+                if (is_end) {
+                    // This is "debug end if", stop parsing body
+                    break;
+                }
+            }
+            
+            Statement* body_stmt = parser_parse_statement(parser);
+            
+            if (stmt->debug_if.body_count >= capacity) {
+                capacity *= 2;
+                stmt->debug_if.body = realloc(stmt->debug_if.body,
+                                              sizeof(Statement*) * capacity);
+            }
+            stmt->debug_if.body[stmt->debug_if.body_count++] = body_stmt;
+        }
+        
+        // Expect 'debug' (for "debug end if")
+        if (parser->current_token->type != TOKEN_DEBUG) {
+            fprintf(stderr, "Parser error: Expected 'debug end if' to close debug if block at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip 'debug'
+        
+        // Expect 'end'
+        if (parser->current_token->type != TOKEN_END) {
+            fprintf(stderr, "Parser error: Expected 'end' after 'debug' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip 'end'
+        
+        // Expect 'if'
+        if (parser->current_token->type != TOKEN_IF) {
+            fprintf(stderr, "Parser error: Expected 'if' after 'debug end' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+    }
+    else if (parser->current_token->type == TOKEN_PAUSE) {
+        // debug pause
+        stmt->type = STMT_DEBUG_PAUSE;
+        parser_advance(parser); // skip 'pause'
+    }
+    else {
+        fprintf(stderr, "Parser error: Unknown debug statement type at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    return stmt;
+}
+
+Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_async) {
     Statement* stmt = malloc(sizeof(Statement));
     stmt->type = STMT_FUNC_DEF;
+    stmt->func_def.is_exported = is_exported;  // Set visibility
+    stmt->func_def.is_async = is_async;        // Set async flag
     
     // Skip 'func'
     parser_advance(parser);
@@ -1904,10 +2316,44 @@ Statement* parser_parse_enum_definition(Parser* parser) {
 Statement* parser_parse_statement(Parser* parser) {
     Statement* stmt = malloc(sizeof(Statement));
     
-    // Check for func
-    if (parser->current_token->type == TOKEN_FUNC) {
+    // Check for async modifier
+    int is_async = 0;
+    if (parser->current_token->type == TOKEN_ASYNC) {
+        is_async = 1;
+        parser_advance(parser);  // skip 'async'
+        
+        // Async must be followed by func
+        if (parser->current_token->type != TOKEN_FUNC) {
+            fprintf(stderr, "Parser error: 'async' must be followed by 'func' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+    }
+    
+    // Check for export/private visibility modifiers
+    int is_exported = 1;  // Default: exported (public)
+    if (parser->current_token->type == TOKEN_EXPORT) {
+        is_exported = 1;
+        parser_advance(parser);  // skip 'export'
+    } else if (parser->current_token->type == TOKEN_PRIVATE) {
+        is_exported = 0;
+        parser_advance(parser);  // skip 'private'
+    }
+    
+    // Check for import
+    if (parser->current_token->type == TOKEN_IMPORT) {
         free(stmt);
-        return parser_parse_func_definition(parser);
+        return parser_parse_import_statement(parser);
+    }
+    // Check for module
+    else if (parser->current_token->type == TOKEN_MODULE) {
+        free(stmt);
+        return parser_parse_module_definition(parser);
+    }
+    // Check for func
+    else if (parser->current_token->type == TOKEN_FUNC) {
+        free(stmt);
+        return parser_parse_func_definition(parser, is_exported, is_async);
     }
     // Check for struct
     else if (parser->current_token->type == TOKEN_STRUCT) {
@@ -1991,8 +2437,48 @@ Statement* parser_parse_statement(Parser* parser) {
     else if (parser->current_token->type == TOKEN_THROW) {
         stmt->type = STMT_THROW;
         parser_advance(parser); // skip 'throw'
-        stmt->throw_stmt.error_expr = parser_parse_expression(parser);
+        
+        // Parse exception type (optional identifier before expression)
+        stmt->throw_stmt.error_type = NULL;
+        stmt->throw_stmt.error_message = NULL;
+        
+        if (parser->current_token->type == TOKEN_IDENTIFIER) {
+            // Look ahead: throw ErrorType("message") or throw "message"
+            // If identifier followed by '(', it's a type
+            char* first_id = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(first_id, parser->current_token->value);
+            parser_advance(parser);
+            
+            if (parser->current_token->type == TOKEN_LPAREN) {
+                // throw ErrorType(message)
+                stmt->throw_stmt.error_type = first_id;
+                parser_advance(parser); // skip '('
+                stmt->throw_stmt.error_message = parser_parse_expression(parser);
+                
+                if (parser->current_token->type != TOKEN_RPAREN) {
+                    fprintf(stderr, "Parser error: Expected ')' after throw message at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                parser_advance(parser); // skip ')'
+            } else {
+                // Just a variable, treat as message
+                Expression* var_expr = malloc(sizeof(Expression));
+                var_expr->type = EXPR_VARIABLE;
+                var_expr->var_name = first_id;
+                stmt->throw_stmt.error_message = var_expr;
+            }
+        } else {
+            // throw expression (no type)
+            stmt->throw_stmt.error_message = parser_parse_expression(parser);
+        }
+        
         return stmt;
+    }
+    // Check for debug statements
+    else if (parser->current_token->type == TOKEN_DEBUG) {
+        free(stmt);
+        return parser_parse_debug_statement(parser);
     }
     // Check for exit
     else if (parser->current_token->type == TOKEN_EXIT) {
@@ -2013,6 +2499,7 @@ Statement* parser_parse_statement(Parser* parser) {
         parser->current_token->type == TOKEN_TEXT) {
         stmt->type = STMT_DECLARATION;
         stmt->declaration = parser_parse_declaration(parser);
+        stmt->declaration->is_exported = is_exported;  // Set visibility
     }
     // Check for print
     else if (parser->current_token->type == TOKEN_PRINT) {

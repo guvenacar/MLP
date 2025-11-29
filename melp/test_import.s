@@ -35,24 +35,19 @@ _start:
     push rbp
     mov rbp, rsp
 
-
-    ; Try-catch block
-    ; Note: Simplified error handling (no full exception stack unwinding)
-    ; Try body
-
-    ; Print statement
-    mov rax, 42
-    mov rdi, rax
-    call print_number
-    jmp .L1           ; Skip catch if no error
-.L0:  ; Catch block
-    ; Catch body
+    ; import math
+    ; (Module resolution not yet implemented)
+    ; import string as str
+    ; (Module resolution not yet implemented)
+    ; Declaration: numeric result
+    sub rsp, 8         ; Allocate space for result
+    mov rax, 100
+    mov [rbp-8], rax   ; Initialize result
 
     ; Print statement
-    mov rax, 99
+    mov rax, [rbp-8]
     mov rdi, rax
     call print_number
-.L1:  ; End try-catch
 
     ; Exit program
     mov rax, 60        ; sys_exit

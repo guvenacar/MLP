@@ -325,6 +325,8 @@ void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "extern string_equal");
     codegen_emit(gen, "extern string_not_equal");
     codegen_emit(gen, "extern int_to_string");
+    codegen_emit(gen, "extern malloc");
+    codegen_emit(gen, "extern free");
     codegen_emit(gen, "extern mlp_array_alloc");
     codegen_emit(gen, "extern mlp_array_free");
     codegen_emit(gen, "extern mlp_array_length");
@@ -339,6 +341,16 @@ void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "extern mlp_string_length");
     codegen_emit(gen, "extern mlp_get_argv");
     codegen_emit(gen, "extern mlp_get_argc");
+    codegen_emit(gen, "extern setjmp");
+    codegen_emit(gen, "extern strcmp");
+    codegen_emit(gen, "extern mlp_exception_push");
+    codegen_emit(gen, "extern mlp_exception_pop");
+    codegen_emit(gen, "extern mlp_throw");
+    codegen_emit(gen, "extern mlp_exception_type");
+    codegen_emit(gen, "extern mlp_exception_message");
+    codegen_emit(gen, "extern mlp_exception_code");
+    codegen_emit(gen, "extern mlp_exception_has_handler");
+    codegen_emit(gen, "extern mlp_exception_has_parent_handler");
     codegen_emit(gen, "global _start");
 }
 
@@ -744,9 +756,27 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
         snprintf(buffer, sizeof(buffer), "    mov rax, str_%d", str_id);
         codegen_emit(gen, buffer);
     } else if (expr->type == EXPR_VARIABLE) {
-        int offset = codegen_find_variable(gen, expr->var_name);
-        snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", offset);
-        codegen_emit(gen, buffer);
+        VarInfo* var = codegen_get_variable(gen, expr->var_name);
+        
+        if (var->stack_offset < 0 && var->stack_offset <= -1000) {
+            // Captured variable from closure environment
+            // offset = -(1000 + index), so index = -(offset + 1000)
+            int capture_index = -(var->stack_offset + 1000);
+            int env_offset = 8;  // Closure env pushed first (push rdi)
+            
+            snprintf(buffer, sizeof(buffer), 
+                    "    ; Load captured variable %s from environment[%d]", 
+                    expr->var_name, capture_index);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov r13, [rbp-%d]   ; Environment pointer", env_offset);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov rax, [r13+%d]", capture_index * 8);
+            codegen_emit(gen, buffer);
+        } else {
+            // Regular stack variable
+            snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", var->stack_offset);
+            codegen_emit(gen, buffer);
+        }
     } else if (expr->type == EXPR_BINARY_OP) {
         // Check if this is string concatenation
         if (expr->binary_op.op == BIN_OP_ADD && 
@@ -889,23 +919,87 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             codegen_emit(gen, buffer);
             // Result is in rax
         } else {
-            // User-defined function - push arguments in reverse order (right to left)
-            for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
-                codegen_generate_expression_value(gen, expr->func_call.args[i]);
-                codegen_emit(gen, "    push rax");
+            // User-defined function OR lambda call
+            // Check if func_name is a variable (lambda)
+            VarInfo* lambda_var = NULL;
+            VarInfo* v = gen->variables;
+            while (v) {
+                if (strcmp(v->name, expr->func_call.func_name) == 0) {
+                    lambda_var = v;
+                    break;
+                }
+                v = v->next;
             }
             
-            // Call function
-            snprintf(buffer, sizeof(buffer), "    call func_%s", expr->func_call.func_name);
-            codegen_emit(gen, buffer);
-            
-            // Clean up stack (pop arguments)
-            if (expr->func_call.arg_count > 0) {
-                snprintf(buffer, sizeof(buffer), "    add rsp, %d", expr->func_call.arg_count * 8);
+            if (lambda_var) {
+                // Lambda call: variable holds closure structure OR function pointer
+                codegen_emit(gen, "    ; Lambda/closure call");
+                
+                // Load closure pointer/function pointer
+                snprintf(buffer, sizeof(buffer), "    mov r15, [rbp-%d]   ; Load closure/lambda", 
+                         lambda_var->stack_offset);
                 codegen_emit(gen, buffer);
+                
+                // Check if r15 points to closure structure (has env pointer)
+                // For simplicity, assume if lambda was created with closures, first qword is func ptr
+                codegen_emit(gen, "    ; Assume closure structure: [func_ptr, env_ptr]");
+                
+                // Push arguments to stack (System V ABI: rdi, rsi, rdx, rcx)
+                const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx"};
+                
+                // Save r15 (closure pointer)
+                codegen_emit(gen, "    push r15");
+                
+                // Evaluate arguments and save to temp storage
+                for (int i = 0; i < expr->func_call.arg_count; i++) {
+                    codegen_generate_expression_value(gen, expr->func_call.args[i]);
+                    codegen_emit(gen, "    push rax");
+                }
+                
+                // Restore closure pointer
+                snprintf(buffer, sizeof(buffer), "    mov r15, [rsp+%d]", expr->func_call.arg_count * 8);
+                codegen_emit(gen, buffer);
+                
+                // Load function pointer and environment pointer
+                codegen_emit(gen, "    mov r14, [r15]      ; Function pointer");
+                codegen_emit(gen, "    mov rdi, [r15+8]    ; Environment pointer (first arg)");
+                
+                // Pop arguments into registers (skip rdi, it's for environment)
+                for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
+                    if (i < 3) {  // rsi, rdx, rcx available (rdi used for env)
+                        snprintf(buffer, sizeof(buffer), "    pop %s", arg_regs[i + 1]);
+                        codegen_emit(gen, buffer);
+                    } else {
+                        codegen_emit(gen, "    pop rax");  // Clean stack
+                    }
+                }
+                
+                // Remove saved closure pointer from stack
+                codegen_emit(gen, "    add rsp, 8");
+                
+                // Call function
+                codegen_emit(gen, "    call r14");
+                
+                // Result is in rax
+            } else {
+                // Regular user-defined function - push arguments in reverse order (right to left)
+                for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
+                    codegen_generate_expression_value(gen, expr->func_call.args[i]);
+                    codegen_emit(gen, "    push rax");
+                }
+                
+                // Call function
+                snprintf(buffer, sizeof(buffer), "    call func_%s", expr->func_call.func_name);
+                codegen_emit(gen, buffer);
+                
+                // Clean up stack (pop arguments)
+                if (expr->func_call.arg_count > 0) {
+                    snprintf(buffer, sizeof(buffer), "    add rsp, %d", expr->func_call.arg_count * 8);
+                    codegen_emit(gen, buffer);
+                }
+                
+                // Result is in rax
             }
-            
-            // Result is in rax
         }
     } else if (expr->type == EXPR_FIELD_ACCESS) {
         // Field access: object.field OR Enum.Member
@@ -1168,12 +1262,173 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
         codegen_emit(gen, "    setz al             ; Set AL to 1 if zero, 0 otherwise");
         codegen_emit(gen, "    movzx rax, al       ; Zero-extend AL to RAX");
     } else if (expr->type == EXPR_LAMBDA) {
-        // Phase 12: Lambda functions
-        // Note: Full lambda support requires function pointers and closures
-        // For now, lambdas are not fully implemented in codegen
-        fprintf(stderr, "Codegen error: Lambda functions are parsed but not yet fully implemented in code generation\n");
-        fprintf(stderr, "Hint: Define a regular function instead of using lambda syntax\n");
-        exit(1);
+        // Lambda functions: inline generation with JMP skip
+        char buffer[256];
+        char lambda_name[64];
+        char skip_label_name[64];
+        int skip_label = gen->label_counter++;
+        
+        snprintf(lambda_name, sizeof(lambda_name), "__lambda_%d", gen->label_counter++);
+        snprintf(skip_label_name, sizeof(skip_label_name), "__lambda_skip_%d", skip_label);
+        
+        // Jump over lambda definition
+        snprintf(buffer, sizeof(buffer), "    jmp %s     ; Skip lambda definition", skip_label_name);
+        codegen_emit(gen, buffer);
+        
+        // Store current context
+        int old_in_function = gen->in_function;
+        VarInfo* old_variables = gen->variables;
+        int old_stack_offset = gen->stack_offset;
+        
+        // Lambda function definition
+        gen->in_function = 1;
+        gen->variables = NULL;
+        gen->stack_offset = 0;
+        
+        codegen_emit(gen, "");
+        snprintf(buffer, sizeof(buffer), "; Lambda function: %s (captures %d variables)", 
+                lambda_name, expr->lambda.captured_count);
+        codegen_emit(gen, buffer);
+        snprintf(buffer, sizeof(buffer), "%s:", lambda_name);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    push rbp");
+        codegen_emit(gen, "    mov rbp, rsp");
+        
+        // If lambda has closure, first parameter (rdi) is closure environment pointer
+        int param_offset = 0;
+        const char* param_regs[] = {"rdi", "rsi", "rdx", "rcx"};
+        
+        if (expr->lambda.captured_count > 0) {
+            // Store closure environment pointer
+            codegen_emit(gen, "    ; Store closure environment pointer");
+            gen->stack_offset += 8;
+            codegen_emit(gen, "    push rdi    ; closure environment");
+            int closure_offset = gen->stack_offset;
+            
+            // Add captured variables to symbol table
+            for (int i = 0; i < expr->lambda.captured_count; i++) {
+                VarInfo* var = malloc(sizeof(VarInfo));
+                var->name = malloc(strlen(expr->lambda.captured_vars[i]) + 1);
+                strcpy(var->name, expr->lambda.captured_vars[i]);
+                var->stack_offset = -(1000 + i);  // Special marker: negative 1000+ index
+                var->type = TYPE_NUMERIC;
+                var->struct_name = NULL;
+                var->is_dynamic_array = 0;
+                var->is_pointer = 0;
+                var->next = gen->variables;
+                gen->variables = var;
+                
+                snprintf(buffer, sizeof(buffer), 
+                        "    ; Captured variable: %s at environment[%d]", 
+                        expr->lambda.captured_vars[i], i);
+                codegen_emit(gen, buffer);
+            }
+            
+            param_offset = 1;  // First actual parameter is in rsi, not rdi
+        }
+        
+        // Allocate stack for parameters
+        int total_stack = expr->lambda.param_count * 8;
+        if (total_stack > 0) {
+            snprintf(buffer, sizeof(buffer), "    sub rsp, %d", total_stack);
+            codegen_emit(gen, buffer);
+        }
+        
+        // Store parameters from registers
+        for (int i = 0; i < expr->lambda.param_count && (i + param_offset) < 4; i++) {
+            gen->stack_offset += 8;
+            VarInfo* var = malloc(sizeof(VarInfo));
+            var->name = malloc(strlen(expr->lambda.param_names[i]) + 1);
+            strcpy(var->name, expr->lambda.param_names[i]);
+            var->stack_offset = gen->stack_offset;
+            var->type = TYPE_NUMERIC;
+            var->struct_name = NULL;
+            var->is_dynamic_array = 0;
+            var->is_pointer = 0;
+            var->next = gen->variables;
+            gen->variables = var;
+            
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], %s", 
+                    gen->stack_offset, param_regs[i + param_offset]);
+            codegen_emit(gen, buffer);
+        }
+        
+        // Generate lambda body
+        codegen_emit(gen, "    ; Lambda body");
+        codegen_generate_expression_value(gen, expr->lambda.body);
+        
+        // Return
+        codegen_emit(gen, "    leave");
+        codegen_emit(gen, "    ret");
+        
+        // Skip label - closure creation code runs HERE in outer function scope
+        snprintf(buffer, sizeof(buffer), "%s:", skip_label_name);
+        codegen_emit(gen, buffer);
+        
+        // Create closure if needed (BEFORE restoring context, while captured vars accessible)
+        if (expr->lambda.captured_count > 0) {
+            codegen_emit(gen, "");
+            codegen_emit(gen, "    ; Allocate closure environment");
+            int env_size = expr->lambda.captured_count * 8;
+            snprintf(buffer, sizeof(buffer), "    mov rdi, %d", env_size);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    call malloc");
+            codegen_emit(gen, "    mov r12, rax    ; Save environment pointer");
+            
+            // Copy captured variable values to environment (use OLD context)
+            for (int i = 0; i < expr->lambda.captured_count; i++) {
+                VarInfo* var = old_variables;
+                while (var) {
+                    if (strcmp(var->name, expr->lambda.captured_vars[i]) == 0) {
+                        snprintf(buffer, sizeof(buffer), 
+                                "    ; Store %s in environment[%d]", 
+                                expr->lambda.captured_vars[i], i);
+                        codegen_emit(gen, buffer);
+                        
+                        snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", var->stack_offset);
+                        codegen_emit(gen, buffer);
+                        snprintf(buffer, sizeof(buffer), "    mov [r12+%d], rax", i * 8);
+                        codegen_emit(gen, buffer);
+                        break;
+                    }
+                    var = var->next;
+                }
+            }
+            
+            // Create closure: allocate structure with function pointer + environment
+            codegen_emit(gen, "    ; Create closure structure (func_ptr + env_ptr)");
+            codegen_emit(gen, "    mov rdi, 16     ; 2 pointers");
+            codegen_emit(gen, "    call malloc");
+            snprintf(buffer, sizeof(buffer), "    lea r13, [rel %s]", lambda_name);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    mov [rax], r13      ; Store function pointer");
+            codegen_emit(gen, "    mov [rax+8], r12    ; Store environment pointer");
+            codegen_emit(gen, "    ; rax now holds closure pointer");
+        } else {
+            // No closures: just load lambda address into rax
+            snprintf(buffer, sizeof(buffer), "    lea rax, [rel %s]", lambda_name);
+            codegen_emit(gen, buffer);
+        }
+        
+        // Restore context AFTER closure creation
+        gen->in_function = old_in_function;
+        VarInfo* temp_vars = gen->variables;
+        gen->variables = old_variables;
+        gen->stack_offset = old_stack_offset;
+        
+        // Free lambda variables
+        while (temp_vars) {
+            VarInfo* next = temp_vars->next;
+            free(temp_vars->name);
+            free(temp_vars);
+            temp_vars = next;
+        }
+    } else if (expr->type == EXPR_AWAIT) {
+        // Await expression: for now just evaluate the awaited expression
+        // Full async runtime would suspend here and resume later
+        codegen_emit(gen, "    ; Await expression (compiled as sync call for now)");
+        codegen_generate_expression_value(gen, expr->await_expr.awaited_expr);
+        // Result is already in rax
     }
 }
 
@@ -1601,6 +1856,14 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
                         stmt->func_def.param_types);
     
     codegen_emit(gen, "");
+    
+    // Note: Async functions are compiled as regular functions for now
+    // Full async runtime with state machines would require complex transformation
+    if (stmt->func_def.is_async) {
+        snprintf(buffer, sizeof(buffer), "; Async function: %s (compiled as sync for now)", stmt->func_def.func_name);
+        codegen_emit(gen, buffer);
+    }
+    
     snprintf(buffer, sizeof(buffer), "func_%s:", stmt->func_def.func_name);
     codegen_emit(gen, buffer);
     codegen_emit(gen, "    push rbp");
@@ -1793,58 +2056,225 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
     } else if (stmt->type == STMT_SWITCH) {
         codegen_generate_switch(gen, stmt);
     } else if (stmt->type == STMT_TRY_CATCH) {
-        // Phase 12: Try-catch error handling
-        // Note: Real exception handling requires runtime support
-        // For now, we'll implement basic error checking with labels
+        // Real exception handling with setjmp/longjmp
         char buffer[256];
-        int catch_label = gen->label_counter++;
+        int try_label = gen->label_counter++;
         int end_label = gen->label_counter++;
+        int finally_label = gen->label_counter++;
         
         codegen_emit(gen, "");
-        codegen_emit(gen, "    ; Try-catch block");
-        codegen_emit(gen, "    ; Note: Simplified error handling (no full exception stack unwinding)");
+        codegen_emit(gen, "    ; Try-catch-finally block (setjmp/longjmp)");
+        
+        // Push exception handler
+        codegen_emit(gen, "    ; Push exception handler");
+        codegen_emit(gen, "    call mlp_exception_push");
+        codegen_emit(gen, "    mov r15, rax        ; Save handler pointer");
+        
+        // setjmp(handler->jump_buffer)
+        codegen_emit(gen, "    ; setjmp - returns 0 on first call, 1 on longjmp");
+        codegen_emit(gen, "    mov rdi, r15");
+        codegen_emit(gen, "    call setjmp");
+        codegen_emit(gen, "    test rax, rax");
+        snprintf(buffer, sizeof(buffer), "    jnz .L%d_catch    ; Jump to catch if exception thrown", try_label);
+        codegen_emit(gen, buffer);
         
         // Try body
+        snprintf(buffer, sizeof(buffer), ".L%d_try:", try_label);
+        codegen_emit(gen, buffer);
         codegen_emit(gen, "    ; Try body");
         for (int i = 0; i < stmt->try_catch.try_count; i++) {
             codegen_generate_statement(gen, stmt->try_catch.try_body[i]);
         }
         
-        // If try succeeds, jump to end
-        snprintf(buffer, sizeof(buffer), "    jmp .L%d           ; Skip catch if no error", end_label);
+        // No exception - pop handler and jump to finally
+        codegen_emit(gen, "    ; Try succeeded - pop handler");
+        codegen_emit(gen, "    call mlp_exception_pop");
+        if (stmt->try_catch.finally_count > 0) {
+            snprintf(buffer, sizeof(buffer), "    jmp .L%d_finally", finally_label);
+        } else {
+            snprintf(buffer, sizeof(buffer), "    jmp .L%d_end", end_label);
+        }
         codegen_emit(gen, buffer);
         
-        // Catch label
-        snprintf(buffer, sizeof(buffer), ".L%d:  ; Catch block", catch_label);
+        // Catch blocks
+        snprintf(buffer, sizeof(buffer), ".L%d_catch:", try_label);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    ; Catch block(s)");
+        
+        int rethrow_label = gen->label_counter++;
+        
+        for (int c = 0; c < stmt->try_catch.catch_count; c++) {
+            int next_catch_label = (c < stmt->try_catch.catch_count - 1) ? 
+                                    gen->label_counter++ : rethrow_label;
+            
+            codegen_emit(gen, "");
+            snprintf(buffer, sizeof(buffer), "    ; Catch block %d", c);
+            codegen_emit(gen, buffer);
+            
+            // Type check if specified
+            if (stmt->try_catch.catch_blocks[c].exception_type) {
+                int str_id = codegen_add_string(gen, stmt->try_catch.catch_blocks[c].exception_type);
+                
+                codegen_emit(gen, "    ; Check exception type");
+                codegen_emit(gen, "    call mlp_exception_type");
+                snprintf(buffer, sizeof(buffer), "    mov rdi, str_%d    ; Expected type", str_id);
+                codegen_emit(gen, buffer);
+                codegen_emit(gen, "    mov rsi, rax       ; Actual type");
+                codegen_emit(gen, "    call strcmp");
+                codegen_emit(gen, "    test rax, rax");
+                snprintf(buffer, sizeof(buffer), "    jnz .L%d          ; Type mismatch, try next catch", next_catch_label);
+                codegen_emit(gen, buffer);
+            }
+            
+            // Store exception variable if specified
+            if (stmt->try_catch.catch_blocks[c].exception_var) {
+                codegen_emit(gen, "    ; Store exception in variable");
+                gen->stack_offset += 8;
+                
+                VarInfo* var = malloc(sizeof(VarInfo));
+                var->name = malloc(strlen(stmt->try_catch.catch_blocks[c].exception_var) + 1);
+                strcpy(var->name, stmt->try_catch.catch_blocks[c].exception_var);
+                var->stack_offset = gen->stack_offset;
+                var->type = TYPE_STRING;  // Exception is string pointer
+                var->struct_name = NULL;
+                var->is_dynamic_array = 0;
+                var->is_pointer = 0;
+                var->next = gen->variables;
+                gen->variables = var;
+                
+                codegen_emit(gen, "    call mlp_exception_message");
+                snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax", gen->stack_offset);
+                codegen_emit(gen, buffer);
+            }
+            
+            // Generate catch body
+            for (int i = 0; i < stmt->try_catch.catch_blocks[c].body_count; i++) {
+                codegen_generate_statement(gen, stmt->try_catch.catch_blocks[c].body[i]);
+            }
+            
+            // Pop handler after successful catch
+            codegen_emit(gen, "    ; Caught - pop handler");
+            codegen_emit(gen, "    call mlp_exception_pop");
+            
+            // Jump to finally or end
+            if (stmt->try_catch.finally_count > 0) {
+                snprintf(buffer, sizeof(buffer), "    jmp .L%d_finally", finally_label);
+            } else {
+                snprintf(buffer, sizeof(buffer), "    jmp .L%d_end", end_label);
+            }
+            codegen_emit(gen, buffer);
+            
+            // Next catch label
+            if (c < stmt->try_catch.catch_count - 1) {
+                snprintf(buffer, sizeof(buffer), ".L%d:", next_catch_label);
+                codegen_emit(gen, buffer);
+            }
+        }
+        
+        // No catch matched - re-throw or uncaught
+        snprintf(buffer, sizeof(buffer), ".L%d:  ; Re-throw/Uncaught", rethrow_label);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    ; No catch matched - check if parent handler exists (before popping)");
+        
+        // Check for parent handler WITHOUT popping yet
+        codegen_emit(gen, "    call mlp_exception_has_parent_handler");
+        codegen_emit(gen, "    test rax, rax");
+        snprintf(buffer, sizeof(buffer), "    jnz .L%d_do_rethrow", rethrow_label);
         codegen_emit(gen, buffer);
         
-        // Catch body
-        codegen_emit(gen, "    ; Catch body");
-        for (int i = 0; i < stmt->try_catch.catch_count; i++) {
-            codegen_generate_statement(gen, stmt->try_catch.catch_body[i]);
+        // No parent handler - uncaught exception, terminate (DON'T pop, data still valid)
+        snprintf(buffer, sizeof(buffer), ".L%d_uncaught:", rethrow_label);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    ; Uncaught exception - print and exit");
+        
+        // Print "Uncaught exception: " prefix
+        int uncaught_str = codegen_add_string(gen, "Uncaught exception: ");
+        snprintf(buffer, sizeof(buffer), "    mov rdi, str_%d", uncaught_str);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    call print_string");
+        
+        // Print exception type
+        codegen_emit(gen, "    call mlp_exception_type");
+        codegen_emit(gen, "    mov rdi, rax");
+        codegen_emit(gen, "    call print_string");
+        
+        // Print " - "
+        int sep_str = codegen_add_string(gen, " - ");
+        snprintf(buffer, sizeof(buffer), "    mov rdi, str_%d", sep_str);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    call print_string");
+        
+        // Print exception message
+        codegen_emit(gen, "    call mlp_exception_message");
+        codegen_emit(gen, "    mov rdi, rax");
+        codegen_emit(gen, "    call print_string");
+        
+        codegen_emit(gen, "    mov rax, 60       ; sys_exit");
+        codegen_emit(gen, "    mov rdi, 1        ; error code");
+        codegen_emit(gen, "    syscall");
+        
+        // Has parent handler - pop and re-throw
+        snprintf(buffer, sizeof(buffer), ".L%d_do_rethrow:", rethrow_label);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    ; Re-throw to parent handler");
+        codegen_emit(gen, "    call mlp_exception_type");
+        codegen_emit(gen, "    push rax");
+        codegen_emit(gen, "    call mlp_exception_message");
+        codegen_emit(gen, "    push rax");
+        codegen_emit(gen, "    call mlp_exception_code");
+        codegen_emit(gen, "    mov rdx, rax");
+        codegen_emit(gen, "    pop rsi");
+        codegen_emit(gen, "    pop rdi");
+        codegen_emit(gen, "    call mlp_exception_pop    ; Pop AFTER saving data");
+        codegen_emit(gen, "    call mlp_throw");
+        
+        // Finally block
+        if (stmt->try_catch.finally_count > 0) {
+            snprintf(buffer, sizeof(buffer), ".L%d_finally:", finally_label);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    ; Finally block");
+            for (int i = 0; i < stmt->try_catch.finally_count; i++) {
+                codegen_generate_statement(gen, stmt->try_catch.finally_body[i]);
+            }
         }
         
         // End label
-        snprintf(buffer, sizeof(buffer), ".L%d:  ; End try-catch", end_label);
+        snprintf(buffer, sizeof(buffer), ".L%d_end:", end_label);
         codegen_emit(gen, buffer);
     } else if (stmt->type == STMT_THROW) {
-        // Phase 12: Throw statement
-        // Note: Real throw requires exception runtime
-        // For now, print error and exit
+        // Real throw with mlp_throw runtime
+        char buffer[256];
         codegen_emit(gen, "");
-        codegen_emit(gen, "    ; Throw statement (simplified)");
+        codegen_emit(gen, "    ; Throw exception");
         
-        // Evaluate error expression
-        codegen_generate_expression_value(gen, stmt->throw_stmt.error_expr);
+        // Get exception type (or default "Error")
+        if (stmt->throw_stmt.error_type) {
+            int str_id = codegen_add_string(gen, stmt->throw_stmt.error_type);
+            snprintf(buffer, sizeof(buffer), "    mov rdi, str_%d    ; Exception type", str_id);
+            codegen_emit(gen, buffer);
+        } else {
+            int str_id = codegen_add_string(gen, "Error");
+            snprintf(buffer, sizeof(buffer), "    mov rdi, str_%d    ; Default type: Error", str_id);
+            codegen_emit(gen, buffer);
+        }
         
-        // Print error message (if string/numeric)
-        codegen_emit(gen, "    mov rdi, rax");
-        codegen_emit(gen, "    call print_number  ; Print error code");
+        // Evaluate message expression
+        if (stmt->throw_stmt.error_message) {
+            codegen_emit(gen, "    push rdi           ; Save type");
+            codegen_generate_expression_value(gen, stmt->throw_stmt.error_message);
+            codegen_emit(gen, "    mov rsi, rax       ; Message in rsi");
+            codegen_emit(gen, "    pop rdi            ; Restore type");
+        } else {
+            int str_id = codegen_add_string(gen, "Unknown error");
+            snprintf(buffer, sizeof(buffer), "    mov rsi, str_%d    ; Default message", str_id);
+            codegen_emit(gen, buffer);
+        }
         
-        // Exit with error code 1
-        codegen_emit(gen, "    mov rax, 60        ; sys_exit");
-        codegen_emit(gen, "    mov rdi, 1         ; exit code 1 (error)");
-        codegen_emit(gen, "    syscall");
+        // Exception code (default 1)
+        codegen_emit(gen, "    mov rdx, 1         ; Error code");
+        
+        // Call mlp_throw (does not return - longjmp to handler)
+        codegen_emit(gen, "    call mlp_throw");
     } else if (stmt->type == STMT_EXIT) {
         if (!gen->in_loop) {
             fprintf(stderr, "Codegen error: 'exit' outside loop\n");

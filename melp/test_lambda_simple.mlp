@@ -1,0 +1,8 @@
+-- Test: Lambda function - simple case
+-- Lambda that doubles a number
+
+-- Create lambda: func(x) = x * 2
+numeric doubler = func(x) = x * 2
+
+-- For now just check if it compiles
+print(42)

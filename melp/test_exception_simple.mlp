@@ -1,0 +1,9 @@
+try
+    numeric x = 10
+    numeric y = 0
+    throw y
+catch e
+    print(999)
+end try
+
+print(42)

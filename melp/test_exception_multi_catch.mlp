@@ -1,0 +1,14 @@
+try
+    print(1)
+    throw ValueError("Invalid value!")
+    print(999)
+catch RuntimeError e
+    print(100)
+catch ValueError e
+    print(200)
+catch IOError e
+    print(300)
+finally
+    print(42)
+end try
+print(888)

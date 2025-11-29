@@ -1,0 +1,16 @@
+-- Test: Async/Await basic syntax
+-- Phase 12: Asynchronous functions
+
+-- Simple async function
+async func fetchData(numeric id)
+    return id * 100
+end func
+
+-- Async function with await
+async func processData()
+    numeric result = await fetchData(5)
+    print(result)
+end func
+
+-- Main code
+print(42)

@@ -518,3 +518,126 @@ char** mlp_get_argv(long argc, char** argv_c) {
 long mlp_get_argc(void) {
     return global_argc;
 }
+
+// ============================================================================
+// Exception Handling Runtime
+// ============================================================================
+
+ExceptionHandler* mlp_exception_stack = NULL;
+
+/**
+ * Initialize exception handling system
+ */
+void mlp_exception_init(void) {
+    mlp_exception_stack = NULL;
+}
+
+/**
+ * Push new exception handler onto stack
+ * Returns handler for setjmp
+ */
+ExceptionHandler* mlp_exception_push(void) {
+    ExceptionHandler* handler = (ExceptionHandler*)mlp_malloc(sizeof(ExceptionHandler));
+    handler->exception.message = NULL;
+    handler->exception.type = NULL;
+    handler->exception.code = 0;
+    handler->prev = mlp_exception_stack;
+    mlp_exception_stack = handler;
+    return handler;
+}
+
+/**
+ * Pop exception handler from stack
+ */
+void mlp_exception_pop(void) {
+    if (mlp_exception_stack) {
+        ExceptionHandler* handler = mlp_exception_stack;
+        mlp_exception_stack = handler->prev;
+        
+        // Free exception data
+        if (handler->exception.message) {
+            mlp_free(handler->exception.message);
+        }
+        if (handler->exception.type) {
+            mlp_free(handler->exception.type);
+        }
+        mlp_free(handler);
+    }
+}
+
+/**
+ * Throw exception - unwinds stack to nearest handler
+ */
+void mlp_throw(const char* type, const char* message, long code) {
+    if (!mlp_exception_stack) {
+        // No exception handler - print and exit
+        fprintf(stderr, "Uncaught exception: %s: %s (code: %ld)\n", 
+                type ? type : "Error", message ? message : "Unknown error", code);
+        exit(1);
+    }
+    
+    // Store exception in current handler
+    ExceptionHandler* handler = mlp_exception_stack;
+    
+    if (type) {
+        handler->exception.type = (char*)mlp_malloc(strlen(type) + 1);
+        strcpy(handler->exception.type, type);
+    }
+    
+    if (message) {
+        handler->exception.message = (char*)mlp_malloc(strlen(message) + 1);
+        strcpy(handler->exception.message, message);
+    }
+    
+    handler->exception.code = code;
+    
+    // Jump to handler
+    longjmp(handler->jump_buffer, 1);
+}
+
+/**
+ * Get current exception object
+ */
+MlpException* mlp_get_current_exception(void) {
+    if (mlp_exception_stack) {
+        return &mlp_exception_stack->exception;
+    }
+    return NULL;
+}
+
+/**
+ * Get exception message
+ */
+char* mlp_exception_message(void) {
+    MlpException* ex = mlp_get_current_exception();
+    return ex ? ex->message : NULL;
+}
+
+/**
+ * Get exception type
+ */
+char* mlp_exception_type(void) {
+    MlpException* ex = mlp_get_current_exception();
+    return ex ? ex->type : NULL;
+}
+
+/**
+ * Get exception code
+ */
+long mlp_exception_code(void) {
+    MlpException* ex = mlp_get_current_exception();
+    return ex ? ex->code : 0;
+}
+
+/**
+ * Check if there's a handler available
+ */
+int mlp_exception_has_handler(void) {
+    return mlp_exception_stack != NULL ? 1 : 0;
+}
+
+// Check if current handler has a parent handler
+int mlp_exception_has_parent_handler(void) {
+    if (mlp_exception_stack == NULL) return 0;
+    return mlp_exception_stack->prev != NULL ? 1 : 0;
+}

@@ -1,0 +1,5 @@
+-- Test Module Definition
+module MathUtils
+    numeric x = 42
+    print(x)
+end module

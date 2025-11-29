@@ -35,58 +35,31 @@ _start:
     push rbp
     mov rbp, rsp
 
+    ; Declaration: numeric x
+    sub rsp, 8         ; Allocate space for x
+    mov rax, 5
+    mov [rbp-8], rax   ; Initialize x
 
-    ; Try-catch block
-    ; Note: Simplified error handling (no full exception stack unwinding)
-    ; Try body
+    ; If statement
+
+    ; Evaluate comparison
+    mov rax, [rbp-8]
+    push rax
+    mov rax, 3
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    jle .L0
+    ; Then body
 
     ; Print statement
     mov rax, 100
     mov rdi, rax
     call print_number
-    jmp .L1           ; Skip catch if no error
-.L0:  ; Catch block
-    ; Catch body
+.L0:
 
     ; Print statement
-    mov rax, 999
-    mov rdi, rax
-    call print_number
-.L1:  ; End try-catch
-
-    ; Try-catch block
-    ; Note: Simplified error handling (no full exception stack unwinding)
-    ; Try body
-
-    ; Print statement
-    mov rax, 200
-    mov rdi, rax
-    call print_number
-
-    ; Throw statement (simplified)
     mov rax, 777
-    mov rdi, rax
-    call print_number  ; Print error code
-    mov rax, 60        ; sys_exit
-    mov rdi, 1         ; exit code 1 (error)
-    syscall
-
-    ; Print statement
-    mov rax, 201
-    mov rdi, rax
-    call print_number
-    jmp .L3           ; Skip catch if no error
-.L2:  ; Catch block
-    ; Catch body
-
-    ; Print statement
-    mov rax, 888
-    mov rdi, rax
-    call print_number
-.L3:  ; End try-catch
-
-    ; Print statement
-    mov rax, 300
     mov rdi, rax
     call print_number
 

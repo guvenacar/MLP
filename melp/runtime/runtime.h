@@ -2,6 +2,23 @@
 #define RUNTIME_H
 
 #include <stddef.h>
+#include <setjmp.h>
+
+// Exception handling structures
+typedef struct {
+    char* message;
+    char* type;
+    long code;
+} MlpException;
+
+typedef struct ExceptionHandler {
+    jmp_buf jump_buffer;
+    MlpException exception;
+    struct ExceptionHandler* prev;
+} ExceptionHandler;
+
+// Global exception handler stack
+extern ExceptionHandler* mlp_exception_stack;
 
 // Phase 1: Memory + Print
 void* mlp_malloc(size_t size);
@@ -39,5 +56,15 @@ long mlp_string_length(const char* str);
 // Phase 12: CLI arguments
 char** mlp_get_argv(long argc, char** argv_c);
 long mlp_get_argc(void);
+
+// Exception handling
+void mlp_exception_init(void);
+ExceptionHandler* mlp_exception_push(void);
+void mlp_exception_pop(void);
+void mlp_throw(const char* type, const char* message, long code);
+MlpException* mlp_get_current_exception(void);
+char* mlp_exception_message(void);
+char* mlp_exception_type(void);
+long mlp_exception_code(void);
 
 #endif // RUNTIME_H

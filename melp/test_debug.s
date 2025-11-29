@@ -35,40 +35,50 @@ _start:
     push rbp
     mov rbp, rsp
 
-
-    ; Try-catch block
-    ; Note: Simplified error handling (no full exception stack unwinding)
-    ; Try body
+    ; Declaration: numeric x
+    sub rsp, 8         ; Allocate space for x
+    mov rax, 5
+    mov [rbp-8], rax   ; Initialize x
 
     ; Print statement
-    mov rax, 10
+    mov rax, [rbp-8]
     mov rdi, rax
     call print_number
 
-    ; Throw statement (simplified)
-    mov rax, 999
-    mov rdi, rax
-    call print_number  ; Print error code
-    mov rax, 60        ; sys_exit
-    mov rdi, 1         ; exit code 1 (error)
-    syscall
+    ; Assignment: x = ...
+    mov rax, [rbp-8]
+    push rax
+    mov rax, 1
+    mov rbx, rax
+    pop rax
+    add rax, rbx
+    mov [rbp-8], rax   ; Store to x
 
     ; Print statement
-    mov rax, 20
-    mov rdi, rax
-    call print_number
-    jmp .L1           ; Skip catch if no error
-.L0:  ; Catch block
-    ; Catch body
-
-    ; Print statement
-    mov rax, 30
+    mov rax, [rbp-8]
     mov rdi, rax
     call print_number
-.L1:  ; End try-catch
+
+    ; If statement
+
+    ; Evaluate comparison
+    mov rax, [rbp-8]
+    push rax
+    mov rax, 3
+    mov rbx, rax
+    pop rax
+    cmp rax, rbx
+    jle .L0
+    ; Then body
 
     ; Print statement
-    mov rax, 40
+    mov rax, 100
+    mov rdi, rax
+    call print_number
+.L0:
+
+    ; Print statement
+    mov rax, 777
     mov rdi, rax
     call print_number
 

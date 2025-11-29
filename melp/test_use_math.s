@@ -9,8 +9,6 @@ extern string_concat
 extern string_equal
 extern string_not_equal
 extern int_to_string
-extern malloc
-extern free
 extern mlp_array_alloc
 extern mlp_array_free
 extern mlp_array_length
@@ -25,15 +23,6 @@ extern mlp_charAt
 extern mlp_string_length
 extern mlp_get_argv
 extern mlp_get_argc
-extern setjmp
-extern strcmp
-extern mlp_exception_push
-extern mlp_exception_pop
-extern mlp_throw
-extern mlp_exception_type
-extern mlp_exception_message
-extern mlp_exception_code
-extern mlp_exception_has_handler
 global _start
 
 
@@ -46,48 +35,24 @@ _start:
     push rbp
     mov rbp, rsp
 
-    ; Declaration: numeric sum
-    sub rsp, 8         ; Allocate space for sum
-    mov rax, 0
-    mov [rbp-8], rax   ; Initialize sum
-
-    ; For loop
-    sub rsp, 8         ; Allocate i
-    mov rax, 0
-    mov [rbp-16], rax   ; Initialize i
-.L0:  ; loop_start
-    mov rax, [rbp-16]   ; Load i
-    push rax
-    mov rax, 5
-    mov rbx, rax
-    pop rax
-    cmp rax, rbx
-    jg .L2           ; Exit if i > end
-    ; Loop body
-
-    ; Assignment: sum = ...
-    mov rax, [rbp-8]
-    push rax
-    mov rax, [rbp-16]
-    mov rbx, rax
-    pop rax
-    add rax, rbx
-    mov [rbp-8], rax   ; Store to sum
+    ; import math
+    ; (Module resolution not yet implemented)
+    ; Declaration: numeric result1
+    sub rsp, 8         ; Allocate space for result1
+    mov rax, 10
+    mov [rbp-8], rax   ; Initialize result1
+    ; Declaration: numeric result2
+    sub rsp, 8         ; Allocate space for result2
+    mov rax, 20
+    mov [rbp-16], rax   ; Initialize result2
 
     ; Print statement
     mov rax, [rbp-8]
     mov rdi, rax
     call print_number
-.L1:  ; loop_continue
-    ; Increment loop variable
-    mov rax, [rbp-16]
-    add rax, 1
-    mov [rbp-16], rax
-    jmp .L0
-.L2:  ; loop_end
 
     ; Print statement
-    mov rax, 999
+    mov rax, [rbp-16]
     mov rdi, rax
     call print_number
 

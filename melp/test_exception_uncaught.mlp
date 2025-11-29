@@ -1,0 +1,12 @@
+try
+    print(1)
+    throw NetworkError("Connection failed!")
+    print(999)
+catch RuntimeError e
+    print(100)
+catch ValueError e
+    print(200)
+finally
+    print(42)
+end try
+print(888)

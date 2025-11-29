@@ -576,3 +576,66 @@ Async/Await - Concurrency yok
 Kolay: Debug features (debug print, debug if, debug pause)
 Orta: Modules/Import system
 Zor: Lambda closures codegen, Async/await
+
+--
+
+Lambda parsing (zaten vardı): func(x) = x * 2
+Lambda codegen: Inline fonksiyon oluşturma + JMP skip
+Test çalıştı: test_lambda_simple.mlp başarılı
+Lambda'lar şu anda basit (closure yok), ama async/await'e geçmeden önce closure eklemek çok karmaşık olur. Async/await'e geçelim mi, yoksa closure'ları da yapalım mı?
+-----
+
+Modern Dillerde Olan Ama MELP'te Eksik:
+
+Pattern Matching - Rust/Swift/Kotlin tarzı:
+Generic Types / Templates:
+Interfaces / Traits (Polimorfizm):
+Exception Handling:
+Garbage Collection / RAII - Memory management otomasyonu
+
+Module System / Import:
+
+Operator Overloading:
+Destructuring / Tuple Unpacking:
+🎯 En Kullanışlı Eksikler (Öncelik Sırası):
+
+Exception Handling - Hata yönetimi şart
+Module System - Büyük projeler için gerekli
+Generic Types - Type-safe veri yapıları
+Pattern Matching - Modern syntax, daha okunabilir kod
+Operator Overloading - Özel tip desteği
+MELP zaten çok güçlü bir dil! Lambda, closure, async/await, pointer gibi advanced özellikler var. Kritik eksik aslında module system ve exception handling - bunlar olmadan büyük projeler zor. Generics de type-safety için önemli ama şimdilik manuel type checking ile idare edilebilir.
+
+Ne dersin, hangisini eklemek istersin? 🚀
+
+
+---
+
+1. İLK OKUMA (Hızlı Başlangıç)
+Dosya: AI_HANDOFF_NOTES.md
+
+Neden: Son çalışmanın özeti, hemen başlamak için gerekli bilgiler
+İçerik: Exception handling özeti, sıradaki görev (module system), başlangıç adımları
+Süre: ~5-10 dakika
+2. GÖREV LİSTESİ
+Dosya: TODO.md
+
+Neden: Neyin yapılacağı, öncelikler, roadmap
+İçerik: Tamamlananlar, sıradaki 5 özellik, her biri için detaylı plan
+Süre: ~10 dakika
+3. GENEL KURALLAR
+Dosya: kurallar_kitabı.md
+
+Neden: Proje kuralları, sözdizimi, mimari bilgiler
+İçerik: Tüm MELP syntax, veri tipleri, bootstrap süreci, kritik kurallar
+Süre: ~20-30 dakika (referans olarak kullanılır)
+4. TEKNİK DETAYLAR (İhtiyaç durumunda)
+Dosya: EXCEPTION_HANDLING_COMPLETE.md
+
+Neden: Exception handling nasıl implement edildi, pattern öğrenmek için
+İçerik: Lexer/parser/runtime/codegen değişiklikleri, bug fixes
+Süre: ~15 dakika
+5. MELP REFERANS
+Dosya: README.md
+
+----

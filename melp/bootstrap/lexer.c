@@ -57,11 +57,21 @@ typedef enum {
     TOKEN_DEBUG,         // debug
     TOKEN_GOTO,          // goto (only with debug)
     TOKEN_PAUSE,         // pause (only with debug)
+    // Phase 9: Modules & Imports
+    TOKEN_IMPORT,        // import
+    TOKEN_MODULE,        // module
+    TOKEN_AS,            // as (for import aliasing)
+    TOKEN_EXPORT,        // export (public visibility)
+    TOKEN_PRIVATE,       // private (internal visibility)
     // Phase 12: Exception handling
     TOKEN_TRY,           // try
     TOKEN_CATCH,         // catch
+    TOKEN_FINALLY,       // finally
     TOKEN_THROW,         // throw
     TOKEN_END_TRY,       // end try
+    // Phase 12: Async/Await
+    TOKEN_ASYNC,         // async
+    TOKEN_AWAIT,         // await
     // Phase 4: Functions
     TOKEN_FUNC,          // func
     TOKEN_RETURN,        // return
@@ -443,6 +453,8 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_TRY;
         } else if (strcmp(word, "catch") == 0) {
             token->type = TOKEN_CATCH;
+        } else if (strcmp(word, "finally") == 0) {
+            token->type = TOKEN_FINALLY;
         } else if (strcmp(word, "throw") == 0) {
             token->type = TOKEN_THROW;
         } else if (strcmp(word, "func") == 0) {
@@ -457,6 +469,20 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_TYPE;
         } else if (strcmp(word, "enum") == 0) {
             token->type = TOKEN_ENUM;
+        } else if (strcmp(word, "import") == 0) {
+            token->type = TOKEN_IMPORT;
+        } else if (strcmp(word, "module") == 0) {
+            token->type = TOKEN_MODULE;
+        } else if (strcmp(word, "as") == 0) {
+            token->type = TOKEN_AS;
+        } else if (strcmp(word, "export") == 0) {
+            token->type = TOKEN_EXPORT;
+        } else if (strcmp(word, "private") == 0) {
+            token->type = TOKEN_PRIVATE;
+        } else if (strcmp(word, "async") == 0) {
+            token->type = TOKEN_ASYNC;
+        } else if (strcmp(word, "await") == 0) {
+            token->type = TOKEN_AWAIT;
         } else {
             token->type = TOKEN_IDENTIFIER;
         }

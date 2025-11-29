@@ -1,0 +1,15 @@
+-- Test Module with Function
+module MathHelpers
+    func add(numeric a, numeric b)
+        return a + b
+    end func
+    
+    func multiply(numeric x, numeric y)
+        return x * y
+    end func
+end module
+
+numeric result1 = 10
+numeric result2 = 20
+print(result1)
+print(result2)
