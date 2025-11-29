@@ -98,13 +98,19 @@ debug end if
 - `test_async_basic.mlp` mevcut
 - Derlenip derlenmediği test edilmedi
 
-#### 4. LAMBDA/CLOSURE - ?
-**Durum:** Belirsiz
+#### 4. LAMBDA/CLOSURE - TAM ✅
+**Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
 
 **Detaylar:**
 - **Parser:** EXPR_LAMBDA tanımlı ✅
-- **Test Dosyaları:** `test_lambda_simple.mlp`, `test_closure.mlp`, `test_closure_multi.mlp` mevcut
-- Çalışıp çalışmadığı test edilmedi
+- **Codegen:** Lambda expression ve closure code generation çalışıyor ✅
+- **Test Sonuçları:**
+  - `test_lambda_simple.mlp` - Basit lambda (func(x) = x * 2) ✅ → Çıktı: 42
+  - `test_lambda_basic.mlp` - Multiple lambda invocations ✅ → Çıktı: 10, 10, 11, 999
+  - `test_closure.mlp` - Closure (makeAdder) ✅ → Çıktı: 15
+  - `test_closure_multi.mlp` - Multiple closures ✅ → Çıktı: 50
+
+**Not:** Lambda ve closure implementasyonu tam çalışır durumda!
 
 ---
 
@@ -119,7 +125,7 @@ debug end if
 | Import Statement | ✅ | ✅ | ❌ | YARIM |
 | Debug Features | ✅ | ✅ | ✅ | TAM ✅ |
 | Async/Await | ✅ | ❌ | ❌ | BAŞLANMAMIŞ |
-| Lambda | ? | ✅ | ? | BELİRSİZ |
+| Lambda/Closure | ✅ | ✅ | ✅ | TAM ✅ |
 | Enum | ✅ | ✅ | ✅? | BELİRSİZ |
 
 ### 2. Token Tanımları - Kullanılmayan Tokenlar
