@@ -122,18 +122,59 @@ debug end if
 
 **TODO:** `--debug`/`--release` compiler flag implementasyonu (şu anda tüm debug blokları üretiliyor)
 
-#### 3. ASYNC/AWAIT - KISMİ ❌
-**Durum:** Lexer ✅, Parser ?, Codegen ❌, Runtime ❌
+#### 3. ASYNC/AWAIT - TAM ✅ (Compiled as sync)
+**Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
 
 **Detaylar:**
 - **Lexer:** TOKEN_ASYNC, TOKEN_AWAIT tanımlı ✅
-- **Parser:** async/await parsing fonksiyonu bulunamadı ❌
-- **Codegen:** EXPR_AWAIT için kod üretimi YOK ❌
-- **Runtime:** Thread pool veya async runtime yok ❌
+- **Parser:** 
+  - `async func` parsing ✅
+  - `await expression` parsing (EXPR_AWAIT) ✅
+  - is_async flag tracking ✅
+- **Codegen:** 
+  - Async functions: Comment ile işaretleniyor ✅
+  - Await expressions: Sync call olarak derleniyor ✅
+  - Fonksiyon sonucu doğru döndürülüyor ✅
+- **Runtime:** Thread pool YOK - sync olarak çalışıyor ⚠️
+
+**Test Sonuçları:**
+```bash
+# test_async_basic.mlp
+async func fetchData(numeric id) return id * 100 end func
+async func processData() numeric result = await fetchData(5) end func
+# Çıktı: 42, 500, 500 ✅
+
+# test_async_advanced.mlp - Async chain
+async func calculate()
+    numeric mult = await multiply(3, 4)  # 12
+    numeric sum = await add(mult, 10)     # 22
+    return sum
+end func
+# Çıktı: 22, 30 ✅
+```
+
+**ÇALIŞAN ÖZELLİKLER:**
+- ✅ `async func` syntax
+- ✅ `await expression` syntax
+- ✅ Async function calls
+- ✅ Await chains (multiple awaits)
+- ✅ Return values from async functions
+
+**ÖNEMLİ NOT:**
+Async/await şu anda **sync olarak** derleniyor:
+- ✅ Syntax doğru parse ediliyor
+- ✅ Code generation çalışıyor
+- ⚠️ Gerçek async execution YOK (thread pool, event loop yok)
+- ⚠️ Blocking olarak çalışıyor (non-blocking değil)
+
+Bu bir **"async syntax with sync execution"** implementasyonu. Production async runtime için:
+- Thread pool veya event loop gerekir
+- State machine transformation gerekir
+- Future/Promise runtime support gerekir
 
 **Test Dosyaları:**
-- `test_async_basic.mlp` mevcut
-- Derlenip derlenmediği test edilmedi
+- `test_async_basic.mlp` - Basic async/await ✅
+- `test_async_advanced.mlp` - Async chain ✅
 
 #### 4. LAMBDA/CLOSURE - TAM ✅
 **Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
@@ -163,7 +204,7 @@ debug end if
 | Export/Private | ✅ | ✅ | ✅ | TAM ✅ |
 | Circular Dependency Check | N/A | N/A | ✅ | TAM ✅ |
 | Debug Features | ✅ | ✅ | ✅ | TAM ✅ |
-| Async/Await | ✅ | ❌ | ❌ | BAŞLANMAMIŞ |
+| Async/Await (Sync mode) | ✅ | ✅ | ✅ | TAM ✅ |
 | Lambda/Closure | ✅ | ✅ | ✅ | TAM ✅ |
 | Enum | ✅ | ✅ | ✅? | BELİRSİZ |
 

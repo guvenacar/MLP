@@ -25,6 +25,16 @@ func main()
     print(argc)
 end func
 
+-- Async/Await (NEW! - Compiled as sync)
+async func fetchData(numeric id)
+    return id * 100
+end func
+
+async func processData()
+    numeric result = await fetchData(5)
+    print(result)  -- 500
+end func
+
 -- Debug features (Development mode)
 debug basla  -- Debug label
 print(x)

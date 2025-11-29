@@ -14,3 +14,10 @@ end func
 
 -- Main code
 print(42)
+
+-- Call async function
+numeric data = fetchData(5)
+print(data)
+
+-- Call async with await
+processData()
