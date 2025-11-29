@@ -25,6 +25,14 @@ func main()
     print(argc)
 end func
 
+-- Debug features (Development mode)
+debug basla  -- Debug label
+print(x)
+debug if x > 10 then
+    debug goto basla  -- Intentional infinite loop for testing
+debug end if
+debug pause  -- Breakpoint (int3)
+
 -- Pointers (Phase 10)
 numeric x = 42
 numeric* ptr = &x
@@ -96,6 +104,41 @@ nasm -f elf64 mycode.s -o mycode.o
 ld mycode.o -o mycode
 ./mycode
 ```
+
+## 🐛 Debug Features (Development Mode)
+
+MELP, geliştirme sırasında kullanılmak üzere özel debug statement'ları içerir:
+
+```mlp
+debug label_name        -- Debug label tanımla
+debug goto label_name   -- Debug label'a atla
+debug if condition then -- Debug koşullu blok
+    -- code
+debug end if
+debug pause            -- Breakpoint (int3 instruction)
+```
+
+**ÖNEMLİ:** Debug statement'ları **kasıtlı olarak** sonsuz döngü oluşturabilir!
+
+```mlp
+debug basla
+print(x)
+debug if x = x then
+    debug goto basla  -- Bu SONSUZ DÖNGÜ oluşturur ve bu BEKLENİLEN bir durumdur!
+debug end if
+```
+
+**Neden böyle?**
+- Debug blokları IDE debugger ile adım adım test için tasarlanmıştır
+- Geliştirme sırasında belirli kod bölümlerini tekrar tekrar çalıştırmak için kullanılır
+- Production build'de (`--release` flag ile) tüm debug statement'ları otomatik olarak çıkarılır
+- Debug mode'da sonsuz döngüler **bug değil, feature'dır**!
+
+**Kullanım Senaryosu:**
+1. Geliştirme: `./melp-bootstrap --debug mycode.mlp` → Debug blokları aktif
+2. Production: `./melp-bootstrap --release mycode.mlp` → Debug blokları stripped
+
+**Not:** `--debug`/`--release` flag implementasyonu henüz tamamlanmamıştır. Şu anda tüm debug statement'ları assembly'e dahil edilir.
 
 ## 🔬 Self-Hosting Kanıtı
 
