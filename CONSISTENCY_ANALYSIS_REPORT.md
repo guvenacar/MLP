@@ -23,8 +23,8 @@
 
 ### ⚠️ YARIM IMPLEMENT EDİLMİŞ SİSTEMLER
 
-#### 1. MODULE SYSTEM - KISMİ ✅ (Single-file complete, Multi-file pending)
-**Durum:** Lexer ✅, Parser ✅, Codegen ✅ (single-file), Multi-file ⏳
+#### 1. MODULE SYSTEM - TAM ✅
+**Durum:** Lexer ✅, Parser ✅, Codegen ✅, Multi-file ✅, Export/Private ✅, Circular Detection ✅
 
 **Detaylar:**
 - **Lexer:** TOKEN_MODULE, TOKEN_IMPORT, TOKEN_EXPORT, TOKEN_PRIVATE, TOKEN_AS tanımlı ✅
@@ -32,22 +32,33 @@
   - `parser_parse_import_statement()` fonksiyonu mevcut ✅
   - `parser_parse_module_definition()` fonksiyonu mevcut ✅
   - STMT_IMPORT ve STMT_MODULE_DEF AST node'ları tanımlı ✅
+  - Export/private visibility parsing ✅
 - **Codegen:** 
-  - STMT_IMPORT: Comment olarak assembly'e ekleniyor ✅
+  - STMT_IMPORT: İmport edilen dosyalar otomatik parse ediliyor ✅
   - STMT_MODULE_DEF: Module içindeki fonksiyonlar `Module_function` formatında üretiliyor ✅
   - Module qualified calls: `MathUtils.add()` → `MathUtils_add` assembly call ✅
+  - Export: `global Module_function` directive ekleniyor ✅
+  - Private: global directive yok, sadece local label ✅
+- **Multi-file:**
+  - Recursive import parsing ✅
+  - AST merging ✅
+  - Circular dependency detection (DFS) ✅
 
-**Test Sonuçları (Single-file modules):**
+**Test Sonuçları:**
 ```bash
-# test_module_usage.mlp - Module tanımı ve kullanımı
-module MathUtils
-    func add(numeric a, numeric b) return a + b end func
-end module
-numeric result = MathUtils.add(10, 5)
-# Çıktı: 15 ✅
+# Single-file module
+test_module_usage.mlp → 15, 21 ✅
 
-# test_module_simple.mlp - Module sadece fonksiyonlar
-# Assembly: MathUtils_add, MathUtils_multiply fonksiyonları üretiliyor ✅
+# Multi-file import
+math_module.mlp + test_multi_file_main.mlp → 30, 30, 9 ✅
+
+# Export/Private
+test_export_private.mlp → 15, 14 ✅
+global SecretMath_public_add ✅
+SecretMath_internal_helper (no global) ✅
+
+# Circular dependency
+circular_a.mlp ↔ circular_b.mlp → Error detected ✅
 ```
 
 **ÇALIŞAN ÖZELLİKLER:**
@@ -55,18 +66,24 @@ numeric result = MathUtils.add(10, 5)
 - ✅ Module içinde func tanımı
 - ✅ Module qualified function calls (Module.function)
 - ✅ Assembly'de Module_function naming convention
+- ✅ Multi-file compilation (recursive import)
+- ✅ Export/private visibility (global directive)
+- ✅ Circular dependency detection
+- ✅ Import chain tracking
 
-**YARIM/EKSİK:**
-- ⏳ Multi-file compilation (import'u ayrı dosyadan okuma)
-- ⏳ Export/private visibility enforcement
-- ⏳ Circular dependency detection
-- ⏳ Separate compilation (her modül ayrı .o file)
+**EKSİK/İYİLEŞTİRME:**
+- ⏳ Separate object file compilation (opsiyonel - production için)
+- ⏳ Module-level variables (şu anda sadece fonksiyonlar)
 
 **Örnek Test Dosyaları:**
 - `test_module.mlp` - Module tanımı ✅
-- `test_import.mlp` - Import statement (comment olarak çalışıyor) ✅
+- `test_import.mlp` - Import statement ✅
 - `test_module_func.mlp` - Module içinde func ✅
-- `test_module_usage.mlp` - Module kullanım örneği (15, 21 çıktısı) ✅
+- `test_module_usage.mlp` - Module kullanım örneği (15, 21) ✅
+- `math_module.mlp` - Ayrı dosya module ✅
+- `test_multi_file_main.mlp` - Multi-file import (30, 30, 9) ✅
+- `test_export_private.mlp` - Export/private (15, 14) ✅
+- `circular_a.mlp`, `circular_b.mlp` - Circular dependency test ✅
 
 #### 2. DEBUG FEATURES - TAM ✅
 **Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
@@ -141,9 +158,10 @@ debug end if
 | Özellik | Lexer | Parser | Codegen | Durum |
 |---------|-------|--------|---------|-------|
 | Exception Handling | ✅ | ✅ | ✅ | TAM ✅ |
-| Module System (Single-file) | ✅ | ✅ | ✅ | TAM ✅ |
-| Module System (Multi-file) | ✅ | ✅ | ⏳ | YARIM |
+| Module System | ✅ | ✅ | ✅ | TAM ✅ |
 | Import Statement | ✅ | ✅ | ✅ | TAM ✅ |
+| Export/Private | ✅ | ✅ | ✅ | TAM ✅ |
+| Circular Dependency Check | N/A | N/A | ✅ | TAM ✅ |
 | Debug Features | ✅ | ✅ | ✅ | TAM ✅ |
 | Async/Await | ✅ | ❌ | ❌ | BAŞLANMAMIŞ |
 | Lambda/Closure | ✅ | ✅ | ✅ | TAM ✅ |

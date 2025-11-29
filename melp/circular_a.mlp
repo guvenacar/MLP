@@ -1,0 +1,8 @@
+-- circular_a.mlp - Creates circular dependency
+import circular_b
+
+module ModuleA
+    func funcA()
+        return 1
+    end func
+end module

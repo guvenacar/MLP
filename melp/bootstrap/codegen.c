@@ -1957,6 +1957,12 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     
     codegen_emit(gen, "");
     
+    // Export visibility: Add global directive if exported
+    if (stmt->func_def.is_exported) {
+        snprintf(buffer, sizeof(buffer), "global %s", func_name);
+        codegen_emit(gen, buffer);
+    }
+    
     // Note: Async functions are compiled as regular functions for now
     // Full async runtime with state machines would require complex transformation
     if (stmt->func_def.is_async) {
