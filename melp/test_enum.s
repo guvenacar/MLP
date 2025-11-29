@@ -9,6 +9,8 @@ extern string_concat
 extern string_equal
 extern string_not_equal
 extern int_to_string
+extern malloc
+extern free
 extern mlp_array_alloc
 extern mlp_array_free
 extern mlp_array_length
@@ -23,6 +25,16 @@ extern mlp_charAt
 extern mlp_string_length
 extern mlp_get_argv
 extern mlp_get_argc
+extern setjmp
+extern strcmp
+extern mlp_exception_push
+extern mlp_exception_pop
+extern mlp_throw
+extern mlp_exception_type
+extern mlp_exception_message
+extern mlp_exception_code
+extern mlp_exception_has_handler
+extern mlp_exception_has_parent_handler
 global _start
 
 

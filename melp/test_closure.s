@@ -25,9 +25,20 @@ extern mlp_charAt
 extern mlp_string_length
 extern mlp_get_argv
 extern mlp_get_argc
+extern setjmp
+extern strcmp
+extern mlp_exception_push
+extern mlp_exception_pop
+extern mlp_throw
+extern mlp_exception_type
+extern mlp_exception_message
+extern mlp_exception_code
+extern mlp_exception_has_handler
+extern mlp_exception_has_parent_handler
 global _start
 
 
+global func_makeAdder
 func_makeAdder:
     push rbp
     mov rbp, rsp
@@ -65,12 +76,13 @@ __lambda_skip_0:
     ; Store x in environment[0]
     mov rax, [rbp-8]
     mov [r12+0], rax
-    ; Create closure structure (func_ptr + env_ptr)
-    mov rdi, 16     ; 2 pointers
+    ; Create closure structure [magic, func_ptr, env_ptr]
+    mov rdi, 24     ; 3 pointers (magic + func_ptr + env_ptr)
     call malloc
+    mov qword [rax], 202182115   ; Magic number 0xC105UR3
     lea r13, [rel __lambda_1]
-    mov [rax], r13      ; Store function pointer
-    mov [rax+8], r12    ; Store environment pointer
+    mov [rax+8], r13     ; Store function pointer
+    mov [rax+16], r12    ; Store environment pointer
     ; rax now holds closure pointer
     mov rsp, rbp
     pop rbp
@@ -94,18 +106,29 @@ _start:
     mov [rbp-8], rax   ; Initialize add5
 
     ; Print statement
-    ; Lambda/closure call
+    ; Lambda/closure call with runtime detection
     mov r15, [rbp-8]   ; Load closure/lambda
-    ; Assume closure structure: [func_ptr, env_ptr]
     push r15
     mov rax, 10
     push rax
     mov r15, [rsp+8]
-    mov r14, [r15]      ; Function pointer
-    mov rdi, [r15+8]    ; Environment pointer (first arg)
+    ; Check if closure by testing magic number (0xC105UR3 = 202182115)
+    mov r14, [r15]      ; Load first qword
+    cmp r14, 202182115  ; Magic number for closures
+    je .L_closure_2    ; Jump if closure
+    ; Plain function pointer call
+    pop rdi
+    add rsp, 8
+    call r15
+    jmp .L_done_3
+.L_closure_2:
+    ; Closure call: [magic, func_ptr, env_ptr]
+    mov r14, [r15+8]    ; Function pointer
+    mov rdi, [r15+16]   ; Environment pointer (first arg)
     pop rsi
     add rsp, 8
     call r14
+.L_done_3:
     mov rdi, rax
     call print_number
 

@@ -9,6 +9,8 @@ extern string_concat
 extern string_equal
 extern string_not_equal
 extern int_to_string
+extern malloc
+extern free
 extern mlp_array_alloc
 extern mlp_array_free
 extern mlp_array_length
@@ -23,9 +25,20 @@ extern mlp_charAt
 extern mlp_string_length
 extern mlp_get_argv
 extern mlp_get_argc
+extern setjmp
+extern strcmp
+extern mlp_exception_push
+extern mlp_exception_pop
+extern mlp_throw
+extern mlp_exception_type
+extern mlp_exception_message
+extern mlp_exception_code
+extern mlp_exception_has_handler
+extern mlp_exception_has_parent_handler
 global _start
 
 
+global func_fetchData
 ; Async function: fetchData (compiled as sync for now)
 func_fetchData:
     push rbp
@@ -43,6 +56,7 @@ func_fetchData:
     pop rbp
     ret
 
+global func_processData
 ; Async function: processData (compiled as sync for now)
 func_processData:
     push rbp
@@ -78,6 +92,19 @@ _start:
     mov rax, 42
     mov rdi, rax
     call print_number
+    ; Declaration: numeric data
+    sub rsp, 8         ; Allocate space for data
+    mov rax, 5
+    push rax
+    call func_fetchData
+    add rsp, 8
+    mov [rbp-8], rax   ; Initialize data
+
+    ; Print statement
+    mov rax, [rbp-8]
+    mov rdi, rax
+    call print_number
+    call func_processData
 
     ; Exit program
     mov rax, 60        ; sys_exit

@@ -13,6 +13,9 @@ typedef struct VarInfo {
     char* struct_name; // NULL for non-struct, struct type name for struct instances
     int is_dynamic_array; // 1 if dynamic array (pointer), 0 otherwise
     int is_pointer;       // Phase 10: 1 if pointer type, 0 otherwise
+    int is_closure;       // Phase 12: 1 if lambda with closures, 0 otherwise
+    int is_array;         // Phase 14: 1 if array type, 0 otherwise
+    int array_size;       // Phase 14: size of stack-allocated array (0 for dynamic)
     struct VarInfo* next;
 } VarInfo;
 
@@ -62,6 +65,28 @@ typedef struct StringLiteral {
     struct StringLiteral* next;
 } StringLiteral;
 
+typedef struct ModuleTracker {
+    char* module_name;
+    struct ModuleTracker* next;
+} ModuleTracker;
+
+typedef struct GenericFunc {
+    char* name;                  // Original function name
+    Statement* func_stmt;        // AST node for the function
+    char** type_params;          // Type parameter names (e.g., ["T"])
+    int type_param_count;
+    struct GenericFunc* next;
+} GenericFunc;
+
+typedef struct GenericInstance {
+    char* original_name;         // Original generic function name
+    char* mangled_name;          // Instantiated name (e.g., "max_numeric")
+    VarType* type_args;          // Type arguments used
+    int type_arg_count;
+    int generated;               // Has this instance been generated?
+    struct GenericInstance* next;
+} GenericInstance;
+
 typedef struct {
     FILE* out;
     int stack_offset;
@@ -72,6 +97,9 @@ typedef struct {
     EnumValue* enums;        // Enum values table
     TypeAlias* type_aliases; // Type aliases table
     StringLiteral* strings;  // String literals
+    ModuleTracker* modules_seen; // Modules already processed (for deduplication)
+    GenericFunc* generic_funcs;     // Phase 13: Generic function definitions
+    GenericInstance* generic_instances; // Phase 13: Instantiated generic functions
     int label_counter;       // For unique labels
     int loop_start_label;    // Current loop start (condition check)
     int loop_continue_label; // Current loop continue (increment/next iteration)
@@ -79,9 +107,13 @@ typedef struct {
     int in_loop;             // Are we inside a loop?
     int in_function;         // Are we inside a function?
     int in_operator_overload; // Are we inside an operator overload function?
+    int in_generator;        // Phase 14: Are we inside a generator function?
     int string_counter;      // For unique string labels
     char* current_module;    // Current module name (NULL if not in module)
 } Codegen;
+
+// Forward declarations
+void codegen_generate_func_def(Codegen* gen, Statement* stmt);
 
 Codegen* codegen_create(const char* output_file) {
     Codegen* gen = malloc(sizeof(Codegen));
@@ -105,6 +137,9 @@ Codegen* codegen_create(const char* output_file) {
     gen->enums = NULL;
     gen->type_aliases = NULL;
     gen->strings = NULL;
+    gen->modules_seen = NULL;
+    gen->generic_funcs = NULL;      // Phase 13: Initialize generic tracking
+    gen->generic_instances = NULL;  // Phase 13: Initialize instance tracking
     gen->label_counter = 0;
     gen->loop_start_label = -1;
     gen->loop_continue_label = -1;
@@ -112,9 +147,109 @@ Codegen* codegen_create(const char* output_file) {
     gen->in_loop = 0;
     gen->in_function = 0;
     gen->in_operator_overload = 0;
+    gen->in_generator = 0;         // Phase 14: Initialize generator tracking
     gen->string_counter = 0;
     gen->current_module = NULL;
     return gen;
+}
+
+int codegen_module_seen(Codegen* gen, const char* module_name) {
+    ModuleTracker* tracker = gen->modules_seen;
+    while (tracker) {
+        if (strcmp(tracker->module_name, module_name) == 0) {
+            return 1;  // Already seen
+        }
+        tracker = tracker->next;
+    }
+    return 0;  // Not seen
+}
+
+void codegen_mark_module_seen(Codegen* gen, const char* module_name) {
+    ModuleTracker* tracker = malloc(sizeof(ModuleTracker));
+    tracker->module_name = malloc(strlen(module_name) + 1);
+    strcpy(tracker->module_name, module_name);
+    tracker->next = gen->modules_seen;
+    gen->modules_seen = tracker;
+}
+
+// Phase 13: Register a generic function definition
+void codegen_add_generic_func(Codegen* gen, const char* name, Statement* stmt) {
+    GenericFunc* gf = malloc(sizeof(GenericFunc));
+    gf->name = malloc(strlen(name) + 1);
+    strcpy(gf->name, name);
+    gf->func_stmt = stmt;
+    gf->type_params = stmt->func_def.type_params;
+    gf->type_param_count = stmt->func_def.type_param_count;
+    gf->next = gen->generic_funcs;
+    gen->generic_funcs = gf;
+}
+
+// Phase 13: Find a generic function by name
+GenericFunc* codegen_find_generic_func(Codegen* gen, const char* name) {
+    GenericFunc* gf = gen->generic_funcs;
+    while (gf) {
+        if (strcmp(gf->name, name) == 0) {
+            return gf;
+        }
+        gf = gf->next;
+    }
+    return NULL;
+}
+
+// Phase 13: Get type name for mangling
+const char* codegen_type_name(VarType type) {
+    switch (type) {
+        case TYPE_NUMERIC: return "numeric";
+        case TYPE_DECIMAL: return "decimal";
+        case TYPE_BOOLEAN: return "boolean";
+        case TYPE_STRING: return "text";
+        default: return "unknown";
+    }
+}
+
+// Phase 13: Check if a generic instance already exists
+GenericInstance* codegen_find_generic_instance(Codegen* gen, const char* name, VarType* type_args, int type_arg_count) {
+    GenericInstance* gi = gen->generic_instances;
+    while (gi) {
+        if (strcmp(gi->original_name, name) == 0 && gi->type_arg_count == type_arg_count) {
+            int match = 1;
+            for (int i = 0; i < type_arg_count; i++) {
+                if (gi->type_args[i] != type_args[i]) {
+                    match = 0;
+                    break;
+                }
+            }
+            if (match) return gi;
+        }
+        gi = gi->next;
+    }
+    return NULL;
+}
+
+// Phase 13: Create mangled name for generic instance
+char* codegen_mangle_generic_name(const char* name, VarType* type_args, int type_arg_count) {
+    char* mangled = malloc(256);
+    strcpy(mangled, name);
+    for (int i = 0; i < type_arg_count; i++) {
+        strcat(mangled, "_");
+        strcat(mangled, codegen_type_name(type_args[i]));
+    }
+    return mangled;
+}
+
+// Phase 13: Register a generic instance
+void codegen_add_generic_instance(Codegen* gen, const char* original_name, const char* mangled_name, VarType* type_args, int type_arg_count) {
+    GenericInstance* gi = malloc(sizeof(GenericInstance));
+    gi->original_name = malloc(strlen(original_name) + 1);
+    strcpy(gi->original_name, original_name);
+    gi->mangled_name = malloc(strlen(mangled_name) + 1);
+    strcpy(gi->mangled_name, mangled_name);
+    gi->type_args = malloc(sizeof(VarType) * type_arg_count);
+    memcpy(gi->type_args, type_args, sizeof(VarType) * type_arg_count);
+    gi->type_arg_count = type_arg_count;
+    gi->generated = 0;  // Not generated yet
+    gi->next = gen->generic_instances;
+    gen->generic_instances = gi;
 }
 
 void codegen_add_variable(Codegen* gen, const char* name, int offset, VarType type, const char* struct_name) {
@@ -131,6 +266,9 @@ void codegen_add_variable(Codegen* gen, const char* name, int offset, VarType ty
     }
     var->is_dynamic_array = 0;
     var->is_pointer = 0;
+    var->is_closure = 0;
+    var->is_array = 0;
+    var->array_size = 0;
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -144,6 +282,9 @@ void codegen_add_dynamic_array(Codegen* gen, const char* name, int offset, VarTy
     var->struct_name = NULL;
     var->is_dynamic_array = 1;
     var->is_pointer = 0;
+    var->is_closure = 0;
+    var->is_array = 1;
+    var->array_size = 0;  // Dynamic - size unknown at compile time
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -158,6 +299,9 @@ void codegen_add_pointer_variable(Codegen* gen, const char* name, int offset, Va
     var->struct_name = NULL;
     var->is_dynamic_array = 0;
     var->is_pointer = 1;
+    var->is_closure = 0;
+    var->is_array = 0;
+    var->array_size = 0;
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -168,10 +312,30 @@ void codegen_add_struct_variable(Codegen* gen, const char* name, int offset, con
     strcpy(var->name, name);
     var->is_dynamic_array = 0;
     var->is_pointer = 0;
+    var->is_closure = 0;
+    var->is_array = 0;
+    var->array_size = 0;
     var->stack_offset = offset;
     var->type = TYPE_NUMERIC; // Placeholder
     var->struct_name = malloc(strlen(struct_name) + 1);
     strcpy(var->struct_name, struct_name);
+    var->next = gen->variables;
+    gen->variables = var;
+}
+
+// Phase 14: Add stack-allocated array variable
+void codegen_add_stack_array(Codegen* gen, const char* name, int offset, VarType type, int array_size) {
+    VarInfo* var = malloc(sizeof(VarInfo));
+    var->name = malloc(strlen(name) + 1);
+    strcpy(var->name, name);
+    var->stack_offset = offset;
+    var->type = type;
+    var->struct_name = NULL;
+    var->is_dynamic_array = 0;
+    var->is_pointer = 0;
+    var->is_closure = 0;
+    var->is_array = 1;
+    var->array_size = array_size;
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -373,6 +537,7 @@ InterfaceInfo* codegen_find_interface(Codegen* gen, const char* name) {
 void codegen_generate_statement(Codegen* gen, Statement* stmt);
 void codegen_generate_expression_value(Codegen* gen, Expression* expr);
 void codegen_generate_comparison(Codegen* gen, Expression* condition, int false_label);
+void codegen_generate_for_in(Codegen* gen, Statement* stmt);
 
 void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "section .data");
@@ -392,6 +557,9 @@ void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "extern mlp_array_free");
     codegen_emit(gen, "extern mlp_array_length");
     codegen_emit(gen, "extern mlp_array_resize");
+    codegen_emit(gen, "extern mlp_range");
+    codegen_emit(gen, "extern mlp_range1");
+    codegen_emit(gen, "extern mlp_range2");
     codegen_emit(gen, "extern mlp_file_read");
     codegen_emit(gen, "extern mlp_file_write");
     codegen_emit(gen, "extern mlp_file_exists");
@@ -507,13 +675,38 @@ void codegen_generate_declaration(Codegen* gen, Declaration* decl) {
                  struct_info->total_size, decl->name);
         codegen_emit(gen, buffer);
         
-        // Initialize fields to zero
-        for (int i = 0; i < struct_info->field_count; i++) {
-            int field_offset = gen->stack_offset - struct_info->field_offsets[i];
-            snprintf(buffer, sizeof(buffer),
-                     "    mov qword [rbp-%d], 0   ; Initialize %s.%s",
-                     field_offset, decl->name, struct_info->field_names[i]);
+        // Check if struct has initialization (e.g., Point p = createPoint(x, y))
+        if (decl->init_value) {
+            // Generate the function call - result in rax (field 0), rdx (field 1)
+            codegen_emit(gen, "");
+            snprintf(buffer, sizeof(buffer), "    ; Struct initialization: %s = ...", decl->name);
             codegen_emit(gen, buffer);
+            codegen_generate_expression_value(gen, decl->init_value);
+            
+            // Store returned values into struct fields
+            if (struct_info->field_count >= 1) {
+                int field0_offset = gen->stack_offset - struct_info->field_offsets[0];
+                snprintf(buffer, sizeof(buffer),
+                         "    mov [rbp-%d], rax   ; Store %s.%s from return",
+                         field0_offset, decl->name, struct_info->field_names[0]);
+                codegen_emit(gen, buffer);
+            }
+            if (struct_info->field_count >= 2) {
+                int field1_offset = gen->stack_offset - struct_info->field_offsets[1];
+                snprintf(buffer, sizeof(buffer),
+                         "    mov [rbp-%d], rdx   ; Store %s.%s from return",
+                         field1_offset, decl->name, struct_info->field_names[1]);
+                codegen_emit(gen, buffer);
+            }
+        } else {
+            // Initialize fields to zero
+            for (int i = 0; i < struct_info->field_count; i++) {
+                int field_offset = gen->stack_offset - struct_info->field_offsets[i];
+                snprintf(buffer, sizeof(buffer),
+                         "    mov qword [rbp-%d], 0   ; Initialize %s.%s",
+                         field_offset, decl->name, struct_info->field_names[i]);
+                codegen_emit(gen, buffer);
+            }
         }
     } else if (decl->is_array) {
         // Array declaration
@@ -558,7 +751,8 @@ void codegen_generate_declaration(Codegen* gen, Declaration* decl) {
             int total_size = decl->array_size * element_size;
             
             gen->stack_offset += total_size;
-            codegen_add_variable(gen, decl->name, gen->stack_offset, decl->type, NULL);
+            // Phase 14: Use codegen_add_stack_array to track array info for iterators
+            codegen_add_stack_array(gen, decl->name, gen->stack_offset, decl->type, decl->array_size);
             
             const char* type_str = decl->type == TYPE_NUMERIC ? "numeric" :
                                    decl->type == TYPE_DECIMAL ? "decimal" :
@@ -663,6 +857,15 @@ void codegen_generate_declaration(Codegen* gen, Declaration* decl) {
                      "    mov [rbp-%d], rax   ; Initialize %s",
                      gen->stack_offset, decl->name);
             codegen_emit(gen, buffer);
+            
+            // Check if this is a lambda with closures
+            if (decl->init_value->type == EXPR_LAMBDA && decl->init_value->lambda.captured_count > 0) {
+                // Mark variable as closure
+                VarInfo* var = gen->variables;
+                if (var && strcmp(var->name, decl->name) == 0) {
+                    var->is_closure = 1;
+                }
+            }
         }
     }
 }
@@ -969,6 +1172,34 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
         // Function call
         char buffer[256];
         
+        // Phase 13: Check if this is a generic function call
+        char* actual_func_name = expr->func_call.func_name;
+        if (expr->func_call.type_arg_count > 0) {
+            // Generic call - need to instantiate or use existing instance
+            GenericFunc* gf = codegen_find_generic_func(gen, expr->func_call.func_name);
+            if (gf) {
+                // Check if this instance already exists
+                GenericInstance* gi = codegen_find_generic_instance(gen, 
+                    expr->func_call.func_name, 
+                    expr->func_call.type_args, 
+                    expr->func_call.type_arg_count);
+                
+                if (!gi) {
+                    // Need to register this instance for later generation
+                    char* mangled = codegen_mangle_generic_name(expr->func_call.func_name,
+                        expr->func_call.type_args, expr->func_call.type_arg_count);
+                    
+                    // Register instance (will be generated in codegen_generate)
+                    codegen_add_generic_instance(gen, expr->func_call.func_name, mangled,
+                        expr->func_call.type_args, expr->func_call.type_arg_count);
+                    
+                    actual_func_name = mangled;
+                } else {
+                    actual_func_name = gi->mangled_name;
+                }
+            }
+        }
+        
         // Check for built-in functions
         int is_builtin = 0;
         const char* builtin_name = NULL;
@@ -1020,6 +1251,16 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                    strcmp(expr->func_call.func_name, "mlp_get_argc") == 0) {
             is_builtin = 1;
             builtin_name = "mlp_get_argc";
+        } else if (strcmp(expr->func_call.func_name, "range") == 0) {
+            // Phase 14: range() built-in for iterators
+            is_builtin = 1;
+            if (expr->func_call.arg_count == 1) {
+                builtin_name = "mlp_range1";      // range(end)
+            } else if (expr->func_call.arg_count == 2) {
+                builtin_name = "mlp_range2";      // range(start, end)
+            } else {
+                builtin_name = "mlp_range";       // range(start, end, step)
+            }
         }
         
         if (is_builtin) {
@@ -1062,19 +1303,15 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             
             if (lambda_var) {
                 // Lambda call: variable holds closure structure OR function pointer
-                codegen_emit(gen, "    ; Lambda/closure call");
+                codegen_emit(gen, "    ; Lambda/closure call with runtime detection");
+                
+                // Push arguments to stack (System V ABI: rdi, rsi, rdx, rcx)
+                const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx"};
                 
                 // Load closure pointer/function pointer
                 snprintf(buffer, sizeof(buffer), "    mov r15, [rbp-%d]   ; Load closure/lambda", 
                          lambda_var->stack_offset);
                 codegen_emit(gen, buffer);
-                
-                // Check if r15 points to closure structure (has env pointer)
-                // For simplicity, assume if lambda was created with closures, first qword is func ptr
-                codegen_emit(gen, "    ; Assume closure structure: [func_ptr, env_ptr]");
-                
-                // Push arguments to stack (System V ABI: rdi, rsi, rdx, rcx)
-                const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx"};
                 
                 // Save r15 (closure pointer)
                 codegen_emit(gen, "    push r15");
@@ -1089,9 +1326,48 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 snprintf(buffer, sizeof(buffer), "    mov r15, [rsp+%d]", expr->func_call.arg_count * 8);
                 codegen_emit(gen, buffer);
                 
+                // Runtime closure detection: check magic number
+                codegen_emit(gen, "    ; Check if closure by testing magic number (0xC105UR3 = 202182115)");
+                codegen_emit(gen, "    mov r14, [r15]      ; Load first qword");
+                codegen_emit(gen, "    cmp r14, 202182115  ; Magic number for closures");
+                
+                // Generate unique labels
+                int closure_label = gen->label_counter++;
+                int done_label = gen->label_counter++;
+                
+                snprintf(buffer, sizeof(buffer), "    je .L_closure_%d    ; Jump if closure", closure_label);
+                codegen_emit(gen, buffer);
+                
+                // Plain function pointer path
+                codegen_emit(gen, "    ; Plain function pointer call");
+                
+                // Pop arguments into registers (use all 4: rdi, rsi, rdx, rcx)
+                for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
+                    if (i < 4) {
+                        snprintf(buffer, sizeof(buffer), "    pop %s", arg_regs[i]);
+                        codegen_emit(gen, buffer);
+                    } else {
+                        codegen_emit(gen, "    pop rax");  // Clean stack
+                    }
+                }
+                
+                // Remove saved function pointer from stack
+                codegen_emit(gen, "    add rsp, 8");
+                
+                // Call function directly (r15 is function pointer)
+                codegen_emit(gen, "    call r15");
+                
+                snprintf(buffer, sizeof(buffer), "    jmp .L_done_%d", done_label);
+                codegen_emit(gen, buffer);
+                
+                // Closure path
+                snprintf(buffer, sizeof(buffer), ".L_closure_%d:", closure_label);
+                codegen_emit(gen, buffer);
+                codegen_emit(gen, "    ; Closure call: [magic, func_ptr, env_ptr]");
+                
                 // Load function pointer and environment pointer
-                codegen_emit(gen, "    mov r14, [r15]      ; Function pointer");
-                codegen_emit(gen, "    mov rdi, [r15+8]    ; Environment pointer (first arg)");
+                codegen_emit(gen, "    mov r14, [r15+8]    ; Function pointer");
+                codegen_emit(gen, "    mov rdi, [r15+16]   ; Environment pointer (first arg)");
                 
                 // Pop arguments into registers (skip rdi, it's for environment)
                 for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
@@ -1109,6 +1385,9 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 // Call function
                 codegen_emit(gen, "    call r14");
                 
+                snprintf(buffer, sizeof(buffer), ".L_done_%d:", done_label);
+                codegen_emit(gen, buffer);
+                
                 // Result is in rax
             } else {
                 // Regular user-defined or builtin function
@@ -1117,23 +1396,23 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 int is_builtin = 0;
                 char* func_label = NULL;
                 
-                if (strchr(expr->func_call.func_name, '.') != NULL) {
+                if (strchr(actual_func_name, '.') != NULL) {
                     // Module qualified call: Math.add -> Math_add
-                    func_label = malloc(strlen(expr->func_call.func_name) + 1);
-                    strcpy(func_label, expr->func_call.func_name);
+                    func_label = malloc(strlen(actual_func_name) + 1);
+                    strcpy(func_label, actual_func_name);
                     // Replace dot with underscore
                     for (char* p = func_label; *p; p++) {
                         if (*p == '.') *p = '_';
                     }
-                } else if (is_builtin_function(expr->func_call.func_name)) {
+                } else if (is_builtin_function(actual_func_name)) {
                     // Builtin/runtime function - use as-is without func_ prefix
-                    func_label = malloc(strlen(expr->func_call.func_name) + 1);
-                    strcpy(func_label, expr->func_call.func_name);
+                    func_label = malloc(strlen(actual_func_name) + 1);
+                    strcpy(func_label, actual_func_name);
                     is_builtin = 1;
                 } else {
                     // Regular user function call: func_name -> func_func_name
-                    func_label = malloc(strlen(expr->func_call.func_name) + 6);
-                    sprintf(func_label, "func_%s", expr->func_call.func_name);
+                    func_label = malloc(strlen(actual_func_name) + 6);
+                    sprintf(func_label, "func_%s", actual_func_name);
                 }
                 
                 if (is_builtin) {
@@ -1552,6 +1831,7 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 var->struct_name = NULL;
                 var->is_dynamic_array = 0;
                 var->is_pointer = 0;
+    var->is_closure = 0;
                 var->next = gen->variables;
                 gen->variables = var;
                 
@@ -1582,6 +1862,7 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             var->struct_name = NULL;
             var->is_dynamic_array = 0;
             var->is_pointer = 0;
+    var->is_closure = 0;
             var->next = gen->variables;
             gen->variables = var;
             
@@ -1632,14 +1913,15 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 }
             }
             
-            // Create closure: allocate structure with function pointer + environment
-            codegen_emit(gen, "    ; Create closure structure (func_ptr + env_ptr)");
-            codegen_emit(gen, "    mov rdi, 16     ; 2 pointers");
+            // Create closure: allocate structure with magic + function pointer + environment
+            codegen_emit(gen, "    ; Create closure structure [magic, func_ptr, env_ptr]");
+            codegen_emit(gen, "    mov rdi, 24     ; 3 pointers (magic + func_ptr + env_ptr)");
             codegen_emit(gen, "    call malloc");
+            codegen_emit(gen, "    mov qword [rax], 202182115   ; Magic number 0xC105UR3");
             snprintf(buffer, sizeof(buffer), "    lea r13, [rel %s]", lambda_name);
             codegen_emit(gen, buffer);
-            codegen_emit(gen, "    mov [rax], r13      ; Store function pointer");
-            codegen_emit(gen, "    mov [rax+8], r12    ; Store environment pointer");
+            codegen_emit(gen, "    mov [rax+8], r13     ; Store function pointer");
+            codegen_emit(gen, "    mov [rax+16], r12    ; Store environment pointer");
             codegen_emit(gen, "    ; rax now holds closure pointer");
         } else {
             // No closures: just load lambda address into rax
@@ -1880,6 +2162,166 @@ void codegen_generate_for(Codegen* gen, Statement* stmt) {
     
     // Loop end label
     snprintf(buffer, sizeof(buffer), ".L%d:  ; loop_end", loop_end);
+    codegen_emit(gen, buffer);
+    
+    // Restore previous loop context
+    gen->loop_start_label = prev_start;
+    gen->loop_continue_label = prev_continue;
+    gen->loop_end_label = prev_end;
+    gen->in_loop = prev_in_loop;
+}
+
+// Phase 14: For-in loop (array iteration)
+void codegen_generate_for_in(Codegen* gen, Statement* stmt) {
+    char buffer[256];
+    int loop_start = gen->label_counter++;
+    int loop_end = gen->label_counter++;
+    int loop_continue = gen->label_counter++;
+    
+    // Save previous loop context
+    int prev_start = gen->loop_start_label;
+    int prev_continue = gen->loop_continue_label;
+    int prev_end = gen->loop_end_label;
+    int prev_in_loop = gen->in_loop;
+    
+    gen->loop_start_label = loop_start;
+    gen->loop_continue_label = loop_continue;
+    gen->loop_end_label = loop_end;
+    gen->in_loop = 1;
+    
+    codegen_emit(gen, "");
+    codegen_emit(gen, "    ; For-in loop");
+    
+    // Allocate space for loop variable and index
+    gen->stack_offset += 8;  // Loop variable
+    int var_offset = gen->stack_offset;
+    codegen_add_variable(gen, stmt->for_in.var_name, var_offset, stmt->for_in.var_type, NULL);
+    snprintf(buffer, sizeof(buffer), "    sub rsp, 8         ; Allocate space for %s", stmt->for_in.var_name);
+    codegen_emit(gen, buffer);
+    
+    gen->stack_offset += 8;  // Index variable
+    int index_offset = gen->stack_offset;
+    snprintf(buffer, sizeof(buffer), "    sub rsp, 8         ; Allocate space for loop index");
+    codegen_emit(gen, buffer);
+    
+    gen->stack_offset += 8;  // Array base address
+    int arr_offset = gen->stack_offset;
+    snprintf(buffer, sizeof(buffer), "    sub rsp, 8         ; Allocate space for array base");
+    codegen_emit(gen, buffer);
+    
+    gen->stack_offset += 8;  // Array length
+    int len_offset = gen->stack_offset;
+    snprintf(buffer, sizeof(buffer), "    sub rsp, 8         ; Allocate space for array length");
+    codegen_emit(gen, buffer);
+    
+    // Check if iterable is a simple variable (stack array)
+    if (stmt->for_in.iterable->type == EXPR_VARIABLE) {
+        // Find the variable info
+        VarInfo* var = gen->variables;
+        int found_offset = 0;
+        int is_dynamic = 0;
+        int is_array = 0;
+        int array_size = 0;
+        while (var) {
+            if (strcmp(var->name, stmt->for_in.iterable->var_name) == 0) {
+                found_offset = var->stack_offset;
+                is_dynamic = var->is_dynamic_array;
+                is_array = var->is_array;
+                array_size = var->array_size;
+                break;
+            }
+            var = var->next;
+        }
+        
+        if (is_dynamic) {
+            // Dynamic array - pointer stored in variable, use mlp_array_length
+            snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]   ; Load dynamic array pointer", found_offset);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array pointer", arr_offset);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    mov rdi, rax");
+            codegen_emit(gen, "    call mlp_array_length");
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array length", len_offset);
+            codegen_emit(gen, buffer);
+        } else if (is_array && array_size > 0) {
+            // Stack array - get address of array start, use known size
+            snprintf(buffer, sizeof(buffer), "    lea rax, [rbp-%d]   ; Get address of stack array", found_offset);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array base address", arr_offset);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov rax, %d   ; Array length (from declaration)", array_size);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array length", len_offset);
+            codegen_emit(gen, buffer);
+        } else {
+            // Unknown - try as dynamic array
+            snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]   ; Load potential array pointer", found_offset);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array pointer", arr_offset);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    mov rdi, rax");
+            codegen_emit(gen, "    call mlp_array_length");
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array length", len_offset);
+            codegen_emit(gen, buffer);
+        }
+    } else {
+        // General case - evaluate expression and treat as dynamic array
+        codegen_generate_expression_value(gen, stmt->for_in.iterable);
+        snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array pointer", arr_offset);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    mov rdi, rax");
+        codegen_emit(gen, "    call mlp_array_length");
+        snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store array length", len_offset);
+        codegen_emit(gen, buffer);
+    }
+    
+    // Initialize index to 0
+    snprintf(buffer, sizeof(buffer), "    mov qword [rbp-%d], 0   ; Initialize index", index_offset);
+    codegen_emit(gen, buffer);
+    
+    // Loop start
+    snprintf(buffer, sizeof(buffer), ".L%d:  ; for_in_start", loop_start);
+    codegen_emit(gen, buffer);
+    
+    // Check if index < length
+    snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", index_offset);
+    codegen_emit(gen, buffer);
+    snprintf(buffer, sizeof(buffer), "    cmp rax, [rbp-%d]", len_offset);
+    codegen_emit(gen, buffer);
+    snprintf(buffer, sizeof(buffer), "    jge .L%d", loop_end);
+    codegen_emit(gen, buffer);
+    
+    // Load current element: arr[index]
+    snprintf(buffer, sizeof(buffer), "    mov rdi, [rbp-%d]   ; Array base", arr_offset);
+    codegen_emit(gen, buffer);
+    snprintf(buffer, sizeof(buffer), "    mov rsi, [rbp-%d]   ; Index", index_offset);
+    codegen_emit(gen, buffer);
+    codegen_emit(gen, "    mov rax, [rdi + rsi*8]   ; Load element");
+    snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store in loop variable", var_offset);
+    codegen_emit(gen, buffer);
+    
+    // Generate loop body
+    for (int i = 0; i < stmt->for_in.body_count; i++) {
+        codegen_generate_statement(gen, stmt->for_in.body[i]);
+    }
+    
+    // Continue label (for continue statement)
+    snprintf(buffer, sizeof(buffer), ".L%d:  ; for_in_continue", loop_continue);
+    codegen_emit(gen, buffer);
+    
+    // Increment index
+    snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", index_offset);
+    codegen_emit(gen, buffer);
+    codegen_emit(gen, "    add rax, 1");
+    snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax", index_offset);
+    codegen_emit(gen, buffer);
+    
+    // Jump back to loop start
+    snprintf(buffer, sizeof(buffer), "    jmp .L%d", loop_start);
+    codegen_emit(gen, buffer);
+    
+    // Loop end label
+    snprintf(buffer, sizeof(buffer), ".L%d:  ; for_in_end", loop_end);
     codegen_emit(gen, buffer);
     
     // Restore previous loop context
@@ -2159,6 +2601,13 @@ void codegen_generate_switch(Codegen* gen, Statement* stmt) {
 void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     char buffer[256];
     
+    // Phase 13: If this is a generic function, save it for later instantiation
+    if (stmt->func_def.type_param_count > 0) {
+        codegen_add_generic_func(gen, stmt->func_def.func_name, stmt);
+        // Don't generate code now - will be generated when called with concrete types
+        return;
+    }
+    
     // Generate function name with module prefix if inside module
     char func_name[256];
     if (gen->current_module) {
@@ -2197,10 +2646,12 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     VarInfo* prev_variables = gen->variables;
     int prev_in_function = gen->in_function;
     int prev_in_operator_overload = gen->in_operator_overload;
+    int prev_in_generator = gen->in_generator;
     
     gen->stack_offset = 0;
     gen->variables = NULL;
     gen->in_function = 1;
+    gen->in_generator = stmt->func_def.is_generator;
     
     // Check if this is an operator overload function (name contains "_operator_")
     if (strstr(stmt->func_def.func_name, "_operator_") != NULL) {
@@ -2231,6 +2682,36 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
         codegen_emit(gen, buffer);
     }
     
+    // Phase 14: Generator function setup
+    // If this is a generator (yields), allocate result array and index counter
+    int gen_array_offset = 0;
+    int gen_index_offset = 0;
+    if (stmt->func_def.is_generator) {
+        codegen_emit(gen, "    ; Generator function setup");
+        
+        // Allocate space for result array pointer
+        gen->stack_offset += 8;
+        gen_array_offset = gen->stack_offset;
+        codegen_emit(gen, "    sub rsp, 8");
+        
+        // Allocate space for current index
+        gen->stack_offset += 8;
+        gen_index_offset = gen->stack_offset;
+        codegen_emit(gen, "    sub rsp, 8");
+        
+        // Initialize with estimated size (will grow if needed) - allocate 16 elements
+        codegen_emit(gen, "    mov rdi, 16");
+        codegen_emit(gen, "    call mlp_array_alloc");
+        snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax      ; Store result array pointer", gen_array_offset);
+        codegen_emit(gen, buffer);
+        snprintf(buffer, sizeof(buffer), "    mov qword [rbp-%d], 0 ; Initialize index to 0", gen_index_offset);
+        codegen_emit(gen, buffer);
+        
+        // Store offsets for yield statements (use special named variables)
+        codegen_add_variable(gen, "__gen_array__", gen_array_offset, TYPE_NUMERIC, NULL);
+        codegen_add_variable(gen, "__gen_index__", gen_index_offset, TYPE_NUMERIC, NULL);
+    }
+    
     // Generate function body
     int has_return = 0;
     for (int i = 0; i < stmt->func_def.body_count; i++) {
@@ -2242,6 +2723,17 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     
     // Default return (if no explicit return)
     if (!has_return) {
+        // Phase 14: Generator functions return their result array
+        if (stmt->func_def.is_generator) {
+            int arr_off = codegen_find_variable(gen, "__gen_array__");
+            int idx_off = codegen_find_variable(gen, "__gen_index__");
+            codegen_emit(gen, "    ; Generator: resize and return result array");
+            snprintf(buffer, sizeof(buffer), "    mov rdi, [rbp-%d]     ; Array pointer", arr_off);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov rsi, [rbp-%d]    ; Actual size used", idx_off);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    call mlp_array_resize  ; Resize to actual size");
+        }
         codegen_emit(gen, "    mov rsp, rbp");
         codegen_emit(gen, "    pop rbp");
         codegen_emit(gen, "    ret");
@@ -2251,6 +2743,7 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     gen->variables = prev_variables;
     gen->in_function = prev_in_function;
     gen->in_operator_overload = prev_in_operator_overload;
+    gen->in_generator = prev_in_generator;
 }
 
 void codegen_generate_return(Codegen* gen, Statement* stmt) {
@@ -2259,12 +2752,44 @@ void codegen_generate_return(Codegen* gen, Statement* stmt) {
         exit(1);
     }
     
+    char buffer[256];
+    
     if (stmt->return_stmt.value_count > 0) {
         // Generate code for multiple return values
         // For now, support single return value (multiple returns will use stack)
         if (stmt->return_stmt.value_count == 1) {
-            // Single return value - put in rax
-            codegen_generate_expression_value(gen, stmt->return_stmt.values[0]);
+            // Check if returning a struct variable
+            Expression* ret_expr = stmt->return_stmt.values[0];
+            if (ret_expr->type == EXPR_VARIABLE) {
+                VarInfo* var = codegen_get_variable(gen, ret_expr->var_name);
+                if (var && var->struct_name) {
+                    // Returning a struct - load all fields into rax, rdx, etc.
+                    StructInfo* si = codegen_find_struct(gen, var->struct_name);
+                    if (si && si->field_count >= 1) {
+                        // First field in rax
+                        int field0_offset = var->stack_offset - si->field_offsets[0];
+                        snprintf(buffer, sizeof(buffer), 
+                                 "    mov rax, [rbp-%d]   ; Load %s.%s for return", 
+                                 field0_offset, ret_expr->var_name, si->field_names[0]);
+                        codegen_emit(gen, buffer);
+                        
+                        if (si->field_count >= 2) {
+                            // Second field in rdx
+                            int field1_offset = var->stack_offset - si->field_offsets[1];
+                            snprintf(buffer, sizeof(buffer), 
+                                     "    mov rdx, [rbp-%d]   ; Load %s.%s for return", 
+                                     field1_offset, ret_expr->var_name, si->field_names[1]);
+                            codegen_emit(gen, buffer);
+                        }
+                    }
+                } else {
+                    // Regular variable - put in rax
+                    codegen_generate_expression_value(gen, ret_expr);
+                }
+            } else {
+                // Single return value - put in rax
+                codegen_generate_expression_value(gen, ret_expr);
+            }
         } else {
             // Multiple return values - store on stack
             // Return values will be accessed by caller via stack offsets
@@ -2442,6 +2967,37 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         codegen_generate_if(gen, stmt);
     } else if (stmt->type == STMT_FOR) {
         codegen_generate_for(gen, stmt);
+    } else if (stmt->type == STMT_FOR_IN) {
+        codegen_generate_for_in(gen, stmt);
+    } else if (stmt->type == STMT_YIELD) {
+        // Phase 14: Yield statement for generators
+        // For simple generator pattern: append value to internal result array
+        // The generator function should have initialized a result array
+        char buffer[256];
+        codegen_emit(gen, "    ; Yield statement");
+        
+        // Evaluate the yield value
+        codegen_generate_expression_value(gen, stmt->yield_stmt.value);
+        codegen_emit(gen, "    push rax           ; Save yield value");
+        
+        // Find generator internal variables
+        int arr_offset = codegen_find_variable(gen, "__gen_array__");
+        int idx_offset = codegen_find_variable(gen, "__gen_index__");
+        
+        if (arr_offset == -1 || idx_offset == -1) {
+            fprintf(stderr, "Codegen error: yield outside generator function\n");
+            exit(1);
+        }
+        
+        // Store value in generator's result array
+        snprintf(buffer, sizeof(buffer), "    mov rdi, [rbp-%d]   ; Load result array pointer", arr_offset);
+        codegen_emit(gen, buffer);
+        snprintf(buffer, sizeof(buffer), "    mov rsi, [rbp-%d]   ; Load current index", idx_offset);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    pop rax             ; Restore yield value");
+        codegen_emit(gen, "    mov [rdi + rsi*8], rax   ; Store yielded value");
+        snprintf(buffer, sizeof(buffer), "    inc qword [rbp-%d]   ; Increment index", idx_offset);
+        codegen_emit(gen, buffer);
     } else if (stmt->type == STMT_WHILE) {
         codegen_generate_while(gen, stmt);
     } else if (stmt->type == STMT_DO_WHILE) {
@@ -2532,6 +3088,7 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
                 var->struct_name = NULL;
                 var->is_dynamic_array = 0;
                 var->is_pointer = 0;
+    var->is_closure = 0;
                 var->next = gen->variables;
                 gen->variables = var;
                 
@@ -2690,6 +3247,20 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         // Result in rax, but we don't use it
     } else if (stmt->type == STMT_MODULE_DEF) {
         // Module definition: Generate code for module body with namespace prefix
+        
+        // Check if module already processed (deduplication)
+        if (codegen_module_seen(gen, stmt->module_def.module_name)) {
+            // Skip duplicate module definition
+            char comment[256];
+            snprintf(comment, sizeof(comment), "; Skipping duplicate module: %s", 
+                     stmt->module_def.module_name);
+            codegen_emit(gen, comment);
+            return;
+        }
+        
+        // Mark module as seen
+        codegen_mark_module_seen(gen, stmt->module_def.module_name);
+        
         codegen_emit(gen, "");
         char comment[256];
         snprintf(comment, sizeof(comment), "; Module: %s", stmt->module_def.module_name);
@@ -2836,6 +3407,57 @@ void codegen_generate(Codegen* gen, AST* ast) {
     }
     
     codegen_emit_epilogue(gen);
+    
+    // Phase 13: Generate pending generic function instances
+    // These are collected during code generation when generic calls are encountered
+    GenericInstance* gi = gen->generic_instances;
+    while (gi) {
+        if (!gi->generated) {
+            gi->generated = 1;
+            
+            // Find the generic function definition
+            GenericFunc* gf = codegen_find_generic_func(gen, gi->original_name);
+            if (gf && gf->func_stmt) {
+                Statement* func_stmt = gf->func_stmt;
+                
+                // Create modified param_types based on type arguments
+                VarType* original_types = func_stmt->func_def.param_types;
+                VarType* instantiated_types = malloc(sizeof(VarType) * func_stmt->func_def.param_count);
+                
+                for (int i = 0; i < func_stmt->func_def.param_count; i++) {
+                    if (func_stmt->func_def.param_is_generic && func_stmt->func_def.param_is_generic[i]) {
+                        int idx = func_stmt->func_def.param_generic_index[i];
+                        instantiated_types[i] = gi->type_args[idx];
+                    } else {
+                        instantiated_types[i] = original_types[i];
+                    }
+                }
+                
+                // Temporarily replace types for code generation
+                func_stmt->func_def.param_types = instantiated_types;
+                
+                // Save original name and replace with mangled name
+                char* original_name = func_stmt->func_def.func_name;
+                func_stmt->func_def.func_name = gi->mangled_name;
+                
+                // Temporarily disable generic flag to actually generate code
+                int saved_type_param_count = func_stmt->func_def.type_param_count;
+                func_stmt->func_def.type_param_count = 0;
+                
+                // Generate the function (now in .text section at end)
+                codegen_emit(gen, "");
+                codegen_emit(gen, "section .text");
+                codegen_generate_func_def(gen, func_stmt);
+                
+                // Restore original values
+                func_stmt->func_def.type_param_count = saved_type_param_count;
+                func_stmt->func_def.func_name = original_name;
+                func_stmt->func_def.param_types = original_types;
+                free(instantiated_types);
+            }
+        }
+        gi = gi->next;
+    }
     
     // Now emit string data section at the end
     // We need to reorganize - strings should be at top after section .data

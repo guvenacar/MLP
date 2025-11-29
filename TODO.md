@@ -1,44 +1,87 @@
 # MELP TODO List
 
-**Son Güncelleme:** 29 Kasım 2025  
-**Durum:** Phase 12 Complete, Exception Handling Complete
+**Son Güncelleme:** 13 Ocak 2025  
+**Durum:** Phase 14 Complete - Iterator/Generator Pattern
 
 ---
 
-## ✅ Tamamlanan Özellikler
+## ✅ Tam Çalışan Özellikler
 
-### Phase 0-12 (Bootstrap Foundation)
-- [x] Variables (numeric, text)
-- [x] Arithmetic operations
-- [x] Print statements
-- [x] If-else conditionals
-- [x] While loops
-- [x] Do-while loops
-- [x] Functions
-- [x] Arrays
-- [x] Structs
-- [x] Pointers
-- [x] Lambda expressions
-- [x] Closures
-- [x] CLI arguments (argc/argv)
-- [x] String utilities (length, concat, substring, etc.)
-- [x] File operations (read, write, append)
-- [x] For loops
-- [x] Ternary operator
-- [x] Logical operators (&&, ||, !)
-- [x] Enum types
+### Temel Özellikler
+- [x] **Yorum Satırları** - `--` tek satır, `---` çoklu satır
+- [x] **Değişkenler** - numeric, text, boolean
+- [x] **Aritmetik İşlemler** - +, -, *, /
+- [x] **Print Statement** - print()
+- [x] **If-Else** - if/then/else/end if
+- [x] **Else-If Chains** - else if zincirleri
+- [x] **While Döngüsü** - while/end while
+- [x] **Do-While Döngüsü** - do/while
+- [x] **For Döngüsü** - for/to/step/end for
+- [x] **Exit/Continue** - döngü kontrolü
+- [x] **Switch-Case** - switch/case/default/end switch
+- [x] **Fonksiyonlar** - func/return/end func
+- [x] **Pointers** - &var, *ptr
+- [x] **Lambda/Closure** - func(x) = x + 10
+- [x] **String İşlemleri** - str_length, substring, indexOf, charAt
+- [x] **String Interpolation** - $"Hello {name}"
+- [x] **File I/O** - read_file, write_file, append_file, file_exists
+- [x] **CLI Arguments** - get_argc()
+- [x] **Ternary Operator** - x > y ? x : y
+- [x] **Logical Operators** - `and`, `or`, `not` (NOT: &&, ||, ! değil!)
+- [x] **Enum Types** - enum/end enum, Enum.Value
+- [x] **Destructuring** - numeric a, b, c = arr
 
-### Modern Language Features
-- [x] **Exception Handling** (29 Kasım 2025)
-  - try-catch-finally blokları
-  - Çoklu catch (tip kontrolü)
-  - throw statement
-  - Yakalanmamış istisna yönetimi
-  - İç içe try-catch desteği
+### Modern Özellikler
+- [x] **Exception Handling** - try/catch/throw/end try
+- [x] **Async/Await** - async func, await
+- [x] **Module System (Multi-file)** - import ModuleName (ayrı .mlp dosyası)
+- [x] **Generics** - func max<T>(T a, T b), struct Pair<T, U>
+- [x] **Iterators/Generators** - for x in arr, range(), yields/yield
 
 ---
 
-## 🚀 Sıradaki Özellikler
+## ⚠️ Kısmi Çalışan Özellikler (Bug'lu)
+
+### Arrays
+- ✅ Dynamic: `numeric[] arr = malloc(5)` + `arr[0] = value`
+- ✅ Static literals: `numeric[5] arr = [10, 20, 30, 40, 50]` - ÇALIŞıYOR
+
+### Structs  
+- ✅ Struct tanımlama ve field erişimi
+- ✅ Struct return bug: DÜZELTİLDİ (rax + rdx ile multi-register return)
+
+### Module System
+- ✅ Multi-file import çalışıyor
+- ✅ Aynı dosya içinde module tanımlama ve kullanma - ÇALIŞIYOR
+
+---
+
+## ❌ Çalışmayan Özellikler (Kritik Buglar)
+
+### Pattern Matching - DÜZELTİLDİ ✅
+- `case 1 to 5` (range matching) → ÇALIŞıYOR
+- Guard conditions `case x if x > 10` → ÇALIŞıYOR
+- **Düzeltme:** Declaration struct field initialization eklendi
+
+### Interface - ÇALIŞIYOR ✅
+- İngilizce syntax ile test edildi
+- `struct Circle implements Drawable` → ÇALIŞIYOR
+
+---
+
+## 🔧 Düzeltilecekler (Öncelik Sırası)
+
+1. ~~**[ACİL]** Pattern Matching SEGFAULT düzelt~~ ✅ DÜZELTİLDİ
+2. ~~**[YÜKSEK]** Struct return bug düzelt~~ ✅ DÜZELTİLDİ
+3. ~~**[YÜKSEK]** Interface İngilizce syntax testi~~ ✅ ÇALIŞIYOR
+4. ~~**[ORTA]** Static array literals desteği~~ ✅ ÇALIŞIYOR
+5. ~~**[DÜŞÜK]** Same-file module desteği~~ ✅ ÇALIŞIYOR
+
+**TÜM KRİTİK BUGLAR DÜZELTİLDİ!** 🎉
+
+---
+
+## 🚀 Gelecek Özellikler
 
 ### 1. Modül Sistemi (Module System) - YÜKSEKÖNCELİK
 **Amaç:** Kod organizasyonu ve yeniden kullanılabilirlik

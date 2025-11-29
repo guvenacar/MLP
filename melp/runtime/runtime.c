@@ -252,6 +252,52 @@ void* mlp_array_resize(void* data, long new_size) {
     return new_data;
 }
 
+// Phase 14: Range function - generates array from start to end (exclusive)
+// range(5) -> [0, 1, 2, 3, 4]
+// range(2, 5) -> [2, 3, 4]  
+// range(0, 10, 2) -> [0, 2, 4, 6, 8]
+void* mlp_range(long start, long end, long step) {
+    if (step == 0) {
+        fprintf(stderr, "Range step cannot be zero\n");
+        exit(1);
+    }
+    
+    // Calculate size
+    long size = 0;
+    if (step > 0 && end > start) {
+        size = (end - start + step - 1) / step;
+    } else if (step < 0 && end < start) {
+        size = (start - end - step - 1) / (-step);
+    }
+    
+    if (size <= 0) {
+        size = 0;
+    }
+    
+    // Allocate array
+    void* data = mlp_array_alloc(size);
+    long* elements = (long*)data;
+    
+    // Fill array
+    long value = start;
+    for (long i = 0; i < size; i++) {
+        elements[i] = value;
+        value += step;
+    }
+    
+    return data;
+}
+
+// Convenience: range(end) - same as range(0, end, 1)
+void* mlp_range1(long end) {
+    return mlp_range(0, end, 1);
+}
+
+// Convenience: range(start, end) - same as range(start, end, 1)
+void* mlp_range2(long start, long end) {
+    return mlp_range(start, end, 1);
+}
+
 // ============================================================================
 // PHASE 9: File I/O
 // ============================================================================

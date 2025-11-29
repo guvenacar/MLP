@@ -649,3 +649,8 @@ ld math.o main.o runtime/runtime.o -o program
 **Tarih:** 29 Kasım 2025  
 **Sonraki Adım:** Module System Codegen Implementation
 
+----
+
+❌ Comprehensions - Denendi ama geri alındı (~5 saat debug, %90 tamamlanmıştı ama son bug)
+⏳ Generics/Type Parameters - Bekliyor
+⏳ Macros/Metaprogramming - Bekliyor

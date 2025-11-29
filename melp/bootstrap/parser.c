@@ -36,6 +36,8 @@ typedef enum {
     STMT_TYPE_ALIAS,  // Phase 11: Type alias
     STMT_TRY_CATCH,   // Phase 12: Try-catch block
     STMT_THROW,       // Phase 12: Throw statement
+    STMT_YIELD,       // Phase 14: Yield statement (generator)
+    STMT_FOR_IN,      // Phase 14: For-in loop (iterator)
     STMT_DEBUG_LABEL, // Debug label definition
     STMT_DEBUG_GOTO,  // Debug goto statement
     STMT_DEBUG_IF,    // Debug conditional block
@@ -61,7 +63,8 @@ typedef enum {
     EXPR_LOGICAL_OR,  // Logical OR (||)
     EXPR_LOGICAL_NOT, // Logical NOT (!)
     EXPR_LAMBDA,      // Phase 12: Lambda function (inline anonymous function)
-    EXPR_AWAIT        // Phase 12: Await expression (await async_call())
+    EXPR_AWAIT,       // Phase 12: Await expression (await async_call())
+    EXPR_ARRAY_LITERAL // Array literal: [10, 20, 30]
 } ExprType;
 
 typedef enum {
@@ -100,6 +103,9 @@ typedef struct Expression {
             char* func_name;
             struct Expression** args;
             int arg_count;
+            // Phase 13: Generics
+            VarType* type_args;         // Type arguments (e.g., [TYPE_NUMERIC] for max<numeric>)
+            int type_arg_count;         // Number of type arguments
         } func_call;
         struct {
             char* object_name;  // Variable name (e.g., "person")
@@ -130,6 +136,10 @@ typedef struct Expression {
         struct {
             struct Expression* awaited_expr;  // Expression to await (usually func call)
         } await_expr;
+        struct {
+            struct Expression** elements;  // Array literal elements
+            int count;                      // Number of elements
+        } array_literal;
     };
 } Expression;
 
@@ -148,12 +158,16 @@ typedef struct {
     int union_count;         // Phase 11: Number of types in union
     Expression* init_value;  // NULL if no initialization
     int is_exported;         // Phase 9: 1 if export, 0 if private (default export in modules)
+    VarType* struct_type_args;  // Phase 13: Generic type arguments for struct (e.g., Box<numeric>)
+    int struct_type_arg_count;  // Phase 13: Number of type arguments
 } Declaration;
 
 // Phase 6: Struct field definition
 typedef struct {
     VarType type;
     char* name;
+    int is_generic;         // Phase 13: Is this field a generic type parameter?
+    int generic_index;      // Phase 13: Index into type_params if generic
 } StructField;
 
 // Interface method signature
@@ -247,6 +261,14 @@ typedef struct Statement {
             int body_count;
             int is_exported;            // Phase 9: 1 if export, 0 if private
             int is_async;               // Phase 12: 1 if async, 0 if sync
+            int is_generator;           // Phase 14: 1 if generator (yields), 0 if regular
+            // Phase 13: Generics
+            char** type_params;         // Type parameter names (e.g., ["T", "U"])
+            int type_param_count;       // Number of type parameters
+            int* param_is_generic;      // 1 if param uses type param, 0 otherwise
+            int* param_generic_index;   // Index into type_params for generic params
+            int return_is_generic;      // 1 if return type uses type param
+            int return_generic_index;   // Index into type_params for return type
         } func_def;
         struct {
             Expression** values;    // Return values (multiple for multi-return)
@@ -258,6 +280,9 @@ typedef struct Statement {
             int field_count;
             char** implements;      // Implemented interfaces
             int implements_count;   // Number of interfaces
+            // Phase 13: Generics
+            char** type_params;     // Type parameter names (e.g., ["T"])
+            int type_param_count;   // Number of type parameters
         } struct_def;
         struct {
             char* interface_name;
@@ -315,6 +340,18 @@ typedef struct Statement {
             int var_count;             // Number of variables
             Expression* source;        // Source expression (array or struct)
         } destructure;
+        // Phase 14: Yield statement
+        struct {
+            Expression* value;         // Value to yield
+        } yield_stmt;
+        // Phase 14: For-in loop
+        struct {
+            char* var_name;            // Loop variable name
+            VarType var_type;          // Loop variable type
+            Expression* iterable;      // Iterable expression (generator call or array)
+            struct Statement** body;   // Loop body
+            int body_count;
+        } for_in;
         struct {
             char* module_name;         // Module name (e.g., "MyModule")
             struct Statement** body;   // Module body (functions, structs, etc.)
@@ -430,6 +467,8 @@ Expression* expression_create_func_call(const char* func_name, Expression** args
     strcpy(expr->func_call.func_name, func_name);
     expr->func_call.args = args;
     expr->func_call.arg_count = arg_count;
+    expr->func_call.type_args = NULL;
+    expr->func_call.type_arg_count = 0;
     return expr;
 }
 
@@ -737,6 +776,42 @@ Expression* parser_parse_primary_expression(Parser* parser) {
         Expression* expr = malloc(sizeof(Expression));
         expr->type = EXPR_NULL;
         return expr;
+    } else if (parser->current_token->type == TOKEN_LBRACKET) {
+        // Array literal: [10, 20, 30, 40, 50]
+        parser_advance(parser); // skip '['
+        
+        Expression* expr = malloc(sizeof(Expression));
+        expr->type = EXPR_ARRAY_LITERAL;
+        expr->array_literal.elements = malloc(sizeof(Expression*) * 10);
+        expr->array_literal.count = 0;
+        int capacity = 10;
+        
+        if (parser->current_token->type != TOKEN_RBRACKET) {
+            while (1) {
+                if (expr->array_literal.count >= capacity) {
+                    capacity *= 2;
+                    expr->array_literal.elements = realloc(expr->array_literal.elements,
+                                                          sizeof(Expression*) * capacity);
+                }
+                expr->array_literal.elements[expr->array_literal.count++] = 
+                    parser_parse_expression(parser);
+                
+                if (parser->current_token->type == TOKEN_COMMA) {
+                    parser_advance(parser);
+                } else {
+                    break;
+                }
+            }
+        }
+        
+        if (parser->current_token->type != TOKEN_RBRACKET) {
+            fprintf(stderr, "Parser error: Expected ']' after array literal at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip ']'
+        
+        return expr;
     } else if (parser->current_token->type == TOKEN_INTERPOLATED_STRING) {
         // Interpolated string: $"text {expr} text"
         char* str_value = malloc(strlen(parser->current_token->value) + 1);
@@ -757,6 +832,76 @@ Expression* parser_parse_primary_expression(Parser* parser) {
         char* name = malloc(strlen(parser->current_token->value) + 1);
         strcpy(name, parser->current_token->value);
         parser_advance(parser);
+        
+        // Phase 13: Check for generic type arguments <type1, type2, ...>
+        VarType* type_args = NULL;
+        int type_arg_count = 0;
+        
+        if (parser->current_token->type == TOKEN_LESS) {
+            // Could be generic call or comparison - peek ahead
+            // If we see a type keyword followed by > or ,, it's generic
+            // Save position for backtracking
+            Token* saved_token = parser->current_token;
+            parser_advance(parser); // skip '<'
+            
+            // Check if this looks like a generic call
+            int is_generic = 0;
+            if (parser->current_token->type == TOKEN_NUMERIC ||
+                parser->current_token->type == TOKEN_DECIMAL ||
+                parser->current_token->type == TOKEN_BOOLEAN ||
+                parser->current_token->type == TOKEN_TEXT ||
+                parser->current_token->type == TOKEN_IDENTIFIER) {
+                // Likely generic - parse type arguments
+                is_generic = 1;
+            }
+            
+            if (is_generic) {
+                type_args = malloc(sizeof(VarType) * 10);
+                int type_arg_capacity = 10;
+                
+                while (1) {
+                    VarType arg_type;
+                    if (parser->current_token->type == TOKEN_NUMERIC) {
+                        arg_type = TYPE_NUMERIC;
+                    } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                        arg_type = TYPE_DECIMAL;
+                    } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                        arg_type = TYPE_BOOLEAN;
+                    } else if (parser->current_token->type == TOKEN_TEXT) {
+                        arg_type = TYPE_STRING;
+                    } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+                        // Could be a struct type
+                        arg_type = TYPE_NUMERIC; // Placeholder
+                    } else {
+                        // Not a valid type - this wasn't a generic call
+                        // TODO: backtrack properly
+                        break;
+                    }
+                    
+                    if (type_arg_count >= type_arg_capacity) {
+                        type_arg_capacity *= 2;
+                        type_args = realloc(type_args, sizeof(VarType) * type_arg_capacity);
+                    }
+                    type_args[type_arg_count++] = arg_type;
+                    parser_advance(parser);
+                    
+                    if (parser->current_token->type == TOKEN_COMMA) {
+                        parser_advance(parser);
+                    } else {
+                        break;
+                    }
+                }
+                
+                if (parser->current_token->type == TOKEN_GREATER) {
+                    parser_advance(parser); // skip '>'
+                } else {
+                    // Not a valid generic - free and reset
+                    free(type_args);
+                    type_args = NULL;
+                    type_arg_count = 0;
+                }
+            }
+        }
         
         // Check for function call
         if (parser->current_token->type == TOKEN_LPAREN) {
@@ -791,6 +936,9 @@ Expression* parser_parse_primary_expression(Parser* parser) {
             parser_advance(parser); // skip ')'
             
             Expression* expr = expression_create_func_call(name, args, arg_count);
+            // Set generic type arguments if present
+            expr->func_call.type_args = type_args;
+            expr->func_call.type_arg_count = type_arg_count;
             free(name);
             return expr;
         } else if (parser->current_token->type == TOKEN_LBRACKET) {
@@ -1055,6 +1203,8 @@ Declaration* parser_parse_declaration(Parser* parser) {
     decl->union_count = 0;
     decl->init_value = NULL;
     decl->is_exported = 1;  // Default: exported (public)
+    decl->struct_type_args = NULL;     // Phase 13: Generic type args
+    decl->struct_type_arg_count = 0;   // Phase 13: Generic type arg count
     
     // Type keyword or struct name
     if (parser->current_token->type == TOKEN_NUMERIC) {
@@ -1070,11 +1220,56 @@ Declaration* parser_parse_declaration(Parser* parser) {
         decl->type = TYPE_STRING;
         parser_advance(parser);
     } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
-        // Struct instance (e.g., Person p)
+        // Struct instance (e.g., Person p or Box<numeric> b)
         decl->struct_name = malloc(strlen(parser->current_token->value) + 1);
         strcpy(decl->struct_name, parser->current_token->value);
         decl->type = TYPE_NUMERIC; // Placeholder, actual type is struct
         parser_advance(parser);
+        
+        // Phase 13: Check for generic type arguments: Box<numeric>
+        if (parser->current_token->type == TOKEN_LESS) {
+            parser_advance(parser); // skip '<'
+            
+            decl->struct_type_args = malloc(sizeof(VarType) * 10);
+            int capacity = 10;
+            
+            while (1) {
+                VarType type_arg;
+                if (parser->current_token->type == TOKEN_NUMERIC) {
+                    type_arg = TYPE_NUMERIC;
+                } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                    type_arg = TYPE_DECIMAL;
+                } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                    type_arg = TYPE_BOOLEAN;
+                } else if (parser->current_token->type == TOKEN_TEXT) {
+                    type_arg = TYPE_STRING;
+                } else {
+                    fprintf(stderr, "Parser error: Expected type in generic arguments at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                parser_advance(parser);
+                
+                if (decl->struct_type_arg_count >= capacity) {
+                    capacity *= 2;
+                    decl->struct_type_args = realloc(decl->struct_type_args, sizeof(VarType) * capacity);
+                }
+                decl->struct_type_args[decl->struct_type_arg_count++] = type_arg;
+                
+                if (parser->current_token->type == TOKEN_COMMA) {
+                    parser_advance(parser); // skip ','
+                } else {
+                    break;
+                }
+            }
+            
+            if (parser->current_token->type != TOKEN_GREATER) {
+                fprintf(stderr, "Parser error: Expected '>' after generic arguments at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip '>'
+        }
     } else {
         fprintf(stderr, "Parser error: Expected type keyword at line %d\n", 
                 parser->current_token->line);
@@ -1382,7 +1577,6 @@ Statement* parser_parse_if_statement(Parser* parser) {
 
 Statement* parser_parse_for_statement(Parser* parser) {
     Statement* stmt = malloc(sizeof(Statement));
-    stmt->type = STMT_FOR;
     
     // Skip 'for'
     parser_advance(parser);
@@ -1393,9 +1587,66 @@ Statement* parser_parse_for_statement(Parser* parser) {
                 parser->current_token->line);
         exit(1);
     }
-    stmt->for_stmt.var_name = malloc(strlen(parser->current_token->value) + 1);
-    strcpy(stmt->for_stmt.var_name, parser->current_token->value);
+    char* var_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(var_name, parser->current_token->value);
     parser_advance(parser);
+    
+    // Phase 14: Check for 'in' (for-in loop) vs '=' (traditional for loop)
+    if (parser->current_token->type == TOKEN_IN) {
+        // for x in iterable do ... end for
+        stmt->type = STMT_FOR_IN;
+        stmt->for_in.var_name = var_name;
+        stmt->for_in.var_type = TYPE_NUMERIC; // Default, will be inferred from iterator
+        
+        parser_advance(parser); // skip 'in'
+        
+        // Parse iterable expression (generator call or array)
+        stmt->for_in.iterable = parser_parse_expression(parser);
+        
+        // Optional 'do' keyword
+        if (parser->current_token->type == TOKEN_DO) {
+            parser_advance(parser);
+        }
+        
+        // Parse body
+        stmt->for_in.body = malloc(sizeof(Statement*) * 10);
+        stmt->for_in.body_count = 0;
+        int body_capacity = 10;
+        
+        while (parser->current_token->type != TOKEN_END &&
+               parser->current_token->type != TOKEN_EOF) {
+            
+            Statement* body_stmt = parser_parse_statement(parser);
+            
+            if (stmt->for_in.body_count >= body_capacity) {
+                body_capacity *= 2;
+                stmt->for_in.body = realloc(stmt->for_in.body,
+                                            sizeof(Statement*) * body_capacity);
+            }
+            stmt->for_in.body[stmt->for_in.body_count++] = body_stmt;
+        }
+        
+        // Expect 'end' 'for'
+        if (parser->current_token->type != TOKEN_END) {
+            fprintf(stderr, "Parser error: Expected 'end' after for-in loop body at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+        
+        if (parser->current_token->type != TOKEN_FOR) {
+            fprintf(stderr, "Parser error: Expected 'for' after 'end' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+        
+        return stmt;
+    }
+    
+    // Traditional for loop: for i = start to end [step s] do ... end for
+    stmt->type = STMT_FOR;
+    stmt->for_stmt.var_name = var_name;
     
     // Expect '='
     if (parser->current_token->type != TOKEN_ASSIGN) {
@@ -2042,6 +2293,15 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
     stmt->type = STMT_FUNC_DEF;
     stmt->func_def.is_exported = is_exported;  // Set visibility
     stmt->func_def.is_async = is_async;        // Set async flag
+    stmt->func_def.is_generator = 0;           // Phase 14: Default not a generator
+    
+    // Initialize generic fields
+    stmt->func_def.type_params = NULL;
+    stmt->func_def.type_param_count = 0;
+    stmt->func_def.param_is_generic = NULL;
+    stmt->func_def.param_generic_index = NULL;
+    stmt->func_def.return_is_generic = 0;
+    stmt->func_def.return_generic_index = -1;
     
     // Skip 'func'
     parser_advance(parser);
@@ -2056,6 +2316,48 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
     strcpy(stmt->func_def.func_name, parser->current_token->value);
     parser_advance(parser);
     
+    // Phase 13: Check for generic type parameters <T, U, ...>
+    if (parser->current_token->type == TOKEN_LESS) {
+        parser_advance(parser); // skip '<'
+        
+        stmt->func_def.type_params = malloc(sizeof(char*) * 10);
+        int type_param_capacity = 10;
+        
+        while (1) {
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected type parameter name at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            if (stmt->func_def.type_param_count >= type_param_capacity) {
+                type_param_capacity *= 2;
+                stmt->func_def.type_params = realloc(stmt->func_def.type_params,
+                                                     sizeof(char*) * type_param_capacity);
+            }
+            
+            stmt->func_def.type_params[stmt->func_def.type_param_count] = 
+                malloc(strlen(parser->current_token->value) + 1);
+            strcpy(stmt->func_def.type_params[stmt->func_def.type_param_count],
+                   parser->current_token->value);
+            stmt->func_def.type_param_count++;
+            parser_advance(parser);
+            
+            if (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+            } else {
+                break;
+            }
+        }
+        
+        if (parser->current_token->type != TOKEN_GREATER) {
+            fprintf(stderr, "Parser error: Expected '>' after type parameters at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip '>'
+    }
+    
     // Expect '('
     if (parser->current_token->type != TOKEN_LPAREN) {
         fprintf(stderr, "Parser error: Expected '(' after function name at line %d\n",
@@ -2068,6 +2370,8 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
     stmt->func_def.param_types = malloc(sizeof(VarType) * 10);
     stmt->func_def.param_names = malloc(sizeof(char*) * 10);
     stmt->func_def.param_struct_names = malloc(sizeof(char*) * 10);
+    stmt->func_def.param_is_generic = malloc(sizeof(int) * 10);
+    stmt->func_def.param_generic_index = malloc(sizeof(int) * 10);
     stmt->func_def.param_count = 0;
     int param_capacity = 10;
     
@@ -2076,6 +2380,8 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
             // Parse parameter type
             VarType param_type;
             char* struct_name = NULL;  // For struct type parameters
+            int is_generic_param = 0;
+            int generic_param_index = -1;
             
             if (parser->current_token->type == TOKEN_NUMERIC) {
                 param_type = TYPE_NUMERIC;
@@ -2090,10 +2396,27 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
                 param_type = TYPE_STRING;
                 parser_advance(parser);
             } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
-                // Could be a struct type (e.g., Vector2D)
-                param_type = TYPE_NUMERIC;  // Placeholder
-                struct_name = malloc(strlen(parser->current_token->value) + 1);
-                strcpy(struct_name, parser->current_token->value);
+                // Check if it's a generic type parameter (T, U, etc.)
+                char* type_name = parser->current_token->value;
+                int found_generic = 0;
+                
+                for (int i = 0; i < stmt->func_def.type_param_count; i++) {
+                    if (strcmp(type_name, stmt->func_def.type_params[i]) == 0) {
+                        is_generic_param = 1;
+                        generic_param_index = i;
+                        found_generic = 1;
+                        break;
+                    }
+                }
+                
+                if (found_generic) {
+                    param_type = TYPE_NUMERIC;  // Placeholder, will be resolved at instantiation
+                } else {
+                    // Could be a struct type (e.g., Vector2D)
+                    param_type = TYPE_NUMERIC;  // Placeholder
+                    struct_name = malloc(strlen(parser->current_token->value) + 1);
+                    strcpy(struct_name, parser->current_token->value);
+                }
                 parser_advance(parser);
             } else {
                 fprintf(stderr, "Parser error: Expected parameter type at line %d\n",
@@ -2123,12 +2446,18 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
                                                      sizeof(char*) * param_capacity);
                 stmt->func_def.param_struct_names = realloc(stmt->func_def.param_struct_names,
                                                            sizeof(char*) * param_capacity);
+                stmt->func_def.param_is_generic = realloc(stmt->func_def.param_is_generic,
+                                                          sizeof(int) * param_capacity);
+                stmt->func_def.param_generic_index = realloc(stmt->func_def.param_generic_index,
+                                                             sizeof(int) * param_capacity);
             }
             
             stmt->func_def.param_types[stmt->func_def.param_count] = param_type;
             stmt->func_def.param_names[stmt->func_def.param_count] = malloc(strlen(parser->current_token->value) + 1);
             strcpy(stmt->func_def.param_names[stmt->func_def.param_count], parser->current_token->value);
             stmt->func_def.param_struct_names[stmt->func_def.param_count] = struct_name;  // NULL for primitives
+            stmt->func_def.param_is_generic[stmt->func_def.param_count] = is_generic_param;
+            stmt->func_def.param_generic_index[stmt->func_def.param_count] = generic_param_index;
             stmt->func_def.param_count++;
             parser_advance(parser);
             
@@ -2149,11 +2478,19 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
     parser_advance(parser);
     
     // Parse return type(s) if present (returns type1, type2, ...)
+    // Or yield type for generators (yields type)
     stmt->func_def.return_types = NULL;
     stmt->func_def.return_count = 0;
     
-    if (parser->current_token->type == TOKEN_RETURNS) {
-        parser_advance(parser); // skip 'returns'
+    if (parser->current_token->type == TOKEN_RETURNS || 
+        parser->current_token->type == TOKEN_YIELDS) {
+        
+        // Phase 14: Check if it's a generator function
+        if (parser->current_token->type == TOKEN_YIELDS) {
+            stmt->func_def.is_generator = 1;
+        }
+        
+        parser_advance(parser); // skip 'returns' or 'yields'
         
         stmt->func_def.return_types = malloc(sizeof(VarType) * 10);
         int return_capacity = 10;
@@ -2162,19 +2499,43 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
         VarType ret_type;
         if (parser->current_token->type == TOKEN_NUMERIC) {
             ret_type = TYPE_NUMERIC;
+            parser_advance(parser);
         } else if (parser->current_token->type == TOKEN_DECIMAL) {
             ret_type = TYPE_DECIMAL;
+            parser_advance(parser);
         } else if (parser->current_token->type == TOKEN_BOOLEAN) {
             ret_type = TYPE_BOOLEAN;
+            parser_advance(parser);
         } else if (parser->current_token->type == TOKEN_TEXT) {
             ret_type = TYPE_STRING;
+            parser_advance(parser);
+        } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+            // Check if it's a generic type parameter
+            char* type_name = parser->current_token->value;
+            int found_generic = 0;
+            
+            for (int i = 0; i < stmt->func_def.type_param_count; i++) {
+                if (strcmp(type_name, stmt->func_def.type_params[i]) == 0) {
+                    stmt->func_def.return_is_generic = 1;
+                    stmt->func_def.return_generic_index = i;
+                    found_generic = 1;
+                    break;
+                }
+            }
+            
+            if (!found_generic) {
+                fprintf(stderr, "Parser error: Unknown return type '%s' at line %d\n",
+                        type_name, parser->current_token->line);
+                exit(1);
+            }
+            ret_type = TYPE_NUMERIC;  // Placeholder
+            parser_advance(parser);
         } else {
             fprintf(stderr, "Parser error: Expected return type after 'returns' at line %d\n",
                     parser->current_token->line);
             exit(1);
         }
         stmt->func_def.return_types[stmt->func_def.return_count++] = ret_type;
-        parser_advance(parser);
         
         // Parse additional return types if comma-separated
         while (parser->current_token->type == TOKEN_COMMA) {
@@ -2244,6 +2605,10 @@ Statement* parser_parse_struct_definition(Parser* parser) {
     Statement* stmt = malloc(sizeof(Statement));
     stmt->type = STMT_STRUCT_DEF;
     
+    // Initialize generic fields
+    stmt->struct_def.type_params = NULL;
+    stmt->struct_def.type_param_count = 0;
+    
     // Skip 'struct'
     parser_advance(parser);
     
@@ -2256,6 +2621,48 @@ Statement* parser_parse_struct_definition(Parser* parser) {
     stmt->struct_def.struct_name = malloc(strlen(parser->current_token->value) + 1);
     strcpy(stmt->struct_def.struct_name, parser->current_token->value);
     parser_advance(parser);
+    
+    // Phase 13: Check for generic type parameters <T, U, ...>
+    if (parser->current_token->type == TOKEN_LESS) {
+        parser_advance(parser); // skip '<'
+        
+        stmt->struct_def.type_params = malloc(sizeof(char*) * 10);
+        int type_param_capacity = 10;
+        
+        while (1) {
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected type parameter name at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            if (stmt->struct_def.type_param_count >= type_param_capacity) {
+                type_param_capacity *= 2;
+                stmt->struct_def.type_params = realloc(stmt->struct_def.type_params,
+                                                       sizeof(char*) * type_param_capacity);
+            }
+            
+            stmt->struct_def.type_params[stmt->struct_def.type_param_count] = 
+                malloc(strlen(parser->current_token->value) + 1);
+            strcpy(stmt->struct_def.type_params[stmt->struct_def.type_param_count],
+                   parser->current_token->value);
+            stmt->struct_def.type_param_count++;
+            parser_advance(parser);
+            
+            if (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+            } else {
+                break;
+            }
+        }
+        
+        if (parser->current_token->type != TOKEN_GREATER) {
+            fprintf(stderr, "Parser error: Expected '>' after type parameters at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip '>'
+    }
     
     // Check for 'implements' keyword
     stmt->struct_def.implements = NULL;
@@ -2307,6 +2714,9 @@ Statement* parser_parse_struct_definition(Parser* parser) {
         
         // Parse field type
         VarType field_type;
+        int field_is_generic = 0;
+        int field_generic_index = -1;
+        
         if (parser->current_token->type == TOKEN_NUMERIC) {
             field_type = TYPE_NUMERIC;
         } else if (parser->current_token->type == TOKEN_DECIMAL) {
@@ -2315,6 +2725,22 @@ Statement* parser_parse_struct_definition(Parser* parser) {
             field_type = TYPE_BOOLEAN;
         } else if (parser->current_token->type == TOKEN_TEXT) {
             field_type = TYPE_STRING;
+        } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+            // Check if it's a type parameter (e.g., T, U)
+            int found_type_param = 0;
+            for (int i = 0; i < stmt->struct_def.type_param_count; i++) {
+                if (strcmp(parser->current_token->value, stmt->struct_def.type_params[i]) == 0) {
+                    field_is_generic = 1;
+                    field_generic_index = i;
+                    field_type = TYPE_NUMERIC; // Placeholder, will be substituted at instantiation
+                    found_type_param = 1;
+                    break;
+                }
+            }
+            if (!found_type_param) {
+                // Must be 'end' keyword or unknown type
+                break;
+            }
         } else {
             // Must be 'end' keyword
             break;
@@ -2337,6 +2763,8 @@ Statement* parser_parse_struct_definition(Parser* parser) {
         stmt->struct_def.fields[stmt->struct_def.field_count].type = field_type;
         stmt->struct_def.fields[stmt->struct_def.field_count].name = malloc(strlen(parser->current_token->value) + 1);
         strcpy(stmt->struct_def.fields[stmt->struct_def.field_count].name, parser->current_token->value);
+        stmt->struct_def.fields[stmt->struct_def.field_count].is_generic = field_is_generic;
+        stmt->struct_def.fields[stmt->struct_def.field_count].generic_index = field_generic_index;
         stmt->struct_def.field_count++;
         parser_advance(parser);
     }
@@ -2807,6 +3235,16 @@ Statement* parser_parse_statement(Parser* parser) {
         
         return stmt;
     }
+    // Phase 14: Check for yield statement
+    else if (parser->current_token->type == TOKEN_YIELD) {
+        stmt->type = STMT_YIELD;
+        parser_advance(parser); // skip 'yield'
+        
+        // Parse yield value
+        stmt->yield_stmt.value = parser_parse_expression(parser);
+        
+        return stmt;
+    }
     // Check for debug statements
     else if (parser->current_token->type == TOKEN_DEBUG) {
         free(stmt);
@@ -2864,7 +3302,12 @@ Statement* parser_parse_statement(Parser* parser) {
             decl->is_exported = is_exported;
             decl->is_array = 0;
             decl->array_size = 0;
+            decl->array_init = NULL;
+            decl->array_init_count = 0;
             decl->is_pointer = 0;
+            decl->is_union = 0;
+            decl->union_types = NULL;
+            decl->union_count = 0;
             decl->init_value = NULL;
             
             if (is_array) {
@@ -2897,7 +3340,47 @@ Statement* parser_parse_statement(Parser* parser) {
             decl->init_value = NULL;
             if (parser->current_token->type == TOKEN_ASSIGN) {
                 parser_advance(parser);
-                decl->init_value = parser_parse_expression(parser);
+                
+                // Check for array literal: [1, 2, 3]
+                if (decl->is_array && parser->current_token->type == TOKEN_LBRACKET) {
+                    parser_advance(parser); // skip '['
+                    
+                    // Parse array elements
+                    int capacity = 10;
+                    decl->array_init = malloc(sizeof(Expression*) * capacity);
+                    decl->array_init_count = 0;
+                    
+                    if (parser->current_token->type != TOKEN_RBRACKET) {
+                        while (1) {
+                            if (decl->array_init_count >= capacity) {
+                                capacity *= 2;
+                                decl->array_init = realloc(decl->array_init, sizeof(Expression*) * capacity);
+                            }
+                            
+                            decl->array_init[decl->array_init_count++] = parser_parse_expression(parser);
+                            
+                            if (parser->current_token->type == TOKEN_COMMA) {
+                                parser_advance(parser);
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (parser->current_token->type != TOKEN_RBRACKET) {
+                        fprintf(stderr, "Parser error: Expected ']' after array elements at line %d\n",
+                                parser->current_token->line);
+                        exit(1);
+                    }
+                    parser_advance(parser); // skip ']'
+                    
+                    // Set array size from literal if not specified
+                    if (decl->array_size == 0) {
+                        decl->array_size = decl->array_init_count;
+                    }
+                } else {
+                    decl->init_value = parser_parse_expression(parser);
+                }
             }
             
             stmt->declaration = decl;
@@ -2979,8 +3462,13 @@ Statement* parser_parse_statement(Parser* parser) {
                 decl->struct_name = NULL;
                 decl->is_array = 0;
                 decl->array_size = 0;
+                decl->array_init = NULL;
+                decl->array_init_count = 0;
                 decl->is_pointer = 0;
                 decl->is_nullable = 0;
+                decl->is_union = 0;
+                decl->union_types = NULL;
+                decl->union_count = 0;
                 decl->is_exported = is_exported;
                 decl->init_value = NULL;
                 
@@ -3044,8 +3532,90 @@ Statement* parser_parse_statement(Parser* parser) {
         strcpy(name, parser->current_token->value);
         parser_advance(parser);
         
+        // Phase 13: Check for generic struct instance (e.g., Box<numeric> b)
+        if (parser->current_token->type == TOKEN_LESS) {
+            parser_advance(parser); // skip '<'
+            
+            // Parse type arguments
+            VarType* type_args = malloc(sizeof(VarType) * 10);
+            int type_arg_count = 0;
+            int type_arg_capacity = 10;
+            
+            while (1) {
+                VarType type_arg;
+                if (parser->current_token->type == TOKEN_NUMERIC) {
+                    type_arg = TYPE_NUMERIC;
+                } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                    type_arg = TYPE_DECIMAL;
+                } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                    type_arg = TYPE_BOOLEAN;
+                } else if (parser->current_token->type == TOKEN_TEXT) {
+                    type_arg = TYPE_STRING;
+                } else {
+                    fprintf(stderr, "Parser error: Expected type in generic arguments at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                parser_advance(parser);
+                
+                if (type_arg_count >= type_arg_capacity) {
+                    type_arg_capacity *= 2;
+                    type_args = realloc(type_args, sizeof(VarType) * type_arg_capacity);
+                }
+                type_args[type_arg_count++] = type_arg;
+                
+                if (parser->current_token->type == TOKEN_COMMA) {
+                    parser_advance(parser); // skip ','
+                } else {
+                    break;
+                }
+            }
+            
+            if (parser->current_token->type != TOKEN_GREATER) {
+                fprintf(stderr, "Parser error: Expected '>' after generic arguments at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip '>'
+            
+            // Now expect variable name
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected variable name after generic type at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            stmt->type = STMT_DECLARATION;
+            Declaration* decl = malloc(sizeof(Declaration));
+            decl->struct_name = name; // Generic struct name (e.g., Box)
+            decl->type = TYPE_NUMERIC; // Placeholder
+            decl->name = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(decl->name, parser->current_token->value);
+            decl->is_array = 0;
+            decl->array_size = 0;
+            decl->array_init = NULL;
+            decl->array_init_count = 0;
+            decl->is_pointer = 0;
+            decl->is_nullable = 0;
+            decl->is_union = 0;
+            decl->union_types = NULL;
+            decl->union_count = 0;
+            decl->is_exported = 1;
+            decl->init_value = NULL;
+            decl->struct_type_args = type_args;
+            decl->struct_type_arg_count = type_arg_count;
+            parser_advance(parser);
+            
+            // Check for initialization
+            if (parser->current_token->type == TOKEN_ASSIGN) {
+                parser_advance(parser);
+                decl->init_value = parser_parse_expression(parser);
+            }
+            
+            stmt->declaration = decl;
+        }
         // Check if it's a struct/type alias instance declaration (e.g., "Person p" or "PersonId id")
-        if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        else if (parser->current_token->type == TOKEN_IDENTIFIER) {
             // This is a struct/alias instance: "TypeName varName"
             // name = type name (struct or alias), current_token = variable name
             stmt->type = STMT_DECLARATION;
@@ -3056,9 +3626,17 @@ Statement* parser_parse_statement(Parser* parser) {
             strcpy(decl->name, parser->current_token->value);
             decl->is_array = 0;
             decl->array_size = 0;
+            decl->array_init = NULL;
+            decl->array_init_count = 0;
             decl->is_pointer = 0;
             decl->is_nullable = 0;
+            decl->is_union = 0;
+            decl->union_types = NULL;
+            decl->union_count = 0;
+            decl->is_exported = 1;
             decl->init_value = NULL;
+            decl->struct_type_args = NULL;
+            decl->struct_type_arg_count = 0;
             parser_advance(parser);
             
             // Check for initialization

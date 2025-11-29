@@ -1,0 +1,11 @@
+-- Simple test
+
+func test_array()
+    numeric[5] arr = [10, 20, 30, 40, 50]
+    print(arr[0])
+end func
+
+func main() -> numeric
+    test_array()
+    return 0
+end func

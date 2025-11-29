@@ -41,6 +41,11 @@ void mlp_array_free(void* data);
 long mlp_array_length(void* data);
 void* mlp_array_resize(void* data, long new_size);
 
+// Phase 14: Range function for iterators
+void* mlp_range(long start, long end, long step);
+void* mlp_range1(long end);
+void* mlp_range2(long start, long end);
+
 // Phase 9: File I/O
 char* mlp_file_read(const char* path);
 long mlp_file_write(const char* path, const char* content);

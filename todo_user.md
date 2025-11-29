@@ -2,7 +2,65 @@
 
 **Amaç:** Basit deklarasyondan modern tam özellikli dile kademeli geçiş
 
-**Durum:** Phase 3 TAMAMLANDI - MELP is Turing-complete! 🎉
+**Durum:** Phase 14 TAMAMLANDI - Iterator/Generator Pattern 🎉
+
+**Son Güncelleme:** 30 Kasım 2025
+
+---
+
+## 📊 MELP Özellik Durumu Tablosu
+
+| Özellik | Durum | Açıklama |
+|---------|-------|----------|
+| **Temel Özellikler** | | |
+| Değişkenler (numeric, decimal, boolean, text) | ✅ | Tam çalışıyor |
+| Aritmetik İşlemler (+, -, *, /, mod) | ✅ | Tam çalışıyor |
+| Karşılaştırma (==, !=, <, >, <=, >=) | ✅ | Tam çalışıyor |
+| Mantıksal (and, or, not) | ✅ | Tam çalışıyor |
+| Print Statement | ✅ | Tam çalışıyor |
+| Yorum Satırları (--, ---) | ✅ | Tam çalışıyor |
+| **Kontrol Yapıları** | | |
+| If/Else/Else If | ✅ | Tam çalışıyor |
+| While Döngüsü | ✅ | Tam çalışıyor |
+| Do-While Döngüsü | ✅ | Tam çalışıyor |
+| For Döngüsü (to/step) | ✅ | Tam çalışıyor |
+| For-In Döngüsü | ✅ | Phase 14 - Yeni |
+| Switch-Case | ✅ | Range matching dahil |
+| Exit/Continue | ✅ | Tam çalışıyor |
+| **Fonksiyonlar** | | |
+| Fonksiyon Tanımı (func) | ✅ | Tam çalışıyor |
+| Return Statement | ✅ | Çoklu return dahil |
+| Lambda/Closure | ✅ | Tam çalışıyor |
+| Generator (yields/yield) | ✅ | Phase 14 - Yeni |
+| Async/Await | ✅ | Temel destek |
+| **Veri Yapıları** | | |
+| Arrays (Static) | ✅ | [1,2,3] literal desteği |
+| Arrays (Dynamic) | ✅ | malloc/resize/free |
+| Structs | ✅ | Field erişimi çalışıyor |
+| Enums | ✅ | Tam çalışıyor |
+| Pointers | ✅ | &var, *ptr |
+| **Gelişmiş Özellikler** | | |
+| Generics | ✅ | Phase 13 - func<T>, struct<T> |
+| Exception Handling | ✅ | try/catch/throw |
+| Module System | ✅ | import desteği |
+| Interface | ✅ | Tam çalışıyor |
+| Type Alias | ✅ | Tam çalışıyor |
+| Range Fonksiyonu | ✅ | Phase 14 - range(n), range(a,b), range(a,b,step) |
+| **String İşlemleri** | | |
+| String Literals | ✅ | Tam çalışıyor |
+| String Interpolation | ✅ | $"Hello {name}" |
+| str_length, substring | ✅ | Tam çalışıyor |
+| indexOf, charAt | ✅ | Tam çalışıyor |
+| **I/O İşlemleri** | | |
+| File Read/Write | ✅ | read_file, write_file |
+| File Append/Exists | ✅ | append_file, file_exists |
+| CLI Arguments | ✅ | get_argc() |
+| **Henüz Yapılmamış** | | |
+| Null Safety | ❌ | Planlandı |
+| Garbage Collection | ❌ | Düşük öncelik |
+| State Management | ❌ | Planlandı |
+| Pattern Matching (match) | ❌ | switch-case alternatifi var |
+| Operator Overloading | ⚠️ | Kısmi destek |
 
 ---
 
@@ -639,3 +697,5 @@ Süre: ~15 dakika
 Dosya: README.md
 
 ----
+
+durum yönetimi, state management

@@ -1,0 +1,16 @@
+func max<T>(T a, T b) returns T
+    if a > b then
+        return a
+    end if
+    return b
+end func
+
+func main() returns numeric
+    numeric x = max<numeric>(5, 10)
+    print(x)
+    
+    numeric y = max<numeric>(100, 50)
+    print(y)
+    
+    return 0
+end func

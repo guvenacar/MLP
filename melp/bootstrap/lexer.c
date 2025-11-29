@@ -72,6 +72,10 @@ typedef enum {
     // Phase 12: Async/Await
     TOKEN_ASYNC,         // async
     TOKEN_AWAIT,         // await
+    // Phase 14: Iterator/Generator
+    TOKEN_YIELD,         // yield
+    TOKEN_YIELDS,        // yields (for generator return type)
+    TOKEN_IN,            // in (for for-in loops)
     // Phase 4: Functions
     TOKEN_FUNC,          // func
     TOKEN_RETURN,        // return
@@ -496,6 +500,12 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_ASYNC;
         } else if (strcmp(word, "await") == 0) {
             token->type = TOKEN_AWAIT;
+        } else if (strcmp(word, "yield") == 0) {
+            token->type = TOKEN_YIELD;
+        } else if (strcmp(word, "yields") == 0) {
+            token->type = TOKEN_YIELDS;
+        } else if (strcmp(word, "in") == 0) {
+            token->type = TOKEN_IN;
         } else {
             token->type = TOKEN_IDENTIFIER;
         }

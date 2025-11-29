@@ -1,0 +1,9 @@
+async func fetchData()
+    print(42)
+    return 42
+end func
+
+func main()
+    numeric result = await fetchData()
+    print(result)
+end func

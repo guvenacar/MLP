@@ -9,6 +9,8 @@ extern string_concat
 extern string_equal
 extern string_not_equal
 extern int_to_string
+extern malloc
+extern free
 extern mlp_array_alloc
 extern mlp_array_free
 extern mlp_array_length
@@ -23,9 +25,20 @@ extern mlp_charAt
 extern mlp_string_length
 extern mlp_get_argv
 extern mlp_get_argc
+extern setjmp
+extern strcmp
+extern mlp_exception_push
+extern mlp_exception_pop
+extern mlp_throw
+extern mlp_exception_type
+extern mlp_exception_message
+extern mlp_exception_code
+extern mlp_exception_has_handler
+extern mlp_exception_has_parent_handler
 global _start
 
 
+global func_test_logical
 func_test_logical:
     push rbp
     mov rbp, rsp
@@ -63,6 +76,12 @@ func_test_logical:
     ; If statement
 
     ; Evaluate comparison
+
+    ; Logical NOT
+    mov rax, [rbp-24]
+    test rax, rax
+    setz al             ; Set AL to 1 if zero, 0 otherwise
+    movzx rax, al       ; Zero-extend AL to RAX
     push rax
     mov rax, 0
     mov rbx, rax
@@ -81,6 +100,7 @@ func_test_logical:
     pop rbp
     ret
 
+global func_main
 func_main:
     push rbp
     mov rbp, rsp

@@ -1,0 +1,9 @@
+func main() returns numeric
+    numeric[] arr = [1, 2, 3, 4, 5]
+    
+    for x in arr do
+        print(x)
+    end for
+    
+    return 0
+end func

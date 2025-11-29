@@ -1,0 +1,16 @@
+-- Test 5: Generator function with yields
+
+func make_squares(numeric n) yields numeric
+    for i = 0 to n
+        yield i * i
+    end for
+end func
+
+func main() returns numeric
+    print("Squares of 0 to 4:")
+    for sq in make_squares(5)
+        print(sq)
+    end for
+    
+    return 0
+end func

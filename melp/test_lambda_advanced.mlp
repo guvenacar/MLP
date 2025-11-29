@@ -1,0 +1,25 @@
+func makeCounter(numeric start)
+    numeric counter = func(increment) = start + increment
+    return counter
+end func
+
+func main()
+    numeric add = func(x) = x + 10
+    numeric result1 = add(5)
+    print(result1)
+    
+    numeric multiplier = 3
+    numeric multiply = func(y) = y * multiplier
+    numeric result2 = multiply(4)
+    print(result2)
+    
+    numeric counter5 = makeCounter(5)
+    numeric result3 = counter5(2)
+    print(result3)
+    
+    numeric counter10 = makeCounter(10)
+    numeric result4 = counter10(3)
+    print(result4)
+    
+    print(999)
+end func
