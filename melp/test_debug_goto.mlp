@@ -1,10 +1,16 @@
-numeric x = 5
+-- Test: Debug label and conditional goto
+-- This demonstrates debug goto without infinite loop
 
-debug mylabel
+numeric counter = 0
 
-if x > 3 then
-    print(100)
-    debug goto mylabel
-end if
+debug loop_start
 
-print(777)
+counter = counter + 1
+print(counter)
+
+-- Only jump back if counter < 3 (prevents infinite loop)
+debug if counter < 3 then
+    debug goto loop_start  -- Debug goto inside debug if block
+debug end if
+
+print(999)

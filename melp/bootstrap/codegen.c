@@ -2415,6 +2415,49 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         
         codegen_emit(gen, "; End of module");
         codegen_emit(gen, "");
+    } else if (stmt->type == STMT_DEBUG_LABEL) {
+        // Debug label: Generate assembly label
+        char label[256];
+        snprintf(label, sizeof(label), ".debug_%s:", stmt->debug_label.label_name);
+        codegen_emit(gen, "");
+        codegen_emit(gen, label);
+    } else if (stmt->type == STMT_DEBUG_GOTO) {
+        // Debug goto: Generate jump to debug label
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), "    jmp .debug_%s           ; debug goto", 
+                 stmt->debug_goto.target_label);
+        codegen_emit(gen, buffer);
+    } else if (stmt->type == STMT_DEBUG_IF) {
+        // Debug if: Conditional debug block
+        int end_label = gen->label_counter++;
+        
+        codegen_emit(gen, "");
+        codegen_emit(gen, "    ; Debug if block");
+        
+        // Generate condition check (similar to normal if)
+        if (stmt->debug_if.condition->type == EXPR_COMPARISON) {
+            codegen_generate_comparison(gen, stmt->debug_if.condition, end_label);
+        } else {
+            // For non-comparison expressions, check if result is non-zero
+            codegen_generate_expression_value(gen, stmt->debug_if.condition);
+            codegen_emit(gen, "    cmp rax, 0");
+            char buffer[256];
+            snprintf(buffer, sizeof(buffer), "    je .L%d", end_label);
+            codegen_emit(gen, buffer);
+        }
+        
+        // Generate debug if body
+        for (int i = 0; i < stmt->debug_if.body_count; i++) {
+            codegen_generate_statement(gen, stmt->debug_if.body[i]);
+        }
+        
+        // End label
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), ".L%d:  ; End debug if", end_label);
+        codegen_emit(gen, buffer);
+    } else if (stmt->type == STMT_DEBUG_PAUSE) {
+        // Debug pause: Generate breakpoint (int3 instruction)
+        codegen_emit(gen, "    int3                ; debug pause (breakpoint)");
     } else if (stmt->type == STMT_IMPORT) {
         // Import statement: Currently a no-op in codegen
         // In future, this could generate extern declarations

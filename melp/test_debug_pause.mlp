@@ -1,0 +1,12 @@
+-- Test: Debug pause (breakpoint)
+-- When run with GDB, execution will stop at int3 instruction
+
+numeric x = 5
+print(x)
+
+debug pause  -- Breakpoint here (int3 instruction)
+
+x = x + 10
+print(x)
+
+print(999)
