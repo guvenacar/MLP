@@ -1,14 +1,23 @@
 # MLP Kurallar Kitabı (AI Agent Referansı)
 
-**Son Güncelleme:** 29 Kasım 2025  
-**Versiyon:** 3.1  
-**Milestone:** Phase 12 Complete + Exception Handling Complete! 🎉  
+**Son Güncelleme:** 30 Kasım 2025  
+**Versiyon:** 4.0  
+**Milestone:** Phase 14 Complete - Generics + Iterator/Generator 🎉  
 **Amaç:** Tüm kritik proje bilgisini tek merkezi dokümanda toplamak
 
-**⚠️ ÖNEMLİ:** Yeni dökümanlar eklendi:
-- `TODO.md` - Tüm gelecek özellikler ve öncelikler
-- `EXCEPTION_HANDLING_COMPLETE.md` - Exception handling detaylı dokümantasyon
-- `AI_HANDOFF_NOTES.md` - Sonraki AI için özel notlar ve başlangıç rehberi
+---
+
+## ⚠️ YENİ AI İÇİN BAŞLANGIÇ PROTOKOLÜ
+
+**MUTLAKA bu sırayla oku:**
+1. **Bu dosya (kurallar_kitabı.md)** - Tüm kurallar ve söz dizimi
+2. **todo_user.md** - Özellik durumu tablosu (başındaki tablo güncel)
+3. **melp/PHASE_14_COMPLETE.md** - Son tamamlanan phase detayları
+
+**Kod yazmadan ÖNCE:**
+- `git status` ile temiz olduğunu doğrula
+- Bu belgedeki "Söz Dizimi Referansı" bölümünü oku
+- Değişiklik yapacağın dosyayı önce oku, sonra değiştir
 
 ---
 
@@ -31,14 +40,13 @@
 ## 1. Kritik Kurallar
 
 ### ⛔ YASAKLAR
-- **Repoya PUSH YOK**: Tüm çalışma lokal, `git push` kesinlikle yasak
-- **Mevcut Kodu Bozma**: `self_host/` ve `runtime/` klasörleri çalışıyor, elleme
-- **Yeni Belgeler Oluşturma**: Tüm bilgi bu dosyaya yazılır, yeni `.md` dosyası oluşturma
-- **Belge Okumadan Kod Yazma**: Görev başlamadan önce bu belgeyi tamamen oku
+- **Mevcut Kodu Bozma**: Çalışan kodu değiştirmeden önce test et
+- **Belge Okumadan Kod Yazma**: Bu belgeyi tamamen oku
+- **Tahminle Kod Yazma**: Emin değilsen dosyayı oku, varsayım yapma
 
 ### ✅ ZORUNLULAR
-- **Bu Belge Tek Kaynak**: Yeni bilgi eklemek için önce index'e ekle, sonra ilgili bölüme yaz
-- **Git Temiz Tut**: Çalışma başında `git status` kontrol et, temiz olmalı
+- **Bu Belge Tek Kaynak**: Yeni bilgi eklemek için önce index'e ekle
+- **Git Temiz Tut**: Çalışma başında `git status` kontrol et
 - **Test Et**: Kod değişikliği yaptıktan sonra mutlaka test et
 - **Self-Hosting İlkesi**: Compiler MLP'de yazılacak (runtime C'de kalacak)
 
@@ -83,31 +91,37 @@ MLP/
 
 ### Aktif Durum
 
-**Phase 10 Complete! (29 Kasım 2025)** ✅
+**Phase 14 Complete! (30 Kasım 2025)** ✅
 
-Son Tamamlanan Özellikler (Phase 10):
-- ✅ **Else-if chains:** Recursive parser helper ile çoklu koşul dalları
-- ✅ **Switch/case:** Multiple case + default support, automatic break
-- ✅ **Do-while loops:** Post-condition loops (en az 1 kez çalışır)
+Son Tamamlanan Özellikler (Phase 14 - Iterator/Generator):
+- ✅ **For-in loops:** `for x in arr` ve `for x in range(n)`
+- ✅ **range() built-in:** range(n), range(start,end), range(start,end,step)
+- ✅ **Generator functions:** `yields` + `yield` keyword'leri
 
 Daha Önce Tamamlananlar:
 - ✅ Phase 0: Deklarasyonlar (numeric, decimal, boolean)
 - ✅ Phase 1: Assignment, print, expressions
 - ✅ Phase 2: If/else, comparison operators (==, !=, <, <=, >, >=)
 - ✅ Phase 3: For loops (with step), while loops, exit, continue
-- ✅ Arithmetic operators: +, -, *, /
-- ✅ Nested loops with context tracking
+- ✅ Phase 4: Functions (func/return)
+- ✅ Phase 5: Arrays (stack + dynamic)
+- ✅ Phase 6: Structs
+- ✅ Phase 7: Nested functions
+- ✅ Phase 8A: Closures
+- ✅ Phase 8B: Defer statement
+- ✅ Phase 9: Modules (import/export)
+- ✅ Phase 10: Switch-case, else-if, do-while
+- ✅ Phase 11: Exception handling (try/catch/throw)
+- ✅ Phase 12: Lambda/Anonymous functions
+- ✅ Phase 13: Generics
+- ✅ Phase 14: Iterator/Generator
 
-**MELP is now Turing-complete with extended control flow!** 🚀
+**MELP is feature-rich and production ready!** 🚀
 
 Sırada (Öncelik Sırasına Göre):
-- ⏳ **Nullable types (?)** - Optional values with null safety (HIGH)
-- ⏳ **Enums** - Named constant sets (HIGH)
-- ⏳ **Type aliases** - Custom type names (MEDIUM)
-- ⏳ **Multiple return values** - Tuple-like returns (MEDIUM)
-- ⏳ Debug features (debug goto, debug pause, debug label)
-- ⏳ Phase 4: Functions (func/return)
-- ⏳ Lambda, try/catch, modules, async/await (LOW - defer until needed)
+- ⏳ **Null Safety** - Optional values with ? operator (HIGH)
+- ⏳ **State Management** - Shared state patterns (MEDIUM)
+- ⏳ **Garbage Collection** - Automatic memory management (LOW - defer)
 
 ---
 
@@ -146,6 +160,23 @@ x86-64 Assembly (NASM)
 ---
 
 ## 4. Söz Dizimi Referansı
+
+### ⚠️ YORUM SATIRLARI (KRİTİK!)
+
+MLP'de yorum satırları `//` veya `#` DEĞİL, `--` kullanır:
+
+```mlp
+-- Bu tek satır yorum
+
+---
+Bu çoklu satır yorum
+Birden fazla satır yazabilirsin
+---
+
+numeric x = 10  -- Satır sonu yorumu
+```
+
+**DİKKAT:** `//` kullanırsan HATA alırsın!
 
 ### Pragmatik MLP Base Syntax
 (Stage 1-2'den sonra compiler'ın gördüğü)
@@ -207,6 +238,17 @@ stop            -- programı durdur
 ```
 
 **Not:** `break` ve `continue` YOK. VB.NET felsefesi: herhangi bir bloktan çıkabilirsin.
+
+### Debug Keyword'leri (MLP'ye Özel)
+
+```mlp
+debug goto @label    -- Debug modunda etikete atla
+debug pause          -- Debug modunda dur (breakpoint)
+debug label @name    -- Debug etiketi tanımla
+debug print x        -- Debug modunda değişken yazdır
+```
+
+**Not:** Bu keyword'ler sadece `--debug` flag'i ile derleme yapılırsa aktif olur.
 
 ---
 
@@ -277,6 +319,41 @@ for i = 0 to 10
         exit for
     end if
     print i
+end for
+```
+
+### For-In (Iterator) ✅ (Phase 14)
+```mlp
+numeric[] arr = [1, 2, 3, 4, 5]
+for x in arr
+    print(x)
+end for
+
+-- range() ile
+for i in range(5)
+    print(i)  -- 0, 1, 2, 3, 4
+end for
+
+for i in range(2, 8)
+    print(i)  -- 2, 3, 4, 5, 6, 7
+end for
+
+for i in range(0, 10, 2)
+    print(i)  -- 0, 2, 4, 6, 8
+end for
+```
+
+### Generator Fonksiyonlar ✅ (Phase 14)
+```mlp
+func squares(numeric n) yields numeric
+    for i = 0 to n
+        yield i * i
+    end for
+end func
+
+-- Kullanım
+for sq in squares(5)
+    print(sq)  -- 0, 1, 4, 9, 16, 25
 end for
 ```
 
@@ -614,6 +691,11 @@ int mlp_list_size(void* list);
 char* mlp_string_concat(const char* a, const char* b);
 int mlp_string_length(const char* str);
 char* mlp_string_substr(const char* str, int start, int len);
+
+// Range/Iterator operations (Phase 14)
+void* mlp_range(long start, long end, long step);   // Tam parametre
+void* mlp_range2(long start, long end);              // step = 1
+void* mlp_range1(long end);                          // start = 0, step = 1
 ```
 
 ### Assembly Template (Minimal)
