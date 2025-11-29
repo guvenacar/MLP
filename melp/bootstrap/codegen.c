@@ -30,8 +30,17 @@ typedef struct StructInfo {
     char** field_names;
     int* field_offsets;  // Offset of each field in bytes
     int total_size;      // Total size of struct in bytes
+    char** implements;   // Implemented interfaces
+    int implements_count;
     struct StructInfo* next;
 } StructInfo;
+
+typedef struct InterfaceInfo {
+    char* name;
+    MethodSignature** methods;
+    int method_count;
+    struct InterfaceInfo* next;
+} InterfaceInfo;
 
 typedef struct EnumValue {
     char* enum_name;    // Enum type name (e.g., "Status")
@@ -59,6 +68,7 @@ typedef struct {
     VarInfo* variables;      // Symbol table
     FuncInfo* functions;     // Function table
     StructInfo* structs;     // Struct type table
+    InterfaceInfo* interfaces; // Interface definitions
     EnumValue* enums;        // Enum values table
     TypeAlias* type_aliases; // Type aliases table
     StringLiteral* strings;  // String literals
@@ -91,6 +101,7 @@ Codegen* codegen_create(const char* output_file) {
     gen->variables = NULL;
     gen->functions = NULL;
     gen->structs = NULL;
+    gen->interfaces = NULL;
     gen->enums = NULL;
     gen->type_aliases = NULL;
     gen->strings = NULL;
@@ -279,7 +290,8 @@ FuncInfo* codegen_find_function(Codegen* gen, const char* name) {
 }
 
 void codegen_add_struct(Codegen* gen, const char* name, int field_count, 
-                       VarType* field_types, char** field_names) {
+                       VarType* field_types, char** field_names,
+                       char** implements, int implements_count) {
     StructInfo* st = malloc(sizeof(StructInfo));
     st->name = malloc(strlen(name) + 1);
     strcpy(st->name, name);
@@ -302,12 +314,52 @@ void codegen_add_struct(Codegen* gen, const char* name, int field_count,
     }
     
     st->total_size = offset;
+    
+    // Copy implements info
+    if (implements && implements_count > 0) {
+        st->implements = malloc(sizeof(char*) * implements_count);
+        st->implements_count = implements_count;
+        for (int i = 0; i < implements_count; i++) {
+            st->implements[i] = malloc(strlen(implements[i]) + 1);
+            strcpy(st->implements[i], implements[i]);
+        }
+    } else {
+        st->implements = NULL;
+        st->implements_count = 0;
+    }
+    
     st->next = gen->structs;
     gen->structs = st;
 }
 
 StructInfo* codegen_find_struct(Codegen* gen, const char* name) {
     StructInfo* current = gen->structs;
+    while (current) {
+        if (strcmp(current->name, name) == 0) {
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+void codegen_add_interface(Codegen* gen, const char* name, MethodSignature** methods, int method_count) {
+    InterfaceInfo* iface = malloc(sizeof(InterfaceInfo));
+    iface->name = malloc(strlen(name) + 1);
+    strcpy(iface->name, name);
+    iface->method_count = method_count;
+    iface->methods = malloc(sizeof(MethodSignature*) * method_count);
+    
+    for (int i = 0; i < method_count; i++) {
+        iface->methods[i] = methods[i];
+    }
+    
+    iface->next = gen->interfaces;
+    gen->interfaces = iface;
+}
+
+InterfaceInfo* codegen_find_interface(Codegen* gen, const char* name) {
+    InterfaceInfo* current = gen->interfaces;
     while (current) {
         if (strcmp(current->name, name) == 0) {
             return current;
@@ -2259,10 +2311,18 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         }
         
         codegen_add_struct(gen, stmt->struct_def.struct_name, 
-                          stmt->struct_def.field_count, field_types, field_names);
+                          stmt->struct_def.field_count, field_types, field_names,
+                          stmt->struct_def.implements, stmt->struct_def.implements_count);
         
         free(field_types);
         free(field_names);
+    } else if (stmt->type == STMT_INTERFACE_DEF) {
+        // Register interface (no assembly code generated)
+        codegen_add_interface(gen, stmt->interface_def.interface_name,
+                             stmt->interface_def.methods, stmt->interface_def.method_count);
+        
+        // Validate that all implementing structs have required methods
+        // This is done after all definitions are parsed
     } else if (stmt->type == STMT_ENUM_DEF) {
         // Register enum values (no assembly code generated)
         for (int i = 0; i < stmt->enum_def.member_count; i++) {

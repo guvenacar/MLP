@@ -1,0 +1,8 @@
+interface Drawable
+    yaz test() returns numeric
+end interface
+
+yaz main() returns numeric
+    yazdir(42)
+    dondur 0
+end yaz

@@ -81,6 +81,9 @@ typedef enum {
     TOKEN_STRUCT,        // struct
     TOKEN_TYPE,          // type (for type aliases)
     TOKEN_DOT,           // . (field access)
+    // Interfaces
+    TOKEN_INTERFACE,     // interface
+    TOKEN_IMPLEMENTS,    // implements
     // Enums
     TOKEN_ENUM,          // enum
     // Ternary operator
@@ -393,6 +396,8 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_TEXT;
         } else if (strcmp(word, "print") == 0) {
             token->type = TOKEN_PRINT;
+        } else if (strcmp(word, "yazdir") == 0) {  // Turkish: print
+            token->type = TOKEN_PRINT;
         } else if (strcmp(word, "if") == 0) {
             token->type = TOKEN_IF;
         } else if (strcmp(word, "then") == 0) {
@@ -459,7 +464,11 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_THROW;
         } else if (strcmp(word, "func") == 0) {
             token->type = TOKEN_FUNC;
+        } else if (strcmp(word, "yaz") == 0) {  // Turkish: write/func
+            token->type = TOKEN_FUNC;
         } else if (strcmp(word, "return") == 0) {
+            token->type = TOKEN_RETURN;
+        } else if (strcmp(word, "dondur") == 0) {  // Turkish: return
             token->type = TOKEN_RETURN;
         } else if (strcmp(word, "returns") == 0) {
             token->type = TOKEN_RETURNS;
@@ -469,6 +478,10 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_TYPE;
         } else if (strcmp(word, "enum") == 0) {
             token->type = TOKEN_ENUM;
+        } else if (strcmp(word, "interface") == 0) {
+            token->type = TOKEN_INTERFACE;
+        } else if (strcmp(word, "implements") == 0) {
+            token->type = TOKEN_IMPLEMENTS;
         } else if (strcmp(word, "import") == 0) {
             token->type = TOKEN_IMPORT;
         } else if (strcmp(word, "module") == 0) {

@@ -31,6 +31,7 @@ typedef enum {
     STMT_RETURN,
     STMT_EXPR_STMT,  // Expression statement (e.g., function call)
     STMT_STRUCT_DEF,  // Phase 6: Struct definition
+    STMT_INTERFACE_DEF, // Interface definition
     STMT_ENUM_DEF,    // Phase 10: Enum definition
     STMT_TYPE_ALIAS,  // Phase 11: Type alias
     STMT_TRY_CATCH,   // Phase 12: Try-catch block
@@ -155,6 +156,16 @@ typedef struct {
     char* name;
 } StructField;
 
+// Interface method signature
+typedef struct MethodSignature {
+    char* name;             // Method name
+    VarType* param_types;   // Parameter types
+    char** param_names;     // Parameter names
+    int param_count;        // Number of parameters
+    VarType return_type;    // Return type
+    int has_return;         // 1 if returns value, 0 if void
+} MethodSignature;
+
 // Phase 10: Enum member definition
 typedef struct {
     char* name;     // Member name (e.g., "Active")
@@ -245,7 +256,14 @@ typedef struct Statement {
             char* struct_name;
             StructField* fields;
             int field_count;
+            char** implements;      // Implemented interfaces
+            int implements_count;   // Number of interfaces
         } struct_def;
+        struct {
+            char* interface_name;
+            struct MethodSignature** methods;
+            int method_count;
+        } interface_def;
         struct {
             char* enum_name;
             EnumMember* members;
@@ -2239,6 +2257,46 @@ Statement* parser_parse_struct_definition(Parser* parser) {
     strcpy(stmt->struct_def.struct_name, parser->current_token->value);
     parser_advance(parser);
     
+    // Check for 'implements' keyword
+    stmt->struct_def.implements = NULL;
+    stmt->struct_def.implements_count = 0;
+    
+    if (parser->current_token->type == TOKEN_IMPLEMENTS) {
+        parser_advance(parser);
+        
+        // Parse interface names (comma-separated)
+        stmt->struct_def.implements = malloc(sizeof(char*) * 10);
+        int implements_capacity = 10;
+        
+        while (1) {
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected interface name after 'implements' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            if (stmt->struct_def.implements_count >= implements_capacity) {
+                implements_capacity *= 2;
+                stmt->struct_def.implements = realloc(stmt->struct_def.implements,
+                                                     sizeof(char*) * implements_capacity);
+            }
+            
+            stmt->struct_def.implements[stmt->struct_def.implements_count] = 
+                malloc(strlen(parser->current_token->value) + 1);
+            strcpy(stmt->struct_def.implements[stmt->struct_def.implements_count],
+                   parser->current_token->value);
+            stmt->struct_def.implements_count++;
+            parser_advance(parser);
+            
+            // Check for comma (multiple interfaces)
+            if (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser);
+            } else {
+                break;
+            }
+        }
+    }
+    
     // Parse struct fields (no 'then' keyword, unlike if statement)
     stmt->struct_def.fields = malloc(sizeof(StructField) * 10);
     stmt->struct_def.field_count = 0;
@@ -2300,6 +2358,154 @@ Statement* parser_parse_struct_definition(Parser* parser) {
     
     return stmt;
 }
+
+Statement* parser_parse_interface_definition(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_INTERFACE_DEF;
+    
+    // Skip 'interface'
+    parser_advance(parser);
+    
+    // Parse interface name
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected interface name after 'interface' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    stmt->interface_def.interface_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->interface_def.interface_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Parse method signatures
+    stmt->interface_def.methods = malloc(sizeof(MethodSignature*) * 10);
+    stmt->interface_def.method_count = 0;
+    int method_capacity = 10;
+    
+    while (parser->current_token->type != TOKEN_END &&
+           parser->current_token->type != TOKEN_EOF) {
+        
+        // Must be 'yaz' (func keyword)
+        if (parser->current_token->type != TOKEN_FUNC) {
+            break;
+        }
+        parser_advance(parser);
+        
+        // Parse method name
+        if (parser->current_token->type != TOKEN_IDENTIFIER) {
+            fprintf(stderr, "Parser error: Expected method name at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        
+        if (stmt->interface_def.method_count >= method_capacity) {
+            method_capacity *= 2;
+            stmt->interface_def.methods = realloc(stmt->interface_def.methods,
+                                                 sizeof(MethodSignature*) * method_capacity);
+        }
+        
+        MethodSignature* sig = malloc(sizeof(MethodSignature));
+        sig->name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(sig->name, parser->current_token->value);
+        parser_advance(parser);
+        
+        // Parse parameters: ( ... )
+        if (parser->current_token->type != TOKEN_LPAREN) {
+            fprintf(stderr, "Parser error: Expected '(' after method name at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+        
+        sig->param_types = malloc(sizeof(VarType) * 10);
+        sig->param_names = malloc(sizeof(char*) * 10);
+        sig->param_count = 0;
+        int param_capacity = 10;
+        
+        while (parser->current_token->type != TOKEN_RPAREN &&
+               parser->current_token->type != TOKEN_EOF) {
+            // Parse parameter type
+            VarType param_type;
+            if (parser->current_token->type == TOKEN_NUMERIC) {
+                param_type = TYPE_NUMERIC;
+            } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                param_type = TYPE_DECIMAL;
+            } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                param_type = TYPE_BOOLEAN;
+            } else if (parser->current_token->type == TOKEN_TEXT) {
+                param_type = TYPE_STRING;
+            } else {
+                fprintf(stderr, "Parser error: Expected parameter type at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            if (sig->param_count >= param_capacity) {
+                param_capacity *= 2;
+                sig->param_types = realloc(sig->param_types, sizeof(VarType) * param_capacity);
+                sig->param_names = realloc(sig->param_names, sizeof(char*) * param_capacity);
+            }
+            
+            sig->param_types[sig->param_count] = param_type;
+            sig->param_names[sig->param_count] = NULL; // No names in interface signatures
+            sig->param_count++;
+            parser_advance(parser);
+            
+            // Check for comma
+            if (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser);
+            }
+        }
+        parser_advance(parser); // Skip ')'
+        
+        // Parse return type: -> type
+        sig->has_return = 0;
+        if (parser->current_token->type == TOKEN_RETURNS) {
+            parser_advance(parser);
+            
+            if (parser->current_token->type == TOKEN_NUMERIC) {
+                sig->return_type = TYPE_NUMERIC;
+                sig->has_return = 1;
+            } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                sig->return_type = TYPE_DECIMAL;
+                sig->has_return = 1;
+            } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                sig->return_type = TYPE_BOOLEAN;
+                sig->has_return = 1;
+            } else if (parser->current_token->type == TOKEN_TEXT) {
+                sig->return_type = TYPE_STRING;
+                sig->has_return = 1;
+            } else if (strcmp(parser->current_token->value, "void") == 0) {
+                sig->has_return = 0;
+            } else {
+                fprintf(stderr, "Parser error: Expected return type after '->' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser);
+        }
+        
+        stmt->interface_def.methods[stmt->interface_def.method_count] = sig;
+        stmt->interface_def.method_count++;
+    }
+    
+    // Expect 'end' 'interface'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after interface body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_INTERFACE) {
+        fprintf(stderr, "Parser error: Expected 'interface' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
 
 Statement* parser_parse_type_alias(Parser* parser) {
     Statement* stmt = malloc(sizeof(Statement));
@@ -2480,6 +2686,11 @@ Statement* parser_parse_statement(Parser* parser) {
     else if (parser->current_token->type == TOKEN_STRUCT) {
         free(stmt);
         return parser_parse_struct_definition(parser);
+    }
+    // Check for interface
+    else if (parser->current_token->type == TOKEN_INTERFACE) {
+        free(stmt);
+        return parser_parse_interface_definition(parser);
     }
     // Check for type alias
     else if (parser->current_token->type == TOKEN_TYPE) {
