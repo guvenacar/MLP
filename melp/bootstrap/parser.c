@@ -781,7 +781,7 @@ Expression* parser_parse_primary_expression(Parser* parser) {
             expr->array_index.index = index;
             return expr;
         } else if (parser->current_token->type == TOKEN_DOT) {
-            // Field access: object.field
+            // Field access OR module qualified function call: object.field OR Module.func()
             parser_advance(parser); // skip '.'
             
             if (parser->current_token->type != TOKEN_IDENTIFIER) {
@@ -794,10 +794,56 @@ Expression* parser_parse_primary_expression(Parser* parser) {
             strcpy(field_name, parser->current_token->value);
             parser_advance(parser);
             
-            Expression* expr = expression_create_field_access(name, field_name);
-            free(name);
-            free(field_name);
-            return expr;
+            // Check if it's a function call: Module.func()
+            if (parser->current_token->type == TOKEN_LPAREN) {
+                // Module qualified function call
+                parser_advance(parser); // skip '('
+                
+                // Create qualified function name: Module_func
+                char* qualified_name = malloc(strlen(name) + strlen(field_name) + 2);
+                sprintf(qualified_name, "%s.%s", name, field_name);
+                
+                // Parse arguments
+                int arg_count = 0;
+                int arg_capacity = 4;
+                Expression** args = malloc(sizeof(Expression*) * arg_capacity);
+                
+                if (parser->current_token->type != TOKEN_RPAREN) {
+                    while (1) {
+                        if (arg_count >= arg_capacity) {
+                            arg_capacity *= 2;
+                            args = realloc(args, sizeof(Expression*) * arg_capacity);
+                        }
+                        
+                        args[arg_count++] = parser_parse_expression(parser);
+                        
+                        if (parser->current_token->type == TOKEN_COMMA) {
+                            parser_advance(parser); // skip ','
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                
+                if (parser->current_token->type != TOKEN_RPAREN) {
+                    fprintf(stderr, "Parser error: Expected ')' after arguments at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                parser_advance(parser); // skip ')'
+                
+                Expression* expr = expression_create_func_call(qualified_name, args, arg_count);
+                free(name);
+                free(field_name);
+                free(qualified_name);
+                return expr;
+            } else {
+                // Regular field access
+                Expression* expr = expression_create_field_access(name, field_name);
+                free(name);
+                free(field_name);
+                return expr;
+            }
         } else {
             // Variable
             Expression* expr = expression_create_variable(name);

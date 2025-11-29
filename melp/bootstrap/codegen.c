@@ -69,6 +69,7 @@ typedef struct {
     int in_loop;             // Are we inside a loop?
     int in_function;         // Are we inside a function?
     int string_counter;      // For unique string labels
+    char* current_module;    // Current module name (NULL if not in module)
 } Codegen;
 
 Codegen* codegen_create(const char* output_file) {
@@ -99,6 +100,7 @@ Codegen* codegen_create(const char* output_file) {
     gen->in_loop = 0;
     gen->in_function = 0;
     gen->string_counter = 0;
+    gen->current_module = NULL;
     return gen;
 }
 
@@ -988,9 +990,26 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                     codegen_emit(gen, "    push rax");
                 }
                 
+                // Check if func_name contains dot (Module.func format)
+                char* func_label = NULL;
+                if (strchr(expr->func_call.func_name, '.') != NULL) {
+                    // Module qualified call: Math.add -> Math_add
+                    func_label = malloc(strlen(expr->func_call.func_name) + 1);
+                    strcpy(func_label, expr->func_call.func_name);
+                    // Replace dot with underscore
+                    for (char* p = func_label; *p; p++) {
+                        if (*p == '.') *p = '_';
+                    }
+                } else {
+                    // Regular function call: func_name -> func_func_name
+                    func_label = malloc(strlen(expr->func_call.func_name) + 6);
+                    sprintf(func_label, "func_%s", expr->func_call.func_name);
+                }
+                
                 // Call function
-                snprintf(buffer, sizeof(buffer), "    call func_%s", expr->func_call.func_name);
+                snprintf(buffer, sizeof(buffer), "    call %s", func_label);
                 codegen_emit(gen, buffer);
+                free(func_label);
                 
                 // Clean up stack (pop arguments)
                 if (expr->func_call.arg_count > 0) {
@@ -1002,7 +1021,7 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             }
         }
     } else if (expr->type == EXPR_FIELD_ACCESS) {
-        // Field access: object.field OR Enum.Member
+        // Field access: object.field OR Enum.Member OR Module.function
         // First check if it's an enum value
         EnumValue* ev = gen->enums;
         int found_enum = 0;
@@ -1019,40 +1038,54 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
         }
         
         if (!found_enum) {
-            // Not an enum, must be struct field access
+            // Check if it's a module function reference (e.g., Math.add)
+            // Module function references are just identifiers, not actual values
+            // They will be used in function calls like: Math.add(5, 3)
+            // For now, we can't load a function as a value, so this is likely
+            // used in a function call expression which will be handled separately
+            
+            // Try to find as struct field access
             VarInfo* var_info = codegen_get_variable(gen, expr->field_access.object_name);
             
-            if (!var_info->struct_name) {
+            if (!var_info) {
+                // Not a variable, could be a module name
+                // For now, emit a comment and leave rax unchanged (module.func will be handled in EXPR_FUNC_CALL)
+                snprintf(buffer, sizeof(buffer), "    ; Module reference: %s.%s (used in function call)", 
+                         expr->field_access.object_name, expr->field_access.field_name);
+                codegen_emit(gen, buffer);
+                // This case shouldn't normally be reached as module.func is parsed as part of function call
+            } else if (!var_info->struct_name) {
                 fprintf(stderr, "Codegen error: '%s' is not a struct or enum\n", expr->field_access.object_name);
                 exit(1);
-            }
-            
-            StructInfo* struct_info = codegen_find_struct(gen, var_info->struct_name);
-            if (!struct_info) {
-                fprintf(stderr, "Codegen error: Undefined struct type '%s'\n", var_info->struct_name);
-                exit(1);
-            }
-            
-            // Find field in struct
-            int field_index = -1;
-            for (int i = 0; i < struct_info->field_count; i++) {
-                if (strcmp(struct_info->field_names[i], expr->field_access.field_name) == 0) {
-                    field_index = i;
-                    break;
+            } else {
+                // Struct field access
+                StructInfo* struct_info = codegen_find_struct(gen, var_info->struct_name);
+                if (!struct_info) {
+                    fprintf(stderr, "Codegen error: Undefined struct type '%s'\n", var_info->struct_name);
+                    exit(1);
                 }
+                
+                // Find field in struct
+                int field_index = -1;
+                for (int i = 0; i < struct_info->field_count; i++) {
+                    if (strcmp(struct_info->field_names[i], expr->field_access.field_name) == 0) {
+                        field_index = i;
+                        break;
+                    }
+                }
+                
+                if (field_index == -1) {
+                    fprintf(stderr, "Codegen error: Struct '%s' has no field '%s'\n", 
+                            var_info->struct_name, expr->field_access.field_name);
+                    exit(1);
+                }
+                
+                // Calculate actual offset: base_offset - field_offset
+                int actual_offset = var_info->stack_offset - struct_info->field_offsets[field_index];
+                snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]   ; Load %s.%s", 
+                         actual_offset, expr->field_access.object_name, expr->field_access.field_name);
+                codegen_emit(gen, buffer);
             }
-            
-            if (field_index == -1) {
-                fprintf(stderr, "Codegen error: Struct '%s' has no field '%s'\n", 
-                        var_info->struct_name, expr->field_access.field_name);
-                exit(1);
-            }
-            
-            // Calculate actual offset: base_offset - field_offset
-            int actual_offset = var_info->stack_offset - struct_info->field_offsets[field_index];
-            snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]   ; Load %s.%s", 
-                     actual_offset, expr->field_access.object_name, expr->field_access.field_name);
-            codegen_emit(gen, buffer);
         }
     } else if (expr->type == EXPR_TERNARY) {
         // Ternary operator: condition ? true_expr : false_expr
@@ -1850,6 +1883,14 @@ void codegen_generate_switch(Codegen* gen, Statement* stmt) {
 void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     char buffer[256];
     
+    // Generate function name with module prefix if inside module
+    char func_name[256];
+    if (gen->current_module) {
+        snprintf(func_name, sizeof(func_name), "%s_%s", gen->current_module, stmt->func_def.func_name);
+    } else {
+        snprintf(func_name, sizeof(func_name), "func_%s", stmt->func_def.func_name);
+    }
+    
     // Register function
     codegen_add_function(gen, stmt->func_def.func_name, 
                         stmt->func_def.param_count, 
@@ -1864,7 +1905,7 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
         codegen_emit(gen, buffer);
     }
     
-    snprintf(buffer, sizeof(buffer), "func_%s:", stmt->func_def.func_name);
+    snprintf(buffer, sizeof(buffer), "%s:", func_name);
     codegen_emit(gen, buffer);
     codegen_emit(gen, "    push rbp");
     codegen_emit(gen, "    mov rbp, rsp");
@@ -2295,6 +2336,38 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         // Expression statement (e.g., function call for side effects)
         codegen_generate_expression_value(gen, stmt->print_stmt.expr);
         // Result in rax, but we don't use it
+    } else if (stmt->type == STMT_MODULE_DEF) {
+        // Module definition: Generate code for module body with namespace prefix
+        codegen_emit(gen, "");
+        char comment[256];
+        snprintf(comment, sizeof(comment), "; Module: %s", stmt->module_def.module_name);
+        codegen_emit(gen, comment);
+        
+        // Set current module context
+        gen->current_module = stmt->module_def.module_name;
+        
+        // Generate code for all statements in module body
+        for (int i = 0; i < stmt->module_def.body_count; i++) {
+            codegen_generate_statement(gen, stmt->module_def.body[i]);
+        }
+        
+        // Clear module context
+        gen->current_module = NULL;
+        
+        codegen_emit(gen, "; End of module");
+        codegen_emit(gen, "");
+    } else if (stmt->type == STMT_IMPORT) {
+        // Import statement: Currently a no-op in codegen
+        // In future, this could generate extern declarations
+        // For now, we assume all modules are compiled together and linked
+        char comment[256];
+        if (stmt->import_stmt.alias) {
+            snprintf(comment, sizeof(comment), "; Import: %s as %s", 
+                     stmt->import_stmt.module_name, stmt->import_stmt.alias);
+        } else {
+            snprintf(comment, sizeof(comment), "; Import: %s", stmt->import_stmt.module_name);
+        }
+        codegen_emit(gen, comment);
     }
 }
 
@@ -2315,11 +2388,13 @@ void codegen_generate(Codegen* gen, AST* ast) {
     
     codegen_emit(gen, "");
     
-    // First pass: Register struct types and generate function definitions
+    // First pass: Register struct types, generate function definitions, and module definitions
     for (int i = 0; i < ast->count; i++) {
         if (ast->statements[i]->type == STMT_STRUCT_DEF) {
             codegen_generate_statement(gen, ast->statements[i]);
         } else if (ast->statements[i]->type == STMT_FUNC_DEF) {
+            codegen_generate_statement(gen, ast->statements[i]);
+        } else if (ast->statements[i]->type == STMT_MODULE_DEF) {
             codegen_generate_statement(gen, ast->statements[i]);
         }
     }
@@ -2356,10 +2431,11 @@ void codegen_generate(Codegen* gen, AST* ast) {
         codegen_emit(gen, "    call func_main");
     }
     
-    // Second pass: Generate non-function, non-struct statements
+    // Second pass: Generate non-function, non-struct, non-module statements
     for (int i = 0; i < ast->count; i++) {
         if (ast->statements[i]->type != STMT_FUNC_DEF && 
-            ast->statements[i]->type != STMT_STRUCT_DEF) {
+            ast->statements[i]->type != STMT_STRUCT_DEF &&
+            ast->statements[i]->type != STMT_MODULE_DEF) {
             codegen_generate_statement(gen, ast->statements[i]);
         }
     }

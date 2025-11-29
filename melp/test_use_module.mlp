@@ -1,0 +1,8 @@
+-- Test program using module
+import MathUtils
+
+numeric result1 = MathUtils.add(10, 20)
+print(result1)
+
+numeric result2 = MathUtils.multiply(5, 6)
+print(result2)
