@@ -1,0 +1,71 @@
+#!/bin/bash
+# MELP Multi-file Compiler
+# Compiles multiple .mlp files by concatenating them
+
+set -e
+
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 <file1.mlp> [file2.mlp ...] <output>"
+    echo "Example: $0 math_utils.mlp main.mlp program"
+    exit 1
+fi
+
+# Get all arguments
+args=("$@")
+# Last argument is output name
+output_name="${args[-1]}"
+# All other arguments are input files
+input_files=("${args[@]:0:$#-1}")
+
+echo "MELP Multi-file Compiler"
+echo "========================"
+echo "Input files: ${input_files[@]}"
+echo "Output: $output_name"
+echo ""
+
+# Create temporary combined file
+temp_file=$(mktemp /tmp/melp_combined_XXXXXX.mlp)
+
+echo "-- Combined MELP source from multiple files" > "$temp_file"
+echo "" >> "$temp_file"
+
+# Concatenate all input files
+for file in "${input_files[@]}"; do
+    if [ ! -f "$file" ]; then
+        echo "Error: File not found: $file"
+        rm -f "$temp_file"
+        exit 1
+    fi
+    echo "-- ===== File: $file =====" >> "$temp_file"
+    cat "$file" >> "$temp_file"
+    echo "" >> "$temp_file"
+done
+
+echo "Combined source: $temp_file"
+echo ""
+
+# Compile combined file
+./melp-bootstrap "$temp_file" "${output_name}.s"
+
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "Assembling..."
+    nasm -f elf64 "${output_name}.s" -o "${output_name}.o"
+    
+    echo "Linking..."
+    ld "${output_name}.o" runtime/runtime.o -o "$output_name" -lc --dynamic-linker=/lib64/ld-linux-x86-64.so.2 2>&1 | grep -v "warning:"
+    
+    echo ""
+    echo "✅ Multi-file compilation successful!"
+    echo "   Executable: $output_name"
+    echo ""
+    echo "Cleanup temporary files..."
+    rm -f "$temp_file"
+    
+    echo ""
+    echo "Run with: ./$output_name"
+else
+    echo "❌ Compilation failed"
+    rm -f "$temp_file"
+    exit 1
+fi

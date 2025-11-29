@@ -1,0 +1,20 @@
+-- Main program that uses MathUtils module
+
+import MathUtils
+
+numeric x = 10
+numeric y = 20
+
+numeric sum = MathUtils.add(x, y)
+print(sum)
+
+numeric product = MathUtils.multiply(x, y)
+print(product)
+
+numeric diff = MathUtils.subtract(y, x)
+print(diff)
+
+numeric quot = MathUtils.divide(y, x)
+print(quot)
+
+print(999)

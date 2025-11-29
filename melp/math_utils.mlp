@@ -1,0 +1,24 @@
+-- Math utilities module
+-- This file contains mathematical helper functions
+
+module MathUtils
+    export func add(numeric a, numeric b) returns numeric
+        return a + b
+    end func
+    
+    export func subtract(numeric a, numeric b) returns numeric
+        return a - b
+    end func
+    
+    export func multiply(numeric x, numeric y) returns numeric
+        return x * y
+    end func
+    
+    export func divide(numeric x, numeric y) returns numeric
+        return x / y
+    end func
+    
+    private func helper(numeric n) returns numeric
+        return n * 2
+    end func
+end module

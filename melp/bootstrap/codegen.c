@@ -356,6 +356,31 @@ void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "global _start");
 }
 
+// Helper function to check if a function name is a builtin/runtime function
+int is_builtin_function(const char* name) {
+    static const char* builtins[] = {
+        "print_number", "print_string", "string_length", "string_concat",
+        "string_equal", "string_not_equal", "int_to_string",
+        "malloc", "free",
+        "mlp_array_alloc", "mlp_array_free", "mlp_array_length", "mlp_array_resize",
+        "mlp_file_read", "mlp_file_write", "mlp_file_exists", "mlp_file_append",
+        "mlp_substring", "mlp_indexOf", "mlp_charAt", "mlp_string_length",
+        "mlp_get_argv", "mlp_get_argc",
+        "setjmp", "strcmp",
+        "mlp_exception_push", "mlp_exception_pop", "mlp_throw",
+        "mlp_exception_type", "mlp_exception_message", "mlp_exception_code",
+        "mlp_exception_has_handler", "mlp_exception_has_parent_handler",
+        NULL
+    };
+    
+    for (int i = 0; builtins[i] != NULL; i++) {
+        if (strcmp(name, builtins[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void codegen_emit_epilogue(Codegen* gen) {
     codegen_emit(gen, "");
     codegen_emit(gen, "    ; Exit program");
@@ -984,14 +1009,12 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 
                 // Result is in rax
             } else {
-                // Regular user-defined function - push arguments in reverse order (right to left)
-                for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
-                    codegen_generate_expression_value(gen, expr->func_call.args[i]);
-                    codegen_emit(gen, "    push rax");
-                }
+                // Regular user-defined or builtin function
                 
-                // Check if func_name contains dot (Module.func format)
+                // Check if it's a builtin function
+                int is_builtin = 0;
                 char* func_label = NULL;
+                
                 if (strchr(expr->func_call.func_name, '.') != NULL) {
                     // Module qualified call: Math.add -> Math_add
                     func_label = malloc(strlen(expr->func_call.func_name) + 1);
@@ -1000,22 +1023,58 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                     for (char* p = func_label; *p; p++) {
                         if (*p == '.') *p = '_';
                     }
+                } else if (is_builtin_function(expr->func_call.func_name)) {
+                    // Builtin/runtime function - use as-is without func_ prefix
+                    func_label = malloc(strlen(expr->func_call.func_name) + 1);
+                    strcpy(func_label, expr->func_call.func_name);
+                    is_builtin = 1;
                 } else {
-                    // Regular function call: func_name -> func_func_name
+                    // Regular user function call: func_name -> func_func_name
                     func_label = malloc(strlen(expr->func_call.func_name) + 6);
                     sprintf(func_label, "func_%s", expr->func_call.func_name);
                 }
                 
-                // Call function
-                snprintf(buffer, sizeof(buffer), "    call %s", func_label);
-                codegen_emit(gen, buffer);
-                free(func_label);
-                
-                // Clean up stack (pop arguments)
-                if (expr->func_call.arg_count > 0) {
-                    snprintf(buffer, sizeof(buffer), "    add rsp, %d", expr->func_call.arg_count * 8);
+                if (is_builtin) {
+                    // Builtin functions use System V ABI (rdi, rsi, rdx, rcx, r8, r9)
+                    // Generate arguments and store in registers
+                    static const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+                    
+                    // Evaluate arguments right-to-left and store in temp locations
+                    for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
+                        codegen_generate_expression_value(gen, expr->func_call.args[i]);
+                        codegen_emit(gen, "    push rax");
+                    }
+                    
+                    // Pop arguments into registers (left-to-right)
+                    for (int i = 0; i < expr->func_call.arg_count && i < 6; i++) {
+                        snprintf(buffer, sizeof(buffer), "    pop %s", arg_regs[i]);
+                        codegen_emit(gen, buffer);
+                    }
+                    
+                    // Call function
+                    snprintf(buffer, sizeof(buffer), "    call %s", func_label);
                     codegen_emit(gen, buffer);
+                    
+                    // Result is in rax
+                } else {
+                    // User-defined function - push arguments in reverse order (right to left)
+                    for (int i = expr->func_call.arg_count - 1; i >= 0; i--) {
+                        codegen_generate_expression_value(gen, expr->func_call.args[i]);
+                        codegen_emit(gen, "    push rax");
+                    }
+                    
+                    // Call function
+                    snprintf(buffer, sizeof(buffer), "    call %s", func_label);
+                    codegen_emit(gen, buffer);
+                    
+                    // Clean up stack (pop arguments)
+                    if (expr->func_call.arg_count > 0) {
+                        snprintf(buffer, sizeof(buffer), "    add rsp, %d", expr->func_call.arg_count * 8);
+                        codegen_emit(gen, buffer);
+                    }
                 }
+                
+                free(func_label);
                 
                 // Result is in rax
             }

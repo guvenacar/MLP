@@ -34,6 +34,7 @@ extern mlp_exception_type
 extern mlp_exception_message
 extern mlp_exception_code
 extern mlp_exception_has_handler
+extern mlp_exception_has_parent_handler
 global _start
 
 
