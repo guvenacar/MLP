@@ -18,6 +18,7 @@ typedef enum {
     STMT_DECLARATION,
     STMT_ASSIGNMENT,
     STMT_MULTI_ASSIGNMENT,  // Multiple variable assignment (a, b = func())
+    STMT_DESTRUCTURE,       // Destructuring assignment (a, b, c = arr)
     STMT_PRINT,
     STMT_IF,
     STMT_FOR,
@@ -290,6 +291,12 @@ typedef struct Statement {
             char* module_name;         // Module name to import (e.g., "math")
             char* alias;               // Alias (e.g., "str" for "import string as str"), NULL if no alias
         } import_stmt;
+        struct {
+            VarType var_type;          // Type of variables (all must be same type)
+            char** var_names;          // Array of variable names
+            int var_count;             // Number of variables
+            Expression* source;        // Source expression (array or struct)
+        } destructure;
         struct {
             char* module_name;         // Module name (e.g., "MyModule")
             struct Statement** body;   // Module body (functions, structs, etc.)
@@ -2606,14 +2613,178 @@ Statement* parser_parse_statement(Parser* parser) {
         parser_advance(parser);
         return stmt;
     }
-    // Check for type keywords (declaration)
+    // Check for type keywords (declaration or destructuring)
     else if (parser->current_token->type == TOKEN_NUMERIC ||
         parser->current_token->type == TOKEN_DECIMAL ||
         parser->current_token->type == TOKEN_BOOLEAN ||
         parser->current_token->type == TOKEN_TEXT) {
-        stmt->type = STMT_DECLARATION;
-        stmt->declaration = parser_parse_declaration(parser);
-        stmt->declaration->is_exported = is_exported;  // Set visibility
+        
+        // Try to parse as declaration first
+        // But we need to detect destructuring pattern: type id, id, id = expr
+        // vs normal declaration: type id or type id = expr or type[] id
+        
+        Token* type_token = parser->current_token;
+        TokenType saved_type = type_token->type;  // Save type before advancing
+        
+        parser_advance(parser);
+        
+        // Check for array syntax or pointer syntax
+        if (parser->current_token->type == TOKEN_LBRACKET ||
+            parser->current_token->type == TOKEN_MULTIPLY) {
+            // Normal declaration with array or pointer - rewind and parse normally
+            // We need to go back - save current state
+            int is_array = (parser->current_token->type == TOKEN_LBRACKET);
+            int is_pointer = (parser->current_token->type == TOKEN_MULTIPLY);
+            
+            // For now, just parse as normal declaration
+            // This is a simplification - ideally we'd rewind properly
+            stmt->type = STMT_DECLARATION;
+            
+            VarType var_type;
+            if (saved_type == TOKEN_NUMERIC) var_type = TYPE_NUMERIC;
+            else if (saved_type == TOKEN_DECIMAL) var_type = TYPE_DECIMAL;
+            else if (saved_type == TOKEN_BOOLEAN) var_type = TYPE_BOOLEAN;
+            else var_type = TYPE_STRING;
+            
+            Declaration* decl = malloc(sizeof(Declaration));
+            decl->type = var_type;
+            decl->struct_name = NULL;
+            decl->is_nullable = 0;
+            decl->is_exported = is_exported;
+            decl->is_array = 0;
+            decl->array_size = 0;
+            decl->is_pointer = 0;
+            decl->init_value = NULL;
+            
+            if (is_array) {
+                parser_advance(parser); // skip '['
+                decl->is_array = 1;
+                if (parser->current_token->type == TOKEN_NUMBER) {
+                    decl->array_size = atoi(parser->current_token->value);
+                    parser_advance(parser);
+                } else {
+                    decl->array_size = 0; // Dynamic
+                }
+                if (parser->current_token->type != TOKEN_RBRACKET) {
+                    fprintf(stderr, "Parser error: Expected ']' in array declaration\n");
+                    exit(1);
+                }
+                parser_advance(parser);
+            } else if (is_pointer) {
+                parser_advance(parser); // skip '*'
+                decl->is_pointer = 1;
+            }
+            
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected identifier\n");
+                exit(1);
+            }
+            decl->name = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(decl->name, parser->current_token->value);
+            parser_advance(parser);
+            
+            decl->init_value = NULL;
+            if (parser->current_token->type == TOKEN_ASSIGN) {
+                parser_advance(parser);
+                decl->init_value = parser_parse_expression(parser);
+            }
+            
+            stmt->declaration = decl;
+            
+        } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+            // Could be: numeric a, b = arr OR numeric a = 5 OR numeric a
+            // Save first identifier
+            char* first_name = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(first_name, parser->current_token->value);
+            parser_advance(parser);
+            
+            if (parser->current_token->type == TOKEN_COMMA) {
+                // Destructuring: numeric a, b, c = arr
+                stmt->type = STMT_DESTRUCTURE;
+                
+                VarType var_type;
+                if (saved_type == TOKEN_NUMERIC) var_type = TYPE_NUMERIC;
+                else if (saved_type == TOKEN_DECIMAL) var_type = TYPE_DECIMAL;
+                else if (saved_type == TOKEN_BOOLEAN) var_type = TYPE_BOOLEAN;
+                else var_type = TYPE_STRING;
+                
+                stmt->destructure.var_type = var_type;
+                stmt->destructure.var_names = malloc(sizeof(char*) * 10);
+                stmt->destructure.var_count = 0;
+                int capacity = 10;
+                
+                // Add first name
+                stmt->destructure.var_names[stmt->destructure.var_count++] = first_name;
+                
+                // Parse remaining names
+                while (parser->current_token->type == TOKEN_COMMA) {
+                    parser_advance(parser); // skip comma
+                    
+                    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                        fprintf(stderr, "Parser error: Expected identifier in destructuring at line %d\n",
+                                parser->current_token->line);
+                        exit(1);
+                    }
+                    
+                    if (stmt->destructure.var_count >= capacity) {
+                        capacity *= 2;
+                        stmt->destructure.var_names = realloc(stmt->destructure.var_names,
+                                                             sizeof(char*) * capacity);
+                    }
+                    
+                    stmt->destructure.var_names[stmt->destructure.var_count] = 
+                        malloc(strlen(parser->current_token->value) + 1);
+                    strcpy(stmt->destructure.var_names[stmt->destructure.var_count],
+                           parser->current_token->value);
+                    stmt->destructure.var_count++;
+                    
+                    parser_advance(parser);
+                }
+                
+                // Expect '='
+                if (parser->current_token->type != TOKEN_ASSIGN) {
+                    fprintf(stderr, "Parser error: Expected '=' in destructuring at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                parser_advance(parser);
+                
+                // Parse source expression
+                stmt->destructure.source = parser_parse_expression(parser);
+                
+            } else {
+                // Normal declaration: numeric a = 5 OR numeric a
+                stmt->type = STMT_DECLARATION;
+                
+                VarType var_type;
+                if (saved_type == TOKEN_NUMERIC) var_type = TYPE_NUMERIC;
+                else if (saved_type == TOKEN_DECIMAL) var_type = TYPE_DECIMAL;
+                else if (saved_type == TOKEN_BOOLEAN) var_type = TYPE_BOOLEAN;
+                else var_type = TYPE_STRING;
+                
+                Declaration* decl = malloc(sizeof(Declaration));
+                decl->type = var_type;
+                decl->name = first_name;
+                decl->struct_name = NULL;
+                decl->is_array = 0;
+                decl->array_size = 0;
+                decl->is_pointer = 0;
+                decl->is_nullable = 0;
+                decl->is_exported = is_exported;
+                decl->init_value = NULL;
+                
+                if (parser->current_token->type == TOKEN_ASSIGN) {
+                    parser_advance(parser);
+                    decl->init_value = parser_parse_expression(parser);
+                }
+                
+                stmt->declaration = decl;
+            }
+        } else {
+            fprintf(stderr, "Parser error: Unexpected token after type keyword at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
     }
     // Check for print
     else if (parser->current_token->type == TOKEN_PRINT) {

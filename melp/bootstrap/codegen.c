@@ -807,6 +807,12 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             snprintf(buffer, sizeof(buffer), "    mov rax, [r13+%d]", capture_index * 8);
             codegen_emit(gen, buffer);
         } else {
+            // Check if this is an array variable (for destructuring)
+            // If the variable is declared as array, we need the address, not the value
+            // This is a heuristic: if offset is large (>8), likely an array
+            // Better: check VarInfo for is_array flag (but we don't have that)
+            // For now, just return the value - destructuring will handle this differently
+            
             // Regular stack variable
             snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", var->stack_offset);
             codegen_emit(gen, buffer);
@@ -2317,6 +2323,58 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         // Additional variables (if supported in future)
         if (stmt->multi_assignment.var_count > 2) {
             fprintf(stderr, "Codegen warning: More than 2 values in multi-assignment not fully supported\n");
+        }
+    } else if (stmt->type == STMT_DESTRUCTURE) {
+        // Destructuring: numeric a, b, c = arr
+        char buffer[256];
+        
+        // Get source variable (must be an array for now)
+        if (stmt->destructure.source->type != EXPR_VARIABLE) {
+            fprintf(stderr, "Codegen error: Destructuring source must be a variable\n");
+            exit(1);
+        }
+        
+        VarInfo* src_var = codegen_get_variable(gen, stmt->destructure.source->var_name);
+        if (!src_var) {
+            fprintf(stderr, "Codegen error: Destructuring source '%s' not found\n",
+                    stmt->destructure.source->var_name);
+            exit(1);
+        }
+        
+        // For fixed-size arrays on stack, we need to calculate the base address
+        // Array is stored at [rbp-offset] to [rbp-offset+size]
+        // We want the address of the last element (highest address)
+        // which is [rbp-offset+size-8] for numeric arrays
+        
+        // Calculate array base address (address of first element, which has highest offset)
+        snprintf(buffer, sizeof(buffer), "    lea rax, [rbp-%d]   ; Load address of %s",
+                 src_var->stack_offset, stmt->destructure.source->var_name);
+        codegen_emit(gen, buffer);
+        
+        // Allocate space for each variable and load from array
+        for (int i = 0; i < stmt->destructure.var_count; i++) {
+            gen->stack_offset += 8;
+            codegen_add_variable(gen, stmt->destructure.var_names[i],
+                               gen->stack_offset, stmt->destructure.var_type, NULL);
+            
+            snprintf(buffer, sizeof(buffer), "    sub rsp, 8");
+            codegen_emit(gen, buffer);
+            
+            // Load array[i] into variable
+            // Array base address is in rax
+            // Element i is at [rax + i*8]
+            snprintf(buffer, sizeof(buffer), "    push rax   ; Save array pointer");
+            codegen_emit(gen, buffer);
+            
+            snprintf(buffer, sizeof(buffer), "    mov rbx, [rax+%d]   ; Load array[%d]", i * 8, i);
+            codegen_emit(gen, buffer);
+            
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rbx   ; Store to %s",
+                     gen->stack_offset, stmt->destructure.var_names[i]);
+            codegen_emit(gen, buffer);
+            
+            snprintf(buffer, sizeof(buffer), "    pop rax   ; Restore array pointer");
+            codegen_emit(gen, buffer);
         }
     } else if (stmt->type == STMT_PRINT) {
         codegen_generate_print(gen, stmt->print_stmt.expr);
