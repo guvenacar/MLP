@@ -225,15 +225,16 @@ typedef struct Statement {
         } switch_stmt;
         struct {
             char* func_name;
-            VarType* param_types;   // Parameter types
-            char** param_names;     // Parameter names
+            VarType* param_types;       // Parameter types
+            char** param_names;         // Parameter names
+            char** param_struct_names;  // Struct type names (NULL for primitives)
             int param_count;
-            VarType* return_types;  // Return types (NULL if no return type specified)
-            int return_count;       // Number of return values (0 if void)
+            VarType* return_types;      // Return types (NULL if no return type specified)
+            int return_count;           // Number of return values (0 if void)
             struct Statement** body;
             int body_count;
-            int is_exported;        // Phase 9: 1 if export, 0 if private
-            int is_async;           // Phase 12: 1 if async, 0 if sync
+            int is_exported;            // Phase 9: 1 if export, 0 if private
+            int is_async;               // Phase 12: 1 if async, 0 if sync
         } func_def;
         struct {
             Expression** values;    // Return values (multiple for multi-return)
@@ -2041,6 +2042,7 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
     // Parse parameters
     stmt->func_def.param_types = malloc(sizeof(VarType) * 10);
     stmt->func_def.param_names = malloc(sizeof(char*) * 10);
+    stmt->func_def.param_struct_names = malloc(sizeof(char*) * 10);
     stmt->func_def.param_count = 0;
     int param_capacity = 10;
     
@@ -2048,20 +2050,31 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
         while (1) {
             // Parse parameter type
             VarType param_type;
+            char* struct_name = NULL;  // For struct type parameters
+            
             if (parser->current_token->type == TOKEN_NUMERIC) {
                 param_type = TYPE_NUMERIC;
+                parser_advance(parser);
             } else if (parser->current_token->type == TOKEN_DECIMAL) {
                 param_type = TYPE_DECIMAL;
+                parser_advance(parser);
             } else if (parser->current_token->type == TOKEN_BOOLEAN) {
                 param_type = TYPE_BOOLEAN;
+                parser_advance(parser);
             } else if (parser->current_token->type == TOKEN_TEXT) {
                 param_type = TYPE_STRING;
+                parser_advance(parser);
+            } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+                // Could be a struct type (e.g., Vector2D)
+                param_type = TYPE_NUMERIC;  // Placeholder
+                struct_name = malloc(strlen(parser->current_token->value) + 1);
+                strcpy(struct_name, parser->current_token->value);
+                parser_advance(parser);
             } else {
                 fprintf(stderr, "Parser error: Expected parameter type at line %d\n",
                         parser->current_token->line);
                 exit(1);
             }
-            parser_advance(parser);
             
             // Phase 10: Check for pointer type (*)
             if (parser->current_token->type == TOKEN_MULTIPLY) {
@@ -2083,11 +2096,14 @@ Statement* parser_parse_func_definition(Parser* parser, int is_exported, int is_
                                                     sizeof(VarType) * param_capacity);
                 stmt->func_def.param_names = realloc(stmt->func_def.param_names,
                                                      sizeof(char*) * param_capacity);
+                stmt->func_def.param_struct_names = realloc(stmt->func_def.param_struct_names,
+                                                           sizeof(char*) * param_capacity);
             }
             
             stmt->func_def.param_types[stmt->func_def.param_count] = param_type;
             stmt->func_def.param_names[stmt->func_def.param_count] = malloc(strlen(parser->current_token->value) + 1);
             strcpy(stmt->func_def.param_names[stmt->func_def.param_count], parser->current_token->value);
+            stmt->func_def.param_struct_names[stmt->func_def.param_count] = struct_name;  // NULL for primitives
             stmt->func_def.param_count++;
             parser_advance(parser);
             

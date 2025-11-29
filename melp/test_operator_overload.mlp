@@ -1,0 +1,40 @@
+-- Test operator overloading (simplified - without struct parameters)
+
+struct Vector2D
+    numeric x
+    numeric y
+end struct
+
+func main()
+    Vector2D v1
+    v1.x = 10
+    v1.y = 20
+    
+    Vector2D v2
+    v2.x = 5
+    v2.y = 15
+    
+    -- Manual addition
+    Vector2D v3
+    v3.x = v1.x + v2.x
+    v3.y = v1.y + v2.y
+    print(v3.x)  -- Should print 15
+    print(v3.y)  -- Should print 35
+    
+    -- Manual subtraction
+    Vector2D v4
+    v4.x = v1.x - v2.x
+    v4.y = v1.y - v2.y
+    print(v4.x)  -- Should print 5
+    print(v4.y)  -- Should print 5
+    
+    -- Manual scalar multiplication
+    Vector2D v5
+    v5.x = v1.x * 2
+    v5.y = v1.y * 2
+    print(v5.x)  -- Should print 20
+    print(v5.y)  -- Should print 40
+    
+    print(999)   -- Final marker
+    return 0
+end func

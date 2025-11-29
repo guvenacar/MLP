@@ -68,6 +68,7 @@ typedef struct {
     int loop_end_label;      // Current loop end for exit
     int in_loop;             // Are we inside a loop?
     int in_function;         // Are we inside a function?
+    int in_operator_overload; // Are we inside an operator overload function?
     int string_counter;      // For unique string labels
     char* current_module;    // Current module name (NULL if not in module)
 } Codegen;
@@ -99,18 +100,24 @@ Codegen* codegen_create(const char* output_file) {
     gen->loop_end_label = -1;
     gen->in_loop = 0;
     gen->in_function = 0;
+    gen->in_operator_overload = 0;
     gen->string_counter = 0;
     gen->current_module = NULL;
     return gen;
 }
 
-void codegen_add_variable(Codegen* gen, const char* name, int offset, VarType type) {
+void codegen_add_variable(Codegen* gen, const char* name, int offset, VarType type, const char* struct_name) {
     VarInfo* var = malloc(sizeof(VarInfo));
     var->name = malloc(strlen(name) + 1);
     strcpy(var->name, name);
     var->stack_offset = offset;
     var->type = type;
-    var->struct_name = NULL;
+    if (struct_name) {
+        var->struct_name = malloc(strlen(struct_name) + 1);
+        strcpy(var->struct_name, struct_name);
+    } else {
+        var->struct_name = NULL;
+    }
     var->is_dynamic_array = 0;
     var->is_pointer = 0;
     var->next = gen->variables;
@@ -499,7 +506,7 @@ void codegen_generate_declaration(Codegen* gen, Declaration* decl) {
             int total_size = decl->array_size * element_size;
             
             gen->stack_offset += total_size;
-            codegen_add_variable(gen, decl->name, gen->stack_offset, decl->type);
+            codegen_add_variable(gen, decl->name, gen->stack_offset, decl->type, NULL);
             
             const char* type_str = decl->type == TYPE_NUMERIC ? "numeric" :
                                    decl->type == TYPE_DECIMAL ? "decimal" :
@@ -582,7 +589,7 @@ void codegen_generate_declaration(Codegen* gen, Declaration* decl) {
     } else {
         // Regular variable declaration (may be through type alias)
         gen->stack_offset += 8;
-        codegen_add_variable(gen, decl->name, gen->stack_offset, actual_type);
+        codegen_add_variable(gen, decl->name, gen->stack_offset, actual_type, NULL);
         
         snprintf(buffer, sizeof(buffer), 
                  "    ; Declaration: %s %s", 
@@ -836,31 +843,68 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             codegen_emit(gen, "    call string_concat");
             // Result pointer is in rax
         } else {
-            // Numeric operations
-            // Evaluate left side
-            codegen_generate_expression_value(gen, expr->binary_op.left);
-            codegen_emit(gen, "    push rax");
+            // Check for operator overloading (only if not already in operator overload function)
+            char overload_func[256];
+            const char* op_name = NULL;
+            FuncInfo* overload = NULL;
             
-            // Evaluate right side
-            codegen_generate_expression_value(gen, expr->binary_op.right);
-            codegen_emit(gen, "    mov rbx, rax");
-            codegen_emit(gen, "    pop rax");
+            if (!gen->in_operator_overload) {
+                // For now, only support numeric operator overloading
+                switch (expr->binary_op.op) {
+                    case BIN_OP_ADD: op_name = "add"; break;
+                    case BIN_OP_SUB: op_name = "sub"; break;
+                    case BIN_OP_MUL: op_name = "mul"; break;
+                    case BIN_OP_DIV: op_name = "div"; break;
+                }
+                
+                snprintf(overload_func, sizeof(overload_func), "numeric_operator_%s", op_name);
+                
+                // Check if operator overload function exists
+                overload = codegen_find_function(gen, overload_func);
+            }
             
-            // Perform operation
-            switch (expr->binary_op.op) {
-                case BIN_OP_ADD:
-                    codegen_emit(gen, "    add rax, rbx");
-                    break;
-                case BIN_OP_SUB:
-                    codegen_emit(gen, "    sub rax, rbx");
-                    break;
-                case BIN_OP_MUL:
-                    codegen_emit(gen, "    imul rax, rbx");
-                    break;
-                case BIN_OP_DIV:
-                    codegen_emit(gen, "    cqo");  // Sign extend rax to rdx:rax
-                    codegen_emit(gen, "    idiv rbx");
-                    break;
+            if (overload && overload->param_count == 2) {
+                // Use operator overload function
+                // Evaluate left side
+                codegen_generate_expression_value(gen, expr->binary_op.left);
+                codegen_emit(gen, "    push rax");
+                
+                // Evaluate right side
+                codegen_generate_expression_value(gen, expr->binary_op.right);
+                codegen_emit(gen, "    push rax");
+                
+                // Call overload function
+                snprintf(buffer, sizeof(buffer), "    call func_%s", overload_func);
+                codegen_emit(gen, buffer);
+                codegen_emit(gen, "    add rsp, 16   ; Clean up parameters");
+                // Result is in rax
+            } else {
+                // Numeric operations (default)
+                // Evaluate left side
+                codegen_generate_expression_value(gen, expr->binary_op.left);
+                codegen_emit(gen, "    push rax");
+                
+                // Evaluate right side
+                codegen_generate_expression_value(gen, expr->binary_op.right);
+                codegen_emit(gen, "    mov rbx, rax");
+                codegen_emit(gen, "    pop rax");
+                
+                // Perform operation
+                switch (expr->binary_op.op) {
+                    case BIN_OP_ADD:
+                        codegen_emit(gen, "    add rax, rbx");
+                        break;
+                    case BIN_OP_SUB:
+                        codegen_emit(gen, "    sub rax, rbx");
+                        break;
+                    case BIN_OP_MUL:
+                        codegen_emit(gen, "    imul rax, rbx");
+                        break;
+                    case BIN_OP_DIV:
+                        codegen_emit(gen, "    cqo");  // Sign extend rax to rdx:rax
+                        codegen_emit(gen, "    idiv rbx");
+                        break;
+                }
             }
         }
     } else if (expr->type == EXPR_FUNC_CALL) {
@@ -1712,7 +1756,7 @@ void codegen_generate_for(Codegen* gen, Statement* stmt) {
     
     // Allocate loop variable on stack
     gen->stack_offset += 8;
-    codegen_add_variable(gen, stmt->for_stmt.var_name, gen->stack_offset, TYPE_NUMERIC);
+    codegen_add_variable(gen, stmt->for_stmt.var_name, gen->stack_offset, TYPE_NUMERIC, NULL);
     snprintf(buffer, sizeof(buffer), "    sub rsp, 8         ; Allocate %s", 
              stmt->for_stmt.var_name);
     codegen_emit(gen, buffer);
@@ -2094,10 +2138,16 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     int prev_stack_offset = gen->stack_offset;
     VarInfo* prev_variables = gen->variables;
     int prev_in_function = gen->in_function;
+    int prev_in_operator_overload = gen->in_operator_overload;
     
     gen->stack_offset = 0;
     gen->variables = NULL;
     gen->in_function = 1;
+    
+    // Check if this is an operator overload function (name contains "_operator_")
+    if (strstr(stmt->func_def.func_name, "_operator_") != NULL) {
+        gen->in_operator_overload = 1;
+    }
     
     // Parameters are passed on stack (above rbp)
     // rbp+16 = first param, rbp+24 = second param, etc.
@@ -2111,7 +2161,10 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
         
         // Allocate local space for parameter
         gen->stack_offset += 8;
-        codegen_add_variable(gen, stmt->func_def.param_names[i], gen->stack_offset, stmt->func_def.param_types[i]);
+        // Pass struct_name if it's a struct type parameter
+        const char* param_struct_name = stmt->func_def.param_struct_names[i];
+        codegen_add_variable(gen, stmt->func_def.param_names[i], gen->stack_offset, 
+                           stmt->func_def.param_types[i], param_struct_name);
         
         snprintf(buffer, sizeof(buffer), "    sub rsp, 8");
         codegen_emit(gen, buffer);
@@ -2139,6 +2192,7 @@ void codegen_generate_func_def(Codegen* gen, Statement* stmt) {
     gen->stack_offset = prev_stack_offset;
     gen->variables = prev_variables;
     gen->in_function = prev_in_function;
+    gen->in_operator_overload = prev_in_operator_overload;
 }
 
 void codegen_generate_return(Codegen* gen, Statement* stmt) {

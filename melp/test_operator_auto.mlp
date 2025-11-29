@@ -1,0 +1,38 @@
+-- Test automatic operator overloading
+
+-- Operator overloading: numeric + numeric (custom behavior)
+func numeric_operator_add(numeric a, numeric b)
+    return a + b + 100  -- Custom: add 100 to result
+end func
+
+-- Operator overloading: numeric * numeric (custom behavior)
+func numeric_operator_mul(numeric a, numeric b)
+    return a * b * 2  -- Custom: double the result
+end func
+
+func main()
+    numeric x
+    x = 10
+    
+    numeric y
+    y = 5
+    
+    -- Automatic operator dispatch
+    numeric result1
+    result1 = x + y  -- Should call numeric_operator_add automatically
+    print(result1)   -- Should print 115 (10+5+100)
+    
+    numeric result2
+    result2 = x * y  -- Should call numeric_operator_mul automatically
+    print(result2)   -- Should print 100 (10*5*2)
+    
+    -- Regular operations without overload should still work
+    numeric z
+    z = 3
+    numeric result3
+    result3 = x - z  -- No overload for -, should be regular: 10-3=7
+    print(result3)   -- Should print 7
+    
+    print(999)   -- Final marker
+    return 0
+end func

@@ -1,0 +1,31 @@
+-- Test operator overloading with primitives (no struct params yet)
+
+-- Operator overloading: numeric + numeric (custom behavior)
+func numeric_operator_add(numeric a, numeric b)
+    return a + b + 100  -- Custom: add 100 to result
+end func
+
+-- Operator overloading: numeric * numeric (custom behavior)
+func numeric_operator_mul(numeric a, numeric b)
+    return a * b * 2  -- Custom: double the result
+end func
+
+func main()
+    numeric x
+    x = 10
+    
+    numeric y
+    y = 5
+    
+    -- Manual operator calls
+    numeric result1
+    result1 = numeric_operator_add(x, y)
+    print(result1)  -- Should print 115 (10+5+100)
+    
+    numeric result2
+    result2 = numeric_operator_mul(x, y)
+    print(result2)  -- Should print 100 (10*5*2)
+    
+    print(999)   -- Final marker
+    return 0
+end func
