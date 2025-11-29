@@ -23,8 +23,8 @@
 
 ### ⚠️ YARIM IMPLEMENT EDİLMİŞ SİSTEMLER
 
-#### 1. MODULE SYSTEM - KISMİ ❌
-**Durum:** Lexer ✅, Parser ✅, Codegen ❌, Runtime N/A
+#### 1. MODULE SYSTEM - KISMİ ✅ (Single-file complete, Multi-file pending)
+**Durum:** Lexer ✅, Parser ✅, Codegen ✅ (single-file), Multi-file ⏳
 
 **Detaylar:**
 - **Lexer:** TOKEN_MODULE, TOKEN_IMPORT, TOKEN_EXPORT, TOKEN_PRIVATE, TOKEN_AS tanımlı ✅
@@ -33,20 +33,40 @@
   - `parser_parse_module_definition()` fonksiyonu mevcut ✅
   - STMT_IMPORT ve STMT_MODULE_DEF AST node'ları tanımlı ✅
 - **Codegen:** 
-  - STMT_IMPORT için kod üretimi YOK ❌
-  - STMT_MODULE_DEF için kod üretimi YOK ❌
-  - Test dosyaları parse ediliyor ama assembly'de hiçbir şey üretilmiyor
+  - STMT_IMPORT: Comment olarak assembly'e ekleniyor ✅
+  - STMT_MODULE_DEF: Module içindeki fonksiyonlar `Module_function` formatında üretiliyor ✅
+  - Module qualified calls: `MathUtils.add()` → `MathUtils_add` assembly call ✅
 
-**Test Sonuçları:**
+**Test Sonuçları (Single-file modules):**
 ```bash
-./melp-bootstrap test_module.mlp test.s
-# Başarılı derleniyor ama assembly boş (sadece prologue/epilogue)
+# test_module_usage.mlp - Module tanımı ve kullanımı
+module MathUtils
+    func add(numeric a, numeric b) return a + b end func
+end module
+numeric result = MathUtils.add(10, 5)
+# Çıktı: 15 ✅
+
+# test_module_simple.mlp - Module sadece fonksiyonlar
+# Assembly: MathUtils_add, MathUtils_multiply fonksiyonları üretiliyor ✅
 ```
 
+**ÇALIŞAN ÖZELLİKLER:**
+- ✅ Module tanımı (module ... end module)
+- ✅ Module içinde func tanımı
+- ✅ Module qualified function calls (Module.function)
+- ✅ Assembly'de Module_function naming convention
+
+**YARIM/EKSİK:**
+- ⏳ Multi-file compilation (import'u ayrı dosyadan okuma)
+- ⏳ Export/private visibility enforcement
+- ⏳ Circular dependency detection
+- ⏳ Separate compilation (her modül ayrı .o file)
+
 **Örnek Test Dosyaları:**
-- `test_module.mlp` - Module tanımı (parse ✅, codegen ❌)
-- `test_import.mlp` - Import statement (parse ✅, codegen ❌)
-- `test_module_func.mlp` - Module içinde func (parse ✅, codegen ❌)
+- `test_module.mlp` - Module tanımı ✅
+- `test_import.mlp` - Import statement (comment olarak çalışıyor) ✅
+- `test_module_func.mlp` - Module içinde func ✅
+- `test_module_usage.mlp` - Module kullanım örneği (15, 21 çıktısı) ✅
 
 #### 2. DEBUG FEATURES - TAM ✅
 **Durum:** Lexer ✅, Parser ✅, Codegen ✅, Tested ✅
@@ -121,8 +141,9 @@ debug end if
 | Özellik | Lexer | Parser | Codegen | Durum |
 |---------|-------|--------|---------|-------|
 | Exception Handling | ✅ | ✅ | ✅ | TAM ✅ |
-| Module System | ✅ | ✅ | ❌ | YARIM |
-| Import Statement | ✅ | ✅ | ❌ | YARIM |
+| Module System (Single-file) | ✅ | ✅ | ✅ | TAM ✅ |
+| Module System (Multi-file) | ✅ | ✅ | ⏳ | YARIM |
+| Import Statement | ✅ | ✅ | ✅ | TAM ✅ |
 | Debug Features | ✅ | ✅ | ✅ | TAM ✅ |
 | Async/Await | ✅ | ❌ | ❌ | BAŞLANMAMIŞ |
 | Lambda/Closure | ✅ | ✅ | ✅ | TAM ✅ |

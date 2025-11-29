@@ -1,0 +1,19 @@
+-- Test: Using module functions
+-- Module is defined inline in same file
+
+module MathUtils
+    func add(numeric a, numeric b)
+        return a + b
+    end func
+    
+    func multiply(numeric x, numeric y)
+        return x * y
+    end func
+end module
+
+-- Now use the module functions
+numeric result1 = MathUtils.add(10, 5)
+print(result1)
+
+numeric result2 = MathUtils.multiply(3, 7)
+print(result2)
