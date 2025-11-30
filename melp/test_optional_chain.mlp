@@ -1,0 +1,29 @@
+-- MELP Phase 15: Optional Chaining Test
+
+struct Person
+    text name
+    numeric age
+end struct
+
+func main()
+    print("=== Optional Chaining Tests ===")
+    
+    -- Test with non-null struct
+    Person p
+    p.name = "Alice"
+    p.age = 30
+    
+    -- Normal field access
+    print("Normal access:")
+    print(p.name)
+    print(p.age)
+    
+    -- Optional chaining (should work the same when not null)
+    print("Optional chaining on valid struct:")
+    text name = p?.name
+    print(name)
+    
+    print("=== Tests complete ===")
+end func
+
+main()

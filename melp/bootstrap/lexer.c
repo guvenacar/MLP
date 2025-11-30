@@ -90,11 +90,23 @@ typedef enum {
     TOKEN_IMPLEMENTS,    // implements
     // Enums
     TOKEN_ENUM,          // enum
+    // Phase 16: Operator Overloading
+    TOKEN_OPERATOR,      // operator
+    // Phase 17: Pattern Matching
+    TOKEN_MATCH,         // match
+    TOKEN_ARROW,         // => (fat arrow for match cases)
+    TOKEN_UNDERSCORE,    // _ (wildcard pattern)
+    // Phase 18: State Management
+    TOKEN_STATE,         // state (global state declaration)
+    TOKEN_SHARED,        // shared (shared state modifier)
     // Ternary operator
     TOKEN_QUESTION,      // ?
     TOKEN_COLON,         // :
     // Nullable types
     TOKEN_NULL,          // null
+    // Null safety operators (Phase 15)
+    TOKEN_QUESTION_DOT,  // ?. (optional chaining)
+    TOKEN_NULL_COALESCE, // ?? (null coalescing)
     // Phase 7: String interpolation
     TOKEN_INTERPOLATED_STRING, // $"text {expr} text"
     // Phase 8: Arrays
@@ -482,6 +494,14 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_TYPE;
         } else if (strcmp(word, "enum") == 0) {
             token->type = TOKEN_ENUM;
+        } else if (strcmp(word, "operator") == 0) {
+            token->type = TOKEN_OPERATOR;
+        } else if (strcmp(word, "match") == 0) {
+            token->type = TOKEN_MATCH;
+        } else if (strcmp(word, "state") == 0) {
+            token->type = TOKEN_STATE;
+        } else if (strcmp(word, "shared") == 0) {
+            token->type = TOKEN_SHARED;
         } else if (strcmp(word, "interface") == 0) {
             token->type = TOKEN_INTERFACE;
         } else if (strcmp(word, "implements") == 0) {
@@ -522,6 +542,10 @@ Token* lexer_next_token(Lexer* lexer) {
             if (lexer->source[lexer->pos] == '=') {
                 lexer->pos++;
                 token->type = TOKEN_EQUAL;
+            } else if (lexer->source[lexer->pos] == '>') {
+                // Phase 17: Fat arrow for pattern matching
+                lexer->pos++;
+                token->type = TOKEN_ARROW;
             } else {
                 token->type = TOKEN_ASSIGN;
             }
@@ -557,7 +581,17 @@ Token* lexer_next_token(Lexer* lexer) {
         case ']': token->type = TOKEN_RBRACKET; break;
         case ',': token->type = TOKEN_COMMA; break;
         case '.': token->type = TOKEN_DOT; break;
-        case '?': token->type = TOKEN_QUESTION; break;
+        case '?':
+            if (lexer->source[lexer->pos] == '.') {
+                lexer->pos++;
+                token->type = TOKEN_QUESTION_DOT;  // ?.
+            } else if (lexer->source[lexer->pos] == '?') {
+                lexer->pos++;
+                token->type = TOKEN_NULL_COALESCE;  // ??
+            } else {
+                token->type = TOKEN_QUESTION;
+            }
+            break;
         case ':': token->type = TOKEN_COLON; break;
         case '+': token->type = TOKEN_PLUS; break;
         case '-': token->type = TOKEN_MINUS; break;
@@ -565,6 +599,7 @@ Token* lexer_next_token(Lexer* lexer) {
         case '/': token->type = TOKEN_DIVIDE; break;
         case '&': token->type = TOKEN_AMPERSAND; break; // Phase 10: Address-of
         case '|': token->type = TOKEN_PIPE; break; // Phase 11: Union types
+        case '_': token->type = TOKEN_UNDERSCORE; break; // Phase 17: Wildcard pattern
         default:
             fprintf(stderr, "Lexer error: Unknown character '%c' at line %d\n", c, lexer->line);
             exit(1);

@@ -1,8 +1,8 @@
 # MLP Kurallar Kitabı (AI Agent Referansı)
 
-**Son Güncelleme:** 30 Kasım 2025  
-**Versiyon:** 4.0  
-**Milestone:** Phase 14 Complete - Generics + Iterator/Generator 🎉  
+**Son Güncelleme:** 10 Ocak 2025  
+**Versiyon:** 8.0  
+**Milestone:** Phase 18 Complete - State Management 🎉  
 **Amaç:** Tüm kritik proje bilgisini tek merkezi dokümanda toplamak
 
 ---
@@ -91,12 +91,14 @@ MLP/
 
 ### Aktif Durum
 
-**Phase 14 Complete! (30 Kasım 2025)** ✅
+**Phase 17 Complete! (30 Kasım 2025)** ✅
 
-Son Tamamlanan Özellikler (Phase 14 - Iterator/Generator):
-- ✅ **For-in loops:** `for x in arr` ve `for x in range(n)`
-- ✅ **range() built-in:** range(n), range(start,end), range(start,end,step)
-- ✅ **Generator functions:** `yields` + `yield` keyword'leri
+Son Tamamlanan Özellikler (Phase 18 - State Management):
+- ✅ **state keyword:** Global state değişken tanımlama
+- ✅ **shared state keyword:** Çoklu dosyalar arası paylaşılan state
+- ✅ **State Arithmetic:** State değişkenlerle aritmetik işlemler
+- ✅ **State in Conditions:** State koşul ifadelerinde kullanım
+- ✅ **State in Loops:** State döngülerde kullanım
 
 Daha Önce Tamamlananlar:
 - ✅ Phase 0: Deklarasyonlar (numeric, decimal, boolean)
@@ -115,12 +117,14 @@ Daha Önce Tamamlananlar:
 - ✅ Phase 12: Lambda/Anonymous functions
 - ✅ Phase 13: Generics
 - ✅ Phase 14: Iterator/Generator
+- ✅ Phase 15: Null Safety
+- ✅ Phase 16: Operator Overloading
+- ✅ Phase 17: Pattern Matching
+- ✅ Phase 18: State Management
 
 **MELP is feature-rich and production ready!** 🚀
 
 Sırada (Öncelik Sırasına Göre):
-- ⏳ **Null Safety** - Optional values with ? operator (HIGH)
-- ⏳ **State Management** - Shared state patterns (MEDIUM)
 - ⏳ **Garbage Collection** - Automatic memory management (LOW - defer)
 
 ---
@@ -249,6 +253,162 @@ debug print x        -- Debug modunda değişken yazdır
 ```
 
 **Not:** Bu keyword'ler sadece `--debug` flag'i ile derleme yapılırsa aktif olur.
+
+### Null Safety Operatörleri (Phase 15)
+
+```mlp
+-- Null coalescing: ilk null olmayan değeri döndürür
+numeric result = maybeNull ?? defaultValue
+numeric chained = a ?? b ?? c ?? 999
+
+-- Optional chaining: null ise erken çıkış
+numeric? name = person?.name    -- person null ise name = null
+
+-- Null literal
+numeric x = null
+if x == null then
+    print("x is null")
+end if
+
+-- Nullable type annotation
+numeric? maybeNum = null
+text? maybeStr = null
+```
+
+**Not:** 
+- `0` değeri null gibi değerlendirilir (null = 0)
+- `??` operatörü soldan sağa zincirleme kullanılabilir
+- `?.` struct field erişiminde null check yapar
+
+### Operator Overloading (Phase 16)
+
+```mlp
+-- Struct için operator tanımı
+struct Vector
+    numeric x
+    numeric y
+end struct
+
+-- + operatörünü Vector için tanımla
+operator +(Vector a, Vector b) returns numeric
+    numeric result
+    result = a.x + b.x + a.y + b.y
+    return result
+end operator
+
+-- - operatörünü Vector için tanımla
+operator -(Vector a, Vector b) returns numeric
+    return a.x - b.x + a.y - b.y
+end operator
+
+-- Kullanım
+Vector v1
+v1.x = 10
+v1.y = 20
+
+Vector v2
+v2.x = 5
+v2.y = 15
+
+numeric sum = v1 + v2     -- __op_Vector_add çağrılır -> 50
+numeric diff = v1 - v2    -- __op_Vector_sub çağrılır -> 10
+```
+
+**Desteklenen Operatörler:**
+- Aritmetik: `+`, `-`, `*`, `/`
+- Karşılaştırma: `==`, `!=`, `<`, `>`, `<=`, `>=`
+
+**Not:**
+- Operatör fonksiyonları `__op_TypeName_opname` formatında adlandırılır
+- Yalnızca struct tipleri için operatör tanımlanabilir
+- Her operatör binary olmalı (iki parametre alır)
+
+### Pattern Matching (Phase 17)
+
+```mlp
+-- Temel match ifadesi
+numeric x = 3
+match x
+    case 1 => print(100)
+    case 2 => print(200)
+    case 3 => print(300)
+    case _ => print(999)
+end match
+
+-- Virgülle ayrılmış birden fazla değer
+numeric y = 5
+match y
+    case 1, 2 => print(110)
+    case 3, 4, 5 => print(220)
+    case 6, 7 => print(330)
+    case _ => print(999)
+end match
+
+-- Range (aralık) pattern
+numeric z = 7
+match z
+    case 1 to 5 => print(111)
+    case 6 to 10 => print(222)
+    case 11 to 20 => print(333)
+    case _ => print(999)
+end match
+```
+
+**Pattern Tipleri:**
+- **Single Value:** `case 1 => ...` - Tek değer eşleşmesi
+- **Multiple Values:** `case 1, 2, 3 => ...` - Birden fazla değer
+- **Range:** `case 1 to 10 => ...` - Aralık eşleşmesi
+- **Wildcard:** `case _ => ...` - Diğer tüm durumlar (default)
+
+**Not:**
+- `=>` (fat arrow) pattern ile body'yi ayırır
+- Wildcard `_` herhangi bir değeri yakalar
+- Match ifadeleri fall-through yapmaz (break gerekmez)
+
+### State Management (Phase 18)
+
+```mlp
+-- State değişken tanımlama
+state numeric counter = 100
+state text message = "Hello"
+shared state numeric global_counter = 1000
+
+-- State değişken okuma ve yazdırma
+print(counter)
+
+-- State değişken atama
+counter = 200
+print(counter)
+
+-- State ile aritmetik işlemler
+counter = counter + 50
+total = counter * multiplier
+
+-- State koşul ifadelerinde
+if counter > 100 then
+    print("Counter is high")
+end if
+
+-- State döngülerde
+state numeric sum = 0
+for i in range(1, 5)
+    sum = sum + i
+end for
+print(sum)  -- 10 yazdırır (1+2+3+4)
+```
+
+**State Türleri:**
+- **state:** Modül/dosya kapsamında global değişken
+- **shared state:** Çoklu dosyalar arasında paylaşılan global değişken
+
+**Desteklenen Tipler:**
+- `state numeric name = value` - Sayısal state
+- `state text name = "value"` - Metin state
+
+**Notlar:**
+- State değişkenler .bss section'da saklanır
+- State değişkenler programın tüm fonksiyonlarından erişilebilir
+- State değişkenler aritmetik, koşul ve döngü ifadelerinde kullanılabilir
 
 ---
 

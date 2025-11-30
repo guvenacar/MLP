@@ -1,0 +1,20 @@
+-- MELP Phase 15: Null literal test
+
+func main()
+    print("=== Null Literal Tests ===")
+    
+    -- Test 1: null ?? default
+    numeric result1 = null ?? 100
+    print("null ?? 100 = ")
+    print(result1)
+    
+    -- Test 2: null comparison
+    numeric x = 0
+    if x == 0 then
+        print("PASS: x is zero (null-like)")
+    end if
+    
+    print("=== Tests complete ===")
+end func
+
+main()

@@ -15,6 +15,9 @@ extern mlp_array_alloc
 extern mlp_array_free
 extern mlp_array_length
 extern mlp_array_resize
+extern mlp_range
+extern mlp_range1
+extern mlp_range2
 extern mlp_file_read
 extern mlp_file_write
 extern mlp_file_exists

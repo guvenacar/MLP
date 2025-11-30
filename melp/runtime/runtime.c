@@ -687,3 +687,31 @@ int mlp_exception_has_parent_handler(void) {
     if (mlp_exception_stack == NULL) return 0;
     return mlp_exception_stack->prev != NULL ? 1 : 0;
 }
+
+// ============================================================================
+// PHASE 15: Null Safety
+// ============================================================================
+
+/**
+ * Check if a value is null (0)
+ * Returns 1 if null, 0 otherwise
+ */
+long mlp_is_null(void* ptr) {
+    return ptr == NULL ? 1 : 0;
+}
+
+/**
+ * Null coalescing - returns value if not null, otherwise default_val
+ */
+long mlp_coalesce(long value, long default_val) {
+    return value == 0 ? default_val : value;
+}
+
+/**
+ * Safe pointer dereference - returns 0 if ptr is null
+ */
+long mlp_safe_deref(void* ptr) {
+    if (ptr == NULL) return 0;
+    return *((long*)ptr);
+}
+

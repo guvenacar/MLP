@@ -51,25 +51,48 @@ _start:
     mov rbp, rsp
 
 
-    ; State declaration: counter
+    ; State declaration: shared global_counter
+    mov rax, 1000
+    mov [state_global_counter], rax
+
+    ; Print statement
+    mov rax, str_0
+    mov rdi, rax
+    call print_string
+
+    ; Print statement
+    mov rax, [state_global_counter]
+    mov rdi, rax
+    call print_number
+
+    ; Assignment: global_counter = ...
+    mov rax, [state_global_counter]
+    push rax
     mov rax, 100
-    mov [state_counter], rax
+    mov rbx, rax
+    pop rax
+    add rax, rbx
+    mov [state_global_counter], rax   ; Store to state global_counter
 
     ; Print statement
-    mov rax, [state_counter]
+    mov rax, [state_global_counter]
     mov rdi, rax
     call print_number
 
     ; Print statement
-    mov rax, 999
+    mov rax, str_1
     mov rdi, rax
-    call print_number
+    call print_string
 
     ; Exit program
     mov rax, 60        ; sys_exit
     xor rdi, rdi       ; exit code 0
     syscall
 
+section .data
+str_1: db "=== END ===", 0
+str_0: db "=== Shared State Test ===", 0
+
 section .bss
     ; Global state variables
-state_counter: resq 1
+state_global_counter: resq 1

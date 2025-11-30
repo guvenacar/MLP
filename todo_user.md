@@ -2,9 +2,9 @@
 
 **Amaç:** Basit deklarasyondan modern tam özellikli dile kademeli geçiş
 
-**Durum:** Phase 14 TAMAMLANDI - Iterator/Generator Pattern 🎉
+**Durum:** Phase 18 TAMAMLANDI - State Management 🎉
 
-**Son Güncelleme:** 30 Kasım 2025
+**Son Güncelleme:** 10 Ocak 2025
 
 ---
 
@@ -24,14 +24,14 @@
 | While Döngüsü | ✅ | Tam çalışıyor |
 | Do-While Döngüsü | ✅ | Tam çalışıyor |
 | For Döngüsü (to/step) | ✅ | Tam çalışıyor |
-| For-In Döngüsü | ✅ | Phase 14 - Yeni |
+| For-In Döngüsü | ✅ | Phase 14 |
 | Switch-Case | ✅ | Range matching dahil |
 | Exit/Continue | ✅ | Tam çalışıyor |
 | **Fonksiyonlar** | | |
 | Fonksiyon Tanımı (func) | ✅ | Tam çalışıyor |
 | Return Statement | ✅ | Çoklu return dahil |
 | Lambda/Closure | ✅ | Tam çalışıyor |
-| Generator (yields/yield) | ✅ | Phase 14 - Yeni |
+| Generator (yields/yield) | ✅ | Phase 14 |
 | Async/Await | ✅ | Temel destek |
 | **Veri Yapıları** | | |
 | Arrays (Static) | ✅ | [1,2,3] literal desteği |
@@ -46,6 +46,10 @@
 | Interface | ✅ | Tam çalışıyor |
 | Type Alias | ✅ | Tam çalışıyor |
 | Range Fonksiyonu | ✅ | Phase 14 - range(n), range(a,b), range(a,b,step) |
+| Null Safety | ✅ | Phase 15 - ??, ?., null literal |
+| Operator Overloading | ✅ | Phase 16 - operator +/- for structs |
+| Pattern Matching | ✅ | Phase 17 - match/case/=>/_ |
+| State Management | ✅ | Phase 18 - state/shared state |
 | **String İşlemleri** | | |
 | String Literals | ✅ | Tam çalışıyor |
 | String Interpolation | ✅ | $"Hello {name}" |
@@ -56,11 +60,7 @@
 | File Append/Exists | ✅ | append_file, file_exists |
 | CLI Arguments | ✅ | get_argc() |
 | **Henüz Yapılmamış** | | |
-| Null Safety | ❌ | Planlandı |
 | Garbage Collection | ❌ | Düşük öncelik |
-| State Management | ❌ | Planlandı |
-| Pattern Matching (match) | ❌ | switch-case alternatifi var |
-| Operator Overloading | ⚠️ | Kısmi destek |
 
 ---
 

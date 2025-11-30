@@ -1,49 +1,44 @@
--- Test pattern matching
+-- Test pattern matching (Phase 17)
 
--- Test 1: Range matching (case 1 to 5)
+-- Test 1: Single value match
 numeric x = 3
-switch x
-    case 1 to 5
-        print(100)  -- Should match
-    case 6 to 10
-        print(200)
-    default
-        print(0)
-end switch
+match x
+    case 1 => print(100)
+    case 2 => print(200)
+    case 3 => print(300)
+    case _ => print(999)
+end match
 
--- Test 2: Guard conditions (case x if x > 10)
-numeric y = 15
-switch y
-    case 10 if y > 12
-        print(300)  -- Should match (10 with guard y > 12)
-    case 20
-        print(400)
-    default
-        print(0)
-end switch
+print(1000)
 
--- Test 3: Type checking (case is null)
-numeric z = 0  -- null
-switch z
-    case is null
-        print(500)  -- Should match
-    case 1
-        print(600)
-    default
-        print(0)
-end switch
+-- Test 2: Multiple values (comma separated)
+numeric y = 5
+match y
+    case 1, 2 => print(110)
+    case 3, 4, 5 => print(220)
+    case 6, 7 => print(330)
+    case _ => print(999)
+end match
 
--- Test 4: Combined - range with guard
-numeric w = 7
-switch w
-    case 1 to 5
-        print(700)
-    case 6 to 10 if w > 8
-        print(800)
-    case 6 to 10 if w <= 8
-        print(900)  -- Should match (7 is in range 6 to 10 and <= 8)
-    default
-        print(0)
-end switch
+print(2000)
 
-print(999)  -- Final marker
+-- Test 3: Range matching
+numeric z = 7
+match z
+    case 1 to 5 => print(111)
+    case 6 to 10 => print(222)
+    case 11 to 20 => print(333)
+    case _ => print(999)
+end match
+
+print(3000)
+
+-- Test 4: Wildcard only (default case)
+numeric w = 100
+match w
+    case 1 => print(10)
+    case 2 => print(20)
+    case _ => print(444)
+end match
+
+print(4000)

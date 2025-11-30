@@ -1,26 +1,94 @@
--- Test null safety
+-- MELP Phase 15: Null Safety Tests
+-- Tests for nullable types (?), optional chaining (?.) and null coalescing (??)
 
--- Nullable variable (numeric?)
-numeric? x = null
-print(x == null)  -- Should print 1 (true)
+-- Test 1: Basic null literal
+func test_null_literal()
+    print("Test 1: Null literal")
+    numeric? x = null
+    if x == null then
+        print("PASS: x is null")
+    else
+        print("FAIL: x should be null")
+    end if
+end func
 
--- Non-null value
-numeric? y = 42
-print(y == null)  -- Should print 0 (false)
-print(y)          -- Should print 42
+-- Test 2: Nullable with value
+func test_nullable_with_value()
+    print("Test 2: Nullable with value")
+    numeric? y = 42
+    if y != null then
+        print("PASS: y has value")
+        print(y)
+    else
+        print("FAIL: y should have value")
+    end if
+end func
 
--- Null check before use
-if y != null then
-    print(100)    -- Should print 100
-end if
+-- Test 3: Null coalescing operator (??)
+func test_null_coalesce()
+    print("Test 3: Null coalescing operator")
+    
+    -- null ?? default should return default
+    numeric? a = null
+    numeric result1 = a ?? 100
+    print("null ?? 100 = ")
+    print(result1)
+    
+    -- value ?? default should return value
+    numeric? b = 50
+    numeric result2 = b ?? 100
+    print("50 ?? 100 = ")
+    print(result2)
+end func
 
-if x == null then
-    print(200)    -- Should print 200
-end if
+-- Test 4: Chained null coalescing
+func test_chained_coalesce()
+    print("Test 4: Chained null coalescing")
+    numeric? a = null
+    numeric? b = null
+    numeric? c = 30
+    
+    numeric result = a ?? b ?? c ?? 999
+    print("null ?? null ?? 30 ?? 999 = ")
+    print(result)
+end func
 
--- Reassignment
-x = 99
-print(x == null)  -- Should print 0 (false)
-print(x)          -- Should print 99
+-- Test 5: Null comparison
+func test_null_comparison()
+    print("Test 5: Null comparison")
+    numeric? x = null
+    numeric? y = 10
+    
+    if x == null then
+        print("PASS: x == null")
+    end if
+    
+    if y != null then
+        print("PASS: y != null")
+    end if
+end func
 
-print(999)  -- Final marker
+-- Main
+func main()
+    print("=== MELP Null Safety Tests ===")
+    print("")
+    
+    test_null_literal()
+    print("")
+    
+    test_nullable_with_value()
+    print("")
+    
+    test_null_coalesce()
+    print("")
+    
+    test_chained_coalesce()
+    print("")
+    
+    test_null_comparison()
+    print("")
+    
+    print("=== All tests complete ===")
+end func
+
+main()

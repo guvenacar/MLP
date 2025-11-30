@@ -1,26 +1,37 @@
--- Test null safety - simpler version
+-- MELP Phase 15: Null Safety - Simple Test
+-- Test null coalescing operator (??)
 
--- Regular null initialization
-numeric x = 0  -- null is 0 in MELP
-print(x == 0)  -- Should print 1 (true) - null check
+func main()
+    print("=== Null Coalescing Tests ===")
+    
+    -- Test 1: Value ?? default with value
+    numeric a = 50
+    numeric result1 = a ?? 100
+    print("50 ?? 100 = ")
+    print(result1)
+    
+    -- Test 2: 0 ?? default (0 is treated as null)
+    numeric b = 0
+    numeric result2 = b ?? 200
+    print("0 ?? 200 = ")
+    print(result2)
+    
+    -- Test 3: Chained null coalescing
+    numeric c = 0
+    numeric d = 0
+    numeric e = 30
+    numeric result3 = c ?? d ?? e ?? 999
+    print("0 ?? 0 ?? 30 ?? 999 = ")
+    print(result3)
+    
+    -- Test 4: Non-zero value in chain
+    numeric f = 0
+    numeric g = 42
+    numeric result4 = f ?? g ?? 999
+    print("0 ?? 42 ?? 999 = ")
+    print(result4)
+    
+    print("=== Tests complete ===")
+end func
 
--- Non-null value
-numeric y = 42
-print(y == 0)  -- Should print 0 (false) - not null
-print(y)       -- Should print 42
-
--- Null check pattern
-if y != 0 then
-    print(100)  -- Should print 100
-end if
-
-if x == 0 then
-    print(200)  -- Should print 200
-end if
-
--- Reassignment
-x = 99
-print(x == 0)  -- Should print 0 (false) - not null anymore
-print(x)       -- Should print 99
-
-print(999)  -- Final marker
+main()

@@ -1,0 +1,11 @@
+-- Test Shared State (Phase 18)
+
+shared state numeric global_counter = 1000
+
+print("=== Shared State Test ===")
+print(global_counter)
+
+global_counter = global_counter + 100
+print(global_counter)
+
+print("=== END ===")

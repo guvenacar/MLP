@@ -1,6 +1,7 @@
 // MELP Phase 1 - Bootstrap Compiler  
 // Codegen: x86-64 Assembly üretir (declarations + assignments + print)
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +17,8 @@ typedef struct VarInfo {
     int is_closure;       // Phase 12: 1 if lambda with closures, 0 otherwise
     int is_array;         // Phase 14: 1 if array type, 0 otherwise
     int array_size;       // Phase 14: size of stack-allocated array (0 for dynamic)
+    int is_global;        // Phase 18: 1 if global/state variable
+    int is_state;         // Phase 18: 1 if state variable (shared state)
     struct VarInfo* next;
 } VarInfo;
 
@@ -87,6 +90,25 @@ typedef struct GenericInstance {
     struct GenericInstance* next;
 } GenericInstance;
 
+// Phase 16: Operator Overloading registry
+typedef struct OperatorOverload {
+    char* op;                    // Operator symbol (+, -, *, etc.)
+    char* type_name;             // Type name this applies to
+    char* func_name;             // Generated function name for this operator
+    struct OperatorOverload* next;
+} OperatorOverload;
+
+// Phase 18: State variable info for global state
+typedef struct StateVarInfo {
+    char* name;
+    VarType type;
+    int is_global;
+    int is_state;
+} StateVarInfo;
+
+#define MAX_VARS 256
+#define MAX_STATE_VARS 64
+
 typedef struct {
     FILE* out;
     int stack_offset;
@@ -100,6 +122,7 @@ typedef struct {
     ModuleTracker* modules_seen; // Modules already processed (for deduplication)
     GenericFunc* generic_funcs;     // Phase 13: Generic function definitions
     GenericInstance* generic_instances; // Phase 13: Instantiated generic functions
+    OperatorOverload* operator_overloads; // Phase 16: Operator overloading registry
     int label_counter;       // For unique labels
     int loop_start_label;    // Current loop start (condition check)
     int loop_continue_label; // Current loop continue (increment/next iteration)
@@ -110,6 +133,9 @@ typedef struct {
     int in_generator;        // Phase 14: Are we inside a generator function?
     int string_counter;      // For unique string labels
     char* current_module;    // Current module name (NULL if not in module)
+    // Phase 18: State Management
+    StateVarInfo global_vars[MAX_STATE_VARS];  // Global state variables
+    int global_var_count;                       // Number of global state variables
 } Codegen;
 
 // Forward declarations
@@ -140,6 +166,7 @@ Codegen* codegen_create(const char* output_file) {
     gen->modules_seen = NULL;
     gen->generic_funcs = NULL;      // Phase 13: Initialize generic tracking
     gen->generic_instances = NULL;  // Phase 13: Initialize instance tracking
+    gen->operator_overloads = NULL; // Phase 16: Initialize operator overloads
     gen->label_counter = 0;
     gen->loop_start_label = -1;
     gen->loop_continue_label = -1;
@@ -150,6 +177,9 @@ Codegen* codegen_create(const char* output_file) {
     gen->in_generator = 0;         // Phase 14: Initialize generator tracking
     gen->string_counter = 0;
     gen->current_module = NULL;
+    gen->global_var_count = 0;     // Phase 18: Initialize state variables
+    // Initialize global_vars array to zero
+    memset(gen->global_vars, 0, sizeof(gen->global_vars));
     return gen;
 }
 
@@ -170,6 +200,31 @@ void codegen_mark_module_seen(Codegen* gen, const char* module_name) {
     strcpy(tracker->module_name, module_name);
     tracker->next = gen->modules_seen;
     gen->modules_seen = tracker;
+}
+
+// Phase 16: Register an operator overload
+void codegen_add_operator_overload(Codegen* gen, const char* op, const char* type_name, const char* func_name) {
+    OperatorOverload* oo = malloc(sizeof(OperatorOverload));
+    oo->op = malloc(strlen(op) + 1);
+    strcpy(oo->op, op);
+    oo->type_name = malloc(strlen(type_name) + 1);
+    strcpy(oo->type_name, type_name);
+    oo->func_name = malloc(strlen(func_name) + 1);
+    strcpy(oo->func_name, func_name);
+    oo->next = gen->operator_overloads;
+    gen->operator_overloads = oo;
+}
+
+// Phase 16: Find an operator overload for a type
+OperatorOverload* codegen_find_operator_overload(Codegen* gen, const char* op, const char* type_name) {
+    OperatorOverload* oo = gen->operator_overloads;
+    while (oo) {
+        if (strcmp(oo->op, op) == 0 && strcmp(oo->type_name, type_name) == 0) {
+            return oo;
+        }
+        oo = oo->next;
+    }
+    return NULL;
 }
 
 // Phase 13: Register a generic function definition
@@ -929,17 +984,33 @@ void codegen_generate_assignment(Codegen* gen, char* var_name, char* field_name,
         }
     } else if (field_name == NULL) {
         // Regular variable assignment
-        int offset = codegen_find_variable(gen, var_name);
-        
         codegen_emit(gen, "");
         snprintf(buffer, sizeof(buffer), "    ; Assignment: %s = ...", var_name);
         codegen_emit(gen, buffer);
         
-        // Evaluate expression and store result
-        codegen_generate_expression_value(gen, value);
-        snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store to %s",
-                 offset, var_name);
-        codegen_emit(gen, buffer);
+        // Phase 18: Check if this is a state variable
+        int is_state_var = 0;
+        for (int i = 0; i < gen->global_var_count; i++) {
+            if (strcmp(gen->global_vars[i].name, var_name) == 0) {
+                is_state_var = 1;
+                // Evaluate expression and store to state
+                codegen_generate_expression_value(gen, value);
+                snprintf(buffer, sizeof(buffer), "    mov [state_%s], rax   ; Store to state %s",
+                         var_name, var_name);
+                codegen_emit(gen, buffer);
+                break;
+            }
+        }
+        
+        if (!is_state_var) {
+            int offset = codegen_find_variable(gen, var_name);
+            
+            // Evaluate expression and store result
+            codegen_generate_expression_value(gen, value);
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax   ; Store to %s",
+                     offset, var_name);
+            codegen_emit(gen, buffer);
+        }
     } else {
         // Field assignment: object.field = value
         int offset = codegen_find_variable(gen, var_name);
@@ -1001,12 +1072,25 @@ void codegen_generate_print(Codegen* gen, Expression* expr) {
     if (expr->type == EXPR_STRING) {
         codegen_emit(gen, "    call print_string");
     } else if (expr->type == EXPR_VARIABLE) {
-        // Check variable type
-        VarInfo* var = codegen_get_variable(gen, expr->var_name);
-        if (var->type == TYPE_STRING) {
-            codegen_emit(gen, "    call print_string");
-        } else {
-            codegen_emit(gen, "    call print_number");
+        // Phase 18: Check if this is a state variable first
+        int is_state_var = 0;
+        for (int i = 0; i < gen->global_var_count; i++) {
+            if (strcmp(gen->global_vars[i].name, expr->var_name) == 0) {
+                is_state_var = 1;
+                // State variables are numeric for now
+                codegen_emit(gen, "    call print_number");
+                break;
+            }
+        }
+        
+        if (!is_state_var) {
+            // Check regular variable type
+            VarInfo* var = codegen_get_variable(gen, expr->var_name);
+            if (var->type == TYPE_STRING) {
+                codegen_emit(gen, "    call print_string");
+            } else {
+                codegen_emit(gen, "    call print_number");
+            }
         }
     } else {
         codegen_emit(gen, "    call print_number");
@@ -1019,6 +1103,12 @@ int is_string_expression(Codegen* gen, Expression* expr) {
         return 1;
     }
     if (expr->type == EXPR_VARIABLE) {
+        // Phase 18: Check if this is a state variable first
+        for (int i = 0; i < gen->global_var_count; i++) {
+            if (strcmp(gen->global_vars[i].name, expr->var_name) == 0) {
+                return gen->global_vars[i].type == TYPE_STRING;
+            }
+        }
         VarInfo* var = codegen_get_variable(gen, expr->var_name);
         return var->type == TYPE_STRING;
     }
@@ -1045,32 +1135,45 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
         snprintf(buffer, sizeof(buffer), "    mov rax, str_%d", str_id);
         codegen_emit(gen, buffer);
     } else if (expr->type == EXPR_VARIABLE) {
-        VarInfo* var = codegen_get_variable(gen, expr->var_name);
+        // Phase 18: First check if this is a state variable
+        int is_state_var = 0;
+        for (int i = 0; i < gen->global_var_count; i++) {
+            if (strcmp(gen->global_vars[i].name, expr->var_name) == 0) {
+                is_state_var = 1;
+                snprintf(buffer, sizeof(buffer), "    mov rax, [state_%s]", expr->var_name);
+                codegen_emit(gen, buffer);
+                break;
+            }
+        }
         
-        if (var->stack_offset < 0 && var->stack_offset <= -1000) {
-            // Captured variable from closure environment
-            // offset = -(1000 + index), so index = -(offset + 1000)
-            int capture_index = -(var->stack_offset + 1000);
-            int env_offset = 8;  // Closure env pushed first (push rdi)
+        if (!is_state_var) {
+            VarInfo* var = codegen_get_variable(gen, expr->var_name);
             
-            snprintf(buffer, sizeof(buffer), 
-                    "    ; Load captured variable %s from environment[%d]", 
-                    expr->var_name, capture_index);
-            codegen_emit(gen, buffer);
-            snprintf(buffer, sizeof(buffer), "    mov r13, [rbp-%d]   ; Environment pointer", env_offset);
-            codegen_emit(gen, buffer);
-            snprintf(buffer, sizeof(buffer), "    mov rax, [r13+%d]", capture_index * 8);
-            codegen_emit(gen, buffer);
-        } else {
-            // Check if this is an array variable (for destructuring)
-            // If the variable is declared as array, we need the address, not the value
-            // This is a heuristic: if offset is large (>8), likely an array
-            // Better: check VarInfo for is_array flag (but we don't have that)
-            // For now, just return the value - destructuring will handle this differently
-            
-            // Regular stack variable
-            snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", var->stack_offset);
-            codegen_emit(gen, buffer);
+            if (var->stack_offset < 0 && var->stack_offset <= -1000) {
+                // Captured variable from closure environment
+                // offset = -(1000 + index), so index = -(offset + 1000)
+                int capture_index = -(var->stack_offset + 1000);
+                int env_offset = 8;  // Closure env pushed first (push rdi)
+                
+                snprintf(buffer, sizeof(buffer), 
+                        "    ; Load captured variable %s from environment[%d]", 
+                        expr->var_name, capture_index);
+                codegen_emit(gen, buffer);
+                snprintf(buffer, sizeof(buffer), "    mov r13, [rbp-%d]   ; Environment pointer", env_offset);
+                codegen_emit(gen, buffer);
+                snprintf(buffer, sizeof(buffer), "    mov rax, [r13+%d]", capture_index * 8);
+                codegen_emit(gen, buffer);
+            } else {
+                // Check if this is an array variable (for destructuring)
+                // If the variable is declared as array, we need the address, not the value
+                // This is a heuristic: if offset is large (>8), likely an array
+                // Better: check VarInfo for is_array flag (but we don't have that)
+                // For now, just return the value - destructuring will handle this differently
+                
+                // Regular stack variable
+                snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]", var->stack_offset);
+                codegen_emit(gen, buffer);
+            }
         }
     } else if (expr->type == EXPR_BINARY_OP) {
         // Check if this is string concatenation
@@ -1104,10 +1207,96 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             codegen_emit(gen, "    call string_concat");
             // Result pointer is in rax
         } else {
-            // Check for operator overloading (only if not already in operator overload function)
-            char overload_func[256];
-            const char* op_name = NULL;
-            FuncInfo* overload = NULL;
+            // Phase 16: Check for struct operator overloading first
+            char* left_struct_type = NULL;
+            
+            // Check if left operand is a struct variable (skip for state variables)
+            if (expr->binary_op.left->type == EXPR_VARIABLE) {
+                // Phase 18: Check if state variable first
+                int is_state = 0;
+                for (int i = 0; i < gen->global_var_count; i++) {
+                    if (strcmp(gen->global_vars[i].name, expr->binary_op.left->var_name) == 0) {
+                        is_state = 1;
+                        break;
+                    }
+                }
+                if (!is_state) {
+                    VarInfo* var = codegen_get_variable(gen, expr->binary_op.left->var_name);
+                    if (var && var->struct_name != NULL) {
+                        left_struct_type = var->struct_name;
+                    }
+                }
+            }
+            
+            // Check if we have an operator overload for this struct type
+            OperatorOverload* struct_overload = NULL;
+            if (left_struct_type && !gen->in_operator_overload) {
+                const char* op_str = NULL;
+                switch (expr->binary_op.op) {
+                    case BIN_OP_ADD: op_str = "+"; break;
+                    case BIN_OP_SUB: op_str = "-"; break;
+                    case BIN_OP_MUL: op_str = "*"; break;
+                    case BIN_OP_DIV: op_str = "/"; break;
+                    default: break;
+                }
+                if (op_str) {
+                    struct_overload = codegen_find_operator_overload(gen, op_str, left_struct_type);
+                }
+            }
+            
+            if (struct_overload) {
+                // Phase 16: Call operator overload function for struct
+                codegen_emit(gen, "    ; Struct operator overload call");
+                
+                // Get left operand address (pointer to struct)
+                if (expr->binary_op.left->type == EXPR_VARIABLE) {
+                    // Phase 18: Check if it's a state variable first
+                    int is_state_left = 0;
+                    for (int i = 0; i < gen->global_var_count; i++) {
+                        if (strcmp(gen->global_vars[i].name, expr->binary_op.left->var_name) == 0) {
+                            is_state_left = 1;
+                            snprintf(buffer, sizeof(buffer), "    lea rdi, [state_%s]   ; Address of state left operand", expr->binary_op.left->var_name);
+                            codegen_emit(gen, buffer);
+                            break;
+                        }
+                    }
+                    if (!is_state_left) {
+                        VarInfo* var = codegen_get_variable(gen, expr->binary_op.left->var_name);
+                        snprintf(buffer, sizeof(buffer), "    lea rdi, [rbp-%d]   ; Address of left operand", var->stack_offset);
+                        codegen_emit(gen, buffer);
+                    }
+                }
+                codegen_emit(gen, "    push rdi");
+                
+                // Get right operand address
+                if (expr->binary_op.right->type == EXPR_VARIABLE) {
+                    // Phase 18: Check if it's a state variable first
+                    int is_state_right = 0;
+                    for (int i = 0; i < gen->global_var_count; i++) {
+                        if (strcmp(gen->global_vars[i].name, expr->binary_op.right->var_name) == 0) {
+                            is_state_right = 1;
+                            snprintf(buffer, sizeof(buffer), "    lea rsi, [state_%s]   ; Address of state right operand", expr->binary_op.right->var_name);
+                            codegen_emit(gen, buffer);
+                            break;
+                        }
+                    }
+                    if (!is_state_right) {
+                        VarInfo* var = codegen_get_variable(gen, expr->binary_op.right->var_name);
+                        snprintf(buffer, sizeof(buffer), "    lea rsi, [rbp-%d]   ; Address of right operand", var->stack_offset);
+                        codegen_emit(gen, buffer);
+                    }
+                }
+                codegen_emit(gen, "    pop rdi");
+                
+                // Call operator function
+                snprintf(buffer, sizeof(buffer), "    call %s", struct_overload->func_name);
+                codegen_emit(gen, buffer);
+                // Result in rax
+            } else {
+                // Check for operator overloading (only if not already in operator overload function)
+                char overload_func[256];
+                const char* op_name = NULL;
+                FuncInfo* overload = NULL;
             
             if (!gen->in_operator_overload) {
                 // For now, only support numeric operator overloading
@@ -1166,6 +1355,7 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                         codegen_emit(gen, "    idiv rbx");
                         break;
                 }
+            }
             }
         }
     } else if (expr->type == EXPR_FUNC_CALL) {
@@ -1615,6 +1805,138 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             snprintf(buffer, sizeof(buffer), ".L%d:", end_label);
             codegen_emit(gen, buffer);
         }
+    } else if (expr->type == EXPR_OPTIONAL_CHAIN) {
+        // Phase 15: Optional chaining: object?.field
+        // Returns null (0) if object is null, otherwise object.field
+        int null_label = gen->label_counter++;
+        int end_label = gen->label_counter++;
+        
+        codegen_emit(gen, "");
+        codegen_emit(gen, "    ; Optional chaining (?.)");
+        
+        // Get struct info from the object's variable
+        if (expr->optional_chain.object->type == EXPR_VARIABLE) {
+            VarInfo* var_info = codegen_get_variable(gen, expr->optional_chain.object->var_name);
+            
+            if (var_info && var_info->struct_name) {
+                // Find struct definition
+                StructInfo* struct_info = codegen_find_struct(gen, var_info->struct_name);
+                if (struct_info) {
+                    // Find field offset
+                    int field_index = -1;
+                    for (int i = 0; i < struct_info->field_count; i++) {
+                        if (strcmp(struct_info->field_names[i], expr->optional_chain.field_name) == 0) {
+                            field_index = i;
+                            break;
+                        }
+                    }
+                    
+                    if (field_index >= 0) {
+                        // For stack-allocated structs, calculate the address first
+                        // Load the struct base address into rax
+                        snprintf(buffer, sizeof(buffer), "    lea rax, [rbp-%d]   ; Get struct address", 
+                                 var_info->stack_offset);
+                        codegen_emit(gen, buffer);
+                        
+                        // Check if null (for pointer types, the value would be 0)
+                        // For stack-allocated structs, we check if the first field is 0
+                        // as a null indicator (convention: null struct has first field = 0)
+                        codegen_emit(gen, "    mov rbx, [rax]      ; Load first field for null check");
+                        codegen_emit(gen, "    test rbx, rbx       ; Check if null");
+                        snprintf(buffer, sizeof(buffer), "    jz .L_null_%d       ; If null, skip field access", null_label);
+                        codegen_emit(gen, buffer);
+                        
+                        // Not null - access the field
+                        // Calculate actual offset: base_offset - field_offset
+                        int actual_offset = var_info->stack_offset - struct_info->field_offsets[field_index];
+                        snprintf(buffer, sizeof(buffer), "    mov rax, [rbp-%d]   ; Load %s.%s", 
+                                 actual_offset, expr->optional_chain.object->var_name, 
+                                 expr->optional_chain.field_name);
+                        codegen_emit(gen, buffer);
+                        
+                        snprintf(buffer, sizeof(buffer), "    jmp .L_end_%d", end_label);
+                        codegen_emit(gen, buffer);
+                        
+                        // Null path - return null (0)
+                        snprintf(buffer, sizeof(buffer), ".L_null_%d:", null_label);
+                        codegen_emit(gen, buffer);
+                        codegen_emit(gen, "    mov rax, 0          ; Return null");
+                        
+                        snprintf(buffer, sizeof(buffer), ".L_end_%d:", end_label);
+                        codegen_emit(gen, buffer);
+                    } else {
+                        fprintf(stderr, "Codegen error: Unknown field '%s' in optional chain\n", 
+                                expr->optional_chain.field_name);
+                        exit(1);
+                    }
+                } else {
+                    fprintf(stderr, "Codegen error: Undefined struct type '%s'\n", var_info->struct_name);
+                    exit(1);
+                }
+            } else {
+                // Not a struct variable - just evaluate and check for null
+                codegen_generate_expression_value(gen, expr->optional_chain.object);
+                codegen_emit(gen, "    test rax, rax       ; Check if null");
+                snprintf(buffer, sizeof(buffer), "    jz .L_null_%d", null_label);
+                codegen_emit(gen, buffer);
+                
+                // Try to access field (this would be for pointer-to-struct types)
+                // For now, just return the value
+                snprintf(buffer, sizeof(buffer), "    jmp .L_end_%d", end_label);
+                codegen_emit(gen, buffer);
+                
+                snprintf(buffer, sizeof(buffer), ".L_null_%d:", null_label);
+                codegen_emit(gen, buffer);
+                codegen_emit(gen, "    mov rax, 0          ; Return null");
+                
+                snprintf(buffer, sizeof(buffer), ".L_end_%d:", end_label);
+                codegen_emit(gen, buffer);
+            }
+        } else {
+            // Non-variable expression (e.g., function call result)
+            codegen_generate_expression_value(gen, expr->optional_chain.object);
+            codegen_emit(gen, "    test rax, rax       ; Check if null");
+            snprintf(buffer, sizeof(buffer), "    jz .L_null_%d", null_label);
+            codegen_emit(gen, buffer);
+            
+            snprintf(buffer, sizeof(buffer), "    jmp .L_end_%d", end_label);
+            codegen_emit(gen, buffer);
+            
+            snprintf(buffer, sizeof(buffer), ".L_null_%d:", null_label);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    mov rax, 0          ; Return null");
+            
+            snprintf(buffer, sizeof(buffer), ".L_end_%d:", end_label);
+            codegen_emit(gen, buffer);
+        }
+    } else if (expr->type == EXPR_NULL_COALESCE) {
+        // Phase 15: Null coalescing: value ?? default
+        // Returns value if not null, otherwise default
+        int use_default_label = gen->label_counter++;
+        int end_label = gen->label_counter++;
+        
+        codegen_emit(gen, "");
+        codegen_emit(gen, "    ; Null coalescing (??)");
+        
+        // Evaluate left side (value that might be null)
+        codegen_generate_expression_value(gen, expr->null_coalesce.left);
+        
+        // Check if null (0)
+        codegen_emit(gen, "    test rax, rax       ; Check if null");
+        snprintf(buffer, sizeof(buffer), "    jz .L_default_%d    ; If null, use default", use_default_label);
+        codegen_emit(gen, buffer);
+        
+        // Not null - keep the value (already in rax)
+        snprintf(buffer, sizeof(buffer), "    jmp .L_end_%d", end_label);
+        codegen_emit(gen, buffer);
+        
+        // Null - use default value
+        snprintf(buffer, sizeof(buffer), ".L_default_%d:", use_default_label);
+        codegen_emit(gen, buffer);
+        codegen_generate_expression_value(gen, expr->null_coalesce.right);
+        
+        snprintf(buffer, sizeof(buffer), ".L_end_%d:", end_label);
+        codegen_emit(gen, buffer);
     } else if (expr->type == EXPR_ARRAY_INDEX) {
         // Array indexing: arr[index]
         codegen_emit(gen, "");
@@ -3279,6 +3601,242 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         
         codegen_emit(gen, "; End of module");
         codegen_emit(gen, "");
+    } else if (stmt->type == STMT_OPERATOR_DEF) {
+        // Phase 16: Operator overloading - generate operator function
+        char buffer[256];
+        char func_name[256];
+        
+        // Generate unique function name for operator
+        // Format: __op_TYPE_OPERATOR (e.g., __op_Vector_add for Vector +)
+        const char* op_name;
+        if (strcmp(stmt->operator_def.op, "+") == 0) op_name = "add";
+        else if (strcmp(stmt->operator_def.op, "-") == 0) op_name = "sub";
+        else if (strcmp(stmt->operator_def.op, "*") == 0) op_name = "mul";
+        else if (strcmp(stmt->operator_def.op, "/") == 0) op_name = "div";
+        else if (strcmp(stmt->operator_def.op, "%") == 0) op_name = "mod";
+        else if (strcmp(stmt->operator_def.op, "==") == 0) op_name = "eq";
+        else if (strcmp(stmt->operator_def.op, "!=") == 0) op_name = "neq";
+        else if (strcmp(stmt->operator_def.op, "<") == 0) op_name = "lt";
+        else if (strcmp(stmt->operator_def.op, ">") == 0) op_name = "gt";
+        else if (strcmp(stmt->operator_def.op, "<=") == 0) op_name = "lte";
+        else if (strcmp(stmt->operator_def.op, ">=") == 0) op_name = "gte";
+        else op_name = "op";
+        
+        snprintf(func_name, sizeof(func_name), "__op_%s_%s", 
+                 stmt->operator_def.type_name, op_name);
+        
+        // Register operator overload
+        codegen_add_operator_overload(gen, stmt->operator_def.op, 
+                                     stmt->operator_def.type_name, func_name);
+        
+        codegen_emit(gen, "");
+        snprintf(buffer, sizeof(buffer), "; Operator overload: %s %s", 
+                 stmt->operator_def.type_name, stmt->operator_def.op);
+        codegen_emit(gen, buffer);
+        
+        // Generate function label
+        snprintf(buffer, sizeof(buffer), "%s:", func_name);
+        codegen_emit(gen, buffer);
+        
+        // Function prologue
+        codegen_emit(gen, "    push rbp");
+        codegen_emit(gen, "    mov rbp, rsp");
+        
+        // Get struct size for parameters
+        StructInfo* struct_info = codegen_find_struct(gen, stmt->operator_def.type_name);
+        int struct_size = struct_info ? struct_info->total_size : 8;
+        
+        // Calculate stack space needed - parameters + local vars
+        int stack_space = struct_size * 2 + 64; // Two struct params + extra
+        snprintf(buffer, sizeof(buffer), "    sub rsp, %d", stack_space);
+        codegen_emit(gen, buffer);
+        
+        // Save original stack offset
+        int saved_stack_offset = gen->stack_offset;
+        gen->stack_offset = 0;
+        gen->in_operator_overload = 1;
+        gen->in_function = 1;
+        
+        // First parameter (passed by pointer in rdi)
+        // Copy struct from rdi to local stack
+        gen->stack_offset += struct_size;
+        codegen_add_variable(gen, stmt->operator_def.param1_name, 
+                            gen->stack_offset, TYPE_NUMERIC, 
+                            stmt->operator_def.type_name);
+        
+        // Copy struct fields from pointer to stack
+        codegen_emit(gen, "    ; Copy first parameter struct to stack");
+        for (int i = 0; i < (struct_size / 8); i++) {
+            snprintf(buffer, sizeof(buffer), "    mov rax, [rdi+%d]", i * 8);
+            codegen_emit(gen, buffer);
+            snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax", gen->stack_offset - i * 8);
+            codegen_emit(gen, buffer);
+        }
+        
+        // Second parameter (for binary operators, passed by pointer in rsi)
+        if (stmt->operator_def.param2_name) {
+            gen->stack_offset += struct_size;
+            codegen_add_variable(gen, stmt->operator_def.param2_name, 
+                                gen->stack_offset, TYPE_NUMERIC, 
+                                stmt->operator_def.type_name);
+            
+            codegen_emit(gen, "    ; Copy second parameter struct to stack");
+            for (int i = 0; i < (struct_size / 8); i++) {
+                snprintf(buffer, sizeof(buffer), "    mov rax, [rsi+%d]", i * 8);
+                codegen_emit(gen, buffer);
+                snprintf(buffer, sizeof(buffer), "    mov [rbp-%d], rax", gen->stack_offset - i * 8);
+                codegen_emit(gen, buffer);
+            }
+        }
+        
+        // Generate body statements
+        for (int i = 0; i < stmt->operator_def.body_count; i++) {
+            codegen_generate_statement(gen, stmt->operator_def.body[i]);
+        }
+        
+        // Cleanup and return (return value should be set by return statement in body)
+        codegen_emit(gen, "    mov rsp, rbp");
+        codegen_emit(gen, "    pop rbp");
+        codegen_emit(gen, "    ret");
+        codegen_emit(gen, "");
+        
+        // Restore state
+        gen->stack_offset = saved_stack_offset;
+        gen->in_operator_overload = 0;
+        gen->in_function = 0;
+        
+    } else if (stmt->type == STMT_MATCH) {
+        // Phase 17: Pattern matching - similar to switch-case but with patterns
+        char buffer[256];
+        int end_label = gen->label_counter++;
+        
+        codegen_emit(gen, "");
+        codegen_emit(gen, "    ; Pattern match statement");
+        
+        // Evaluate match value once and store in rax
+        codegen_generate_expression_value(gen, stmt->match_stmt.value);
+        codegen_emit(gen, "    push rax           ; Save match value");
+        
+        // Generate code for each case
+        for (int i = 0; i < stmt->match_stmt.case_count; i++) {
+            int next_case_label = gen->label_counter++;
+            
+            if (stmt->match_stmt.cases[i].is_wildcard) {
+                // Wildcard pattern (_) - always matches, like default
+                codegen_emit(gen, "    ; case _ (wildcard/default)");
+            } else if (stmt->match_stmt.cases[i].is_range) {
+                // Range pattern (a to b)
+                codegen_emit(gen, "    ; case range pattern");
+                codegen_emit(gen, "    mov rax, [rsp]      ; Load match value");
+                
+                // Check lower bound
+                codegen_generate_expression_value(gen, stmt->match_stmt.cases[i].range_start);
+                codegen_emit(gen, "    mov rbx, rax        ; Lower bound in rbx");
+                codegen_emit(gen, "    mov rax, [rsp]      ; Match value");
+                codegen_emit(gen, "    cmp rax, rbx");
+                snprintf(buffer, sizeof(buffer), "    jl .L%d            ; Skip if value < lower", next_case_label);
+                codegen_emit(gen, buffer);
+                
+                // Check upper bound
+                codegen_generate_expression_value(gen, stmt->match_stmt.cases[i].range_end);
+                codegen_emit(gen, "    mov rbx, rax        ; Upper bound in rbx");
+                codegen_emit(gen, "    mov rax, [rsp]      ; Match value");
+                codegen_emit(gen, "    cmp rax, rbx");
+                snprintf(buffer, sizeof(buffer), "    jg .L%d            ; Skip if value > upper", next_case_label);
+                codegen_emit(gen, buffer);
+            } else {
+                // Regular pattern(s) - check each pattern value
+                codegen_emit(gen, "    ; case pattern(s)");
+                
+                if (stmt->match_stmt.cases[i].pattern_count == 1) {
+                    // Single pattern
+                    codegen_generate_expression_value(gen, stmt->match_stmt.cases[i].patterns[0]);
+                    codegen_emit(gen, "    mov rbx, rax        ; Pattern value");
+                    codegen_emit(gen, "    mov rax, [rsp]      ; Match value");
+                    codegen_emit(gen, "    cmp rax, rbx");
+                    snprintf(buffer, sizeof(buffer), "    jne .L%d           ; Skip if not equal", next_case_label);
+                    codegen_emit(gen, buffer);
+                } else {
+                    // Multiple patterns (OR logic) - match if any pattern matches
+                    int match_label = gen->label_counter++;
+                    
+                    for (int p = 0; p < stmt->match_stmt.cases[i].pattern_count; p++) {
+                        codegen_generate_expression_value(gen, stmt->match_stmt.cases[i].patterns[p]);
+                        codegen_emit(gen, "    mov rbx, rax        ; Pattern value");
+                        codegen_emit(gen, "    mov rax, [rsp]      ; Match value");
+                        codegen_emit(gen, "    cmp rax, rbx");
+                        snprintf(buffer, sizeof(buffer), "    je .L%d            ; Match found", match_label);
+                        codegen_emit(gen, buffer);
+                    }
+                    // No pattern matched, skip to next case
+                    snprintf(buffer, sizeof(buffer), "    jmp .L%d", next_case_label);
+                    codegen_emit(gen, buffer);
+                    
+                    // Match label - at least one pattern matched
+                    snprintf(buffer, sizeof(buffer), ".L%d:", match_label);
+                    codegen_emit(gen, buffer);
+                }
+            }
+            
+            // Generate case body
+            for (int b = 0; b < stmt->match_stmt.cases[i].body_count; b++) {
+                codegen_generate_statement(gen, stmt->match_stmt.cases[i].body[b]);
+            }
+            
+            // Jump to end (no fall-through)
+            snprintf(buffer, sizeof(buffer), "    jmp .L%d           ; End of match", end_label);
+            codegen_emit(gen, buffer);
+            
+            // Next case label
+            snprintf(buffer, sizeof(buffer), ".L%d:", next_case_label);
+            codegen_emit(gen, buffer);
+        }
+        
+        // End of match
+        snprintf(buffer, sizeof(buffer), ".L%d:", end_label);
+        codegen_emit(gen, buffer);
+        codegen_emit(gen, "    add rsp, 8          ; Pop match value");
+        codegen_emit(gen, "");
+        
+    } else if (stmt->type == STMT_STATE_DECL) {
+        // Phase 18: State Management - Global state declaration
+        char buffer[512];
+        
+        codegen_emit(gen, "");
+        snprintf(buffer, sizeof(buffer), "    ; State declaration: %s%s",
+                stmt->state_decl.is_shared ? "shared " : "", stmt->state_decl.name);
+        codegen_emit(gen, buffer);
+        
+        // Add to global variables list (similar to regular declaration but global scope)
+        // State variables are stored in .bss section (uninitialized) or .data section (initialized)
+        
+        // Find or add variable in global scope
+        int found = 0;
+        for (int i = 0; i < gen->global_var_count; i++) {
+            if (strcmp(gen->global_vars[i].name, stmt->state_decl.name) == 0) {
+                found = 1;
+                break;
+            }
+        }
+        
+        if (!found && gen->global_var_count < MAX_STATE_VARS) {
+            // Add new global state variable
+            char* name_copy = malloc(strlen(stmt->state_decl.name) + 1);
+            strcpy(name_copy, stmt->state_decl.name);
+            gen->global_vars[gen->global_var_count].name = name_copy;
+            gen->global_vars[gen->global_var_count].type = stmt->state_decl.type;
+            gen->global_vars[gen->global_var_count].is_global = 1;
+            gen->global_vars[gen->global_var_count].is_state = 1;  // Mark as state variable
+            gen->global_var_count++;
+            
+            // Generate initialization if provided
+            if (stmt->state_decl.initial_value) {
+                codegen_generate_expression_value(gen, stmt->state_decl.initial_value);
+                snprintf(buffer, sizeof(buffer), "    mov [state_%s], rax", stmt->state_decl.name);
+                codegen_emit(gen, buffer);
+            }
+        }
+        
     } else if (stmt->type == STMT_DEBUG_LABEL) {
         // Debug label: Generate assembly label
         char label[256];
@@ -3354,11 +3912,14 @@ void codegen_generate(Codegen* gen, AST* ast) {
     
     codegen_emit(gen, "");
     
-    // First pass: Register struct types, generate function definitions, and module definitions
+    // First pass: Register struct types, generate function definitions, operator definitions, and module definitions
     for (int i = 0; i < ast->count; i++) {
         if (ast->statements[i]->type == STMT_STRUCT_DEF) {
             codegen_generate_statement(gen, ast->statements[i]);
         } else if (ast->statements[i]->type == STMT_FUNC_DEF) {
+            codegen_generate_statement(gen, ast->statements[i]);
+        } else if (ast->statements[i]->type == STMT_OPERATOR_DEF) {
+            // Phase 16: Generate operator overload functions before _start
             codegen_generate_statement(gen, ast->statements[i]);
         } else if (ast->statements[i]->type == STMT_MODULE_DEF) {
             codegen_generate_statement(gen, ast->statements[i]);
@@ -3397,11 +3958,12 @@ void codegen_generate(Codegen* gen, AST* ast) {
         codegen_emit(gen, "    call func_main");
     }
     
-    // Second pass: Generate non-function, non-struct, non-module statements
+    // Second pass: Generate non-function, non-struct, non-module, non-operator statements
     for (int i = 0; i < ast->count; i++) {
         if (ast->statements[i]->type != STMT_FUNC_DEF && 
             ast->statements[i]->type != STMT_STRUCT_DEF &&
-            ast->statements[i]->type != STMT_MODULE_DEF) {
+            ast->statements[i]->type != STMT_MODULE_DEF &&
+            ast->statements[i]->type != STMT_OPERATOR_DEF) {
             codegen_generate_statement(gen, ast->statements[i]);
         }
     }
@@ -3471,6 +4033,18 @@ void codegen_generate(Codegen* gen, AST* ast) {
             snprintf(buffer, sizeof(buffer), "str_%d: db \"%s\", 0", str->id, str->value);
             codegen_emit(gen, buffer);
             str = str->next;
+        }
+    }
+    
+    // Phase 18: Emit state variables in .bss section
+    if (gen->global_var_count > 0) {
+        codegen_emit(gen, "");
+        codegen_emit(gen, "section .bss");
+        codegen_emit(gen, "    ; Global state variables");
+        char buffer[256];
+        for (int i = 0; i < gen->global_var_count; i++) {
+            snprintf(buffer, sizeof(buffer), "state_%s: resq 1", gen->global_vars[i].name);
+            codegen_emit(gen, buffer);
         }
     }
 }

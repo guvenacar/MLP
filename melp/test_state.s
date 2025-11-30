@@ -60,6 +60,29 @@ _start:
     mov rdi, rax
     call print_number
 
+    ; Assignment: counter = ...
+    mov rax, 200
+    mov [state_counter], rax   ; Store to state counter
+
+    ; Print statement
+    mov rax, [state_counter]
+    mov rdi, rax
+    call print_number
+
+    ; Assignment: counter = ...
+    mov rax, [state_counter]
+    push rax
+    mov rax, 50
+    mov rbx, rax
+    pop rax
+    add rax, rbx
+    mov [state_counter], rax   ; Store to state counter
+
+    ; Print statement
+    mov rax, [state_counter]
+    mov rdi, rax
+    call print_number
+
     ; Print statement
     mov rax, 999
     mov rdi, rax

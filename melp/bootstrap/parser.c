@@ -43,7 +43,10 @@ typedef enum {
     STMT_DEBUG_IF,    // Debug conditional block
     STMT_DEBUG_PAUSE, // Debug pause (breakpoint)
     STMT_IMPORT,      // Import statement (import math, import string as str)
-    STMT_MODULE_DEF   // Module definition (module MyModule...end module)
+    STMT_MODULE_DEF,  // Module definition (module MyModule...end module)
+    STMT_OPERATOR_DEF, // Phase 16: Operator overloading definition
+    STMT_MATCH,       // Phase 17: Pattern matching (match...end match)
+    STMT_STATE_DECL   // Phase 18: State declaration (shared state)
 } StmtType;
 
 typedef enum {
@@ -64,7 +67,10 @@ typedef enum {
     EXPR_LOGICAL_NOT, // Logical NOT (!)
     EXPR_LAMBDA,      // Phase 12: Lambda function (inline anonymous function)
     EXPR_AWAIT,       // Phase 12: Await expression (await async_call())
-    EXPR_ARRAY_LITERAL // Array literal: [10, 20, 30]
+    EXPR_ARRAY_LITERAL, // Array literal: [10, 20, 30]
+    // Phase 15: Null safety
+    EXPR_OPTIONAL_CHAIN, // ?. (optional chaining: obj?.field)
+    EXPR_NULL_COALESCE   // ?? (null coalescing: value ?? default)
 } ExprType;
 
 typedef enum {
@@ -140,6 +146,15 @@ typedef struct Expression {
             struct Expression** elements;  // Array literal elements
             int count;                      // Number of elements
         } array_literal;
+        // Phase 15: Null safety
+        struct {
+            struct Expression* object;      // Object expression (e.g., person in person?.name)
+            char* field_name;               // Field name (e.g., "name")
+        } optional_chain;
+        struct {
+            struct Expression* left;        // Value that might be null
+            struct Expression* right;       // Default value if null
+        } null_coalesce;
     };
 } Expression;
 
@@ -357,6 +372,38 @@ typedef struct Statement {
             struct Statement** body;   // Module body (functions, structs, etc.)
             int body_count;
         } module_def;
+        // Phase 16: Operator Overloading
+        struct {
+            char* op;                  // Operator symbol (+, -, *, /, ==, etc.)
+            char* type_name;           // Type name this operator is for
+            char* param1_name;         // First parameter name
+            char* param2_name;         // Second parameter name (NULL for unary)
+            VarType return_type;       // Return type
+            struct Statement** body;   // Operator body
+            int body_count;
+        } operator_def;
+        // Phase 17: Pattern Matching
+        struct {
+            Expression* value;         // Value to match against
+            struct {
+                Expression** patterns; // Pattern expressions (number, variable, range)
+                int pattern_count;     // Number of patterns in this case (for 1, 2, 3 =>)
+                int is_wildcard;       // 1 if this is _ (default case)
+                int is_range;          // 1 if range pattern (1 to 10)
+                Expression* range_start; // Start of range (if is_range)
+                Expression* range_end;   // End of range (if is_range)
+                struct Statement** body; // Case body statements
+                int body_count;
+            }* cases;
+            int case_count;
+        } match_stmt;
+        // Phase 18: State Management
+        struct {
+            char* name;                // State variable name
+            VarType type;              // State variable type
+            Expression* initial_value; // Initial value (optional)
+            int is_shared;             // 1 if shared (thread-safe)
+        } state_decl;
     };
 } Statement;
 
@@ -439,6 +486,25 @@ Expression* expression_create_ternary(Expression* condition, Expression* true_ex
     expr->ternary.condition = condition;
     expr->ternary.true_expr = true_expr;
     expr->ternary.false_expr = false_expr;
+    return expr;
+}
+
+// Phase 15: Null safety - Optional chaining
+Expression* expression_create_optional_chain(Expression* object, const char* field_name) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_OPTIONAL_CHAIN;
+    expr->optional_chain.object = object;
+    expr->optional_chain.field_name = malloc(strlen(field_name) + 1);
+    strcpy(expr->optional_chain.field_name, field_name);
+    return expr;
+}
+
+// Phase 15: Null safety - Null coalescing
+Expression* expression_create_null_coalesce(Expression* left, Expression* right) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_NULL_COALESCE;
+    expr->null_coalesce.left = left;
+    expr->null_coalesce.right = right;
     return expr;
 }
 
@@ -959,6 +1025,28 @@ Expression* parser_parse_primary_expression(Parser* parser) {
             expr->array_index.array_name = name; // Takes ownership
             expr->array_index.index = index;
             return expr;
+        } else if (parser->current_token->type == TOKEN_QUESTION_DOT) {
+            // Phase 15: Optional chaining: object?.field
+            parser_advance(parser); // skip '?.'
+            
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected field name after '?.' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            
+            char* field_name = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(field_name, parser->current_token->value);
+            parser_advance(parser);
+            
+            // Create variable expression first
+            Expression* var_expr = expression_create_variable(name);
+            free(name);
+            
+            // Create optional chain expression
+            Expression* expr = expression_create_optional_chain(var_expr, field_name);
+            free(field_name);
+            return expr;
         } else if (parser->current_token->type == TOKEN_DOT) {
             // Field access OR module qualified function call: object.field OR Module.func()
             parser_advance(parser); // skip '.'
@@ -1133,6 +1221,13 @@ Expression* parser_parse_comparison_expression(Parser* parser) {
         parser_advance(parser);
         Expression* right = parser_parse_arithmetic_expression(parser);
         left = expression_create_comparison(left, right, op);
+    }
+    
+    // Phase 15: Check for null coalescing operator (??)
+    while (parser->current_token->type == TOKEN_NULL_COALESCE) {
+        parser_advance(parser);  // skip '??'
+        Expression* right = parser_parse_arithmetic_expression(parser);
+        left = expression_create_null_coalesce(left, right);
     }
     
     // Check for ternary operator (? :)
@@ -2175,6 +2270,347 @@ Statement* parser_parse_module_definition(Parser* parser) {
     return stmt;
 }
 
+// Phase 16: Parse operator overloading definition
+// Syntax: operator +(Vector a, Vector b) returns Vector ... end operator
+Statement* parser_parse_operator_definition(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_OPERATOR_DEF;
+    
+    parser_advance(parser); // skip 'operator'
+    
+    // Get operator symbol (+, -, *, /, ==, !=, <, >, <=, >=, etc.)
+    // Can be a single or double char operator
+    char* op = NULL;
+    if (parser->current_token->type == TOKEN_PLUS) {
+        op = "+";
+    } else if (parser->current_token->type == TOKEN_MINUS) {
+        op = "-";
+    } else if (parser->current_token->type == TOKEN_MULTIPLY) {
+        op = "*";
+    } else if (parser->current_token->type == TOKEN_DIVIDE) {
+        op = "/";
+    } else if (parser->current_token->type == TOKEN_EQUAL) {
+        op = "==";
+    } else if (parser->current_token->type == TOKEN_NOT_EQUAL) {
+        op = "!=";
+    } else if (parser->current_token->type == TOKEN_LESS) {
+        op = "<";
+    } else if (parser->current_token->type == TOKEN_GREATER) {
+        op = ">";
+    } else if (parser->current_token->type == TOKEN_LESS_EQUAL) {
+        op = "<=";
+    } else if (parser->current_token->type == TOKEN_GREATER_EQUAL) {
+        op = ">=";
+    } else {
+        fprintf(stderr, "Parser error: Expected operator symbol after 'operator' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    stmt->operator_def.op = malloc(strlen(op) + 1);
+    strcpy(stmt->operator_def.op, op);
+    parser_advance(parser);
+    
+    // Expect '('
+    if (parser->current_token->type != TOKEN_LPAREN) {
+        fprintf(stderr, "Parser error: Expected '(' after operator symbol at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // First parameter: TypeName param_name
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected type name in operator definition at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    stmt->operator_def.type_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->operator_def.type_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected parameter name in operator definition at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    
+    stmt->operator_def.param1_name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->operator_def.param1_name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Check for comma (binary operator) or close paren (unary operator)
+    stmt->operator_def.param2_name = NULL;
+    if (parser->current_token->type == TOKEN_COMMA) {
+        parser_advance(parser); // skip ','
+        
+        // Second parameter: TypeName param_name
+        // Skip the type name (should be same as first)
+        if (parser->current_token->type != TOKEN_IDENTIFIER) {
+            fprintf(stderr, "Parser error: Expected type name for second parameter at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip type name
+        
+        if (parser->current_token->type != TOKEN_IDENTIFIER) {
+            fprintf(stderr, "Parser error: Expected parameter name for second parameter at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        
+        stmt->operator_def.param2_name = malloc(strlen(parser->current_token->value) + 1);
+        strcpy(stmt->operator_def.param2_name, parser->current_token->value);
+        parser_advance(parser);
+    }
+    
+    // Expect ')'
+    if (parser->current_token->type != TOKEN_RPAREN) {
+        fprintf(stderr, "Parser error: Expected ')' after operator parameters at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Expect 'returns' or 'döndürür'
+    if (parser->current_token->type != TOKEN_RETURNS) {
+        fprintf(stderr, "Parser error: Expected 'returns' after operator parameters at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Return type
+    if (parser->current_token->type == TOKEN_NUMERIC) {
+        stmt->operator_def.return_type = TYPE_NUMERIC;
+    } else if (parser->current_token->type == TOKEN_TEXT) {
+        stmt->operator_def.return_type = TYPE_STRING;
+    } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+        stmt->operator_def.return_type = TYPE_BOOLEAN;
+    } else if (parser->current_token->type == TOKEN_DECIMAL) {
+        stmt->operator_def.return_type = TYPE_DECIMAL;
+    } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+        // Custom type - for now treat as numeric (struct support later)
+        stmt->operator_def.return_type = TYPE_NUMERIC;
+    } else {
+        fprintf(stderr, "Parser error: Expected return type after 'returns' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse operator body until 'end operator'
+    int body_capacity = 10;
+    stmt->operator_def.body = malloc(sizeof(Statement*) * body_capacity);
+    stmt->operator_def.body_count = 0;
+    
+    while (parser->current_token->type != TOKEN_END && 
+           parser->current_token->type != TOKEN_EOF) {
+        
+        if (stmt->operator_def.body_count >= body_capacity) {
+            body_capacity *= 2;
+            stmt->operator_def.body = realloc(stmt->operator_def.body,
+                                             sizeof(Statement*) * body_capacity);
+        }
+        
+        stmt->operator_def.body[stmt->operator_def.body_count++] = parser_parse_statement(parser);
+    }
+    
+    // Expect 'end' 'operator'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after operator body at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_OPERATOR) {
+        fprintf(stderr, "Parser error: Expected 'operator' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+// Phase 17: Parse pattern matching statement
+// Syntax: match value
+//           case 1 => ...
+//           case 2, 3 => ...
+//           case 4 to 10 => ...
+//           case _ => ...
+//         end match
+Statement* parser_parse_match_statement(Parser* parser) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_MATCH;
+    
+    parser_advance(parser); // skip 'match'
+    
+    // Parse the value to match
+    stmt->match_stmt.value = parser_parse_expression(parser);
+    
+    // Initialize cases array
+    int case_capacity = 10;
+    stmt->match_stmt.cases = malloc(sizeof(*stmt->match_stmt.cases) * case_capacity);
+    stmt->match_stmt.case_count = 0;
+    
+    // Parse cases until 'end match'
+    while (parser->current_token->type == TOKEN_CASE) {
+        if (stmt->match_stmt.case_count >= case_capacity) {
+            case_capacity *= 2;
+            stmt->match_stmt.cases = realloc(stmt->match_stmt.cases,
+                                            sizeof(*stmt->match_stmt.cases) * case_capacity);
+        }
+        
+        int idx = stmt->match_stmt.case_count;
+        stmt->match_stmt.cases[idx].patterns = NULL;
+        stmt->match_stmt.cases[idx].pattern_count = 0;
+        stmt->match_stmt.cases[idx].is_wildcard = 0;
+        stmt->match_stmt.cases[idx].is_range = 0;
+        stmt->match_stmt.cases[idx].range_start = NULL;
+        stmt->match_stmt.cases[idx].range_end = NULL;
+        stmt->match_stmt.cases[idx].body = NULL;
+        stmt->match_stmt.cases[idx].body_count = 0;
+        
+        parser_advance(parser); // skip 'case'
+        
+        // Check for wildcard pattern (_)
+        if (parser->current_token->type == TOKEN_UNDERSCORE) {
+            stmt->match_stmt.cases[idx].is_wildcard = 1;
+            parser_advance(parser);
+        } else {
+            // Parse pattern(s) - can be comma-separated or range
+            int pattern_capacity = 5;
+            stmt->match_stmt.cases[idx].patterns = malloc(sizeof(Expression*) * pattern_capacity);
+            
+            // First pattern
+            Expression* first_pattern = parser_parse_expression(parser);
+            
+            // Check for range pattern (to keyword)
+            if (parser->current_token->type == TOKEN_TO) {
+                stmt->match_stmt.cases[idx].is_range = 1;
+                stmt->match_stmt.cases[idx].range_start = first_pattern;
+                parser_advance(parser); // skip 'to'
+                stmt->match_stmt.cases[idx].range_end = parser_parse_expression(parser);
+            } else {
+                // Regular pattern(s)
+                stmt->match_stmt.cases[idx].patterns[0] = first_pattern;
+                stmt->match_stmt.cases[idx].pattern_count = 1;
+                
+                // Check for comma-separated patterns
+                while (parser->current_token->type == TOKEN_COMMA) {
+                    parser_advance(parser); // skip ','
+                    
+                    if (stmt->match_stmt.cases[idx].pattern_count >= pattern_capacity) {
+                        pattern_capacity *= 2;
+                        stmt->match_stmt.cases[idx].patterns = realloc(
+                            stmt->match_stmt.cases[idx].patterns,
+                            sizeof(Expression*) * pattern_capacity);
+                    }
+                    
+                    stmt->match_stmt.cases[idx].patterns[stmt->match_stmt.cases[idx].pattern_count++] =
+                        parser_parse_expression(parser);
+                }
+            }
+        }
+        
+        // Expect '=>'
+        if (parser->current_token->type != TOKEN_ARROW) {
+            fprintf(stderr, "Parser error: Expected '=>' after pattern at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser);
+        
+        // Parse case body - single statement or multiple until next case/end
+        int body_capacity = 10;
+        stmt->match_stmt.cases[idx].body = malloc(sizeof(Statement*) * body_capacity);
+        
+        while (parser->current_token->type != TOKEN_CASE &&
+               parser->current_token->type != TOKEN_END &&
+               parser->current_token->type != TOKEN_EOF) {
+            
+            if (stmt->match_stmt.cases[idx].body_count >= body_capacity) {
+                body_capacity *= 2;
+                stmt->match_stmt.cases[idx].body = realloc(
+                    stmt->match_stmt.cases[idx].body,
+                    sizeof(Statement*) * body_capacity);
+            }
+            
+            stmt->match_stmt.cases[idx].body[stmt->match_stmt.cases[idx].body_count++] =
+                parser_parse_statement(parser);
+        }
+        
+        stmt->match_stmt.case_count++;
+    }
+    
+    // Expect 'end' 'match'
+    if (parser->current_token->type != TOKEN_END) {
+        fprintf(stderr, "Parser error: Expected 'end' after match cases at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    if (parser->current_token->type != TOKEN_MATCH) {
+        fprintf(stderr, "Parser error: Expected 'match' after 'end' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    return stmt;
+}
+
+// Phase 18: State Management
+Statement* parser_parse_state_statement(Parser* parser, int is_shared) {
+    Statement* stmt = malloc(sizeof(Statement));
+    stmt->type = STMT_STATE_DECL;
+    stmt->state_decl.is_shared = is_shared;
+    stmt->state_decl.initial_value = NULL;
+    
+    if (is_shared) {
+        parser_advance(parser); // skip 'shared'
+    }
+    parser_advance(parser); // skip 'state'
+    
+    // Parse type
+    if (parser->current_token->type == TOKEN_NUMERIC) {
+        stmt->state_decl.type = TYPE_NUMERIC;
+    } else if (parser->current_token->type == TOKEN_TEXT) {
+        stmt->state_decl.type = TYPE_STRING;
+    } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+        stmt->state_decl.type = TYPE_BOOLEAN;
+    } else if (parser->current_token->type == TOKEN_DECIMAL) {
+        stmt->state_decl.type = TYPE_DECIMAL;
+    } else {
+        fprintf(stderr, "Parser error: Expected type after 'state' at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    parser_advance(parser);
+    
+    // Parse state name
+    if (parser->current_token->type != TOKEN_IDENTIFIER) {
+        fprintf(stderr, "Parser error: Expected state name at line %d\n",
+                parser->current_token->line);
+        exit(1);
+    }
+    stmt->state_decl.name = malloc(strlen(parser->current_token->value) + 1);
+    strcpy(stmt->state_decl.name, parser->current_token->value);
+    parser_advance(parser);
+    
+    // Optional initial value
+    if (parser->current_token->type == TOKEN_ASSIGN) {
+        parser_advance(parser); // skip '='
+        stmt->state_decl.initial_value = parser_parse_expression(parser);
+    }
+    
+    return stmt;
+}
+
 Statement* parser_parse_debug_statement(Parser* parser) {
     parser_advance(parser); // skip 'debug'
     
@@ -3104,6 +3540,25 @@ Statement* parser_parse_statement(Parser* parser) {
     else if (parser->current_token->type == TOKEN_MODULE) {
         free(stmt);
         return parser_parse_module_definition(parser);
+    }
+    // Phase 16: Check for operator overloading
+    else if (parser->current_token->type == TOKEN_OPERATOR) {
+        free(stmt);
+        return parser_parse_operator_definition(parser);
+    }
+    // Phase 17: Check for pattern matching
+    else if (parser->current_token->type == TOKEN_MATCH) {
+        free(stmt);
+        return parser_parse_match_statement(parser);
+    }
+    // Phase 18: Check for state declaration
+    else if (parser->current_token->type == TOKEN_STATE) {
+        free(stmt);
+        return parser_parse_state_statement(parser, 0); // not shared
+    }
+    else if (parser->current_token->type == TOKEN_SHARED) {
+        free(stmt);
+        return parser_parse_state_statement(parser, 1); // shared
     }
     // Check for func
     else if (parser->current_token->type == TOKEN_FUNC) {

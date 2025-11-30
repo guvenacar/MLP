@@ -1,0 +1,14 @@
+-- Test State Management (Phase 18)
+
+-- Test 1: Basic state declaration and assignment
+state numeric counter = 100
+print(counter)
+
+counter = 200
+print(counter)
+
+-- Test 2: State in expression
+counter = counter + 50
+print(counter)
+
+print(999)

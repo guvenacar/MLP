@@ -72,4 +72,9 @@ char* mlp_exception_message(void);
 char* mlp_exception_type(void);
 long mlp_exception_code(void);
 
+// Phase 15: Null safety
+long mlp_is_null(void* ptr);
+long mlp_coalesce(long value, long default_val);
+long mlp_safe_deref(void* ptr);
+
 #endif // RUNTIME_H
