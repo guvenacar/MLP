@@ -2746,6 +2746,10 @@ void codegen_generate_comparison(Codegen* gen, Expression* condition, int false_
     int is_string_comp = is_string_expression(gen, condition->comparison.left) || 
                          is_string_expression(gen, condition->comparison.right);
     
+    // TTO: Check if this is a double comparison
+    int is_double_comp = is_double_expression(gen, condition->comparison.left) || 
+                         is_double_expression(gen, condition->comparison.right);
+    
     if (is_string_comp) {
         // String comparison - use runtime functions
         
@@ -2773,6 +2777,61 @@ void codegen_generate_comparison(Codegen* gen, Expression* condition, int false_
         // Jump to false_label if result is 0
         codegen_emit(gen, "    test rax, rax");
         snprintf(buffer, sizeof(buffer), "    jz .L%d", false_label);
+        codegen_emit(gen, buffer);
+    } else if (is_double_comp) {
+        // TTO: Double comparison - use SSE comisd instruction
+        codegen_emit(gen, "    ; TTO: Double comparison using comisd");
+        
+        // Load left side - may need to convert int to double
+        int left_is_double = is_double_expression(gen, condition->comparison.left);
+        codegen_generate_expression_value(gen, condition->comparison.left);
+        
+        if (left_is_double) {
+            // Value is already in xmm0 (via movq from rax)
+            codegen_emit(gen, "    movq xmm0, rax");
+        } else {
+            // Integer - convert to double
+            codegen_emit(gen, "    cvtsi2sd xmm0, rax");
+        }
+        
+        // Save xmm0 on stack
+        codegen_emit(gen, "    sub rsp, 8");
+        codegen_emit(gen, "    movsd [rsp], xmm0");
+        
+        // Load right side
+        int right_is_double = is_double_expression(gen, condition->comparison.right);
+        codegen_generate_expression_value(gen, condition->comparison.right);
+        
+        if (right_is_double) {
+            codegen_emit(gen, "    movq xmm1, rax");
+        } else {
+            codegen_emit(gen, "    cvtsi2sd xmm1, rax");
+        }
+        
+        // Restore left operand to xmm0
+        codegen_emit(gen, "    movsd xmm0, [rsp]");
+        codegen_emit(gen, "    add rsp, 8");
+        
+        // Compare: comisd sets flags based on xmm0 vs xmm1
+        // CF=1 if xmm0 < xmm1 or unordered
+        // ZF=1 if xmm0 == xmm1
+        // CF=0 and ZF=0 if xmm0 > xmm1
+        codegen_emit(gen, "    comisd xmm0, xmm1");
+        
+        // Jump to false label based on comparison
+        // Note: For floating point, we use unsigned jumps (ja, jb, jae, jbe)
+        const char* jump_instr;
+        switch (condition->comparison.op) {
+            case CMP_EQUAL:         jump_instr = "jne"; break;  // Also handles unordered (NaN)
+            case CMP_NOT_EQUAL:     jump_instr = "je"; break;
+            case CMP_LESS:          jump_instr = "jae"; break;  // jump if not below (CF=0)
+            case CMP_LESS_EQUAL:    jump_instr = "ja"; break;   // jump if above (CF=0 and ZF=0)
+            case CMP_GREATER:       jump_instr = "jbe"; break;  // jump if below or equal
+            case CMP_GREATER_EQUAL: jump_instr = "jb"; break;   // jump if below (CF=1)
+            default: jump_instr = "jmp"; break;
+        }
+        
+        snprintf(buffer, sizeof(buffer), "    %s .L%d", jump_instr, false_label);
         codegen_emit(gen, buffer);
     } else {
         // Numeric comparison - use cmp instruction

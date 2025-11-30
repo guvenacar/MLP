@@ -967,23 +967,36 @@ Expression* parser_parse_primary_expression(Parser* parser) {
         
         if (parser->current_token->type == TOKEN_LESS) {
             // Could be generic call or comparison - peek ahead
-            // If we see a type keyword followed by > or ,, it's generic
-            // Save position for backtracking
-            Token* saved_token = parser->current_token;
-            parser_advance(parser); // skip '<'
+            // If we see a type keyword, it's generic; if number, it's comparison
             
-            // Check if this looks like a generic call
+            // Save state BEFORE consuming '<'
+            // Note: When current_token is '<', lexer->pos is AFTER '<'
+            // So we need to go back 1 character to re-read '<'
+            int saved_pos = parser->lexer->pos - 1;  // Position OF '<'
+            int saved_line = parser->lexer->line;
+            
+            parser_advance(parser); // consume '<', get next token
+            
+            // Check if this looks like a generic call (type keyword) or comparison
             int is_generic = 0;
             if (parser->current_token->type == TOKEN_NUMERIC ||
                 parser->current_token->type == TOKEN_DECIMAL ||
                 parser->current_token->type == TOKEN_BOOLEAN ||
-                parser->current_token->type == TOKEN_TEXT ||
-                parser->current_token->type == TOKEN_IDENTIFIER) {
-                // Likely generic - parse type arguments
+                parser->current_token->type == TOKEN_TEXT) {
+                // Type keyword after < means generic
                 is_generic = 1;
             }
+            // If it's a number (like 0.5) or other non-type token, it's a comparison
             
-            if (is_generic) {
+            if (!is_generic) {
+                // Backtrack: restore lexer position and re-lex '<'
+                token_free(parser->current_token);
+                parser->lexer->pos = saved_pos;
+                parser->lexer->line = saved_line;
+                parser->current_token = lexer_next_token(parser->lexer);
+                // Now current_token should be '<' again
+            } else {
+                // Generic call - continue parsing type arguments
                 type_args = malloc(sizeof(VarType) * 10);
                 int type_arg_capacity = 10;
                 
@@ -1199,12 +1212,33 @@ Expression* parser_parse_primary_expression(Parser* parser) {
 }
 
 // Phase 10: Parse unary expressions (& and * prefix operators)
+// TTO: Also handles unary minus for negative numbers (-3.14, -5)
 Expression* parser_parse_unary_expression(Parser* parser) {
     // Check for logical NOT operator: not expression
     if (parser->current_token->type == TOKEN_NOT) {
         parser_advance(parser); // skip 'not'
         Expression* operand = parser_parse_unary_expression(parser); // Recursive for multiple nots
         return expression_create_logical_not(operand);
+    }
+    
+    // TTO: Check for unary minus operator: -expression
+    if (parser->current_token->type == TOKEN_MINUS) {
+        parser_advance(parser); // skip '-'
+        Expression* operand = parser_parse_unary_expression(parser); // Recursive for --x
+        
+        // Optimization: If operand is a number literal, negate it directly
+        if (operand->type == EXPR_NUMBER) {
+            if (operand->has_decimal_point || operand->internal_numeric_type == INTERNAL_DOUBLE) {
+                operand->double_value = -operand->double_value;
+            } else {
+                operand->number_value = -operand->number_value;
+            }
+            return operand;
+        }
+        
+        // Otherwise, create a subtraction from 0: 0 - operand
+        Expression* zero = expression_create_number(0);
+        return expression_create_binary_op(zero, operand, BIN_OP_SUB);
     }
     
     // Check for address-of operator: &variable
