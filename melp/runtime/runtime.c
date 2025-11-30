@@ -170,6 +170,7 @@ typedef struct {
 
 // Allocate dynamic array with metadata
 // Returns pointer to data (not header)
+// Phase 19: Now uses gc_alloc for automatic memory management
 void* mlp_array_alloc(long size) {
     if (size < 0) {
         fprintf(stderr, "Array size cannot be negative: %ld\n", size);
@@ -178,7 +179,7 @@ void* mlp_array_alloc(long size) {
     
     // Allocate: header + (size * 8 bytes per element)
     size_t total_size = sizeof(ArrayHeader) + (size * 8);
-    ArrayHeader* header = (ArrayHeader*)mlp_malloc(total_size);
+    ArrayHeader* header = (ArrayHeader*)gc_alloc(total_size);
     
     header->size = size;
     header->capacity = size;
@@ -195,10 +196,9 @@ void* mlp_array_alloc(long size) {
 // Free dynamic array (given data pointer)
 void mlp_array_free(void* data) {
     if (!data) return;
-    
     // Get header (stored before data)
     ArrayHeader* header = ((ArrayHeader*)data) - 1;
-    free(header);
+    gc_free(header);
 }
 
 // Get array length
@@ -227,7 +227,7 @@ void* mlp_array_resize(void* data, long new_size) {
     
     // Allocate new array
     size_t total_size = sizeof(ArrayHeader) + (new_size * 8);
-    ArrayHeader* new_header = (ArrayHeader*)mlp_malloc(total_size);
+    ArrayHeader* new_header = (ArrayHeader*)gc_alloc(total_size);
     
     new_header->size = new_size;
     new_header->capacity = new_size;
@@ -247,7 +247,7 @@ void* mlp_array_resize(void* data, long new_size) {
     }
     
     // Free old array
-    free(old_header);
+    gc_free(old_header);
     
     return new_data;
 }
@@ -715,3 +715,257 @@ long mlp_safe_deref(void* ptr) {
     return *((long*)ptr);
 }
 
+// ============================================================================
+// PHASE 19: Garbage Collection (Simple Mark-Sweep)
+// ============================================================================
+
+#define GC_MAX_OBJECTS 4096
+#define GC_THRESHOLD 1024  // Trigger GC when this many objects allocated
+
+// GC Object header - prepended to every gc_alloc allocation
+typedef struct GCObject {
+    size_t size;           // Size of user data
+    int marked;            // Mark bit for mark-sweep
+    int ref_count;         // Reference count (for manual management)
+    struct GCObject* next; // Linked list of all objects
+} GCObject;
+
+// GC state
+static GCObject* gc_objects = NULL;     // Head of all allocated objects
+static int gc_object_count = 0;         // Number of allocated objects
+static int gc_total_bytes = 0;          // Total bytes allocated
+static int gc_enabled = 1;              // GC enabled flag
+static int gc_collections = 0;          // Number of collections performed
+
+// Root set for marking (stack-based roots)
+#define GC_MAX_ROOTS 256
+static void** gc_roots[GC_MAX_ROOTS];
+static int gc_root_count = 0;
+
+/**
+ * Initialize GC system
+ */
+void gc_init(void) {
+    gc_objects = NULL;
+    gc_object_count = 0;
+    gc_total_bytes = 0;
+    gc_enabled = 1;
+    gc_collections = 0;
+    gc_root_count = 0;
+}
+
+/**
+ * Add a root pointer (for marking phase)
+ */
+void gc_add_root(void** root) {
+    if (gc_root_count < GC_MAX_ROOTS) {
+        gc_roots[gc_root_count++] = root;
+    }
+}
+
+/**
+ * Remove a root pointer
+ */
+void gc_remove_root(void** root) {
+    for (int i = 0; i < gc_root_count; i++) {
+        if (gc_roots[i] == root) {
+            // Shift remaining roots
+            for (int j = i; j < gc_root_count - 1; j++) {
+                gc_roots[j] = gc_roots[j + 1];
+            }
+            gc_root_count--;
+            return;
+        }
+    }
+}
+
+/**
+ * Get GCObject header from user pointer
+ */
+static GCObject* gc_get_header(void* ptr) {
+    if (!ptr) return NULL;
+    return (GCObject*)((char*)ptr - sizeof(GCObject));
+}
+
+/**
+ * Mark an object as reachable
+ */
+static void gc_mark_object(void* ptr) {
+    if (!ptr) return;
+    GCObject* obj = gc_get_header(ptr);
+    if (obj && !obj->marked) {
+        obj->marked = 1;
+        // TODO: If object contains pointers, recursively mark them
+    }
+}
+
+/**
+ * Mark phase - mark all reachable objects from roots
+ */
+static void gc_mark(void) {
+    // Mark from root set
+    for (int i = 0; i < gc_root_count; i++) {
+        if (gc_roots[i] && *gc_roots[i]) {
+            gc_mark_object(*gc_roots[i]);
+        }
+    }
+}
+
+/**
+ * Sweep phase - free unmarked objects
+ */
+static void gc_sweep(void) {
+    GCObject** obj = &gc_objects;
+    while (*obj) {
+        if (!(*obj)->marked) {
+            // Object not reachable - free it
+            GCObject* unreached = *obj;
+            *obj = unreached->next;
+            gc_total_bytes -= unreached->size + sizeof(GCObject);
+            gc_object_count--;
+            free(unreached);
+        } else {
+            // Object still reachable - unmark for next cycle
+            (*obj)->marked = 0;
+            obj = &(*obj)->next;
+        }
+    }
+}
+
+/**
+ * Run garbage collection
+ */
+void gc_collect(void) {
+    if (!gc_enabled) return;
+    
+    gc_mark();
+    gc_sweep();
+    gc_collections++;
+}
+
+/**
+ * Allocate memory with GC tracking
+ */
+void* gc_alloc(size_t size) {
+    // Check if we should trigger GC
+    if (gc_enabled && gc_object_count >= GC_THRESHOLD) {
+        gc_collect();
+    }
+    
+    // Allocate object with header
+    GCObject* obj = (GCObject*)malloc(sizeof(GCObject) + size);
+    if (!obj) {
+        // Try GC and retry
+        gc_collect();
+        obj = (GCObject*)malloc(sizeof(GCObject) + size);
+        if (!obj) {
+            fprintf(stderr, "GC: Out of memory\n");
+            exit(1);
+        }
+    }
+    
+    // Initialize header
+    obj->size = size;
+    obj->marked = 0;
+    obj->ref_count = 1;
+    obj->next = gc_objects;
+    gc_objects = obj;
+    
+    gc_object_count++;
+    gc_total_bytes += size + sizeof(GCObject);
+    
+    // Return pointer to user data (after header)
+    return (char*)obj + sizeof(GCObject);
+}
+
+/**
+ * Manually free a GC-allocated object
+ */
+void gc_free(void* ptr) {
+    if (!ptr) return;
+    
+    GCObject* obj = gc_get_header(ptr);
+    if (!obj) return;
+    
+    // Decrement ref count
+    obj->ref_count--;
+    
+    // If ref count is 0, mark for collection
+    // (actual freeing happens during gc_collect)
+    if (obj->ref_count <= 0) {
+        obj->marked = 0; // Will be swept
+    }
+}
+
+/**
+ * Increment reference count
+ */
+void gc_retain(void* ptr) {
+    if (!ptr) return;
+    GCObject* obj = gc_get_header(ptr);
+    if (obj) {
+        obj->ref_count++;
+    }
+}
+
+/**
+ * Decrement reference count
+ */
+void gc_release(void* ptr) {
+    gc_free(ptr);
+}
+
+/**
+ * Get GC statistics
+ */
+long gc_get_object_count(void) {
+    return gc_object_count;
+}
+
+long gc_get_total_bytes(void) {
+    return gc_total_bytes;
+}
+
+long gc_get_collections(void) {
+    return gc_collections;
+}
+
+/**
+ * Enable/disable GC
+ */
+void gc_enable(void) {
+    gc_enabled = 1;
+}
+
+void gc_disable(void) {
+    gc_enabled = 0;
+}
+
+/**
+ * Force a full GC cycle
+ */
+void gc_full_collect(void) {
+    int was_enabled = gc_enabled;
+    gc_enabled = 1;
+    gc_collect();
+    gc_enabled = was_enabled;
+}
+
+/**
+ * Cleanup all GC objects (call at program end)
+ */
+void gc_shutdown(void) {
+    gc_enabled = 0;
+    
+    // Free all remaining objects
+    GCObject* obj = gc_objects;
+    while (obj) {
+        GCObject* next = obj->next;
+        free(obj);
+        obj = next;
+    }
+    
+    gc_objects = NULL;
+    gc_object_count = 0;
+    gc_total_bytes = 0;
+}

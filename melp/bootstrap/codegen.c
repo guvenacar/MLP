@@ -635,6 +635,20 @@ void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "extern mlp_exception_code");
     codegen_emit(gen, "extern mlp_exception_has_handler");
     codegen_emit(gen, "extern mlp_exception_has_parent_handler");
+    // Phase 19: GC functions
+    codegen_emit(gen, "extern gc_init");
+    codegen_emit(gen, "extern gc_alloc");
+    codegen_emit(gen, "extern gc_free");
+    codegen_emit(gen, "extern gc_retain");
+    codegen_emit(gen, "extern gc_release");
+    codegen_emit(gen, "extern gc_collect");
+    codegen_emit(gen, "extern gc_full_collect");
+    codegen_emit(gen, "extern gc_shutdown");
+    codegen_emit(gen, "extern gc_get_object_count");
+    codegen_emit(gen, "extern gc_get_total_bytes");
+    codegen_emit(gen, "extern gc_get_collections");
+    codegen_emit(gen, "extern gc_enable");
+    codegen_emit(gen, "extern gc_disable");
     codegen_emit(gen, "global _start");
 }
 
@@ -652,6 +666,10 @@ int is_builtin_function(const char* name) {
         "mlp_exception_push", "mlp_exception_pop", "mlp_throw",
         "mlp_exception_type", "mlp_exception_message", "mlp_exception_code",
         "mlp_exception_has_handler", "mlp_exception_has_parent_handler",
+        // Phase 19: GC functions
+        "gc_init", "gc_alloc", "gc_free", "gc_retain", "gc_release",
+        "gc_collect", "gc_full_collect", "gc_shutdown",
+        "gc_get_object_count", "gc_get_total_bytes", "gc_get_collections",
         NULL
     };
     
@@ -664,6 +682,10 @@ int is_builtin_function(const char* name) {
 }
 
 void codegen_emit_epilogue(Codegen* gen) {
+    codegen_emit(gen, "");
+    // Phase 19: Shutdown GC before exit
+    codegen_emit(gen, "    ; Shutdown GC");
+    codegen_emit(gen, "    call gc_shutdown");
     codegen_emit(gen, "");
     codegen_emit(gen, "    ; Exit program");
     codegen_emit(gen, "    mov rax, 60        ; sys_exit");
@@ -1451,6 +1473,28 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
             } else {
                 builtin_name = "mlp_range";       // range(start, end, step)
             }
+        // Phase 19: GC built-in functions
+        } else if (strcmp(expr->func_call.func_name, "gc_collect") == 0) {
+            is_builtin = 1;
+            builtin_name = "gc_collect";
+        } else if (strcmp(expr->func_call.func_name, "gc_full_collect") == 0) {
+            is_builtin = 1;
+            builtin_name = "gc_full_collect";
+        } else if (strcmp(expr->func_call.func_name, "gc_get_object_count") == 0) {
+            is_builtin = 1;
+            builtin_name = "gc_get_object_count";
+        } else if (strcmp(expr->func_call.func_name, "gc_get_total_bytes") == 0) {
+            is_builtin = 1;
+            builtin_name = "gc_get_total_bytes";
+        } else if (strcmp(expr->func_call.func_name, "gc_get_collections") == 0) {
+            is_builtin = 1;
+            builtin_name = "gc_get_collections";
+        } else if (strcmp(expr->func_call.func_name, "gc_enable") == 0) {
+            is_builtin = 1;
+            builtin_name = "gc_enable";
+        } else if (strcmp(expr->func_call.func_name, "gc_disable") == 0) {
+            is_builtin = 1;
+            builtin_name = "gc_disable";
         }
         
         if (is_builtin) {
@@ -3936,6 +3980,11 @@ void codegen_generate(Codegen* gen, AST* ast) {
     codegen_emit(gen, "    pop rdi               ; argc (first item on stack)");
     codegen_emit(gen, "    mov rsi, rsp          ; argv (pointer to argv[0])");
     codegen_emit(gen, "    call mlp_get_argv     ; Convert to MLP string array");
+    codegen_emit(gen, "");
+    
+    // Phase 19: Initialize GC
+    codegen_emit(gen, "    ; Initialize GC");
+    codegen_emit(gen, "    call gc_init");
     codegen_emit(gen, "");
     
     // Now setup stack frame

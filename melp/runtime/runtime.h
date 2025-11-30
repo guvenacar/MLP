@@ -77,4 +77,21 @@ long mlp_is_null(void* ptr);
 long mlp_coalesce(long value, long default_val);
 long mlp_safe_deref(void* ptr);
 
+// Phase 19: Garbage Collection
+void gc_init(void);
+void* gc_alloc(size_t size);
+void gc_free(void* ptr);
+void gc_retain(void* ptr);
+void gc_release(void* ptr);
+void gc_collect(void);
+void gc_full_collect(void);
+void gc_shutdown(void);
+void gc_add_root(void** root);
+void gc_remove_root(void** root);
+long gc_get_object_count(void);
+long gc_get_total_bytes(void);
+long gc_get_collections(void);
+void gc_enable(void);
+void gc_disable(void);
+
 #endif // RUNTIME_H

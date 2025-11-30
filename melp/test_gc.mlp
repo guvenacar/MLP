@@ -1,0 +1,71 @@
+-- Test Garbage Collection (Phase 19)
+
+-- Test basic allocation with arrays
+print("=== GC Test: Array Allocation ===")
+
+-- Create some arrays (these use gc_alloc internally)
+numeric[10] arr1
+numeric[20] arr2
+numeric[30] arr3
+
+-- Fill arrays
+for i in range(0, 10)
+    arr1[i] = i * 10
+end for
+
+for i in range(0, 20)
+    arr2[i] = i * 5
+end for
+
+for i in range(0, 30)
+    arr3[i] = i * 2
+end for
+
+-- Print some values to verify
+print("arr1[5] =")
+print(arr1[5])
+
+print("arr2[10] =")
+print(arr2[10])
+
+print("arr3[20] =")
+print(arr3[20])
+
+-- Test gc_collect (explicit)
+print("=== Calling gc_collect() ===")
+gc_collect()
+print("GC collect completed")
+
+-- Test gc_get_object_count
+print("=== GC Statistics ===")
+numeric obj_count = gc_get_object_count()
+print("Object count:")
+print(obj_count)
+
+numeric total_bytes = gc_get_total_bytes()
+print("Total bytes:")
+print(total_bytes)
+
+numeric collections = gc_get_collections()
+print("Collections:")
+print(collections)
+
+-- Create and discard many objects to trigger GC
+print("=== Stress Test: Create many objects ===")
+for i in range(0, 100)
+    numeric[50] temp_arr
+    temp_arr[0] = i
+end for
+
+-- Check stats after stress test
+print("=== After Stress Test ===")
+obj_count = gc_get_object_count()
+print("Object count:")
+print(obj_count)
+
+collections = gc_get_collections()
+print("Collections:")
+print(collections)
+
+print("=== GC Test Complete ===")
+print(999)

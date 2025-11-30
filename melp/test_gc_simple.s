@@ -66,45 +66,64 @@ _start:
     push rbp
     mov rbp, rsp
 
-    ; Declaration: numeric sum
-    sub rsp, 8         ; Allocate space for sum
-    mov rax, 0
-    mov [rbp-8], rax   ; Initialize sum
 
-    ; For loop
-    sub rsp, 8         ; Allocate i
-    mov rax, 0
-    mov [rbp-16], rax   ; Initialize i
-.L0:  ; loop_start
-    mov rax, [rbp-16]   ; Load i
-    push rax
-    mov rax, 5
-    mov rbx, rax
-    pop rax
-    cmp rax, rbx
-    jg .L2           ; Exit if i > end
-    ; Loop body
+    ; Print statement
+    mov rax, str_0
+    mov rdi, rax
+    call print_string
+    call gc_collect
 
-    ; Assignment: sum = ...
-    mov rax, [rbp-8]
-    push rax
-    mov rax, [rbp-16]
-    mov rbx, rax
-    pop rax
-    add rax, rbx
-    mov [rbp-8], rax   ; Store to sum
+    ; Print statement
+    mov rax, str_1
+    mov rdi, rax
+    call print_string
+    ; Declaration: numeric count
+    sub rsp, 8         ; Allocate space for count
+    call gc_get_object_count
+    mov [rbp-8], rax   ; Initialize count
+
+    ; Print statement
+    mov rax, str_2
+    mov rdi, rax
+    call print_string
 
     ; Print statement
     mov rax, [rbp-8]
     mov rdi, rax
     call print_number
-.L1:  ; loop_continue
-    ; Increment loop variable
+    ; Declaration: numeric bytes
+    sub rsp, 8         ; Allocate space for bytes
+    call gc_get_total_bytes
+    mov [rbp-16], rax   ; Initialize bytes
+
+    ; Print statement
+    mov rax, str_3
+    mov rdi, rax
+    call print_string
+
+    ; Print statement
     mov rax, [rbp-16]
-    add rax, 1
-    mov [rbp-16], rax
-    jmp .L0
-.L2:  ; loop_end
+    mov rdi, rax
+    call print_number
+    ; Declaration: numeric cols
+    sub rsp, 8         ; Allocate space for cols
+    call gc_get_collections
+    mov [rbp-24], rax   ; Initialize cols
+
+    ; Print statement
+    mov rax, str_4
+    mov rdi, rax
+    call print_string
+
+    ; Print statement
+    mov rax, [rbp-24]
+    mov rdi, rax
+    call print_number
+
+    ; Print statement
+    mov rax, str_5
+    mov rdi, rax
+    call print_string
 
     ; Print statement
     mov rax, 999
@@ -118,3 +137,11 @@ _start:
     mov rax, 60        ; sys_exit
     xor rdi, rdi       ; exit code 0
     syscall
+
+section .data
+str_5: db "=== GC Test Complete ===", 0
+str_4: db "Collections:", 0
+str_3: db "Total bytes:", 0
+str_2: db "Object count:", 0
+str_1: db "gc_collect() called", 0
+str_0: db "=== GC Basic Test ===", 0

@@ -1,0 +1,25 @@
+-- Simple GC Test (Phase 19)
+
+print("=== GC Basic Test ===")
+
+-- Test gc_collect
+gc_collect()
+print("gc_collect() called")
+
+-- Test gc_get_object_count
+numeric count = gc_get_object_count()
+print("Object count:")
+print(count)
+
+-- Test gc_get_total_bytes
+numeric bytes = gc_get_total_bytes()
+print("Total bytes:")
+print(bytes)
+
+-- Test gc_get_collections
+numeric cols = gc_get_collections()
+print("Collections:")
+print(cols)
+
+print("=== GC Test Complete ===")
+print(999)
