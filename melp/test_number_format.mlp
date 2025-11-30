@@ -1,0 +1,18 @@
+-- Test: Numeric Format Support
+
+-- Standard format (existing)
+numeric standard = 123456.78
+print(standard)
+
+-- Turkish format: dot=thousands, comma=decimal
+numeric turkish = 123.456.789,99
+print(turkish)
+
+-- Python underscore format
+numeric python = 1_000_000
+print(python)
+
+-- Mixed: Turkish with underscore NOT supported (choose one)
+-- numeric mixed = 123_456,78  -- This might work but not recommended
+
+print(999)

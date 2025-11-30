@@ -219,15 +219,71 @@ char* lexer_read_word(Lexer* lexer) {
     return word;
 }
 
+// Normalize number format:
+// - Turkish format: 123.456.789,99 -> 123456789.99 (dot=thousands, comma=decimal)
+// - Python format: 123_456_789 -> 123456789 (underscore separator)
+// - Standard format: 123456.789 -> 123456.789 (dot=decimal)
 char* lexer_read_number(Lexer* lexer) {
     int start = lexer->pos;
-    while (isdigit(lexer->source[lexer->pos]) || lexer->source[lexer->pos] == '.') {
+    int has_comma = 0;      // Turkish decimal separator
+    int has_underscore = 0; // Python separator
+    int dot_count = 0;
+    
+    // First pass: determine format and read raw number
+    while (isdigit(lexer->source[lexer->pos]) || 
+           lexer->source[lexer->pos] == '.' ||
+           lexer->source[lexer->pos] == ',' ||
+           lexer->source[lexer->pos] == '_') {
+        
+        if (lexer->source[lexer->pos] == ',') has_comma = 1;
+        if (lexer->source[lexer->pos] == '_') has_underscore = 1;
+        if (lexer->source[lexer->pos] == '.') dot_count++;
+        
         lexer->pos++;
     }
-    int len = lexer->pos - start;
-    char* num = malloc(len + 1);
-    strncpy(num, &lexer->source[start], len);
-    num[len] = '\0';
+    
+    int raw_len = lexer->pos - start;
+    char* raw = malloc(raw_len + 1);
+    strncpy(raw, &lexer->source[start], raw_len);
+    raw[raw_len] = '\0';
+    
+    // Allocate normalized buffer (same size is enough)
+    char* num = malloc(raw_len + 1);
+    int num_pos = 0;
+    
+    // Determine format:
+    // - Turkish: has comma AND (multiple dots or dot before comma)
+    // - Python: has underscore
+    // - Standard: single dot or no separator
+    int is_turkish = has_comma && (dot_count > 1 || (dot_count >= 1 && has_comma));
+    
+    for (int i = 0; i < raw_len; i++) {
+        char c = raw[i];
+        
+        if (c == '_') {
+            // Python underscore: skip (separator only)
+            continue;
+        }
+        
+        if (is_turkish) {
+            if (c == '.') {
+                // Turkish dot = thousands separator: skip
+                continue;
+            }
+            if (c == ',') {
+                // Turkish comma = decimal point: convert to dot
+                num[num_pos++] = '.';
+                continue;
+            }
+        }
+        
+        // Copy digit or standard decimal point
+        num[num_pos++] = c;
+    }
+    
+    num[num_pos] = '\0';
+    free(raw);
+    
     return num;
 }
 
