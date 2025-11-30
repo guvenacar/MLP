@@ -99,6 +99,8 @@ typedef enum {
     // Phase 18: State Management
     TOKEN_STATE,         // state (global state declaration)
     TOKEN_SHARED,        // shared (shared state modifier)
+    // Phase 21: List type
+    TOKEN_LIST,          // list (dynamic list type)
     // Ternary operator
     TOKEN_QUESTION,      // ?
     TOKEN_COLON,         // :
@@ -502,6 +504,8 @@ Token* lexer_next_token(Lexer* lexer) {
             token->type = TOKEN_STATE;
         } else if (strcmp(word, "shared") == 0) {
             token->type = TOKEN_SHARED;
+        } else if (strcmp(word, "list") == 0) {
+            token->type = TOKEN_LIST;
         } else if (strcmp(word, "interface") == 0) {
             token->type = TOKEN_INTERFACE;
         } else if (strcmp(word, "implements") == 0) {

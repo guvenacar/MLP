@@ -31,6 +31,7 @@ typedef enum {
 
 typedef enum {
     STMT_DECLARATION,
+    STMT_MULTI_DECLARATION, // Phase 21: Multiple typed declarations (numeric, string a, b)
     STMT_ASSIGNMENT,
     STMT_MULTI_ASSIGNMENT,  // Multiple variable assignment (a, b = func())
     STMT_DESTRUCTURE,       // Destructuring assignment (a, b, c = arr)
@@ -183,6 +184,7 @@ typedef struct {
     char* name;
     char* struct_name;       // NULL for non-struct types, struct type name for struct instances
     int is_array;            // 1 if array type, 0 otherwise
+    int is_list;             // Phase 21: 1 if list type (dynamic), 0 otherwise
     int array_size;          // Array size (0 = dynamic/unknown)
     Expression** array_init; // Array literal values (NULL if no literal)
     int array_init_count;    // Number of elements in array_init
@@ -424,6 +426,11 @@ typedef struct Statement {
             Expression* initial_value; // Initial value (optional)
             int is_shared;             // 1 if shared (thread-safe)
         } state_decl;
+        // Phase 21: Multiple typed declarations (numeric, string, boolean a, b, c)
+        struct {
+            Declaration** declarations; // Array of declarations
+            int count;                  // Number of declarations
+        } multi_decl;
     };
 } Statement;
 
@@ -1343,6 +1350,7 @@ Declaration* parser_parse_declaration(Parser* parser) {
     Declaration* decl = malloc(sizeof(Declaration));
     decl->struct_name = NULL;
     decl->is_array = 0;
+    decl->is_list = 0;               // Phase 21: Dynamic list flag
     decl->array_size = 0;
     decl->array_init = NULL;
     decl->array_init_count = 0;
@@ -1480,7 +1488,7 @@ Declaration* parser_parse_declaration(Parser* parser) {
         parser_advance(parser); // skip '?'
     }
     
-    // Check for array type: []
+    // Check for array type: [] or list type: list()
     if (parser->current_token->type == TOKEN_LBRACKET) {
         decl->is_array = 1;
         parser_advance(parser); // skip '['
@@ -1497,6 +1505,27 @@ Declaration* parser_parse_declaration(Parser* parser) {
             exit(1);
         }
         parser_advance(parser); // skip ']'
+    } else if (parser->current_token->type == TOKEN_LIST) {
+        // Phase 21: List type - numeric list() x
+        parser_advance(parser); // skip 'list'
+        
+        if (parser->current_token->type != TOKEN_LPAREN) {
+            fprintf(stderr, "Parser error: Expected '(' after 'list' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip '('
+        
+        if (parser->current_token->type != TOKEN_RPAREN) {
+            fprintf(stderr, "Parser error: Expected ')' after 'list(' at line %d\n",
+                    parser->current_token->line);
+            exit(1);
+        }
+        parser_advance(parser); // skip ')'
+        
+        decl->is_list = 1;
+        decl->is_array = 1;  // Lists are dynamic arrays internally
+        decl->array_size = 0; // Dynamic size
     }
     
     // Variable name
@@ -1514,8 +1543,28 @@ Declaration* parser_parse_declaration(Parser* parser) {
     if (parser->current_token->type == TOKEN_ASSIGN) {
         parser_advance(parser);
         
+        // Phase 21: Check for list() initialization
+        if (decl->is_list && parser->current_token->type == TOKEN_LIST) {
+            parser_advance(parser); // skip 'list'
+            if (parser->current_token->type == TOKEN_LPAREN) {
+                parser_advance(parser); // skip '('
+                if (parser->current_token->type == TOKEN_RPAREN) {
+                    parser_advance(parser); // skip ')'
+                    // Empty list initialization - no init_value needed
+                    // The list is already marked as dynamic via is_list
+                } else {
+                    fprintf(stderr, "Parser error: Expected ')' after 'list(' at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+            } else {
+                fprintf(stderr, "Parser error: Expected '(' after 'list' at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+        }
         // Check for array literal: [1, 2, 3]
-        if (decl->is_array && parser->current_token->type == TOKEN_LBRACKET) {
+        else if (decl->is_array && parser->current_token->type == TOKEN_LBRACKET) {
             parser_advance(parser); // skip '['
             
             // Parse array elements
@@ -3781,19 +3830,131 @@ Statement* parser_parse_statement(Parser* parser) {
         // Try to parse as declaration first
         // But we need to detect destructuring pattern: type id, id, id = expr
         // vs normal declaration: type id or type id = expr or type[] id
+        // Phase 21: Also detect mixed type declaration: numeric, string, boolean a, b, c
         
         Token* type_token = parser->current_token;
         TokenType saved_type = type_token->type;  // Save type before advancing
         
         parser_advance(parser);
         
-        // Check for array syntax or pointer syntax
+        // Phase 21: Check for mixed type declaration: numeric, string, boolean a, b, c
+        if (parser->current_token->type == TOKEN_COMMA) {
+            // Mixed type declaration!
+            // Collect all types first
+            VarType types[100];
+            int type_count = 0;
+            
+            // First type
+            if (saved_type == TOKEN_NUMERIC) types[type_count++] = TYPE_NUMERIC;
+            else if (saved_type == TOKEN_DECIMAL) types[type_count++] = TYPE_DECIMAL;
+            else if (saved_type == TOKEN_BOOLEAN) types[type_count++] = TYPE_BOOLEAN;
+            else types[type_count++] = TYPE_STRING;
+            
+            // Parse remaining types (comma was already seen to get here)
+            // We're at the comma position - check what comes after
+            while (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+                
+                // Check if this is another type or start of identifiers
+                if (parser->current_token->type == TOKEN_NUMERIC) {
+                    types[type_count++] = TYPE_NUMERIC;
+                    parser_advance(parser);
+                } else if (parser->current_token->type == TOKEN_DECIMAL) {
+                    types[type_count++] = TYPE_DECIMAL;
+                    parser_advance(parser);
+                } else if (parser->current_token->type == TOKEN_BOOLEAN) {
+                    types[type_count++] = TYPE_BOOLEAN;
+                    parser_advance(parser);
+                } else if (parser->current_token->type == TOKEN_TEXT) {
+                    types[type_count++] = TYPE_STRING;
+                    parser_advance(parser);
+                } else if (parser->current_token->type == TOKEN_IDENTIFIER) {
+                    // This is the first identifier - handle it below
+                    break;
+                } else {
+                    fprintf(stderr, "Parser error: Expected type or identifier at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+            }
+            
+            // Now parse variable names - current token should be first identifier
+            char* names[100];
+            int name_count = 0;
+            
+            // First identifier
+            if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Parser error: Expected identifier in mixed declaration at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            names[name_count] = malloc(strlen(parser->current_token->value) + 1);
+            strcpy(names[name_count], parser->current_token->value);
+            name_count++;
+            parser_advance(parser);
+            
+            // Parse remaining names
+            while (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+                
+                if (parser->current_token->type != TOKEN_IDENTIFIER) {
+                    fprintf(stderr, "Parser error: Expected identifier after ',' at line %d\n",
+                            parser->current_token->line);
+                    exit(1);
+                }
+                names[name_count] = malloc(strlen(parser->current_token->value) + 1);
+                strcpy(names[name_count], parser->current_token->value);
+                name_count++;
+                parser_advance(parser);
+            }
+            
+            // Validate: type count must equal name count
+            if (type_count != name_count) {
+                fprintf(stderr, "Parser error: Mixed declaration has %d types but %d names at line %d\n",
+                        type_count, name_count, parser->current_token->line);
+                exit(1);
+            }
+            
+            // Create multi-declaration statement
+            stmt->type = STMT_MULTI_DECLARATION;
+            stmt->multi_decl.declarations = malloc(sizeof(Declaration*) * type_count);
+            stmt->multi_decl.count = type_count;
+            
+            for (int i = 0; i < type_count; i++) {
+                Declaration* decl = malloc(sizeof(Declaration));
+                decl->type = types[i];
+                decl->name = names[i];
+                decl->struct_name = NULL;
+                decl->is_array = 0;
+                decl->is_list = 0;
+                decl->array_size = 0;
+                decl->array_init = NULL;
+                decl->array_init_count = 0;
+                decl->is_pointer = 0;
+                decl->is_nullable = 0;
+                decl->is_union = 0;
+                decl->union_types = NULL;
+                decl->union_count = 0;
+                decl->init_value = NULL;
+                decl->is_exported = is_exported;
+                decl->struct_type_args = NULL;
+                decl->struct_type_arg_count = 0;
+                
+                stmt->multi_decl.declarations[i] = decl;
+            }
+            
+            return stmt;
+        }
+        
+        // Check for array syntax, pointer syntax, or list syntax
         if (parser->current_token->type == TOKEN_LBRACKET ||
-            parser->current_token->type == TOKEN_MULTIPLY) {
+            parser->current_token->type == TOKEN_MULTIPLY ||
+            parser->current_token->type == TOKEN_LIST) {
             // Normal declaration with array or pointer - rewind and parse normally
             // We need to go back - save current state
             int is_array = (parser->current_token->type == TOKEN_LBRACKET);
             int is_pointer = (parser->current_token->type == TOKEN_MULTIPLY);
+            int is_list = (parser->current_token->type == TOKEN_LIST);
             
             // For now, just parse as normal declaration
             // This is a simplification - ideally we'd rewind properly
@@ -3811,6 +3972,7 @@ Statement* parser_parse_statement(Parser* parser) {
             decl->is_nullable = 0;
             decl->is_exported = is_exported;
             decl->is_array = 0;
+            decl->is_list = 0;
             decl->array_size = 0;
             decl->array_init = NULL;
             decl->array_init_count = 0;
@@ -3819,6 +3981,8 @@ Statement* parser_parse_statement(Parser* parser) {
             decl->union_types = NULL;
             decl->union_count = 0;
             decl->init_value = NULL;
+            decl->struct_type_args = NULL;
+            decl->struct_type_arg_count = 0;
             
             if (is_array) {
                 parser_advance(parser); // skip '['
@@ -3834,6 +3998,22 @@ Statement* parser_parse_statement(Parser* parser) {
                     exit(1);
                 }
                 parser_advance(parser);
+            } else if (is_list) {
+                // Phase 21: List type - numeric list() x
+                parser_advance(parser); // skip 'list'
+                if (parser->current_token->type != TOKEN_LPAREN) {
+                    fprintf(stderr, "Parser error: Expected '(' after 'list'\n");
+                    exit(1);
+                }
+                parser_advance(parser); // skip '('
+                if (parser->current_token->type != TOKEN_RPAREN) {
+                    fprintf(stderr, "Parser error: Expected ')' after 'list('\n");
+                    exit(1);
+                }
+                parser_advance(parser); // skip ')'
+                decl->is_list = 1;
+                decl->is_array = 1;
+                decl->array_size = 0;
             } else if (is_pointer) {
                 parser_advance(parser); // skip '*'
                 decl->is_pointer = 1;
@@ -3851,8 +4031,19 @@ Statement* parser_parse_statement(Parser* parser) {
             if (parser->current_token->type == TOKEN_ASSIGN) {
                 parser_advance(parser);
                 
+                // Phase 21: Check for list() initialization
+                if (decl->is_list && parser->current_token->type == TOKEN_LIST) {
+                    parser_advance(parser); // skip 'list'
+                    if (parser->current_token->type == TOKEN_LPAREN) {
+                        parser_advance(parser); // skip '('
+                        if (parser->current_token->type == TOKEN_RPAREN) {
+                            parser_advance(parser); // skip ')'
+                            // Empty list - no init value needed
+                        }
+                    }
+                }
                 // Check for array literal: [1, 2, 3]
-                if (decl->is_array && parser->current_token->type == TOKEN_LBRACKET) {
+                else if (decl->is_array && parser->current_token->type == TOKEN_LBRACKET) {
                     parser_advance(parser); // skip '['
                     
                     // Parse array elements
@@ -3971,6 +4162,7 @@ Statement* parser_parse_statement(Parser* parser) {
                 decl->name = first_name;
                 decl->struct_name = NULL;
                 decl->is_array = 0;
+                decl->is_list = 0;
                 decl->array_size = 0;
                 decl->array_init = NULL;
                 decl->array_init_count = 0;
@@ -4102,6 +4294,7 @@ Statement* parser_parse_statement(Parser* parser) {
             decl->name = malloc(strlen(parser->current_token->value) + 1);
             strcpy(decl->name, parser->current_token->value);
             decl->is_array = 0;
+            decl->is_list = 0;
             decl->array_size = 0;
             decl->array_init = NULL;
             decl->array_init_count = 0;
@@ -4135,6 +4328,7 @@ Statement* parser_parse_statement(Parser* parser) {
             decl->name = malloc(strlen(parser->current_token->value) + 1);
             strcpy(decl->name, parser->current_token->value);
             decl->is_array = 0;
+            decl->is_list = 0;
             decl->array_size = 0;
             decl->array_init = NULL;
             decl->array_init_count = 0;

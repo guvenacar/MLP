@@ -3639,6 +3639,11 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         codegen_generate_return(gen, stmt);
     } else if (stmt->type == STMT_DECLARATION) {
         codegen_generate_declaration(gen, stmt->declaration);
+    } else if (stmt->type == STMT_MULTI_DECLARATION) {
+        // Phase 21: Multiple typed declarations (numeric, string, boolean a, b, c)
+        for (int i = 0; i < stmt->multi_decl.count; i++) {
+            codegen_generate_declaration(gen, stmt->multi_decl.declarations[i]);
+        }
     } else if (stmt->type == STMT_ASSIGNMENT) {
         codegen_generate_assignment(gen, stmt->assignment.var_name, stmt->assignment.field_name, stmt->assignment.array_index, stmt->assignment.dereference_target, stmt->assignment.value);
     } else if (stmt->type == STMT_MULTI_ASSIGNMENT) {

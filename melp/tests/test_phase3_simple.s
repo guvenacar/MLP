@@ -3,6 +3,7 @@ section .data
 
 section .text
 extern print_number
+extern print_double
 extern print_string
 extern string_length
 extern string_concat
@@ -51,6 +52,46 @@ extern gc_get_total_bytes
 extern gc_get_collections
 extern gc_enable
 extern gc_disable
+extern mlp_to_numeric
+extern mlp_to_text
+extern mlp_to_decimal
+extern mlp_decimal_to_text
+extern mlp_parse_int
+extern mlp_parse_float
+extern mlp_input
+extern mlp_input_prompt
+extern mlp_sin
+extern mlp_cos
+extern mlp_tan
+extern mlp_sqrt
+extern mlp_pow
+extern mlp_abs
+extern mlp_abs_int
+extern mlp_floor
+extern mlp_ceil
+extern mlp_round
+extern mlp_log
+extern mlp_log10
+extern mlp_exp
+extern mlp_fmod
+extern mlp_pi
+extern mlp_e
+extern mlp_split
+extern mlp_trim
+extern mlp_replace
+extern mlp_to_upper
+extern mlp_to_lower
+extern mlp_starts_with
+extern mlp_ends_with
+extern mlp_contains
+extern mlp_assert
+extern mlp_band
+extern mlp_bor
+extern mlp_bxor
+extern mlp_bnot
+extern mlp_shl
+extern mlp_shr
+extern mlp_ushr
 global _start
 
 
