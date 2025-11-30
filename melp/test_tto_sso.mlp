@@ -1,0 +1,28 @@
+-- TTO SSO (Small String Optimization) Test
+
+-- Test 1: Short strings (≤23 bytes) - SSO candidates
+print("=== Short Strings (SSO) ===")
+text short1 = "Hello"
+print(short1)
+
+text short2 = "MLP Language"
+print(short2)
+
+text short3 = "12345678901234567890123"
+print(short3)
+
+-- Test 2: Long strings (>23 bytes) - Heap allocated
+print("=== Long Strings (Heap) ===")
+text long1 = "This is a longer string that exceeds 23 bytes"
+print(long1)
+
+text long2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+print(long2)
+
+-- Test 3: Mixed usage
+print("=== Mixed Test ===")
+text name = "Ali"
+text greeting = "Merhaba, " + name + "!"
+print(greeting)
+
+print("TTO SSO Test Complete!")

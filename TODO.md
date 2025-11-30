@@ -1,7 +1,47 @@
 # MELP TODO List
 
-**Son Güncelleme:** 13 Ocak 2025  
-**Durum:** Phase 14 Complete - Iterator/Generator Pattern
+**Son Güncelleme:** 30 Kasım 2025  
+**Durum:** Phase 20 Complete - Built-in Functions 🎉
+
+---
+
+## 🚨 SELF-HOSTING ÖNCESİ YAPILACAKLAR (YENİ PLANLAMA)
+
+**Önem:** Bu özellikler self-hosting compiler yazılmadan ÖNCE eklenmelidir!
+
+### 📌 Öncelik 0: Transparent Type Optimization (TTO) - KRİTİK
+
+**Felsefe:** Kullanıcı sadece `numeric` ve `text` görür, arka planda otomatik optimizasyon yapılır.
+
+| # | Özellik | Zorluk | Süre | Durum | Açıklama |
+|---|---------|--------|------|-------|----------|
+| 0.1 | **Numeric TTO** | Orta | 1 gün | ⏳ | int64 (küçük) → double (ondalık) → BigDecimal (büyük) |
+| 0.2 | **Text TTO (SSO)** | Orta | 1 gün | ⏳ | ≤23 byte stack, >23 byte heap, sabit .rodata |
+| 0.3 | **Overflow Handling** | Orta | 0.5 gün | ⏳ | int64 taşarsa otomatik BigDecimal'e promote |
+| 0.4 | **Tip-aware Codegen** | Orta | 0.5 gün | ⏳ | Her dahili tip için optimize assembly |
+
+**TTO Toplam Süre:** ~3 gün
+
+### 📌 Öncelik 1: Temel Fonksiyonlar - ✅ TAMAMLANDI (Phase 20)
+
+| # | Özellik | Zorluk | Süre | Durum | Açıklama |
+|---|---------|--------|------|-------|----------|
+| 1 | **String ↔ Number dönüşümü** | Kolay | 1 saat | ✅ | `to_numeric("42")`, `to_text(42)` |
+| 2 | **Input fonksiyonu** | Kolay | 1 saat | ✅ | `input()`, `input(prompt)` |
+| 3 | **Math kütüphanesi** | Kolay | 2-3 saat | ✅ | sin, cos, sqrt, pow, abs, floor, ceil, log, exp |
+| 4 | **String fonksiyonları** | Kolay | 2 saat | ✅ | split, trim, replace, to_upper, to_lower, starts_with, ends_with, contains |
+| 5 | **Bitwise operatörler** | Kolay | 2-3 saat | ✅ | band, bor, bxor, bnot, shl, shr, ushr |
+| 6 | **Assert** | Kolay | 1 saat | ✅ | assert(condition, "message") |
+| 7 | **Union Types** | Orta | 1-2 gün | ⏳ | `type Result = numeric \| text` - Tip güvenliği |
+
+### 🎯 KALAN TAHMİNİ SÜRE: ~4-5 gün (TTO + Union Types)
+
+### 📝 Önerilen Uygulama Sırası:
+1. ⏳ **TTO Numeric** - int64/double/BigDecimal seçimi
+2. ⏳ **TTO Text** - SSO implementasyonu
+3. ⏳ **Union Types** - En karmaşık
+
+**Not:** Class/Inheritance EKLENMEYECEK - struct+functions yaklaşımı tercih edildi.
 
 ---
 

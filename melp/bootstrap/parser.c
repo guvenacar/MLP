@@ -7,12 +7,27 @@
 #include <string.h>
 #include "lexer.c"
 
+// User-visible types (what user writes in code)
 typedef enum {
     TYPE_NUMERIC,
     TYPE_DECIMAL,
     TYPE_BOOLEAN,
     TYPE_STRING  // Phase 5: String type
 } VarType;
+
+// TTO: Internal numeric representation (transparent to user)
+typedef enum {
+    INTERNAL_INT64,      // Small integers: -2^63 to 2^63-1
+    INTERNAL_DOUBLE,     // Floating point: ~15 digits precision
+    INTERNAL_BIGDECIMAL  // Arbitrary precision (future)
+} InternalNumericType;
+
+// TTO: Internal string representation (transparent to user)
+typedef enum {
+    INTERNAL_SSO,        // Small String Optimization: ≤23 bytes inline
+    INTERNAL_HEAP,       // Heap allocated: >23 bytes
+    INTERNAL_RODATA      // Read-only data section: string literals
+} InternalStringType;
 
 typedef enum {
     STMT_DECLARATION,
@@ -156,6 +171,11 @@ typedef struct Expression {
             struct Expression* right;       // Default value if null
         } null_coalesce;
     };
+    // TTO: Internal type information (transparent to user)
+    InternalNumericType internal_numeric_type;  // For EXPR_NUMBER
+    InternalStringType internal_string_type;    // For EXPR_STRING
+    double double_value;                        // For INTERNAL_DOUBLE numbers
+    int has_decimal_point;                      // 1 if literal had decimal point
 } Expression;
 
 typedef struct {
@@ -451,6 +471,22 @@ Expression* expression_create_number(long value) {
     Expression* expr = malloc(sizeof(Expression));
     expr->type = EXPR_NUMBER;
     expr->number_value = value;
+    // TTO: Default to int64 for integer values
+    expr->internal_numeric_type = INTERNAL_INT64;
+    expr->has_decimal_point = 0;
+    expr->double_value = 0.0;
+    return expr;
+}
+
+// TTO: Create a double number expression
+Expression* expression_create_double(double value) {
+    Expression* expr = malloc(sizeof(Expression));
+    expr->type = EXPR_NUMBER;
+    expr->double_value = value;
+    expr->number_value = (long)value;  // Keep integer approximation
+    // TTO: Use double for floating point
+    expr->internal_numeric_type = INTERNAL_DOUBLE;
+    expr->has_decimal_point = 1;
     return expr;
 }
 
@@ -467,6 +503,13 @@ Expression* expression_create_string(const char* value) {
     expr->type = EXPR_STRING;
     expr->string_value = malloc(strlen(value) + 1);
     strcpy(expr->string_value, value);
+    // TTO: Determine internal string type based on length
+    size_t len = strlen(value);
+    if (len <= 23) {
+        expr->internal_string_type = INTERNAL_SSO;  // Small string - stack
+    } else {
+        expr->internal_string_type = INTERNAL_RODATA;  // Literal goes to .rodata
+    }
     return expr;
 }
 
@@ -833,9 +876,21 @@ Expression* parser_parse_primary_expression(Parser* parser) {
         
         return lambda;
     } else if (parser->current_token->type == TOKEN_NUMBER) {
-        long value = atol(parser->current_token->value);
-        parser_advance(parser);
-        return expression_create_number(value);
+        // TTO: Check if the number has a decimal point
+        const char* num_str = parser->current_token->value;
+        int has_decimal = (strchr(num_str, '.') != NULL);
+        
+        if (has_decimal) {
+            // TTO: Parse as double
+            double value = strtod(num_str, NULL);
+            parser_advance(parser);
+            return expression_create_double(value);
+        } else {
+            // TTO: Parse as int64
+            long value = atol(num_str);
+            parser_advance(parser);
+            return expression_create_number(value);
+        }
     } else if (parser->current_token->type == TOKEN_NULL) {
         // null literal
         parser_advance(parser);

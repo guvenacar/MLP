@@ -1,0 +1,47 @@
+-- Phase 20 Test: Type Conversion, Input, Math, String Functions, Assert
+
+-- Test 1: to_numeric (string to number)
+text num_str = "42"
+numeric x = to_numeric(num_str)
+print(x)  -- Should print 42
+
+-- Test 2: to_text (number to string)
+numeric y = 123
+text y_str = to_text(y)
+print(y_str)  -- Should print "123"
+
+-- Test 3: Math functions - abs
+numeric neg = 0 - 5
+numeric pos = abs(neg)
+print(pos)  -- Should print 5
+
+-- Test 4: String functions
+text hello = "  Hello World  "
+text trimmed = trim(hello)
+print(trimmed)  -- Should print "Hello World"
+
+text upper = to_upper("hello")
+print(upper)  -- Should print "HELLO"
+
+text lower = to_lower("HELLO")
+print(lower)  -- Should print "hello"
+
+-- Test 5: String checks
+numeric sw = starts_with("Hello", "He")
+print(sw)  -- Should print 1
+
+numeric ew = ends_with("Hello", "lo")
+print(ew)  -- Should print 1
+
+numeric ct = contains("Hello World", "World")
+print(ct)  -- Should print 1
+
+-- Test 6: Replace
+text replaced = replace("Hello World", "World", "MLP")
+print(replaced)  -- Should print "Hello MLP"
+
+-- Test 7: Assert (should pass)
+assert(1 == 1, "Math is broken!")
+print("Assert passed!")
+
+print("All Phase 20 tests completed!")

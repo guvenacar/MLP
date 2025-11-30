@@ -24,6 +24,7 @@ extern ExceptionHandler* mlp_exception_stack;
 void* mlp_malloc(size_t size);
 void mlp_free(void* ptr);
 void print_number(long num);
+void print_double(double num);  // TTO: Print floating point
 
 // Phase 5: String operations
 void print_string(const char* str);
@@ -93,5 +94,57 @@ long gc_get_total_bytes(void);
 long gc_get_collections(void);
 void gc_enable(void);
 void gc_disable(void);
+
+// Phase 20: Type Conversion Functions
+long mlp_to_numeric(const char* str);    // String to number: "42" -> 42
+char* mlp_to_text(long num);              // Number to string: 42 -> "42"
+double mlp_to_decimal(const char* str);   // String to decimal: "3.14" -> 3.14
+char* mlp_decimal_to_text(double num);    // Decimal to string: 3.14 -> "3.14"
+long mlp_parse_int(const char* str);      // Parse integer with error handling
+double mlp_parse_float(const char* str);  // Parse float with error handling
+
+// Phase 20: Input Functions
+char* mlp_input(void);                    // Read line from stdin
+char* mlp_input_prompt(const char* prompt); // Read with prompt
+
+// Phase 20: Math Functions
+double mlp_sin(double x);
+double mlp_cos(double x);
+double mlp_tan(double x);
+double mlp_sqrt(double x);
+double mlp_pow(double base, double exp);
+double mlp_abs(double x);
+long mlp_abs_int(long x);
+double mlp_floor(double x);
+double mlp_ceil(double x);
+double mlp_round(double x);
+double mlp_log(double x);
+double mlp_log10(double x);
+double mlp_exp(double x);
+double mlp_fmod(double x, double y);
+double mlp_pi(void);
+double mlp_e(void);
+
+// Phase 20: String Functions
+char** mlp_split(const char* str, const char* delimiter, long* count);
+char* mlp_trim(const char* str);
+char* mlp_replace(const char* str, const char* old, const char* new_str);
+char* mlp_to_upper(const char* str);
+char* mlp_to_lower(const char* str);
+long mlp_starts_with(const char* str, const char* prefix);
+long mlp_ends_with(const char* str, const char* suffix);
+long mlp_contains(const char* str, const char* substr);
+
+// Phase 20: Assert Function
+void mlp_assert(long condition, const char* message);
+
+// Phase 20: Bitwise Operations
+long mlp_band(long a, long b);    // Bitwise AND
+long mlp_bor(long a, long b);     // Bitwise OR
+long mlp_bxor(long a, long b);    // Bitwise XOR
+long mlp_bnot(long a);            // Bitwise NOT
+long mlp_shl(long a, long b);     // Shift left
+long mlp_shr(long a, long b);     // Shift right (arithmetic)
+long mlp_ushr(long a, long b);    // Shift right (logical/unsigned)
 
 #endif // RUNTIME_H

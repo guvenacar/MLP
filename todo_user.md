@@ -2,9 +2,55 @@
 
 **Amaç:** Basit deklarasyondan modern tam özellikli dile kademeli geçiş
 
-**Durum:** Phase 18 TAMAMLANDI - State Management 🎉
+**Durum:** Phase 19 TAMAMLANDI - Garbage Collection 🎉
 
-**Son Güncelleme:** 10 Ocak 2025
+**Son Güncelleme:** 30 Kasım 2025
+
+---
+
+## 🚨 SELF-HOSTING ÖNCESİ YAPILACAKLAR (YENİ PLANLAMA)
+
+**ÖNEMLİ:** Aşağıdaki özellikler self-hosting compiler yazılmadan ÖNCE tamamlanmalıdır!
+
+### 📌 Öncelik 0: Transparent Type Optimization (TTO) - KRİTİK
+
+| # | Özellik | Zorluk | Süre | Durum | Açıklama |
+|---|---------|--------|------|-------|----------|
+| 0.1 | **Numeric TTO** | Orta | 1 gün | ⏳ | int64 → double → BigDecimal otomatik seçim |
+| 0.2 | **Text TTO (SSO)** | Orta | 1 gün | ⏳ | ≤23 byte inline, >23 byte heap |
+| 0.3 | **Overflow Handling** | Orta | 0.5 gün | ⏳ | int64 taşarsa BigDecimal'e promote |
+| 0.4 | **Tip-aware Codegen** | Orta | 0.5 gün | ⏳ | Her tip için optimize assembly |
+
+**TTO Toplam:** ~3 gün
+
+### 📌 Öncelik 1: Temel Fonksiyonlar
+
+| # | Özellik | Zorluk | Süre | Durum | Açıklama |
+|---|---------|--------|------|-------|----------|
+| 1 | **String ↔ Number dönüşümü** | Kolay | 1 saat | ⏳ | `to_numeric("42")`, `to_text(42)` |
+| 2 | **Input fonksiyonu** | Kolay | 1 saat | ⏳ | `input()`, `input("prompt: ")` |
+| 3 | **Math kütüphanesi** | Kolay | 2-3 saat | ⏳ | sin, cos, sqrt, pow, abs, floor, ceil, round |
+| 4 | **String fonksiyonları** | Kolay | 2 saat | ⏳ | split, trim, replace, to_upper, to_lower |
+| 5 | **Bitwise operatörler** | Kolay | 2-3 saat | ⏳ | band, bor, bxor, bnot, shl, shr |
+| 6 | **Assert** | Kolay | 1 saat | ⏳ | assert(condition, "message") |
+| 7 | **Union Types** | Orta | 1-2 gün | ⏳ | `type Result = numeric \| text` |
+
+**Fonksiyonlar Toplam:** ~2-3 gün
+
+### 🎯 Toplam Tahmini Süre: 5-6 gün
+
+### 📝 Önerilen Sıra:
+1. **TTO Faz 1** - Numeric (int64/double/BigDecimal)
+2. **TTO Faz 2** - Text (SSO)
+3. **String ↔ Number** - Lexer için kritik
+4. **Input** - Test için gerekli
+5. **Math** - Yaygın kullanım
+6. **String fonksiyonları** - Lexer parsing için
+7. **Bitwise** - Low-level
+8. **Assert** - Debug
+9. **Union Types** - En karmaşık
+
+**Not:** Class/Inheritance EKLENMEYECEK - struct+functions yaklaşımı kullanılıyor.
 
 ---
 
@@ -60,7 +106,7 @@
 | File Append/Exists | ✅ | append_file, file_exists |
 | CLI Arguments | ✅ | get_argc() |
 | **Henüz Yapılmamış** | | |
-| Garbage Collection | ❌ | Düşük öncelik |
+| Garbage Collection | ✅ | Phase 19 - Otomatik bellek yönetimi |
 
 ---
 
@@ -698,4 +744,8 @@ Dosya: README.md
 
 ----
 
-durum yönetimi, state management
+sırayla gidelim. bu arada mlp de iki tür değişken var bigdecimal ve bigstring. self hosting yapmadan önce bellek yönetimini yapabilir miyiz.
+şöyle bir mantık geliştirdim, bu ne kadar doğru? diğer dillerde bigdecimal aslında string olarak kabul ediliyor, bizde  de sadece bigstring ve bigdecimal var. bu açıdan bakarsak aslında tek bir türümüz var o da string. yine bu açıdan bakarsak diğer diller string'i bellek yötetimi konusunda daha akıllıca kullanıyorlar. örneğin "Ali" ile 10 bin sayfalık bir kitabı aynı bellek alanında tutumuyorlar. Ali'yi doğrudancpu registerinde veya stack'te kitabın kendisini heap te adresini registerde tutuyorlar. bizde de sadece bigdecimal olduğu için böyle bir yaklaşım geliştirebilir miyiz. çünkü aslında bizim dilimiz aşağıdaki zincirden oluşuyor
+kullanıcı kodu (1)> diller.json (Türkçe, Rusça vs) + syntax.json (mlp sözdizimi, C sözdizimi vs.) (2) > normalize (3) > english + mlp pragmatik base syntax (4) > lexer > parser > generatör  
+(mlp de iki söz dizimi vardır: biri kullanıcılara açık olan standart söz dizimi, diğeri kullanıcılara kapalı olan mlp pragmatik base sözdizimi)
+yani bir kullanıcı aslında adım 4'ü hiç görmüyor. adım 4 arkaplanda çalışıyor.  buna göre biz kullanıcıya hiç hissettirmeden arka planda diğer dillerde olan short, long, double vs gibi desenleri kullanıp performansı artırabilir miyiz? 

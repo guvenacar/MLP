@@ -19,6 +19,10 @@ typedef struct VarInfo {
     int array_size;       // Phase 14: size of stack-allocated array (0 for dynamic)
     int is_global;        // Phase 18: 1 if global/state variable
     int is_state;         // Phase 18: 1 if state variable (shared state)
+    // TTO: Internal type information
+    InternalNumericType internal_numeric_type;  // For numeric variables
+    InternalStringType internal_string_type;    // For string variables
+    int is_double;        // 1 if variable holds double, 0 for int64
     struct VarInfo* next;
 } VarInfo;
 
@@ -324,6 +328,46 @@ void codegen_add_variable(Codegen* gen, const char* name, int offset, VarType ty
     var->is_closure = 0;
     var->is_array = 0;
     var->array_size = 0;
+    var->internal_numeric_type = INTERNAL_INT64;  // TTO: Default to INT64
+    var->internal_string_type = INTERNAL_RODATA;  // TTO: Default to RODATA
+    var->next = gen->variables;
+    gen->variables = var;
+}
+
+// TTO: Add variable with specific internal numeric type
+void codegen_add_variable_tto(Codegen* gen, const char* name, int offset, VarType type, InternalNumericType internal_type) {
+    VarInfo* var = malloc(sizeof(VarInfo));
+    var->name = malloc(strlen(name) + 1);
+    strcpy(var->name, name);
+    var->stack_offset = offset;
+    var->type = type;
+    var->struct_name = NULL;
+    var->is_dynamic_array = 0;
+    var->is_pointer = 0;
+    var->is_closure = 0;
+    var->is_array = 0;
+    var->array_size = 0;
+    var->internal_numeric_type = internal_type;  // TTO: Use specified type
+    var->internal_string_type = INTERNAL_RODATA;  // TTO: Default to RODATA
+    var->next = gen->variables;
+    gen->variables = var;
+}
+
+// TTO: Add string variable with specific internal string type
+void codegen_add_variable_tto_string(Codegen* gen, const char* name, int offset, VarType type, InternalStringType str_type) {
+    VarInfo* var = malloc(sizeof(VarInfo));
+    var->name = malloc(strlen(name) + 1);
+    strcpy(var->name, name);
+    var->stack_offset = offset;
+    var->type = type;
+    var->struct_name = NULL;
+    var->is_dynamic_array = 0;
+    var->is_pointer = 0;
+    var->is_closure = 0;
+    var->is_array = 0;
+    var->array_size = 0;
+    var->internal_numeric_type = INTERNAL_INT64;
+    var->internal_string_type = str_type;  // TTO: Use specified string type
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -340,6 +384,8 @@ void codegen_add_dynamic_array(Codegen* gen, const char* name, int offset, VarTy
     var->is_closure = 0;
     var->is_array = 1;
     var->array_size = 0;  // Dynamic - size unknown at compile time
+    var->internal_numeric_type = INTERNAL_INT64;
+    var->internal_string_type = INTERNAL_RODATA;
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -357,6 +403,8 @@ void codegen_add_pointer_variable(Codegen* gen, const char* name, int offset, Va
     var->is_closure = 0;
     var->is_array = 0;
     var->array_size = 0;
+    var->internal_numeric_type = INTERNAL_INT64;
+    var->internal_string_type = INTERNAL_RODATA;
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -374,6 +422,8 @@ void codegen_add_struct_variable(Codegen* gen, const char* name, int offset, con
     var->type = TYPE_NUMERIC; // Placeholder
     var->struct_name = malloc(strlen(struct_name) + 1);
     strcpy(var->struct_name, struct_name);
+    var->internal_numeric_type = INTERNAL_INT64;
+    var->internal_string_type = INTERNAL_RODATA;
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -391,6 +441,8 @@ void codegen_add_stack_array(Codegen* gen, const char* name, int offset, VarType
     var->is_closure = 0;
     var->is_array = 1;
     var->array_size = array_size;
+    var->internal_numeric_type = INTERNAL_INT64;
+    var->internal_string_type = INTERNAL_RODATA;
     var->next = gen->variables;
     gen->variables = var;
 }
@@ -600,6 +652,7 @@ void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "");
     codegen_emit(gen, "section .text");
     codegen_emit(gen, "extern print_number");
+    codegen_emit(gen, "extern print_double");  // TTO: For floating point
     codegen_emit(gen, "extern print_string");
     codegen_emit(gen, "extern string_length");
     codegen_emit(gen, "extern string_concat");
@@ -649,6 +702,52 @@ void codegen_emit_prologue(Codegen* gen) {
     codegen_emit(gen, "extern gc_get_collections");
     codegen_emit(gen, "extern gc_enable");
     codegen_emit(gen, "extern gc_disable");
+    // Phase 20: Type conversion functions
+    codegen_emit(gen, "extern mlp_to_numeric");
+    codegen_emit(gen, "extern mlp_to_text");
+    codegen_emit(gen, "extern mlp_to_decimal");
+    codegen_emit(gen, "extern mlp_decimal_to_text");
+    codegen_emit(gen, "extern mlp_parse_int");
+    codegen_emit(gen, "extern mlp_parse_float");
+    // Phase 20: Input functions
+    codegen_emit(gen, "extern mlp_input");
+    codegen_emit(gen, "extern mlp_input_prompt");
+    // Phase 20: Math functions
+    codegen_emit(gen, "extern mlp_sin");
+    codegen_emit(gen, "extern mlp_cos");
+    codegen_emit(gen, "extern mlp_tan");
+    codegen_emit(gen, "extern mlp_sqrt");
+    codegen_emit(gen, "extern mlp_pow");
+    codegen_emit(gen, "extern mlp_abs");
+    codegen_emit(gen, "extern mlp_abs_int");
+    codegen_emit(gen, "extern mlp_floor");
+    codegen_emit(gen, "extern mlp_ceil");
+    codegen_emit(gen, "extern mlp_round");
+    codegen_emit(gen, "extern mlp_log");
+    codegen_emit(gen, "extern mlp_log10");
+    codegen_emit(gen, "extern mlp_exp");
+    codegen_emit(gen, "extern mlp_fmod");
+    codegen_emit(gen, "extern mlp_pi");
+    codegen_emit(gen, "extern mlp_e");
+    // Phase 20: String functions
+    codegen_emit(gen, "extern mlp_split");
+    codegen_emit(gen, "extern mlp_trim");
+    codegen_emit(gen, "extern mlp_replace");
+    codegen_emit(gen, "extern mlp_to_upper");
+    codegen_emit(gen, "extern mlp_to_lower");
+    codegen_emit(gen, "extern mlp_starts_with");
+    codegen_emit(gen, "extern mlp_ends_with");
+    codegen_emit(gen, "extern mlp_contains");
+    // Phase 20: Assert function
+    codegen_emit(gen, "extern mlp_assert");
+    // Phase 20: Bitwise operations
+    codegen_emit(gen, "extern mlp_band");
+    codegen_emit(gen, "extern mlp_bor");
+    codegen_emit(gen, "extern mlp_bxor");
+    codegen_emit(gen, "extern mlp_bnot");
+    codegen_emit(gen, "extern mlp_shl");
+    codegen_emit(gen, "extern mlp_shr");
+    codegen_emit(gen, "extern mlp_ushr");
     codegen_emit(gen, "global _start");
 }
 
@@ -670,6 +769,22 @@ int is_builtin_function(const char* name) {
         "gc_init", "gc_alloc", "gc_free", "gc_retain", "gc_release",
         "gc_collect", "gc_full_collect", "gc_shutdown",
         "gc_get_object_count", "gc_get_total_bytes", "gc_get_collections",
+        // Phase 20: Type conversion functions
+        "mlp_to_numeric", "mlp_to_text", "mlp_to_decimal", "mlp_decimal_to_text",
+        "mlp_parse_int", "mlp_parse_float",
+        // Phase 20: Input functions
+        "mlp_input", "mlp_input_prompt",
+        // Phase 20: Math functions
+        "mlp_sin", "mlp_cos", "mlp_tan", "mlp_sqrt", "mlp_pow",
+        "mlp_abs", "mlp_abs_int", "mlp_floor", "mlp_ceil", "mlp_round",
+        "mlp_log", "mlp_log10", "mlp_exp", "mlp_fmod", "mlp_pi", "mlp_e",
+        // Phase 20: String functions
+        "mlp_split", "mlp_trim", "mlp_replace", "mlp_to_upper", "mlp_to_lower",
+        "mlp_starts_with", "mlp_ends_with", "mlp_contains",
+        // Phase 20: Assert function
+        "mlp_assert",
+        // Phase 20: Bitwise operations
+        "mlp_band", "mlp_bor", "mlp_bxor", "mlp_bnot", "mlp_shl", "mlp_shr", "mlp_ushr",
         NULL
     };
     
@@ -912,14 +1027,55 @@ void codegen_generate_declaration(Codegen* gen, Declaration* decl) {
     } else {
         // Regular variable declaration (may be through type alias)
         gen->stack_offset += 8;
-        codegen_add_variable(gen, decl->name, gen->stack_offset, actual_type, NULL);
+        
+        // TTO: Determine internal type from init_value
+        InternalNumericType internal_num_type = INTERNAL_INT64;  // Default
+        InternalStringType internal_str_type = INTERNAL_RODATA;  // Default
+        
+        if (actual_type == TYPE_NUMERIC && decl->init_value) {
+            if (decl->init_value->type == EXPR_NUMBER) {
+                internal_num_type = decl->init_value->internal_numeric_type;
+            } else if (decl->init_value->type == EXPR_BINARY_OP) {
+                // TTO: Check if binary op result would be double
+                if (is_double_expression(gen, decl->init_value)) {
+                    internal_num_type = INTERNAL_DOUBLE;
+                }
+            } else if (decl->init_value->type == EXPR_VARIABLE) {
+                // TTO: Inherit type from source variable
+                if (is_double_expression(gen, decl->init_value)) {
+                    internal_num_type = INTERNAL_DOUBLE;
+                }
+            }
+        } else if (actual_type == TYPE_STRING && decl->init_value) {
+            if (decl->init_value->type == EXPR_STRING) {
+                internal_str_type = decl->init_value->internal_string_type;
+            }
+        }
+        
+        // TTO: Use appropriate add_variable function based on type
+        if (actual_type == TYPE_NUMERIC) {
+            codegen_add_variable_tto(gen, decl->name, gen->stack_offset, actual_type, internal_num_type);
+        } else if (actual_type == TYPE_STRING) {
+            codegen_add_variable_tto_string(gen, decl->name, gen->stack_offset, actual_type, internal_str_type);
+        } else {
+            codegen_add_variable(gen, decl->name, gen->stack_offset, actual_type, NULL);
+        }
+        
+        // TTO: Add type info to comment
+        const char* tto_info = "";
+        if (actual_type == TYPE_NUMERIC && internal_num_type == INTERNAL_DOUBLE) {
+            tto_info = " (TTO:double)";
+        } else if (actual_type == TYPE_STRING && internal_str_type == INTERNAL_SSO) {
+            tto_info = " (TTO:SSO)";
+        }
         
         snprintf(buffer, sizeof(buffer), 
-                 "    ; Declaration: %s %s", 
+                 "    ; Declaration: %s %s%s", 
                  actual_type == TYPE_NUMERIC ? "numeric" :
                  actual_type == TYPE_DECIMAL ? "decimal" : 
                  actual_type == TYPE_BOOLEAN ? "boolean" : "text",
-                 decl->name);
+                 decl->name,
+                 tto_info);
         codegen_emit(gen, buffer);
         
         snprintf(buffer, sizeof(buffer),
@@ -1087,20 +1243,45 @@ void codegen_generate_print(Codegen* gen, Expression* expr) {
     // Evaluate expression to rax
     codegen_generate_expression_value(gen, expr);
     
-    // Move result to rdi (first argument)
-    codegen_emit(gen, "    mov rdi, rax");
-    
     // Call appropriate print function based on expression type
     if (expr->type == EXPR_STRING) {
+        codegen_emit(gen, "    mov rdi, rax");
         codegen_emit(gen, "    call print_string");
+    } else if (expr->type == EXPR_NUMBER) {
+        // TTO: Check if double or integer
+        if (expr->internal_numeric_type == INTERNAL_DOUBLE || expr->has_decimal_point) {
+            // For double, rax contains bit pattern - move to xmm0
+            // Save rax, align stack, call, restore
+            codegen_emit(gen, "    movq xmm0, rax    ; TTO: double bit pattern to xmm0");
+            codegen_emit(gen, "    push rbx          ; Save for alignment calculation");
+            codegen_emit(gen, "    mov rbx, rsp      ; Save current stack");
+            codegen_emit(gen, "    and rsp, -16      ; Align stack to 16 bytes");
+            codegen_emit(gen, "    call print_double");
+            codegen_emit(gen, "    mov rsp, rbx      ; Restore stack");
+            codegen_emit(gen, "    pop rbx           ; Restore rbx");
+        } else {
+            codegen_emit(gen, "    mov rdi, rax");
+            codegen_emit(gen, "    call print_number");
+        }
     } else if (expr->type == EXPR_VARIABLE) {
         // Phase 18: Check if this is a state variable first
         int is_state_var = 0;
         for (int i = 0; i < gen->global_var_count; i++) {
             if (strcmp(gen->global_vars[i].name, expr->var_name) == 0) {
                 is_state_var = 1;
-                // State variables are numeric for now
-                codegen_emit(gen, "    call print_number");
+                codegen_emit(gen, "    mov rdi, rax");
+                // TTO: Check if state variable is double
+                if (gen->global_vars[i].type == TYPE_DECIMAL) {
+                    codegen_emit(gen, "    movq xmm0, rax");
+                    codegen_emit(gen, "    push rbx");
+                    codegen_emit(gen, "    mov rbx, rsp");
+                    codegen_emit(gen, "    and rsp, -16");
+                    codegen_emit(gen, "    call print_double");
+                    codegen_emit(gen, "    mov rsp, rbx");
+                    codegen_emit(gen, "    pop rbx");
+                } else {
+                    codegen_emit(gen, "    call print_number");
+                }
                 break;
             }
         }
@@ -1109,12 +1290,24 @@ void codegen_generate_print(Codegen* gen, Expression* expr) {
             // Check regular variable type
             VarInfo* var = codegen_get_variable(gen, expr->var_name);
             if (var->type == TYPE_STRING) {
+                codegen_emit(gen, "    mov rdi, rax");
                 codegen_emit(gen, "    call print_string");
+            } else if (var->internal_numeric_type == INTERNAL_DOUBLE) {
+                // TTO: Variable is known to be double
+                codegen_emit(gen, "    movq xmm0, rax    ; TTO: Load double for print");
+                codegen_emit(gen, "    push rbx          ; Save for alignment");
+                codegen_emit(gen, "    mov rbx, rsp      ; Save stack");
+                codegen_emit(gen, "    and rsp, -16      ; Align to 16 bytes");
+                codegen_emit(gen, "    call print_double");
+                codegen_emit(gen, "    mov rsp, rbx      ; Restore stack");
+                codegen_emit(gen, "    pop rbx           ; Restore rbx");
             } else {
+                codegen_emit(gen, "    mov rdi, rax");
                 codegen_emit(gen, "    call print_number");
             }
         }
     } else {
+        codegen_emit(gen, "    mov rdi, rax");
         codegen_emit(gen, "    call print_number");
     }
 }
@@ -1142,12 +1335,57 @@ int is_string_expression(Codegen* gen, Expression* expr) {
     return 0;
 }
 
+// TTO: Helper - Determine if expression is double type
+int is_double_expression(Codegen* gen, Expression* expr) {
+    if (expr->type == EXPR_NUMBER) {
+        return expr->internal_numeric_type == INTERNAL_DOUBLE || expr->has_decimal_point;
+    }
+    if (expr->type == EXPR_VARIABLE) {
+        // Check state variables
+        for (int i = 0; i < gen->global_var_count; i++) {
+            if (strcmp(gen->global_vars[i].name, expr->var_name) == 0) {
+                // State variables currently don't track TTO type
+                return 0;
+            }
+        }
+        VarInfo* var = codegen_get_variable(gen, expr->var_name);
+        return var->internal_numeric_type == INTERNAL_DOUBLE;
+    }
+    // For binary operations, if either operand is double, result is double
+    if (expr->type == EXPR_BINARY_OP) {
+        return is_double_expression(gen, expr->binary_op.left) || 
+               is_double_expression(gen, expr->binary_op.right);
+    }
+    return 0;
+}
+
 void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
-    char buffer[256];
+    char buffer[512];
     
     if (expr->type == EXPR_NUMBER) {
-        snprintf(buffer, sizeof(buffer), "    mov rax, %ld", expr->number_value);
-        codegen_emit(gen, buffer);
+        // TTO: Generate code based on internal numeric type
+        if (expr->internal_numeric_type == INTERNAL_DOUBLE || expr->has_decimal_point) {
+            // Double value - use XMM registers
+            // Store double in data section and load it
+            codegen_emit(gen, "    ; TTO: Loading double value");
+            
+            // Convert double to its bit representation for movabs
+            union {
+                double d;
+                unsigned long bits;
+            } converter;
+            converter.d = expr->double_value;
+            
+            snprintf(buffer, sizeof(buffer), "    mov rax, 0x%lx    ; double %.15g bit pattern", 
+                     converter.bits, expr->double_value);
+            codegen_emit(gen, buffer);
+            // Note: For now we keep doubles in RAX as bit patterns
+            // Full floating point support would need XMM registers
+        } else {
+            // TTO: int64 - fastest path
+            snprintf(buffer, sizeof(buffer), "    mov rax, %ld", expr->number_value);
+            codegen_emit(gen, buffer);
+        }
     } else if (expr->type == EXPR_NULL) {
         // null literal - represented as 0
         codegen_emit(gen, "    mov rax, 0");
@@ -1351,31 +1589,82 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
                 codegen_emit(gen, "    add rsp, 16   ; Clean up parameters");
                 // Result is in rax
             } else {
-                // Numeric operations (default)
-                // Evaluate left side
-                codegen_generate_expression_value(gen, expr->binary_op.left);
-                codegen_emit(gen, "    push rax");
+                // TTO: Check if this is double arithmetic
+                int left_is_double = is_double_expression(gen, expr->binary_op.left);
+                int right_is_double = is_double_expression(gen, expr->binary_op.right);
+                int use_double = left_is_double || right_is_double;
                 
-                // Evaluate right side
-                codegen_generate_expression_value(gen, expr->binary_op.right);
-                codegen_emit(gen, "    mov rbx, rax");
-                codegen_emit(gen, "    pop rax");
-                
-                // Perform operation
-                switch (expr->binary_op.op) {
-                    case BIN_OP_ADD:
-                        codegen_emit(gen, "    add rax, rbx");
-                        break;
-                    case BIN_OP_SUB:
-                        codegen_emit(gen, "    sub rax, rbx");
-                        break;
-                    case BIN_OP_MUL:
-                        codegen_emit(gen, "    imul rax, rbx");
-                        break;
-                    case BIN_OP_DIV:
-                        codegen_emit(gen, "    cqo");  // Sign extend rax to rdx:rax
-                        codegen_emit(gen, "    idiv rbx");
-                        break;
+                if (use_double) {
+                    // TTO: Double arithmetic using SSE
+                    codegen_emit(gen, "    ; TTO: Double arithmetic");
+                    
+                    // Evaluate left side
+                    codegen_generate_expression_value(gen, expr->binary_op.left);
+                    if (!left_is_double) {
+                        // Convert int64 to double
+                        codegen_emit(gen, "    cvtsi2sd xmm0, rax   ; Convert int to double");
+                    } else {
+                        codegen_emit(gen, "    movq xmm0, rax        ; Load double bit pattern");
+                    }
+                    codegen_emit(gen, "    sub rsp, 8");
+                    codegen_emit(gen, "    movsd [rsp], xmm0      ; Save left operand");
+                    
+                    // Evaluate right side
+                    codegen_generate_expression_value(gen, expr->binary_op.right);
+                    if (!right_is_double) {
+                        // Convert int64 to double
+                        codegen_emit(gen, "    cvtsi2sd xmm1, rax   ; Convert int to double");
+                    } else {
+                        codegen_emit(gen, "    movq xmm1, rax        ; Load double bit pattern");
+                    }
+                    codegen_emit(gen, "    movsd xmm0, [rsp]      ; Restore left operand");
+                    codegen_emit(gen, "    add rsp, 8");
+                    
+                    // Perform double operation
+                    switch (expr->binary_op.op) {
+                        case BIN_OP_ADD:
+                            codegen_emit(gen, "    addsd xmm0, xmm1     ; Double add");
+                            break;
+                        case BIN_OP_SUB:
+                            codegen_emit(gen, "    subsd xmm0, xmm1     ; Double subtract");
+                            break;
+                        case BIN_OP_MUL:
+                            codegen_emit(gen, "    mulsd xmm0, xmm1     ; Double multiply");
+                            break;
+                        case BIN_OP_DIV:
+                            codegen_emit(gen, "    divsd xmm0, xmm1     ; Double divide");
+                            break;
+                    }
+                    
+                    // Store result as bit pattern in rax (for consistency)
+                    codegen_emit(gen, "    movq rax, xmm0         ; Result to rax as bit pattern");
+                } else {
+                    // Integer operations (default)
+                    // Evaluate left side
+                    codegen_generate_expression_value(gen, expr->binary_op.left);
+                    codegen_emit(gen, "    push rax");
+                    
+                    // Evaluate right side
+                    codegen_generate_expression_value(gen, expr->binary_op.right);
+                    codegen_emit(gen, "    mov rbx, rax");
+                    codegen_emit(gen, "    pop rax");
+                    
+                    // Perform integer operation
+                    switch (expr->binary_op.op) {
+                        case BIN_OP_ADD:
+                            codegen_emit(gen, "    add rax, rbx");
+                            break;
+                        case BIN_OP_SUB:
+                            codegen_emit(gen, "    sub rax, rbx");
+                            break;
+                        case BIN_OP_MUL:
+                            codegen_emit(gen, "    imul rax, rbx");
+                            break;
+                        case BIN_OP_DIV:
+                            codegen_emit(gen, "    cqo");  // Sign extend rax to rdx:rax
+                            codegen_emit(gen, "    idiv rbx");
+                            break;
+                    }
                 }
             }
             }
@@ -1495,6 +1784,124 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
         } else if (strcmp(expr->func_call.func_name, "gc_disable") == 0) {
             is_builtin = 1;
             builtin_name = "gc_disable";
+        // Phase 20: Type conversion functions
+        } else if (strcmp(expr->func_call.func_name, "to_numeric") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_to_numeric";
+        } else if (strcmp(expr->func_call.func_name, "to_text") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_to_text";
+        } else if (strcmp(expr->func_call.func_name, "to_decimal") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_to_decimal";
+        } else if (strcmp(expr->func_call.func_name, "parse_int") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_parse_int";
+        } else if (strcmp(expr->func_call.func_name, "parse_float") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_parse_float";
+        // Phase 20: Input functions
+        } else if (strcmp(expr->func_call.func_name, "input") == 0) {
+            is_builtin = 1;
+            if (expr->func_call.arg_count == 0) {
+                builtin_name = "mlp_input";
+            } else {
+                builtin_name = "mlp_input_prompt";
+            }
+        // Phase 20: Math functions
+        } else if (strcmp(expr->func_call.func_name, "sin") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_sin";
+        } else if (strcmp(expr->func_call.func_name, "cos") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_cos";
+        } else if (strcmp(expr->func_call.func_name, "tan") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_tan";
+        } else if (strcmp(expr->func_call.func_name, "sqrt") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_sqrt";
+        } else if (strcmp(expr->func_call.func_name, "pow") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_pow";
+        } else if (strcmp(expr->func_call.func_name, "abs") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_abs_int";  // For integer abs
+        } else if (strcmp(expr->func_call.func_name, "floor") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_floor";
+        } else if (strcmp(expr->func_call.func_name, "ceil") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_ceil";
+        } else if (strcmp(expr->func_call.func_name, "round") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_round";
+        } else if (strcmp(expr->func_call.func_name, "log") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_log";
+        } else if (strcmp(expr->func_call.func_name, "log10") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_log10";
+        } else if (strcmp(expr->func_call.func_name, "exp") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_exp";
+        } else if (strcmp(expr->func_call.func_name, "fmod") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_fmod";
+        } else if (strcmp(expr->func_call.func_name, "pi") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_pi";
+        } else if (strcmp(expr->func_call.func_name, "e") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_e";
+        // Phase 20: String functions
+        } else if (strcmp(expr->func_call.func_name, "trim") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_trim";
+        } else if (strcmp(expr->func_call.func_name, "replace") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_replace";
+        } else if (strcmp(expr->func_call.func_name, "to_upper") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_to_upper";
+        } else if (strcmp(expr->func_call.func_name, "to_lower") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_to_lower";
+        } else if (strcmp(expr->func_call.func_name, "starts_with") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_starts_with";
+        } else if (strcmp(expr->func_call.func_name, "ends_with") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_ends_with";
+        } else if (strcmp(expr->func_call.func_name, "contains") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_contains";
+        // Phase 20: Assert function
+        } else if (strcmp(expr->func_call.func_name, "assert") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_assert";
+        // Phase 20: Bitwise operations
+        } else if (strcmp(expr->func_call.func_name, "band") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_band";
+        } else if (strcmp(expr->func_call.func_name, "bor") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_bor";
+        } else if (strcmp(expr->func_call.func_name, "bxor") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_bxor";
+        } else if (strcmp(expr->func_call.func_name, "bnot") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_bnot";
+        } else if (strcmp(expr->func_call.func_name, "shl") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_shl";
+        } else if (strcmp(expr->func_call.func_name, "shr") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_shr";
+        } else if (strcmp(expr->func_call.func_name, "ushr") == 0) {
+            is_builtin = 1;
+            builtin_name = "mlp_ushr";
         }
         
         if (is_builtin) {

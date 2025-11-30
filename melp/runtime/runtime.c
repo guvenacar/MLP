@@ -66,6 +66,13 @@ void print_number(long num) {
     write(1, buffer, len);
 }
 
+// TTO: Print double to stdout
+void print_double(double num) {
+    char buffer[64];
+    int len = snprintf(buffer, sizeof(buffer), "%.15g\n", num);
+    write(1, buffer, len);
+}
+
 // Print string to stdout
 void print_string(const char* str) {
     if (str) {
@@ -968,4 +975,559 @@ void gc_shutdown(void) {
     gc_objects = NULL;
     gc_object_count = 0;
     gc_total_bytes = 0;
+}
+
+// ============================================================================
+// PHASE 20: Type Conversion Functions
+// ============================================================================
+
+/**
+ * Convert string to numeric (integer)
+ * Returns 0 if string is invalid
+ */
+long mlp_to_numeric(const char* str) {
+    if (!str) return 0;
+    
+    // Skip whitespace
+    while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r') {
+        str++;
+    }
+    
+    if (*str == '\0') return 0;
+    
+    // Handle sign
+    int sign = 1;
+    if (*str == '-') {
+        sign = -1;
+        str++;
+    } else if (*str == '+') {
+        str++;
+    }
+    
+    // Parse digits
+    long result = 0;
+    while (*str >= '0' && *str <= '9') {
+        result = result * 10 + (*str - '0');
+        str++;
+    }
+    
+    return result * sign;
+}
+
+/**
+ * Convert numeric to string
+ * Uses GC for memory allocation
+ */
+char* mlp_to_text(long num) {
+    return int_to_string(num);  // Reuse existing function
+}
+
+/**
+ * Convert string to decimal (double)
+ */
+double mlp_to_decimal(const char* str) {
+    if (!str) return 0.0;
+    
+    // Skip whitespace
+    while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r') {
+        str++;
+    }
+    
+    if (*str == '\0') return 0.0;
+    
+    return strtod(str, NULL);
+}
+
+/**
+ * Convert decimal to string
+ */
+char* mlp_decimal_to_text(double num) {
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "%.15g", num);
+    
+    // Allocate and copy
+    size_t len = strlen(buffer);
+    char* result = (char*)mlp_malloc(len + 1);
+    strcpy(result, buffer);
+    return result;
+}
+
+/**
+ * Parse integer with detailed error handling
+ * Returns 0 on error (sets errno)
+ */
+long mlp_parse_int(const char* str) {
+    if (!str || *str == '\0') return 0;
+    
+    char* endptr;
+    long result = strtol(str, &endptr, 10);
+    
+    // Check if parsing was successful
+    if (endptr == str) {
+        return 0;  // No digits found
+    }
+    
+    return result;
+}
+
+/**
+ * Parse float with detailed error handling
+ * Returns 0.0 on error
+ */
+double mlp_parse_float(const char* str) {
+    if (!str || *str == '\0') return 0.0;
+    
+    char* endptr;
+    double result = strtod(str, &endptr);
+    
+    // Check if parsing was successful
+    if (endptr == str) {
+        return 0.0;  // No digits found
+    }
+    
+    return result;
+}
+
+// ============================================================================
+// PHASE 20: Input Functions
+// ============================================================================
+
+/**
+ * Read a line from stdin
+ * Returns dynamically allocated string (caller must free)
+ */
+char* mlp_input(void) {
+    char buffer[4096];
+    
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        // EOF or error - return empty string
+        char* result = (char*)mlp_malloc(1);
+        result[0] = '\0';
+        return result;
+    }
+    
+    // Remove trailing newline
+    size_t len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '\n') {
+        buffer[len - 1] = '\0';
+        len--;
+    }
+    
+    // Allocate and copy
+    char* result = (char*)mlp_malloc(len + 1);
+    strcpy(result, buffer);
+    return result;
+}
+
+/**
+ * Read a line with prompt
+ */
+char* mlp_input_prompt(const char* prompt) {
+    if (prompt && *prompt) {
+        // Print prompt without newline
+        write(1, prompt, strlen(prompt));
+    }
+    return mlp_input();
+}
+
+// ============================================================================
+// PHASE 20: Math Functions
+// ============================================================================
+
+#include <math.h>
+
+double mlp_sin(double x) {
+    return sin(x);
+}
+
+double mlp_cos(double x) {
+    return cos(x);
+}
+
+double mlp_tan(double x) {
+    return tan(x);
+}
+
+double mlp_sqrt(double x) {
+    if (x < 0) {
+        fprintf(stderr, "Error: sqrt of negative number\n");
+        return 0.0;
+    }
+    return sqrt(x);
+}
+
+double mlp_pow(double base, double exp) {
+    return pow(base, exp);
+}
+
+double mlp_abs(double x) {
+    return fabs(x);
+}
+
+long mlp_abs_int(long x) {
+    return x < 0 ? -x : x;
+}
+
+double mlp_floor(double x) {
+    return floor(x);
+}
+
+double mlp_ceil(double x) {
+    return ceil(x);
+}
+
+double mlp_round(double x) {
+    return round(x);
+}
+
+double mlp_log(double x) {
+    if (x <= 0) {
+        fprintf(stderr, "Error: log of non-positive number\n");
+        return 0.0;
+    }
+    return log(x);
+}
+
+double mlp_log10(double x) {
+    if (x <= 0) {
+        fprintf(stderr, "Error: log10 of non-positive number\n");
+        return 0.0;
+    }
+    return log10(x);
+}
+
+double mlp_exp(double x) {
+    return exp(x);
+}
+
+double mlp_fmod(double x, double y) {
+    if (y == 0.0) {
+        fprintf(stderr, "Error: fmod by zero\n");
+        return 0.0;
+    }
+    return fmod(x, y);
+}
+
+double mlp_pi(void) {
+    return 3.14159265358979323846;
+}
+
+double mlp_e(void) {
+    return 2.71828182845904523536;
+}
+
+// ============================================================================
+// PHASE 20: String Functions
+// ============================================================================
+
+/**
+ * Split string by delimiter
+ * Returns array of strings, sets count to number of parts
+ */
+char** mlp_split(const char* str, const char* delimiter, long* count) {
+    if (!str || !delimiter) {
+        *count = 0;
+        return NULL;
+    }
+    
+    // First pass: count parts
+    size_t del_len = strlen(delimiter);
+    if (del_len == 0) {
+        // Empty delimiter - return single element
+        *count = 1;
+        char** result = (char**)mlp_malloc(sizeof(char*));
+        result[0] = (char*)mlp_malloc(strlen(str) + 1);
+        strcpy(result[0], str);
+        return result;
+    }
+    
+    long num_parts = 1;
+    const char* p = str;
+    while ((p = strstr(p, delimiter)) != NULL) {
+        num_parts++;
+        p += del_len;
+    }
+    
+    // Allocate result array
+    char** result = (char**)mlp_malloc(sizeof(char*) * num_parts);
+    
+    // Second pass: extract parts
+    const char* start = str;
+    const char* end;
+    long i = 0;
+    
+    while ((end = strstr(start, delimiter)) != NULL) {
+        size_t part_len = end - start;
+        result[i] = (char*)mlp_malloc(part_len + 1);
+        strncpy(result[i], start, part_len);
+        result[i][part_len] = '\0';
+        i++;
+        start = end + del_len;
+    }
+    
+    // Last part
+    result[i] = (char*)mlp_malloc(strlen(start) + 1);
+    strcpy(result[i], start);
+    
+    *count = num_parts;
+    return result;
+}
+
+/**
+ * Trim whitespace from both ends of string
+ */
+char* mlp_trim(const char* str) {
+    if (!str) {
+        char* result = (char*)mlp_malloc(1);
+        result[0] = '\0';
+        return result;
+    }
+    
+    // Find start (skip leading whitespace)
+    const char* start = str;
+    while (*start == ' ' || *start == '\t' || *start == '\n' || *start == '\r') {
+        start++;
+    }
+    
+    // Find end (skip trailing whitespace)
+    const char* end = str + strlen(str) - 1;
+    while (end > start && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
+        end--;
+    }
+    
+    // Calculate length
+    size_t len = (end >= start) ? (end - start + 1) : 0;
+    
+    // Allocate and copy
+    char* result = (char*)mlp_malloc(len + 1);
+    if (len > 0) {
+        strncpy(result, start, len);
+    }
+    result[len] = '\0';
+    
+    return result;
+}
+
+/**
+ * Replace all occurrences of old with new_str
+ */
+char* mlp_replace(const char* str, const char* old, const char* new_str) {
+    if (!str) {
+        char* result = (char*)mlp_malloc(1);
+        result[0] = '\0';
+        return result;
+    }
+    
+    if (!old || *old == '\0') {
+        // No pattern to replace
+        char* result = (char*)mlp_malloc(strlen(str) + 1);
+        strcpy(result, str);
+        return result;
+    }
+    
+    if (!new_str) new_str = "";
+    
+    size_t old_len = strlen(old);
+    size_t new_len = strlen(new_str);
+    
+    // Count occurrences
+    size_t count = 0;
+    const char* p = str;
+    while ((p = strstr(p, old)) != NULL) {
+        count++;
+        p += old_len;
+    }
+    
+    if (count == 0) {
+        // No matches
+        char* result = (char*)mlp_malloc(strlen(str) + 1);
+        strcpy(result, str);
+        return result;
+    }
+    
+    // Calculate new size
+    size_t new_size = strlen(str) + count * (new_len - old_len) + 1;
+    char* result = (char*)mlp_malloc(new_size);
+    
+    // Build result
+    char* dest = result;
+    const char* src = str;
+    
+    while ((p = strstr(src, old)) != NULL) {
+        // Copy part before match
+        size_t prefix_len = p - src;
+        memcpy(dest, src, prefix_len);
+        dest += prefix_len;
+        
+        // Copy replacement
+        memcpy(dest, new_str, new_len);
+        dest += new_len;
+        
+        src = p + old_len;
+    }
+    
+    // Copy remaining
+    strcpy(dest, src);
+    
+    return result;
+}
+
+/**
+ * Convert string to uppercase
+ */
+char* mlp_to_upper(const char* str) {
+    if (!str) {
+        char* result = (char*)mlp_malloc(1);
+        result[0] = '\0';
+        return result;
+    }
+    
+    size_t len = strlen(str);
+    char* result = (char*)mlp_malloc(len + 1);
+    
+    for (size_t i = 0; i < len; i++) {
+        char c = str[i];
+        if (c >= 'a' && c <= 'z') {
+            result[i] = c - 'a' + 'A';
+        } else {
+            result[i] = c;
+        }
+    }
+    result[len] = '\0';
+    
+    return result;
+}
+
+/**
+ * Convert string to lowercase
+ */
+char* mlp_to_lower(const char* str) {
+    if (!str) {
+        char* result = (char*)mlp_malloc(1);
+        result[0] = '\0';
+        return result;
+    }
+    
+    size_t len = strlen(str);
+    char* result = (char*)mlp_malloc(len + 1);
+    
+    for (size_t i = 0; i < len; i++) {
+        char c = str[i];
+        if (c >= 'A' && c <= 'Z') {
+            result[i] = c - 'A' + 'a';
+        } else {
+            result[i] = c;
+        }
+    }
+    result[len] = '\0';
+    
+    return result;
+}
+
+/**
+ * Check if string starts with prefix
+ */
+long mlp_starts_with(const char* str, const char* prefix) {
+    if (!str || !prefix) return 0;
+    
+    size_t str_len = strlen(str);
+    size_t prefix_len = strlen(prefix);
+    
+    if (prefix_len > str_len) return 0;
+    
+    return strncmp(str, prefix, prefix_len) == 0 ? 1 : 0;
+}
+
+/**
+ * Check if string ends with suffix
+ */
+long mlp_ends_with(const char* str, const char* suffix) {
+    if (!str || !suffix) return 0;
+    
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
+    
+    if (suffix_len > str_len) return 0;
+    
+    return strcmp(str + str_len - suffix_len, suffix) == 0 ? 1 : 0;
+}
+
+/**
+ * Check if string contains substring
+ */
+long mlp_contains(const char* str, const char* substr) {
+    if (!str || !substr) return 0;
+    return strstr(str, substr) != NULL ? 1 : 0;
+}
+
+// ============================================================================
+// PHASE 20: Assert Function
+// ============================================================================
+
+/**
+ * Assert condition with message
+ * If condition is false, prints message and exits
+ */
+void mlp_assert(long condition, const char* message) {
+    if (!condition) {
+        fprintf(stderr, "Assertion failed");
+        if (message && *message) {
+            fprintf(stderr, ": %s", message);
+        }
+        fprintf(stderr, "\n");
+        exit(1);
+    }
+}
+
+// ============================================================================
+// PHASE 20: Bitwise Operations
+// ============================================================================
+
+/**
+ * Bitwise AND
+ */
+long mlp_band(long a, long b) {
+    return a & b;
+}
+
+/**
+ * Bitwise OR
+ */
+long mlp_bor(long a, long b) {
+    return a | b;
+}
+
+/**
+ * Bitwise XOR
+ */
+long mlp_bxor(long a, long b) {
+    return a ^ b;
+}
+
+/**
+ * Bitwise NOT
+ */
+long mlp_bnot(long a) {
+    return ~a;
+}
+
+/**
+ * Shift left
+ */
+long mlp_shl(long a, long b) {
+    return a << b;
+}
+
+/**
+ * Shift right (arithmetic - preserves sign)
+ */
+long mlp_shr(long a, long b) {
+    return a >> b;
+}
+
+/**
+ * Shift right (logical/unsigned - zero fill)
+ */
+long mlp_ushr(long a, long b) {
+    return (unsigned long)a >> b;
 }

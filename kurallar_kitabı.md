@@ -26,14 +26,15 @@
 1. [Kritik Kurallar](#kritik-kurallar)
 2. [Proje Durumu](#proje-durumu)
 3. [MLP Mimarisi](#mlp-mimarisi)
-4. [Söz Dizimi Referansı](#söz-dizimi-referansı)
-5. [Veri Tipleri](#veri-tipleri)
-6. [Kontrol Akışı](#kontrol-akışı)
-7. [Lexer Token Birleştirme](#lexer-token-birleştirme)
-8. [Bootstrap Süreci](#bootstrap-süreci)
-9. [Aktif Görevler](#aktif-görevler)
-10. [Sonraki AI'ye Notlar](#sonraki-aiye-notlar)
-11. [Hızlı Referans](#hızlı-referans)
+4. [Transparent Type Optimization (TTO)](#transparent-type-optimization-tto)
+5. [Söz Dizimi Referansı](#söz-dizimi-referansı)
+6. [Veri Tipleri](#veri-tipleri)
+7. [Kontrol Akışı](#kontrol-akışı)
+8. [Lexer Token Birleştirme](#lexer-token-birleştirme)
+9. [Bootstrap Süreci](#bootstrap-süreci)
+10. [Aktif Görevler](#aktif-görevler)
+11. [Sonraki AI'ye Notlar](#sonraki-aiye-notlar)
+12. [Hızlı Referans](#hızlı-referans)
 
 ---
 
@@ -163,7 +164,227 @@ x86-64 Assembly (NASM)
 
 ---
 
-## 4. Söz Dizimi Referansı
+## 4. Transparent Type Optimization (TTO)
+
+### 🎯 Temel Felsefe
+
+MLP'de kullanıcıya sadece **2 temel tip** sunulur:
+- `numeric` - Tüm sayılar (tam sayı, ondalık, büyük sayılar)
+- `text` - Tüm metinler (kısa, uzun, sabit)
+
+**Ancak arka planda**, compiler otomatik olarak en verimli dahili temsili seçer. Kullanıcı bunu bilmez ve bilmesine gerek yoktur.
+
+### 📊 Neden Bu Yaklaşım?
+
+**Gözlem 1:** Diğer dillerde BigDecimal aslında string-tabanlıdır  
+**Gözlem 2:** MLP'de sadece numeric ve text var → aslında tek tip: "veri"  
+**Gözlem 3:** "Ali" ile 10.000 sayfalık kitap aynı bellek stratejisini kullanmamalı  
+**Gözlem 4:** Kullanıcı pragmatik katmanı görmüyor → arka plan optimizasyonu mümkün
+
+### 🔄 MLP Derleme Zinciri ve TTO'nun Yeri
+
+**MLP = Multi Language Programming**
+
+MLP'nin temel felsefesi: Kullanıcı istediği sözdiziminde (C, Python, kendi özel sözdizimi), istediği dilde (Türkçe, İngilizce, Hintçe, kendi özel dili) kod yazabilir.
+
+```
+Kullanıcı Kodu                    Kullanıcı Görür
+     ↓
+[diller.json + syntax.json]       Kullanıcı Görür ve Düzenleyebilir (*)
+     ↓
+Normalize → Pragmatik MLP         Kullanıcı Görmez (**)
+     ↓
+Pragmatik MLP (English Base)      Kullanıcı Görmez
+     ↓
+[Lexer → Parser]                  Kullanıcı Görmez
+     ↓
+[TTO: Tip Analizi]  ←←←←←←←←←←←  BURADA OPTİMİZASYON YAPILIR
+     ↓
+[Codegen: Optimize Assembly]      Kullanıcı Görmez
+     ↓
+x86-64 Binary                     Kullanıcı Çalıştırır
+
+(*) diller.json: Dil çevirileri (Türkçe "yazdır" → İngilizce "print")
+    syntax.json: Sözdizimi varyasyonları (Python-like, C-like, custom)
+    Kullanıcı bu dosyaları düzenleyerek kendi dilini/sözdizimini ekleyebilir!
+
+(**) Normalize katmanı:
+    - Kullanıcının sözdizimini alır
+    - Kullanıcının dilini alır  
+    - Her ikisini de Pragmatik MLP (İngilizce base) diline çevirir
+    - Bundan sonra derleyici standart şekilde çalışır
+```
+
+### 📋 Dahili Tip Dönüşüm Tablosu
+
+#### Numeric İçin:
+
+| Kullanıcı Yazar | Değer Aralığı | Dahili Temsil | Nerede? | Performans |
+|-----------------|---------------|---------------|---------|------------|
+| `numeric x = 42` | -2^63 to 2^63-1 | int64 | register/stack | ⚡ En hızlı |
+| `numeric y = 3.14` | ~15 digit hassasiyet | double | xmm register | ⚡ Hızlı |
+| `numeric z = 10^100` | Sınırsız | BigDecimal | heap | 🐢 Yavaş ama güvenli |
+
+#### Text İçin:
+
+| Kullanıcı Yazar | Uzunluk | Dahili Temsil | Nerede? | Performans |
+|-----------------|---------|---------------|---------|------------|
+| `text s = "Ali"` | ≤23 byte | SSO (inline) | stack | ⚡ En hızlı |
+| `text t = "Uzun metin..."` | >23 byte | heap pointer | heap | 🔄 Normal |
+| `text c = "Sabit"` | Sabit | .rodata | readonly | ⚡ Paylaşımlı |
+
+**SSO = Small String Optimization:** Kısa stringler heap allocation olmadan doğrudan stack'te saklanır.
+
+### 🔧 Compile-Time Analiz Algoritması
+
+```
+function analyze_numeric(value):
+    if value tam_sayı AND -2^63 ≤ value ≤ 2^63-1:
+        return INT64          -- Register'da tutulacak
+    else if value ondalık AND digits ≤ 15:
+        return DOUBLE         -- XMM register'da tutulacak
+    else:
+        return BIGDECIMAL     -- Heap'te tutulacak
+
+function analyze_text(value):
+    if is_constant(value):
+        return RODATA_STRING  -- .rodata section'da
+    else if length(value) ≤ 23:
+        return SSO_STRING     -- Stack'te inline
+    else:
+        return HEAP_STRING    -- Heap'te, pointer stack'te
+```
+
+### ⚠️ Runtime Overflow Handling
+
+```
+int64 x = 9223372036854775807  -- Max int64
+x = x + 1                       -- OVERFLOW!
+
+-- Otomatik promote:
+-- 1. Overflow detect edilir
+-- 2. x BigDecimal'e dönüştürülür  
+-- 3. İşlem BigDecimal ile devam eder
+-- 4. Kullanıcı hiçbir şey farketmez
+```
+
+### 🚀 Implementasyon Planı
+
+#### Faz 1: Temel TTO (Self-hosting ÖNCESİ, 2-3 gün)
+
+**Numeric:**
+- [ ] int64 desteği (küçük tam sayılar)
+- [ ] double desteği (ondalık sayılar)
+- [ ] BigDecimal fallback (büyük/hassas sayılar)
+- [ ] Overflow detection ve auto-promote
+
+**Text:**
+- [ ] SSO implementasyonu (≤23 byte inline)
+- [ ] Heap string (>23 byte)
+- [ ] Constant string → .rodata
+
+**Codegen:**
+- [ ] Tip-aware register allocation
+- [ ] Optimized assembly patterns
+
+#### Faz 2: Gelişmiş TTO (Self-hosting SONRASI)
+
+- [ ] Copy-on-write strings
+- [ ] String interning (aynı stringleri paylaş)
+- [ ] int32 kullanımı (değer aralığı izleme)
+- [ ] SIMD optimizasyonları
+
+### 💾 Bellek Yönetimi Stratejisi
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         STACK                                │
+├─────────────────────────────────────────────────────────────┤
+│  int64 değerler (8 byte)                                    │
+│  double değerler (8 byte, aligned)                          │
+│  SSO strings (≤24 byte, inline)                             │
+│  Heap pointers (8 byte, heap verisine işaret eder)          │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                          HEAP                                │
+├─────────────────────────────────────────────────────────────┤
+│  BigDecimal yapıları                                        │
+│  Uzun string verileri (>23 byte)                            │
+│  Dinamik array'ler                                          │
+│  Struct instance'ları                                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     .RODATA (Read-only)                      │
+├─────────────────────────────────────────────────────────────┤
+│  Sabit string literalleri                                   │
+│  Constant numeric değerler                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🎯 Kullanıcı Deneyimi
+
+**Kullanıcı şunu yazar:**
+```mlp
+numeric küçük = 42
+numeric ondalık = 3.14159
+numeric devasa = 10 ^ 1000
+
+text kısa = "Ali"
+text uzun = read_file("kitap.txt")
+```
+
+**Compiler arka planda:**
+```asm
+; küçük = 42 → int64, register'da
+mov rax, 42
+mov [rbp-8], rax
+
+; ondalık = 3.14159 → double, xmm register'da  
+movsd xmm0, [.LC0]
+movsd [rbp-16], xmm0
+
+; devasa = 10^1000 → BigDecimal, heap'te
+call bigdec_pow
+mov [rbp-24], rax      ; heap pointer
+
+; kısa = "Ali" → SSO, stack'te inline
+mov qword [rbp-48], "Ali\0"  ; 24-byte alan, inline
+
+; uzun = read_file(...) → heap string
+call read_file
+mov [rbp-56], rax      ; heap pointer
+```
+
+### ✅ Avantajlar
+
+1. **Kullanıcı basitliği:** Sadece `numeric` ve `text` - başka tip yok
+2. **Otomatik performans:** Küçük değerler hızlı, büyükler güvenli
+3. **Bellek verimliliği:** Gereksiz heap allocation yok
+4. **Backward compatible:** Mevcut MLP kodu değişmeden çalışır
+5. **Şeffaf:** Kullanıcı optimizasyonu bilmek zorunda değil
+
+### ⚠️ Dikkat Edilecekler
+
+1. **Aritmetik işlemlerde tip uyumu:** int64 + double = double
+2. **Overflow handling:** int64 taşarsa BigDecimal'e promote et
+3. **String concat:** SSO + SSO = heap olabilir (uzunluk kontrolü)
+4. **Comparison:** Farklı dahili tipler karşılaştırılabilmeli
+
+### 📝 AI Agent İçin Notlar
+
+- Bu mimari **self-hosting'den ÖNCE** implement edilmelidir
+- C runtime'da temel fonksiyonlar yazılacak
+- Codegen tip-aware assembly üretecek
+- Test: Her tip kombinasyonu için test yazılmalı
+- Kullanıcı API'si DEĞİŞMEYECEK - sadece arka plan optimize edilecek
+
+---
+
+## 5. Söz Dizimi Referansı
 
 ### ⚠️ YORUM SATIRLARI (KRİTİK!)
 
@@ -190,6 +411,15 @@ numeric x = 10  -- Satır sonu yorumu
 numeric x = 10
 string name = "Ali"
 boolean flag = true
+```
+
+**Karışık ve Akıllı Değişken Tanımlama:**
+```mlp
+numeric, string, boolean a,b,c 
+veya
+numeric a, string b, boolean c  
+c,d,e = 10, "Ali", false -- otomatik tip çıkarımı
+
 ```
 
 #### Fonksiyon Tanımı
@@ -1142,8 +1372,87 @@ cd /home/pardus/projeler/MLP/MLP/melp
 
 ---
 
-*Son Güncelleme: 29 Kasım 2025 - Self-hosting POC complete!*  
-*Sonraki: Full integration ve bootstrap loop*
+## 12. Exception Handling (29 Kasım 2025) ✅
+
+### Genel Bakış
+MELP'e tam özellikli istisna yönetimi eklendi. setjmp/longjmp tabanlı, modern try-catch-finally syntax destekliyor.
+
+### Sözdizimi
+```mlp
+try
+    throw RuntimeError("Hata!")
+catch RuntimeError e
+    print("Runtime error yakalandı")
+catch ValueError e
+    print("Value error yakalandı")
+catch e
+    print("Diğer hatalar")
+finally
+    print("Her zaman çalışır")
+end try
+```
+
+### Özellikler
+- ✅ Çoklu catch blokları (tip kontrolü)
+- ✅ Finally blokları
+- ✅ throw Type("message") syntax
+- ✅ Yakalanmamış istisna handling
+- ✅ İç içe try-catch (re-throw)
+- ✅ Type-specific exception matching
+
+### Dosya Değişiklikleri
+
+**Lexer:** TOKEN_TRY, TOKEN_CATCH, TOKEN_THROW, TOKEN_FINALLY  
+**Parser:** CatchBlock struct, try_catch parsing, throw parsing  
+**Runtime:** ExceptionHandler, mlp_exception_* functions, setjmp/longjmp  
+**Codegen:** Try-catch-finally assembly generation
+
+### Test Dosyaları
+- `test_exception_simple.mlp` - Temel test
+- `test_exception_full.mlp` - Finally ile
+- `test_exception_multi_catch.mlp` - Çoklu catch
+- `test_exception_uncaught.mlp` - Yakalanmamış
+
+**Detaylı Dokümantasyon:** `EXCEPTION_HANDLING_COMPLETE.md`
+
+### Bilinen Limitasyonlar
+- Exception variable kullanılamıyor (catch e sonrası e.message yok)
+- Stack trace yok
+- Thread-safe değil
+
+---
+
+## 13. Sıradaki Özellikler
+
+**⚠️ Detaylı liste için:** `TODO.md` dosyasına bak
+
+### Öncelik Sırası
+1. **Module System** (HIGH) - import/export, multi-file support
+2. **Generics** (MEDIUM-HIGH) - Type parameters
+3. **Pattern Matching** (MEDIUM) - match/case
+4. **Operator Overloading** (LOW) - Custom operators
+5. **Interface/Trait** (LOW) - Polymorphism
+
+**Başlangıç için:** `AI_HANDOFF_NOTES.md` dosyasını oku!
+
+---
+
+### 💪 Motivasyon
+
+MELP muhteşem durumda! Phase 12 + Exception Handling complete:
+- ✅ Pointers, arrays, file I/O, strings
+- ✅ Lambda, closures, CLI args
+- ✅ **Exception handling (try-catch-finally)** 🎉
+
+Modern dil özelliklerinde son adım: **Module System**
+
+**Bir sonraki AI: Sen devralıyorsun. Başarılar! 🚀**
+
+---
+
+*Güncelleme: 29 Kasım 2025 23:45*  
+*Durum: Phase 12 Complete, Self-hosting lexer için hazır*  
+*Sonraki: Lexer implementation with inline approach*
 
 ---
 
@@ -1533,4 +1842,48 @@ Modern dil özelliklerinde son adım: **Module System**
 *Güncelleme: 29 Kasım 2025 23:45*  
 *Durum: Phase 12 Complete, Self-hosting lexer için hazır*  
 *Sonraki: Lexer implementation with inline approach*
+
+---
+
+#### ESKI NOTLAR (Referans için saklandı)
+
+#### 1. Text Parameter Desteği Eklendi (Önceki)
+**Sorun:** `func greet(text name)` çalışmıyordu - parser sadece numeric/decimal/boolean kabul ediyordu.
+
+**Çözüm:**
+```c
+// bootstrap/parser.c satır 959-960
+} else if (parser->current_token->type == TOKEN_TEXT) {
+    param_type = TYPE_STRING;
+```
+
+**Test:** `compiler/test_func_param.mlp` ✅ başarılı
+
+#### 2. String Utilities Implementasyonu
+Eklenen fonksiyonlar (`runtime/runtime.c` satır 450-502):
+- `mlp_substring(str, start, length)` - Alt string çıkar
+- `mlp_indexOf(str, substr)` - Konum bul (-1 yoksa)
+- `mlp_charAt(str, index)` - Karakteri string olarak döndür
+- `mlp_string_length(str)` - Uzunluk
+
+**Codegen:** `bootstrap/codegen.c` - 3 parametreli fonksiyon desteği (rdx register)  
+**Test:** `test_string_utils.mlp` ✅ tüm fonksiyonlar çalışıyor
+
+#### 3. CLI Arguments Desteği
+**Implementation:**
+- `runtime/runtime.c` satır 504-543:
+  - `mlp_get_argv()` - C argv'yi MLP string array'e çevir
+  - `mlp_get_argc()` - argc döndür
+  - Global variables: `global_argc`, `global_argv`
+
+- `bootstrap/codegen.c` satır 1399-1419:
+  - `_start` fonksiyonunda stack'ten argc/argv extraction:
+    ```asm
+    pop rdi          ; argc (ilk stack item)
+    mov rsi, rsp     ; argv pointer
+    call mlp_get_argv
+    ```
+
+**Built-in:** `get_argc()` codegen tarafından tanınıyor  
+**Test:** `test_cli_args.mlp` - no args: 1, with 3 args: 4 ✅
 
