@@ -19,6 +19,7 @@ typedef struct VarInfo {
     int array_size;       // Phase 14: size of stack-allocated array (0 for dynamic)
     int is_global;        // Phase 18: 1 if global/state variable
     int is_state;         // Phase 18: 1 if state variable (shared state)
+    Expression* init_expr; // Phase 18: Initial value expression for state vars
     // TTO: Internal type information
     InternalNumericType internal_numeric_type;  // For numeric variables
     InternalStringType internal_string_type;    // For string variables
@@ -108,6 +109,7 @@ typedef struct StateVarInfo {
     VarType type;
     int is_global;
     int is_state;
+    Expression* init_expr;  // Initial value expression
 } StateVarInfo;
 
 #define MAX_VARS 256
@@ -448,6 +450,12 @@ void codegen_add_stack_array(Codegen* gen, const char* name, int offset, VarType
 }
 
 int codegen_find_variable(Codegen* gen, const char* name) {
+    // Phase 18: Check state variables first
+    for (int i = 0; i < gen->global_var_count; i++) {
+        if (strcmp(gen->global_vars[i].name, name) == 0) {
+            return -1;  // Special marker for state variables
+        }
+    }
     VarInfo* current = gen->variables;
     while (current) {
         if (strcmp(current->name, name) == 0) {
@@ -460,6 +468,23 @@ int codegen_find_variable(Codegen* gen, const char* name) {
 }
 
 VarInfo* codegen_get_variable(Codegen* gen, const char* name) {
+    // Phase 18: Check state variables first - return a dummy VarInfo for them
+    for (int i = 0; i < gen->global_var_count; i++) {
+        if (strcmp(gen->global_vars[i].name, name) == 0) {
+            // Return state var info as VarInfo
+            static VarInfo state_var;
+            state_var.name = gen->global_vars[i].name;
+            state_var.type = gen->global_vars[i].type;
+            state_var.stack_offset = -1;  // Special marker
+            state_var.is_global = 1;
+            state_var.is_pointer = 0;
+            state_var.is_closure = 0;
+            state_var.is_array = 0;
+            state_var.internal_numeric_type = INTERNAL_INT64;
+            state_var.next = NULL;
+            return &state_var;
+        }
+    }
     VarInfo* current = gen->variables;
     while (current) {
         if (strcmp(current->name, name) == 0) {
@@ -2550,6 +2575,77 @@ void codegen_generate_expression_value(Codegen* gen, Expression* expr) {
         codegen_emit(gen, "    test rax, rax");
         codegen_emit(gen, "    setz al             ; Set AL to 1 if zero, 0 otherwise");
         codegen_emit(gen, "    movzx rax, al       ; Zero-extend AL to RAX");
+    } else if (expr->type == EXPR_LIST_LITERAL) {
+        // Phase 22: List literal: (a, b, c) - heterojen, mutable, heap-allocated
+        codegen_emit(gen, "");
+        codegen_emit(gen, "    ; List literal (heterojen, mutable)");
+        
+        int count = expr->list_literal.count;
+        
+        if (count == 0) {
+            // Empty list: just return NULL pointer
+            codegen_emit(gen, "    xor rax, rax        ; Empty list = NULL");
+        } else {
+            // Allocate space for list header (count + capacity + data pointer) + elements
+            // Layout: [count:8][capacity:8][element0:8][element1:8]...
+            int header_size = 16;  // count + capacity
+            int data_size = count * 8;
+            snprintf(buffer, sizeof(buffer), "    mov rdi, %d         ; List size: header + %d elements",
+                     header_size + data_size, count);
+            codegen_emit(gen, buffer);
+            codegen_emit(gen, "    call gc_alloc       ; Allocate list on heap");
+            codegen_emit(gen, "    push rax            ; Save list pointer");
+            
+            // Store count
+            snprintf(buffer, sizeof(buffer), "    mov qword [rax], %d ; list.count = %d", count, count);
+            codegen_emit(gen, buffer);
+            
+            // Store capacity (same as count initially)
+            snprintf(buffer, sizeof(buffer), "    mov qword [rax+8], %d ; list.capacity = %d", count, count);
+            codegen_emit(gen, buffer);
+            
+            // Store elements starting at offset 16
+            for (int i = 0; i < count; i++) {
+                codegen_emit(gen, "    push rax            ; Save list pointer");
+                codegen_generate_expression_value(gen, expr->list_literal.elements[i]);
+                codegen_emit(gen, "    mov rbx, rax        ; Element value");
+                codegen_emit(gen, "    pop rax             ; Restore list pointer");
+                snprintf(buffer, sizeof(buffer), "    mov [rax+%d], rbx   ; list[%d] = value",
+                         16 + i * 8, i);
+                codegen_emit(gen, buffer);
+            }
+            
+            codegen_emit(gen, "    pop rax             ; Return list pointer");
+        }
+    } else if (expr->type == EXPR_TUPLE_LITERAL) {
+        // Phase 22: Tuple literal: <a, b, c> - heterojen, immutable, stack-allocated
+        codegen_emit(gen, "");
+        codegen_emit(gen, "    ; Tuple literal (heterojen, immutable, stack)");
+        
+        int count = expr->tuple_literal.count;
+        
+        if (count == 0) {
+            // Empty tuple: return 0
+            codegen_emit(gen, "    xor rax, rax        ; Empty tuple");
+        } else {
+            // Tuple is stack-allocated for performance
+            // Allocate stack space for tuple
+            int tuple_size = count * 8;
+            snprintf(buffer, sizeof(buffer), "    sub rsp, %d         ; Allocate tuple (%d elements)",
+                     tuple_size, count);
+            codegen_emit(gen, buffer);
+            
+            // Store elements on stack (in reverse order for proper layout)
+            for (int i = count - 1; i >= 0; i--) {
+                codegen_generate_expression_value(gen, expr->tuple_literal.elements[i]);
+                snprintf(buffer, sizeof(buffer), "    mov [rsp+%d], rax   ; tuple[%d] = value",
+                         i * 8, i);
+                codegen_emit(gen, buffer);
+            }
+            
+            // Return pointer to tuple on stack
+            codegen_emit(gen, "    mov rax, rsp        ; Return tuple pointer (stack)");
+        }
     } else if (expr->type == EXPR_LAMBDA) {
         // Lambda functions: inline generation with JMP skip
         char buffer[256];
@@ -2876,6 +2972,20 @@ void codegen_generate_if(Codegen* gen, Statement* stmt) {
     // Generate condition check
     if (stmt->if_stmt.condition->type == EXPR_COMPARISON) {
         codegen_generate_comparison(gen, stmt->if_stmt.condition, else_label);
+    } else if (stmt->if_stmt.condition->type == EXPR_LOGICAL_AND ||
+               stmt->if_stmt.condition->type == EXPR_LOGICAL_OR ||
+               stmt->if_stmt.condition->type == EXPR_LOGICAL_NOT) {
+        // Logical expression (and, or, not)
+        codegen_generate_expression_value(gen, stmt->if_stmt.condition);
+        codegen_emit(gen, "    test rax, rax");
+        snprintf(buffer, sizeof(buffer), "    jz .L%d", else_label);
+        codegen_emit(gen, buffer);
+    } else {
+        // Other expressions (function call, variable, etc.) - evaluate and check if non-zero
+        codegen_generate_expression_value(gen, stmt->if_stmt.condition);
+        codegen_emit(gen, "    test rax, rax");
+        snprintf(buffer, sizeof(buffer), "    jz .L%d", else_label);
+        codegen_emit(gen, buffer);
     }
     
     // Then body
@@ -4317,11 +4427,6 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
         // Phase 18: State Management - Global state declaration
         char buffer[512];
         
-        codegen_emit(gen, "");
-        snprintf(buffer, sizeof(buffer), "    ; State declaration: %s%s",
-                stmt->state_decl.is_shared ? "shared " : "", stmt->state_decl.name);
-        codegen_emit(gen, buffer);
-        
         // Add to global variables list (similar to regular declaration but global scope)
         // State variables are stored in .bss section (uninitialized) or .data section (initialized)
         
@@ -4342,14 +4447,8 @@ void codegen_generate_statement(Codegen* gen, Statement* stmt) {
             gen->global_vars[gen->global_var_count].type = stmt->state_decl.type;
             gen->global_vars[gen->global_var_count].is_global = 1;
             gen->global_vars[gen->global_var_count].is_state = 1;  // Mark as state variable
+            gen->global_vars[gen->global_var_count].init_expr = stmt->state_decl.initial_value;  // Store init expr for later
             gen->global_var_count++;
-            
-            // Generate initialization if provided
-            if (stmt->state_decl.initial_value) {
-                codegen_generate_expression_value(gen, stmt->state_decl.initial_value);
-                snprintf(buffer, sizeof(buffer), "    mov [state_%s], rax", stmt->state_decl.name);
-                codegen_emit(gen, buffer);
-            }
         }
         
     } else if (stmt->type == STMT_DEBUG_LABEL) {
@@ -4427,9 +4526,12 @@ void codegen_generate(Codegen* gen, AST* ast) {
     
     codegen_emit(gen, "");
     
-    // First pass: Register struct types, generate function definitions, operator definitions, and module definitions
+    // First pass: Register struct types, state variables, generate function definitions, operator definitions, and module definitions
     for (int i = 0; i < ast->count; i++) {
         if (ast->statements[i]->type == STMT_STRUCT_DEF) {
+            codegen_generate_statement(gen, ast->statements[i]);
+        } else if (ast->statements[i]->type == STMT_STATE_DECL) {
+            // Phase 18: Register state variables before functions so they can be used
             codegen_generate_statement(gen, ast->statements[i]);
         } else if (ast->statements[i]->type == STMT_FUNC_DEF) {
             codegen_generate_statement(gen, ast->statements[i]);
@@ -4463,6 +4565,20 @@ void codegen_generate(Codegen* gen, AST* ast) {
     codegen_emit(gen, "    mov rbp, rsp");
     codegen_emit(gen, "");
     
+    // Phase 18: Initialize state variables (AFTER stack frame setup)
+    if (gen->global_var_count > 0) {
+        codegen_emit(gen, "    ; Initialize state variables");
+        char buffer[256];
+        for (int i = 0; i < gen->global_var_count; i++) {
+            if (gen->global_vars[i].init_expr) {
+                codegen_generate_expression_value(gen, gen->global_vars[i].init_expr);
+                snprintf(buffer, sizeof(buffer), "    mov [state_%s], rax", gen->global_vars[i].name);
+                codegen_emit(gen, buffer);
+            }
+        }
+        codegen_emit(gen, "");
+    }
+    
     // Check if main function exists and call it
     int has_main = 0;
     for (int i = 0; i < ast->count; i++) {
@@ -4478,12 +4594,13 @@ void codegen_generate(Codegen* gen, AST* ast) {
         codegen_emit(gen, "    call func_main");
     }
     
-    // Second pass: Generate non-function, non-struct, non-module, non-operator statements
+    // Second pass: Generate non-function, non-struct, non-module, non-operator, non-state statements
     for (int i = 0; i < ast->count; i++) {
         if (ast->statements[i]->type != STMT_FUNC_DEF && 
             ast->statements[i]->type != STMT_STRUCT_DEF &&
             ast->statements[i]->type != STMT_MODULE_DEF &&
-            ast->statements[i]->type != STMT_OPERATOR_DEF) {
+            ast->statements[i]->type != STMT_OPERATOR_DEF &&
+            ast->statements[i]->type != STMT_STATE_DECL) {
             codegen_generate_statement(gen, ast->statements[i]);
         }
     }
@@ -4549,8 +4666,56 @@ void codegen_generate(Codegen* gen, AST* ast) {
         codegen_emit(gen, "section .data");
         StringLiteral* str = gen->strings;
         while (str) {
-            char buffer[512];
-            snprintf(buffer, sizeof(buffer), "str_%d: db \"%s\", 0", str->id, str->value);
+            char buffer[2048];
+            char escaped[1024];
+            int j = 0;
+            // Escape special characters for NASM
+            for (int i = 0; str->value[i] && j < 1020; i++) {
+                char c = str->value[i];
+                if (c == '\n') {
+                    escaped[j++] = '"';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '1';
+                    escaped[j++] = '0';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '"';
+                } else if (c == '\t') {
+                    escaped[j++] = '"';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '9';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '"';
+                } else if (c == '\r') {
+                    escaped[j++] = '"';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '1';
+                    escaped[j++] = '3';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '"';
+                } else if (c == '"') {
+                    escaped[j++] = '"';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '3';
+                    escaped[j++] = '4';
+                    escaped[j++] = ',';
+                    escaped[j++] = ' ';
+                    escaped[j++] = '"';
+                } else if (c == '\\') {
+                    escaped[j++] = '\\';
+                    escaped[j++] = '\\';
+                } else {
+                    escaped[j++] = c;
+                }
+            }
+            escaped[j] = '\0';
+            snprintf(buffer, sizeof(buffer), "str_%d: db \"%s\", 0", str->id, escaped);
             codegen_emit(gen, buffer);
             str = str->next;
         }

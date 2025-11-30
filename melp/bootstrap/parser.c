@@ -86,7 +86,10 @@ typedef enum {
     EXPR_ARRAY_LITERAL, // Array literal: [10, 20, 30]
     // Phase 15: Null safety
     EXPR_OPTIONAL_CHAIN, // ?. (optional chaining: obj?.field)
-    EXPR_NULL_COALESCE   // ?? (null coalescing: value ?? default)
+    EXPR_NULL_COALESCE,  // ?? (null coalescing: value ?? default)
+    // Phase 22: List and Tuple
+    EXPR_LIST_LITERAL,   // List literal: (10, "hello", true)
+    EXPR_TUPLE_LITERAL   // Tuple literal: <10, "hello", true>
 } ExprType;
 
 typedef enum {
@@ -162,6 +165,15 @@ typedef struct Expression {
             struct Expression** elements;  // Array literal elements
             int count;                      // Number of elements
         } array_literal;
+        // Phase 22: List and Tuple literals
+        struct {
+            struct Expression** elements;  // List literal elements (heterojen, mutable)
+            int count;                      // Number of elements
+        } list_literal;
+        struct {
+            struct Expression** elements;  // Tuple literal elements (heterojen, immutable)
+            int count;                      // Number of elements
+        } tuple_literal;
         // Phase 15: Null safety
         struct {
             struct Expression* object;      // Object expression (e.g., person in person?.name)
@@ -1193,16 +1205,112 @@ Expression* parser_parse_primary_expression(Parser* parser) {
             return expr;
         }
     } else if (parser->current_token->type == TOKEN_LPAREN) {
-        // Parenthesized expression: (expr)
+        // Could be:
+        // 1. Parenthesized expression: (expr)
+        // 2. List literal: (expr, expr, ...) - heterojen, mutable
+        // 3. Empty list: ()
         parser_advance(parser); // skip '('
-        Expression* expr = parser_parse_expression(parser);
         
-        if (parser->current_token->type != TOKEN_RPAREN) {
-            fprintf(stderr, "Parser error: Expected ')' after expression at line %d\n",
+        // Check for empty list ()
+        if (parser->current_token->type == TOKEN_RPAREN) {
+            parser_advance(parser); // skip ')'
+            Expression* expr = malloc(sizeof(Expression));
+            expr->type = EXPR_LIST_LITERAL;
+            expr->list_literal.elements = NULL;
+            expr->list_literal.count = 0;
+            return expr;
+        }
+        
+        Expression* first = parser_parse_expression(parser);
+        
+        // Check if this is a list literal (has comma)
+        if (parser->current_token->type == TOKEN_COMMA) {
+            // List literal: (expr, expr, ...)
+            Expression* expr = malloc(sizeof(Expression));
+            expr->type = EXPR_LIST_LITERAL;
+            expr->list_literal.elements = malloc(sizeof(Expression*) * 10);
+            expr->list_literal.count = 0;
+            int capacity = 10;
+            
+            // Add first element
+            expr->list_literal.elements[expr->list_literal.count++] = first;
+            
+            // Parse remaining elements
+            while (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+                
+                if (expr->list_literal.count >= capacity) {
+                    capacity *= 2;
+                    expr->list_literal.elements = realloc(expr->list_literal.elements,
+                                                          sizeof(Expression*) * capacity);
+                }
+                expr->list_literal.elements[expr->list_literal.count++] = 
+                    parser_parse_expression(parser);
+            }
+            
+            if (parser->current_token->type != TOKEN_RPAREN) {
+                fprintf(stderr, "Parser error: Expected ')' after list literal at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip ')'
+            return expr;
+        } else {
+            // Parenthesized expression: (expr)
+            if (parser->current_token->type != TOKEN_RPAREN) {
+                fprintf(stderr, "Parser error: Expected ')' after expression at line %d\n",
+                        parser->current_token->line);
+                exit(1);
+            }
+            parser_advance(parser); // skip ')'
+            return first;
+        }
+    } else if (parser->current_token->type == TOKEN_LESS) {
+        // Could be:
+        // 1. Tuple literal: <expr, expr, ...> - heterojen, immutable
+        // 2. Empty tuple: <>
+        // Note: This is only reached when < is at start of expression (not comparison)
+        parser_advance(parser); // skip '<'
+        
+        // Check for empty tuple <>
+        if (parser->current_token->type == TOKEN_GREATER) {
+            parser_advance(parser); // skip '>'
+            Expression* expr = malloc(sizeof(Expression));
+            expr->type = EXPR_TUPLE_LITERAL;
+            expr->tuple_literal.elements = NULL;
+            expr->tuple_literal.count = 0;
+            return expr;
+        }
+        
+        // Parse tuple elements
+        Expression* expr = malloc(sizeof(Expression));
+        expr->type = EXPR_TUPLE_LITERAL;
+        expr->tuple_literal.elements = malloc(sizeof(Expression*) * 10);
+        expr->tuple_literal.count = 0;
+        int capacity = 10;
+        
+        while (1) {
+            if (expr->tuple_literal.count >= capacity) {
+                capacity *= 2;
+                expr->tuple_literal.elements = realloc(expr->tuple_literal.elements,
+                                                        sizeof(Expression*) * capacity);
+            }
+            expr->tuple_literal.elements[expr->tuple_literal.count++] = 
+                parser_parse_expression(parser);
+            
+            if (parser->current_token->type == TOKEN_COMMA) {
+                parser_advance(parser); // skip ','
+            } else {
+                break;
+            }
+        }
+        
+        if (parser->current_token->type != TOKEN_GREATER) {
+            fprintf(stderr, "Parser error: Expected '>' after tuple literal at line %d\n",
                     parser->current_token->line);
             exit(1);
         }
-        parser_advance(parser); // skip ')'
+        parser_advance(parser); // skip '>'
         return expr;
     } else {
         fprintf(stderr, "Parser error: Expected expression at line %d\n",

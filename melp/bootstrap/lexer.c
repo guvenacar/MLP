@@ -114,6 +114,9 @@ typedef enum {
     // Phase 8: Arrays
     TOKEN_LBRACKET,      // [
     TOKEN_RBRACKET,      // ]
+    // Phase 22: List and Tuple
+    TOKEN_LANGLE,        // < (tuple start, also used for comparison)
+    TOKEN_RANGLE,        // > (tuple end, also used for comparison)
     // Phase 10: Pointers
     TOKEN_AMPERSAND,     // & (address-of)
     // Phase 11: Union types
