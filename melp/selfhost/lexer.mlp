@@ -1,0 +1,525 @@
+-- ============================================
+-- MLP Self-Hosting Compiler - Lexer
+-- ============================================
+-- Phase 1: Basic Tokenizer
+-- Converts source code into token stream
+-- Uses global state instead of returning structs
+-- ============================================
+
+-- Token Types (numeric constants)
+state numeric TOKEN_EOF = 0
+state numeric TOKEN_NUMERIC = 1
+state numeric TOKEN_DECIMAL = 2
+state numeric TOKEN_BOOLEAN = 3
+state numeric TOKEN_TEXT = 4
+state numeric TOKEN_IDENTIFIER = 5
+state numeric TOKEN_NUMBER = 6
+state numeric TOKEN_STRING = 7
+state numeric TOKEN_ASSIGN = 8
+state numeric TOKEN_LPAREN = 9
+state numeric TOKEN_RPAREN = 10
+state numeric TOKEN_PLUS = 11
+state numeric TOKEN_MINUS = 12
+state numeric TOKEN_MULTIPLY = 13
+state numeric TOKEN_DIVIDE = 14
+state numeric TOKEN_PRINT = 15
+state numeric TOKEN_IF = 16
+state numeric TOKEN_THEN = 17
+state numeric TOKEN_ELSE = 18
+state numeric TOKEN_END = 19
+state numeric TOKEN_EQUAL = 20
+state numeric TOKEN_NOT_EQUAL = 21
+state numeric TOKEN_LESS = 22
+state numeric TOKEN_LESS_EQUAL = 23
+state numeric TOKEN_GREATER = 24
+state numeric TOKEN_GREATER_EQUAL = 25
+state numeric TOKEN_FOR = 26
+state numeric TOKEN_TO = 27
+state numeric TOKEN_STEP = 28
+state numeric TOKEN_WHILE = 29
+state numeric TOKEN_DO = 30
+state numeric TOKEN_AND = 31
+state numeric TOKEN_OR = 32
+state numeric TOKEN_NOT = 33
+state numeric TOKEN_FUNC = 34
+state numeric TOKEN_RETURN = 35
+state numeric TOKEN_COMMA = 36
+state numeric TOKEN_DOT = 37
+state numeric TOKEN_LBRACKET = 38
+state numeric TOKEN_RBRACKET = 39
+state numeric TOKEN_COLON = 40
+state numeric TOKEN_EXIT = 41
+state numeric TOKEN_CONTINUE = 42
+state numeric TOKEN_STRUCT = 43
+state numeric TOKEN_IMPORT = 44
+state numeric TOKEN_MODULE = 45
+state numeric TOKEN_EXPORT = 46
+state numeric TOKEN_RETURNS = 47
+
+-- Global Lexer state
+state text g_source = ""
+state numeric g_pos = 0
+state numeric g_line = 1
+state numeric g_length = 0
+
+-- Current token info
+state numeric g_tok_type = 0
+state text g_tok_value = ""
+state numeric g_tok_line = 0
+
+-- Initialize lexer
+func lexer_init(text src)
+    g_source = src
+    g_pos = 0
+    g_line = 1
+    g_length = str_length(src)
+end func
+
+-- Check if character is whitespace
+func is_whitespace(text c) returns boolean
+    if c == " " then return 1 end if
+    if c == "\t" then return 1 end if
+    if c == "\r" then return 1 end if
+    if c == "\n" then return 1 end if
+    return 0
+end func
+
+-- Check if character is digit
+func is_digit(text c) returns boolean
+    if c == "0" then return 1 end if
+    if c == "1" then return 1 end if
+    if c == "2" then return 1 end if
+    if c == "3" then return 1 end if
+    if c == "4" then return 1 end if
+    if c == "5" then return 1 end if
+    if c == "6" then return 1 end if
+    if c == "7" then return 1 end if
+    if c == "8" then return 1 end if
+    if c == "9" then return 1 end if
+    return 0
+end func
+
+-- Check if character is letter or underscore
+func is_alpha(text c) returns boolean
+    if c == "_" then return 1 end if
+    if c == "a" then return 1 end if
+    if c == "b" then return 1 end if
+    if c == "c" then return 1 end if
+    if c == "d" then return 1 end if
+    if c == "e" then return 1 end if
+    if c == "f" then return 1 end if
+    if c == "g" then return 1 end if
+    if c == "h" then return 1 end if
+    if c == "i" then return 1 end if
+    if c == "j" then return 1 end if
+    if c == "k" then return 1 end if
+    if c == "l" then return 1 end if
+    if c == "m" then return 1 end if
+    if c == "n" then return 1 end if
+    if c == "o" then return 1 end if
+    if c == "p" then return 1 end if
+    if c == "q" then return 1 end if
+    if c == "r" then return 1 end if
+    if c == "s" then return 1 end if
+    if c == "t" then return 1 end if
+    if c == "u" then return 1 end if
+    if c == "v" then return 1 end if
+    if c == "w" then return 1 end if
+    if c == "x" then return 1 end if
+    if c == "y" then return 1 end if
+    if c == "z" then return 1 end if
+    if c == "A" then return 1 end if
+    if c == "B" then return 1 end if
+    if c == "C" then return 1 end if
+    if c == "D" then return 1 end if
+    if c == "E" then return 1 end if
+    if c == "F" then return 1 end if
+    if c == "G" then return 1 end if
+    if c == "H" then return 1 end if
+    if c == "I" then return 1 end if
+    if c == "J" then return 1 end if
+    if c == "K" then return 1 end if
+    if c == "L" then return 1 end if
+    if c == "M" then return 1 end if
+    if c == "N" then return 1 end if
+    if c == "O" then return 1 end if
+    if c == "P" then return 1 end if
+    if c == "Q" then return 1 end if
+    if c == "R" then return 1 end if
+    if c == "S" then return 1 end if
+    if c == "T" then return 1 end if
+    if c == "U" then return 1 end if
+    if c == "V" then return 1 end if
+    if c == "W" then return 1 end if
+    if c == "X" then return 1 end if
+    if c == "Y" then return 1 end if
+    if c == "Z" then return 1 end if
+    return 0
+end func
+
+-- Check if character is alphanumeric
+func is_alnum(text c) returns boolean
+    if is_alpha(c) then return 1 end if
+    if is_digit(c) then return 1 end if
+    return 0
+end func
+
+-- Get current character
+func lexer_current() returns text
+    if g_pos >= g_length then
+        return ""
+    end if
+    return charAt(g_source, g_pos)
+end func
+
+-- Peek next character
+func lexer_peek() returns text
+    if g_pos + 1 >= g_length then
+        return ""
+    end if
+    return charAt(g_source, g_pos + 1)
+end func
+
+-- Advance position
+func lexer_advance()
+    text c = lexer_current()
+    g_pos = g_pos + 1
+    if c == "\n" then
+        g_line = g_line + 1
+    end if
+end func
+
+-- Skip whitespace
+func lexer_skip_whitespace()
+    while g_pos < g_length
+        text c = lexer_current()
+        if is_whitespace(c) then
+            lexer_advance()
+        else
+            exit
+        end if
+    end while
+end func
+
+-- Skip single-line comment (--)
+func lexer_skip_comment()
+    lexer_advance()
+    lexer_advance()
+    while g_pos < g_length
+        text c = lexer_current()
+        if c == "\n" then
+            exit
+        end if
+        lexer_advance()
+    end while
+end func
+
+-- Read a word (identifier or keyword)
+func lexer_read_word() returns text
+    text word = ""
+    while g_pos < g_length
+        text c = lexer_current()
+        if is_alnum(c) then
+            word = word + c
+            lexer_advance()
+        else
+            exit
+        end if
+    end while
+    return word
+end func
+
+-- Read a number
+func lexer_read_number() returns text
+    text num = ""
+    while g_pos < g_length
+        text c = lexer_current()
+        if is_digit(c) or c == "." then
+            num = num + c
+            lexer_advance()
+        else
+            exit
+        end if
+    end while
+    return num
+end func
+
+-- Read a string literal
+func lexer_read_string() returns text
+    text str = ""
+    lexer_advance()
+    while g_pos < g_length
+        text c = lexer_current()
+        if c == "\"" then
+            lexer_advance()
+            exit
+        end if
+        if c == "\\" then
+            lexer_advance()
+            text escaped = lexer_current()
+            if escaped == "n" then
+                str = str + "\n"
+            else if escaped == "t" then
+                str = str + "\t"
+            else if escaped == "\\" then
+                str = str + "\\"
+            else if escaped == "\"" then
+                str = str + "\""
+            else
+                str = str + escaped
+            end if
+            lexer_advance()
+        else
+            str = str + c
+            lexer_advance()
+        end if
+    end while
+    return str
+end func
+
+-- Get keyword token type or IDENTIFIER
+func get_keyword_type(text word) returns numeric
+    if word == "numeric" then return TOKEN_NUMERIC end if
+    if word == "decimal" then return TOKEN_DECIMAL end if
+    if word == "boolean" then return TOKEN_BOOLEAN end if
+    if word == "text" then return TOKEN_TEXT end if
+    if word == "print" then return TOKEN_PRINT end if
+    if word == "if" then return TOKEN_IF end if
+    if word == "then" then return TOKEN_THEN end if
+    if word == "else" then return TOKEN_ELSE end if
+    if word == "end" then return TOKEN_END end if
+    if word == "for" then return TOKEN_FOR end if
+    if word == "to" then return TOKEN_TO end if
+    if word == "step" then return TOKEN_STEP end if
+    if word == "while" then return TOKEN_WHILE end if
+    if word == "do" then return TOKEN_DO end if
+    if word == "and" then return TOKEN_AND end if
+    if word == "or" then return TOKEN_OR end if
+    if word == "not" then return TOKEN_NOT end if
+    if word == "func" then return TOKEN_FUNC end if
+    if word == "return" then return TOKEN_RETURN end if
+    if word == "returns" then return TOKEN_RETURNS end if
+    if word == "exit" then return TOKEN_EXIT end if
+    if word == "continue" then return TOKEN_CONTINUE end if
+    if word == "struct" then return TOKEN_STRUCT end if
+    if word == "import" then return TOKEN_IMPORT end if
+    if word == "module" then return TOKEN_MODULE end if
+    if word == "export" then return TOKEN_EXPORT end if
+    return TOKEN_IDENTIFIER
+end func
+
+-- Set current token
+func set_token(numeric ttype, text tvalue, numeric tline)
+    g_tok_type = ttype
+    g_tok_value = tvalue
+    g_tok_line = tline
+end func
+
+-- Get next token - sets g_tok_type, g_tok_value, g_tok_line
+func lexer_next_token()
+    -- Skip whitespace and comments
+    while g_pos < g_length
+        lexer_skip_whitespace()
+        text c = lexer_current()
+        text nxt = lexer_peek()
+        
+        if c == "-" and nxt == "-" then
+            lexer_skip_comment()
+        else
+            exit
+        end if
+    end while
+    
+    -- Check EOF
+    if g_pos >= g_length then
+        set_token(TOKEN_EOF, "", g_line)
+        return
+    end if
+    
+    text c = lexer_current()
+    numeric cur_line = g_line
+    
+    -- Number
+    if is_digit(c) then
+        text num = lexer_read_number()
+        set_token(TOKEN_NUMBER, num, cur_line)
+        return
+    end if
+    
+    -- String
+    if c == "\"" then
+        text str = lexer_read_string()
+        set_token(TOKEN_STRING, str, cur_line)
+        return
+    end if
+    
+    -- Word (identifier or keyword)
+    if is_alpha(c) then
+        text word = lexer_read_word()
+        numeric ttype = get_keyword_type(word)
+        set_token(ttype, word, cur_line)
+        return
+    end if
+    
+    -- Two-character operators
+    text nxt = lexer_peek()
+    
+    if c == "=" and nxt == "=" then
+        lexer_advance()
+        lexer_advance()
+        set_token(TOKEN_EQUAL, "==", cur_line)
+        return
+    end if
+    
+    if c == "!" and nxt == "=" then
+        lexer_advance()
+        lexer_advance()
+        set_token(TOKEN_NOT_EQUAL, "!=", cur_line)
+        return
+    end if
+    
+    if c == "<" and nxt == "=" then
+        lexer_advance()
+        lexer_advance()
+        set_token(TOKEN_LESS_EQUAL, "<=", cur_line)
+        return
+    end if
+    
+    if c == ">" and nxt == "=" then
+        lexer_advance()
+        lexer_advance()
+        set_token(TOKEN_GREATER_EQUAL, ">=", cur_line)
+        return
+    end if
+    
+    -- Single-character operators
+    lexer_advance()
+    
+    if c == "=" then
+        set_token(TOKEN_ASSIGN, "=", cur_line)
+        return
+    end if
+    if c == "+" then
+        set_token(TOKEN_PLUS, "+", cur_line)
+        return
+    end if
+    if c == "-" then
+        set_token(TOKEN_MINUS, "-", cur_line)
+        return
+    end if
+    if c == "*" then
+        set_token(TOKEN_MULTIPLY, "*", cur_line)
+        return
+    end if
+    if c == "/" then
+        set_token(TOKEN_DIVIDE, "/", cur_line)
+        return
+    end if
+    if c == "(" then
+        set_token(TOKEN_LPAREN, "(", cur_line)
+        return
+    end if
+    if c == ")" then
+        set_token(TOKEN_RPAREN, ")", cur_line)
+        return
+    end if
+    if c == "[" then
+        set_token(TOKEN_LBRACKET, "[", cur_line)
+        return
+    end if
+    if c == "]" then
+        set_token(TOKEN_RBRACKET, "]", cur_line)
+        return
+    end if
+    if c == "," then
+        set_token(TOKEN_COMMA, ",", cur_line)
+        return
+    end if
+    if c == "." then
+        set_token(TOKEN_DOT, ".", cur_line)
+        return
+    end if
+    if c == ":" then
+        set_token(TOKEN_COLON, ":", cur_line)
+        return
+    end if
+    if c == "<" then
+        set_token(TOKEN_LESS, "<", cur_line)
+        return
+    end if
+    if c == ">" then
+        set_token(TOKEN_GREATER, ">", cur_line)
+        return
+    end if
+    
+    -- Unknown character
+    set_token(TOKEN_EOF, "", cur_line)
+end func
+
+-- Get token type name (for debugging)
+func token_type_name(numeric ttype) returns text
+    if ttype == TOKEN_EOF then return "EOF" end if
+    if ttype == TOKEN_NUMERIC then return "NUMERIC" end if
+    if ttype == TOKEN_DECIMAL then return "DECIMAL" end if
+    if ttype == TOKEN_BOOLEAN then return "BOOLEAN" end if
+    if ttype == TOKEN_TEXT then return "TEXT" end if
+    if ttype == TOKEN_IDENTIFIER then return "IDENTIFIER" end if
+    if ttype == TOKEN_NUMBER then return "NUMBER" end if
+    if ttype == TOKEN_STRING then return "STRING" end if
+    if ttype == TOKEN_ASSIGN then return "ASSIGN" end if
+    if ttype == TOKEN_PLUS then return "PLUS" end if
+    if ttype == TOKEN_MINUS then return "MINUS" end if
+    if ttype == TOKEN_MULTIPLY then return "MULTIPLY" end if
+    if ttype == TOKEN_DIVIDE then return "DIVIDE" end if
+    if ttype == TOKEN_PRINT then return "PRINT" end if
+    if ttype == TOKEN_IF then return "IF" end if
+    if ttype == TOKEN_THEN then return "THEN" end if
+    if ttype == TOKEN_ELSE then return "ELSE" end if
+    if ttype == TOKEN_END then return "END" end if
+    if ttype == TOKEN_EQUAL then return "EQUAL" end if
+    if ttype == TOKEN_LESS then return "LESS" end if
+    if ttype == TOKEN_GREATER then return "GREATER" end if
+    if ttype == TOKEN_FOR then return "FOR" end if
+    if ttype == TOKEN_TO then return "TO" end if
+    if ttype == TOKEN_WHILE then return "WHILE" end if
+    if ttype == TOKEN_FUNC then return "FUNC" end if
+    if ttype == TOKEN_RETURN then return "RETURN" end if
+    if ttype == TOKEN_STRUCT then return "STRUCT" end if
+    if ttype == TOKEN_LPAREN then return "LPAREN" end if
+    if ttype == TOKEN_RPAREN then return "RPAREN" end if
+    if ttype == TOKEN_COMMA then return "COMMA" end if
+    return "UNKNOWN"
+end func
+
+-- ============================================
+-- Test: Tokenize a simple program
+-- ============================================
+print("=== MLP Self-Hosting Lexer Test ===")
+
+text test_code = "numeric x = 42
+if x > 10 then
+    print(x)
+end if"
+
+print("Input code:")
+print(test_code)
+print("")
+print("Tokens:")
+
+lexer_init(test_code)
+
+while 1 == 1
+    lexer_next_token()
+    numeric tt = g_tok_type
+    text tv = g_tok_value
+    text type_name = token_type_name(tt)
+    text output = "  Type: " + type_name + ", Value: '" + tv + "'"
+    print(output)
+    
+    if tt == TOKEN_EOF then
+        exit
+    end if
+end while
+
+print("")
+print("=== Lexer Test Complete ===")
