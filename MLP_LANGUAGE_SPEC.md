@@ -850,18 +850,56 @@ text s3 = format_number(12345.67, "_")      -- "12_345.67"
 numeric n1 = parse_number("12.345,67", "tr") -- 12345.67
 ```
 
-### 13.2 Dinamik Listeler/Tuple'lar (Yüksek Öncelik)
+### 13.2 Veri Yapıları: Array, List, Tuple (Yüksek Öncelik)
 
-#### 13.2.1 Heterojen Liste (Mixed Array)
+MLP'de üç temel koleksiyon tipi vardır. Her birinin kendine özgü syntax'ı ve kullanım amacı vardır:
+
+| Syntax | Tip | Homojen? | Mutable? | Bellek | Kullanım Amacı |
+|--------|-----|----------|----------|--------|----------------|
+| `[]` | **Array** | ✅ Evet | ✅ Evet | Stack/Heap | Aynı tipte veri dizisi |
+| `()` | **List** | ❌ Hayır | ✅ Evet | Heap | Heterojen dinamik koleksiyon |
+| `<>` | **Tuple** | ❌ Hayır | ❌ Hayır | Stack ⚡ | Immutable kayıt, hızlı |
+
+#### 13.2.1 Array `[]` - Homojen, Mutable
 
 ```mlp
--- [] ile liste tanımlama - değişken tipte elemanlar
-list kişi = ["Ali", 30, true]
+-- Array tanımlama: Tüm elemanlar aynı tipte
+numeric[] sayılar = [1, 2, 3, 4, 5]
+text[] isimler = ["Ali", "Veli", "Ayşe"]
 
--- Erişim (runtime tip kontrolü)
-text isim = kişi[0]                  -- "Ali" 
-numeric yaş = kişi[1]                -- 30
-boolean aktif = kişi[2]              -- true
+-- Eleman erişimi ve değiştirme
+sayılar[0] = 100                    -- ✅ OK, mutable
+print(sayılar[0])                   -- 100
+
+-- Dinamik işlemler
+array_push(sayılar, 6)              -- ✅ OK, eleman ekle
+numeric son = array_pop(sayılar)    -- ✅ OK, eleman çıkar
+
+-- Boş array
+numeric[] boş = []
+```
+
+#### 13.2.2 List `()` - Heterojen, Mutable
+
+```mlp
+-- List tanımlama: Farklı tipler bir arada
+kişi() = ("Ali", 25, true, 3.14)
+
+-- Eleman erişimi (runtime tip kontrolü)
+text isim = kişi[0]                 -- "Ali"
+numeric yaş = kişi[1]               -- 25
+boolean aktif = kişi[2]             -- true
+
+-- Eleman değiştirme
+kişi[0] = "Veli"                    -- ✅ OK, mutable
+kişi[1] = 30                        -- ✅ OK
+
+-- Dinamik işlemler
+kişi.add("yeni eleman")             -- ✅ OK, eleman ekle
+kişi.remove(0)                      -- ✅ OK, eleman sil
+
+-- Boş list
+boş() = ()
 
 -- Tip güvenli erişim
 if type_of(kişi[0]) == "text" then
@@ -869,32 +907,48 @@ if type_of(kişi[0]) == "text" then
 end if
 ```
 
-#### 13.2.2 Tuple (Sabit Boyutlu)
+#### 13.2.3 Tuple `<>` - Heterojen, Immutable, Stack-allocated
 
 ```mlp
--- () ile tuple tanımlama - değiştirilemez
-tuple koordinat = (10, 20, "point")
+-- Tuple tanımlama: Farklı tipler, değiştirilemez
+koordinat<> = <10, 20, "point">
+renk<> = <255, 128, 0>
 
--- Tuple destructuring
-(numeric x, numeric y, text label) = koordinat
+-- Eleman erişimi (sadece okuma)
+print(koordinat[0])                 -- 10
+print(koordinat[2])                 -- "point"
 
--- Fonksiyondan tuple döndürme
-func minmax(numeric[] arr) returns (numeric, numeric)
-    return (min(arr), max(arr))
+-- ❌ Tuple immutable - değiştirilemez!
+koordinat[0] = 99                   -- ❌ HATA! Compile error
+koordinat.add(5)                    -- ❌ HATA! Boyut sabit
+
+-- Fonksiyondan tuple döndürme (stack'te, hızlı!)
+func minmax(numeric[] arr) returns <numeric, numeric>
+    return <min(arr), max(arr)>
 end func
 
-(numeric en_küçük, numeric en_büyük) = minmax([3, 1, 4, 1, 5])
+sonuç<> = minmax([3, 1, 4, 1, 5])
+print(sonuç[0])                     -- 1 (min)
+print(sonuç[1])                     -- 5 (max)
+
+-- Tuple destructuring
+<min_val, max_val> = minmax([3, 1, 4, 1, 5])
+print(min_val)                      -- 1
+print(max_val)                      -- 5
+
+-- Swap işlemi (tuple ile)
+<a, b> = <b, a>
 ```
 
-#### 13.2.3 List vs Array Karşılaştırma
+#### 13.2.4 Karşılaştırma ve Kullanım Senaryoları
 
-| Özellik | Array `[]` | List `list()` | Tuple `()` |
-|---------|------------|---------------|------------|
-| Homojen | ✅ Evet | ❌ Hayır | ❌ Hayır |
-| Boyut değişir | ✅ Evet | ✅ Evet | ❌ Hayır |
-| Tip güvenli | ✅ Compile-time | ⚠️ Runtime | ⚠️ Runtime |
-| Performans | Yüksek | Orta | Yüksek |
-| Kullanım | `numeric[] a` | `list a` | `(a, b, c)` |
+| Senaryo | Önerilen Tip | Neden? |
+|---------|--------------|--------|
+| Sayı dizisi işleme | `numeric[]` Array | Homojen, hızlı indeksleme |
+| Veritabanı kaydı | `kişi()` List | Farklı tipler, değiştirilebilir |
+| Fonksiyon çoklu return | `<a, b>` Tuple | Stack'te, allocation yok |
+| Koordinat, RGB | `<x, y, z>` Tuple | Sabit yapı, immutable |
+| Dinamik koleksiyon | `items()` List | Eleman ekle/çıkar |
 
 ### 13.3 Çoklu Değişken Tanımlama (Orta Öncelik)
 
@@ -906,10 +960,10 @@ numeric a, b, c = 1, 2, 3
 numeric x = 0, y = 0, z = 0
 
 -- Swap (tuple ile)
-(a, b) = (b, a)
+<a, b> = <b, a>
 
--- Fonksiyondan çoklu dönüş
-(text ad, numeric yaş) = get_user_info()
+-- Fonksiyondan çoklu dönüş (tuple destructuring)
+<text ad, numeric yaş> = get_user_info()
 ```
 
 ### 13.4 Default ve Named Parametreler (Orta Öncelik)

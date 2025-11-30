@@ -646,17 +646,42 @@ print(sum)  -- 10 yazdırır (1+2+3+4)
 
 ### BigDecimal-Based Type System
 - **numeric:** Tüm sayılar (int/float ayrımı YOK), BigDecimal tabanlı
-- **string:** UTF-8 string
+- **text/string:** UTF-8 string
 - **boolean:** true/false
-- **list:** Typeless liste `list()`, generic DEĞİL `list[T]` değil
 
-### Örnek
+### Koleksiyon Tipleri (Array, List, Tuple)
+
+| Syntax | Tip | Homojen? | Mutable? | Bellek |
+|--------|-----|----------|----------|--------|
+| `[]` | **Array** | ✅ Evet | ✅ Evet | Stack/Heap |
+| `()` | **List** | ❌ Hayır | ✅ Evet | Heap |
+| `<>` | **Tuple** | ❌ Hayır | ❌ Hayır | Stack ⚡ |
+
+### Örnekler
 ```mlp
+-- Temel tipler
 numeric x = 10        -- integer gibi
 numeric y = 3.14      -- float gibi
 numeric z = x + y     -- Hepsi numeric, sorunsuz topla
 
-string list() names = list()    -- String listesi
+-- Array: [] - Homojen, mutable
+numeric[] sayılar = [1, 2, 3, 4, 5]
+sayılar[0] = 100                    -- ✅ OK
+
+-- List: () - Heterojen, mutable
+kişi() = ("Ali", 25, true)
+kişi[0] = "Veli"                    -- ✅ OK
+kişi.add(3.14)                      -- ✅ OK
+
+-- Tuple: <> - Heterojen, immutable, stack'te
+koordinat<> = <10, 20, "point">
+koordinat[0] = 99                   -- ❌ HATA! Immutable
+
+-- Fonksiyondan tuple döndürme
+func minmax(numeric[] arr) returns <numeric, numeric>
+    return <min(arr), max(arr)>
+end func
+<min_val, max_val> = minmax([3, 1, 4])
 ```
 
 ---

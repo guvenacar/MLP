@@ -658,94 +658,49 @@ Enums - Yok
 Multiple return values - Yok
 
 
-❌ YAPILMADI:
-
-Else If - Sadece else var, else if yok
-Debug features - debug goto, debug pause, debug if hiç yok
-Lambda functions - Yok
-Try/Catch - Error handling yok
-Modules/Import - Yok
-Async/Await - Concurrency yok
-ÖNERİ SIRA:
-
-🔴 Else If - En basit, hemen eklenebilir
-🟡 Lambda functions - Orta zorluk
-🟡 Try/Catch - Orta zorluk
-🔴 Debug features - Custom feature, isteğe bağlı
-🟢 Modules/Import - Zor, dosya sistemi gerekli
-🟢 Async/Await - En zor, threading gerekli
-
---
-
-Kolay: Debug features (debug print, debug if, debug pause)
-Orta: Modules/Import system
-Zor: Lambda closures codegen, Async/await
-
---
-
-Lambda parsing (zaten vardı): func(x) = x * 2
-Lambda codegen: Inline fonksiyon oluşturma + JMP skip
-Test çalıştı: test_lambda_simple.mlp başarılı
-Lambda'lar şu anda basit (closure yok), ama async/await'e geçmeden önce closure eklemek çok karmaşık olur. Async/await'e geçelim mi, yoksa closure'ları da yapalım mı?
------
-
-Modern Dillerde Olan Ama MELP'te Eksik:
-
-Pattern Matching - Rust/Swift/Kotlin tarzı:
-Generic Types / Templates:
-Interfaces / Traits (Polimorfizm):
-Exception Handling:
-Garbage Collection / RAII - Memory management otomasyonu
-
-Module System / Import:
-
-Operator Overloading:
-Destructuring / Tuple Unpacking:
-🎯 En Kullanışlı Eksikler (Öncelik Sırası):
-
-Exception Handling - Hata yönetimi şart
-Module System - Büyük projeler için gerekli
-Generic Types - Type-safe veri yapıları
-Pattern Matching - Modern syntax, daha okunabilir kod
-Operator Overloading - Özel tip desteği
-MELP zaten çok güçlü bir dil! Lambda, closure, async/await, pointer gibi advanced özellikler var. Kritik eksik aslında module system ve exception handling - bunlar olmadan büyük projeler zor. Generics de type-safety için önemli ama şimdilik manuel type checking ile idare edilebilir.
-
-Ne dersin, hangisini eklemek istersin? 🚀
-
-
 ---
 
-1. İLK OKUMA (Hızlı Başlangıç)
-Dosya: AI_HANDOFF_NOTES.md
+## 📋 Self-Hosting Öncesi Yapılacaklar (Güncel Liste)
 
-Neden: Son çalışmanın özeti, hemen başlamak için gerekli bilgiler
-İçerik: Exception handling özeti, sıradaki görev (module system), başlangıç adımları
-Süre: ~5-10 dakika
-2. GÖREV LİSTESİ
-Dosya: TODO.md
+### ✅ Tamamlanan Tasarım Kararları (30 Kasım 2025)
 
-Neden: Neyin yapılacağı, öncelikler, roadmap
-İçerik: Tamamlananlar, sıradaki 5 özellik, her biri için detaylı plan
-Süre: ~10 dakika
-3. GENEL KURALLAR
-Dosya: kurallar_kitabı.md
+#### 1. Veri Yapıları Syntax'ı
+| Syntax | Tip | Homojen? | Mutable? | Bellek |
+|--------|-----|----------|----------|--------|
+| `[]` | **Array** | ✅ Evet | ✅ Evet | Stack/Heap |
+| `()` | **List** | ❌ Hayır | ✅ Evet | Heap |
+| `<>` | **Tuple** | ❌ Hayır | ❌ Hayır | Stack ⚡ |
 
-Neden: Proje kuralları, sözdizimi, mimari bilgiler
-İçerik: Tüm MELP syntax, veri tipleri, bootstrap süreci, kritik kurallar
-Süre: ~20-30 dakika (referans olarak kullanılır)
-4. TEKNİK DETAYLAR (İhtiyaç durumunda)
-Dosya: EXCEPTION_HANDLING_COMPLETE.md
+```mlp
+-- Array: Homojen, mutable
+numeric[] sayılar = [1, 2, 3]
 
-Neden: Exception handling nasıl implement edildi, pattern öğrenmek için
-İçerik: Lexer/parser/runtime/codegen değişiklikleri, bug fixes
-Süre: ~15 dakika
-5. MELP REFERANS
-Dosya: README.md
+-- List: Heterojen, mutable
+kişi() = ("Ali", 25, true)
 
-----
+-- Tuple: Heterojen, immutable, stack'te (hızlı!)
+koordinat<> = <10, 20, "point">
+<min, max> = minmax([3, 1, 4])    -- Destructuring
+```
 
-sırayla gidelim. bu arada mlp de iki tür değişken var bigdecimal ve bigstring. self hosting yapmadan önce bellek yönetimini yapabilir miyiz.
-şöyle bir mantık geliştirdim, bu ne kadar doğru? diğer dillerde bigdecimal aslında string olarak kabul ediliyor, bizde  de sadece bigstring ve bigdecimal var. bu açıdan bakarsak aslında tek bir türümüz var o da string. yine bu açıdan bakarsak diğer diller string'i bellek yötetimi konusunda daha akıllıca kullanıyorlar. örneğin "Ali" ile 10 bin sayfalık bir kitabı aynı bellek alanında tutumuyorlar. Ali'yi doğrudancpu registerinde veya stack'te kitabın kendisini heap te adresini registerde tutuyorlar. bizde de sadece bigdecimal olduğu için böyle bir yaklaşım geliştirebilir miyiz. çünkü aslında bizim dilimiz aşağıdaki zincirden oluşuyor
-kullanıcı kodu (1)> diller.json (Türkçe, Rusça vs) + syntax.json (mlp sözdizimi, C sözdizimi vs.) (2) > normalize (3) > english + mlp pragmatik base syntax (4) > lexer > parser > generatör  
-(mlp de iki söz dizimi vardır: biri kullanıcılara açık olan standart söz dizimi, diğeri kullanıcılara kapalı olan mlp pragmatik base sözdizimi)
-yani bir kullanıcı aslında adım 4'ü hiç görmüyor. adım 4 arkaplanda çalışıyor.  buna göre biz kullanıcıya hiç hissettirmeden arka planda diğer dillerde olan short, long, double vs gibi desenleri kullanıp performansı artırabilir miyiz? 
+#### 2. Numeric Format Desteği (Lexer'da Normalization)
+```mlp
+-- Türkçe format (varsayılan): nokta=binlik, virgül=ondalık
+numeric maaş = 123.456.789,99       -- → 123456789.99
+
+-- Python style underscore
+numeric büyük = 123_456_789         -- → 123456789
+
+-- Her ikisi de dahili olarak aynı değere normalize edilir
+```
+
+### ⏳ Implementasyon Bekleyen
+
+1. **Lexer:** Türkçe/Python sayı formatı normalization
+2. **Parser:** List `()` ve Tuple `<>` syntax desteği  
+3. **Codegen:** Tuple stack allocation
+4. **TTO:** int64/double/BigDecimal otomatik seçim
+5. **SSO:** Small String Optimization (≤23 byte inline)
+
+---
+ 
