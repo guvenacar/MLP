@@ -4,180 +4,429 @@
 #include <stdio.h>
 #include <ctype.h>
 
-// Create context
-SmartPtrContext* sp_context_create(void) {
-    SmartPtrContext* ctx = (SmartPtrContext*)malloc(sizeof(SmartPtrContext));
-    ctx->declarations = (SmartPtrDecl**)malloc(sizeof(SmartPtrDecl*) * 10);
-    ctx->decl_count = 0;
-    ctx->decl_capacity = 10;
-    
-    ctx->operations = (SmartPtrOpNode**)malloc(sizeof(SmartPtrOpNode*) * 20);
-    ctx->op_count = 0;
-    ctx->op_capacity = 20;
-    
-    ctx->error_message = NULL;
-    return ctx;
+// ============================================================================
+// MLP SMART POINTER PARSER - MODULE #51
+// ============================================================================
+// Parses MLP syntax:
+//   dim ptr as Rc<Node>
+//   dim arc_data as Arc<Data>
+//   dim boxed as Box<i32>
+//   dim weak_ref as Weak<Node>
+//
+// Operations:
+//   call rc_clone(ptr)
+//   call rc_drop(ptr)
+//   call rc_downgrade(ptr)
+//   call weak_upgrade(weak_ref)
+
+// ============================================================================
+// PARSER STATE
+// ============================================================================
+
+typedef struct {
+    const char* input;
+    size_t pos;
+    size_t length;
+    char current_char;
+    int line;
+    int column;
+} Parser;
+
+// ============================================================================
+// PARSER UTILITIES
+// ============================================================================
+
+static void parser_init(Parser* p, const char* input) {
+    p->input = input;
+    p->pos = 0;
+    p->length = strlen(input);
+    p->current_char = input[0];
+    p->line = 1;
+    p->column = 1;
 }
 
-// Free context
-void sp_context_free(SmartPtrContext* ctx) {
-    if (!ctx) return;
-    
-    for (int i = 0; i < ctx->decl_count; i++) {
-        if (ctx->declarations[i]) {
-            free(ctx->declarations[i]->var_name);
-            free(ctx->declarations[i]->inner_type);
-            free(ctx->declarations[i]->init_value);
-            free(ctx->declarations[i]);
-        }
+static void parser_advance(Parser* p) {
+    if (p->pos >= p->length) {
+        p->current_char = '\0';
+        return;
     }
-    free(ctx->declarations);
     
-    for (int i = 0; i < ctx->op_count; i++) {
-        if (ctx->operations[i]) {
-            free(ctx->operations[i]->ptr_name);
-            for (int j = 0; j < ctx->operations[i]->arg_count; j++) {
-                free(ctx->operations[i]->args[j]);
-            }
-            free(ctx->operations[i]);
-        }
+    if (p->current_char == '\n') {
+        p->line++;
+        p->column = 1;
+    } else {
+        p->column++;
     }
-    free(ctx->operations);
     
-    if (ctx->error_message) free(ctx->error_message);
-    free(ctx);
+    p->pos++;
+    p->current_char = p->input[p->pos];
 }
 
-// Get smart pointer type from string
-SmartPtrType sp_get_type(const char* type_str) {
-    if (strncmp(type_str, "Box<", 4) == 0) return SP_BOX;
+static void parser_skip_whitespace(Parser* p) {
+    while (p->current_char == ' ' || p->current_char == '\t' || 
+           p->current_char == '\r') {
+        parser_advance(p);
+    }
+}
+
+static void parser_skip_line(Parser* p) {
+    while (p->current_char != '\n' && p->current_char != '\0') {
+        parser_advance(p);
+    }
+    if (p->current_char == '\n') {
+        parser_advance(p);
+    }
+}
+
+static bool parser_match(Parser* p, const char* str) {
+    size_t len = strlen(str);
+    if (p->pos + len > p->length) return false;
+    return strncmp(&p->input[p->pos], str, len) == 0;
+}
+
+static bool parser_match_keyword(Parser* p, const char* keyword) {
+    size_t len = strlen(keyword);
+    if (p->pos + len > p->length) return false;
+    
+    // Check keyword matches
+    if (strncmp(&p->input[p->pos], keyword, len) != 0) return false;
+    
+    // Check next char is not alphanumeric (word boundary)
+    if (p->pos + len < p->length) {
+        char next = p->input[p->pos + len];
+        if (isalnum(next) || next == '_') return false;
+    }
+    
+    return true;
+}
+
+static char* parser_read_identifier(Parser* p) {
+    parser_skip_whitespace(p);
+    
+    size_t start = p->pos;
+    while (isalnum(p->current_char) || p->current_char == '_') {
+        parser_advance(p);
+    }
+    
+    size_t len = p->pos - start;
+    if (len == 0) return NULL;
+    
+    char* id = (char*)malloc(len + 1);
+    strncpy(id, &p->input[start], len);
+    id[len] = '\0';
+    
+    return id;
+}
+
+static SmartPointerKind parser_detect_smart_pointer_kind(const char* type_str) {
     if (strncmp(type_str, "Rc<", 3) == 0) return SP_RC;
     if (strncmp(type_str, "Arc<", 4) == 0) return SP_ARC;
+    if (strncmp(type_str, "Box<", 4) == 0) return SP_BOX;
     if (strncmp(type_str, "Weak<", 5) == 0) return SP_WEAK;
-    return SP_UNKNOWN;
+    return SP_RC; // Default
 }
 
-// Get operation type from string
-SmartPtrOp sp_get_operation(const char* op_str) {
-    if (strcmp(op_str, "new") == 0) return SP_OP_NEW;
-    if (strcmp(op_str, "clone") == 0) return SP_OP_CLONE;
-    if (strcmp(op_str, "downgrade") == 0) return SP_OP_DOWNGRADE;
-    if (strcmp(op_str, "upgrade") == 0) return SP_OP_UPGRADE;
-    if (strcmp(op_str, "strong_count") == 0) return SP_OP_STRONG_COUNT;
-    if (strcmp(op_str, "weak_count") == 0) return SP_OP_WEAK_COUNT;
-    return SP_OP_UNKNOWN;
+static char* parser_extract_inner_type(const char* type_str) {
+    // Extract T from "Rc<T>", "Arc<T>", "Box<T>", "Weak<T>"
+    const char* start = strchr(type_str, '<');
+    if (!start) return NULL;
+    start++; // Skip '<'
+    
+    const char* end = strchr(start, '>');
+    if (!end) return NULL;
+    
+    size_t len = end - start;
+    char* inner = (char*)malloc(len + 1);
+    strncpy(inner, start, len);
+    inner[len] = '\0';
+    
+    return inner;
 }
 
-// Parse smart pointer declaration: "let ptr: Box<i32> = Box::new(42)"
-bool sp_parse_declaration(SmartPtrContext* ctx, const char* input) {
-    char buffer[256];
-    strncpy(buffer, input, 255);
-    buffer[255] = '\0';
+// ============================================================================
+// SMART POINTER DECLARATION PARSING
+// ============================================================================
+
+typedef struct {
+    SmartPointerKind kind;
+    char* var_name;
+    char* inner_type;
+    char* init_expr;  // Optional initialization
+} SmartPointerDecl;
+
+static SmartPointerDecl* smart_pointer_parse_declaration(Parser* p) {
+    parser_skip_whitespace(p);
     
-    // Simple parser: find "let", type, and initialization
-    char* let = strstr(buffer, "let ");
-    if (!let) return false;
-    
-    // Extract variable name
-    char* name_start = let + 4;
-    while (isspace(*name_start)) name_start++;
-    char* name_end = strchr(name_start, ':');
-    if (!name_end) return false;
-    
-    SmartPtrDecl* decl = (SmartPtrDecl*)malloc(sizeof(SmartPtrDecl));
-    decl->var_name = strndup(name_start, name_end - name_start);
-    
-    // Extract type
-    char* type_start = name_end + 1;
-    while (isspace(*type_start)) type_start++;
-    char* type_end = strchr(type_start, '=');
-    if (!type_end) type_end = strchr(type_start, '\n');
-    if (!type_end) type_end = type_start + strlen(type_start);
-    
-    char type_buffer[128];
-    int type_len = type_end - type_start;
-    strncpy(type_buffer, type_start, type_len);
-    type_buffer[type_len] = '\0';
-    
-    // Trim whitespace
-    char* p = type_buffer + strlen(type_buffer) - 1;
-    while (p >= type_buffer && isspace(*p)) *p-- = '\0';
-    
-    decl->type = sp_get_type(type_buffer);
-    
-    // Extract inner type (T in Box<T>)
-    char* inner_start = strchr(type_buffer, '<');
-    char* inner_end = strchr(type_buffer, '>');
-    if (inner_start && inner_end) {
-        decl->inner_type = strndup(inner_start + 1, inner_end - inner_start - 1);
-    } else {
-        decl->inner_type = strdup("i32");
+    // Check for "dim" keyword (MLP syntax)
+    if (!parser_match_keyword(p, "dim")) {
+        return NULL;
     }
     
-    // Extract initialization value
-    char* init_start = strchr(type_end, '=');
-    if (init_start) {
-        init_start++;
-        while (isspace(*init_start)) init_start++;
-        decl->init_value = strdup(init_start);
-    } else {
-        decl->init_value = NULL;
+    // Skip "dim"
+    for (int i = 0; i < 3; i++) parser_advance(p);
+    parser_skip_whitespace(p);
+    
+    // Read variable name
+    char* var_name = parser_read_identifier(p);
+    if (!var_name) {
+        return NULL;
     }
     
-    sp_add_declaration(ctx, decl);
-    return true;
-}
-
-// Parse smart pointer operation: "ptr.clone()" or "Rc::downgrade(&ptr)"
-bool sp_parse_operation(SmartPtrContext* ctx, const char* input) {
-    SmartPtrOpNode* op = (SmartPtrOpNode*)malloc(sizeof(SmartPtrOpNode));
-    op->arg_count = 0;
+    parser_skip_whitespace(p);
     
-    // Simple operation parsing
-    if (strstr(input, ".clone()")) {
-        op->op = SP_OP_CLONE;
-        char* ptr_end = strstr(input, ".clone");
-        if (ptr_end) {
-            op->ptr_name = strndup(input, ptr_end - input);
+    // Check for "as" keyword
+    if (!parser_match_keyword(p, "as")) {
+        free(var_name);
+        return NULL;
+    }
+    
+    // Skip "as"
+    for (int i = 0; i < 2; i++) parser_advance(p);
+    parser_skip_whitespace(p);
+    
+    // Read smart pointer type: Rc<T>, Arc<T>, Box<T>, Weak<T>
+    size_t type_start = p->pos;
+    
+    // Find end of type (either '=' or newline)
+    while (p->current_char != '=' && p->current_char != '\n' && p->current_char != '\0') {
+        parser_advance(p);
+    }
+    
+    size_t type_len = p->pos - type_start;
+    char* type_str = (char*)malloc(type_len + 1);
+    strncpy(type_str, &p->input[type_start], type_len);
+    type_str[type_len] = '\0';
+    
+    // Trim trailing whitespace
+    while (type_len > 0 && isspace(type_str[type_len - 1])) {
+        type_str[--type_len] = '\0';
+    }
+    
+    // Detect smart pointer kind
+    SmartPointerKind kind = parser_detect_smart_pointer_kind(type_str);
+    
+    // Extract inner type
+    char* inner_type = parser_extract_inner_type(type_str);
+    free(type_str);
+    
+    if (!inner_type) {
+        free(var_name);
+        return NULL;
+    }
+    
+    // Create declaration
+    SmartPointerDecl* decl = (SmartPointerDecl*)malloc(sizeof(SmartPointerDecl));
+    decl->kind = kind;
+    decl->var_name = var_name;
+    decl->inner_type = inner_type;
+    decl->init_expr = NULL;
+    
+    // Check for initialization
+    parser_skip_whitespace(p);
+    if (p->current_char == '=') {
+        parser_advance(p);  // Skip '='
+        parser_skip_whitespace(p);
+        
+        // Read until newline
+        size_t expr_start = p->pos;
+        while (p->current_char != '\n' && p->current_char != '\0') {
+            parser_advance(p);
         }
-    } else if (strstr(input, "::new(")) {
-        op->op = SP_OP_NEW;
-        op->ptr_name = strdup("new_ptr");
-    } else {
-        op->op = SP_OP_UNKNOWN;
-        op->ptr_name = strdup("unknown");
-    }
-    
-    sp_add_operation(ctx, op);
-    return true;
-}
-
-// Add declaration to context
-void sp_add_declaration(SmartPtrContext* ctx, SmartPtrDecl* decl) {
-    if (ctx->decl_count >= ctx->decl_capacity) {
-        ctx->decl_capacity *= 2;
-        ctx->declarations = (SmartPtrDecl**)realloc(ctx->declarations, 
-                                                     sizeof(SmartPtrDecl*) * ctx->decl_capacity);
-    }
-    ctx->declarations[ctx->decl_count++] = decl;
-}
-
-// Add operation to context
-void sp_add_operation(SmartPtrContext* ctx, SmartPtrOpNode* op) {
-    if (ctx->op_count >= ctx->op_capacity) {
-        ctx->op_capacity *= 2;
-        ctx->operations = (SmartPtrOpNode**)realloc(ctx->operations,
-                                                     sizeof(SmartPtrOpNode*) * ctx->op_capacity);
-    }
-    ctx->operations[ctx->op_count++] = op;
-}
-
-// Find declaration by name
-SmartPtrDecl* sp_find_declaration(SmartPtrContext* ctx, const char* name) {
-    for (int i = 0; i < ctx->decl_count; i++) {
-        if (strcmp(ctx->declarations[i]->var_name, name) == 0) {
-            return ctx->declarations[i];
+        
+        size_t expr_len = p->pos - expr_start;
+        if (expr_len > 0) {
+            decl->init_expr = (char*)malloc(expr_len + 1);
+            strncpy(decl->init_expr, &p->input[expr_start], expr_len);
+            decl->init_expr[expr_len] = '\0';
+            
+            // Trim trailing whitespace
+            while (expr_len > 0 && isspace(decl->init_expr[expr_len - 1])) {
+                decl->init_expr[--expr_len] = '\0';
+            }
         }
     }
-    return NULL;
+    
+    return decl;
+}
+
+// ============================================================================
+// SMART POINTER OPERATION PARSING
+// ============================================================================
+
+typedef enum {
+    SP_OP_PARSE_RC_NEW,
+    SP_OP_PARSE_RC_CLONE,
+    SP_OP_PARSE_RC_DROP,
+    SP_OP_PARSE_RC_DOWNGRADE,
+    SP_OP_PARSE_ARC_NEW,
+    SP_OP_PARSE_ARC_CLONE,
+    SP_OP_PARSE_ARC_DROP,
+    SP_OP_PARSE_ARC_DOWNGRADE,
+    SP_OP_PARSE_BOX_NEW,
+    SP_OP_PARSE_BOX_DROP,
+    SP_OP_PARSE_WEAK_UPGRADE,
+    SP_OP_PARSE_WEAK_DROP,
+    SP_OP_PARSE_UNKNOWN
+} SmartPointerOpKind;
+
+typedef struct {
+    SmartPointerOpKind op_kind;
+    char* target_var;
+    char* arg;  // Optional argument
+} SmartPointerOp;
+
+static SmartPointerOp* smart_pointer_parse_operation(Parser* p) {
+    parser_skip_whitespace(p);
+    
+    // Check for "call" keyword
+    if (!parser_match_keyword(p, "call")) {
+        return NULL;
+    }
+    
+    // Skip "call"
+    for (int i = 0; i < 4; i++) parser_advance(p);
+    parser_skip_whitespace(p);
+    
+    // Read function name
+    char* func_name = parser_read_identifier(p);
+    if (!func_name) {
+        return NULL;
+    }
+    
+    SmartPointerOpKind op_kind = SP_OP_PARSE_UNKNOWN;
+    
+    // Detect operation kind
+    if (strcmp(func_name, "rc_new") == 0) op_kind = SP_OP_PARSE_RC_NEW;
+    else if (strcmp(func_name, "rc_clone") == 0) op_kind = SP_OP_PARSE_RC_CLONE;
+    else if (strcmp(func_name, "rc_drop") == 0) op_kind = SP_OP_PARSE_RC_DROP;
+    else if (strcmp(func_name, "rc_downgrade") == 0) op_kind = SP_OP_PARSE_RC_DOWNGRADE;
+    else if (strcmp(func_name, "arc_new") == 0) op_kind = SP_OP_PARSE_ARC_NEW;
+    else if (strcmp(func_name, "arc_clone") == 0) op_kind = SP_OP_PARSE_ARC_CLONE;
+    else if (strcmp(func_name, "arc_drop") == 0) op_kind = SP_OP_PARSE_ARC_DROP;
+    else if (strcmp(func_name, "arc_downgrade") == 0) op_kind = SP_OP_PARSE_ARC_DOWNGRADE;
+    else if (strcmp(func_name, "box_new") == 0) op_kind = SP_OP_PARSE_BOX_NEW;
+    else if (strcmp(func_name, "box_drop") == 0) op_kind = SP_OP_PARSE_BOX_DROP;
+    else if (strcmp(func_name, "weak_upgrade") == 0) op_kind = SP_OP_PARSE_WEAK_UPGRADE;
+    else if (strcmp(func_name, "weak_drop") == 0) op_kind = SP_OP_PARSE_WEAK_DROP;
+    
+    free(func_name);
+    
+    if (op_kind == SP_OP_PARSE_UNKNOWN) {
+        return NULL;
+    }
+    
+    parser_skip_whitespace(p);
+    
+    // Expect '('
+    if (p->current_char != '(') {
+        return NULL;
+    }
+    parser_advance(p);
+    parser_skip_whitespace(p);
+    
+    // Read argument
+    char* arg = parser_read_identifier(p);
+    if (!arg) {
+        return NULL;
+    }
+    
+    parser_skip_whitespace(p);
+    
+    // Expect ')'
+    if (p->current_char != ')') {
+        free(arg);
+        return NULL;
+    }
+    parser_advance(p);
+    
+    // Create operation
+    SmartPointerOp* op = (SmartPointerOp*)malloc(sizeof(SmartPointerOp));
+    op->op_kind = op_kind;
+    op->target_var = NULL;  // Set later if needed
+    op->arg = arg;
+    
+    return op;
+}
+
+// ============================================================================
+// MAIN PARSE FUNCTION
+// ============================================================================
+
+typedef struct {
+    SmartPointerDecl** declarations;
+    size_t decl_count;
+    SmartPointerOp** operations;
+    size_t op_count;
+} SmartPointerParseResult;
+
+SmartPointerParseResult* smart_pointer_parse(const char* input) {
+    Parser parser;
+    parser_init(&parser, input);
+    
+    SmartPointerParseResult* result = (SmartPointerParseResult*)malloc(sizeof(SmartPointerParseResult));
+    result->declarations = (SmartPointerDecl**)malloc(sizeof(SmartPointerDecl*) * 16);
+    result->decl_count = 0;
+    result->operations = (SmartPointerOp**)malloc(sizeof(SmartPointerOp*) * 16);
+    result->op_count = 0;
+    
+    while (parser.current_char != '\0') {
+        parser_skip_whitespace(&parser);
+        
+        if (parser.current_char == '\0') break;
+        
+        // Skip comments
+        if (parser.current_char == '-' && parser.pos + 1 < parser.length && 
+            parser.input[parser.pos + 1] == '-') {
+            parser_skip_line(&parser);
+            continue;
+        }
+        
+        // Skip empty lines
+        if (parser.current_char == '\n') {
+            parser_advance(&parser);
+            continue;
+        }
+        
+        // Try parse declaration
+        SmartPointerDecl* decl = smart_pointer_parse_declaration(&parser);
+        if (decl) {
+            result->declarations[result->decl_count++] = decl;
+            continue;
+        }
+        
+        // Try parse operation
+        SmartPointerOp* op = smart_pointer_parse_operation(&parser);
+        if (op) {
+            result->operations[result->op_count++] = op;
+            continue;
+        }
+        
+        // Unknown line, skip it
+        parser_skip_line(&parser);
+    }
+    
+    return result;
+}
+
+void smart_pointer_parse_result_free(SmartPointerParseResult* result) {
+    if (!result) return;
+    
+    for (size_t i = 0; i < result->decl_count; i++) {
+        SmartPointerDecl* decl = result->declarations[i];
+        free(decl->var_name);
+        free(decl->inner_type);
+        if (decl->init_expr) free(decl->init_expr);
+        free(decl);
+    }
+    free(result->declarations);
+    
+    for (size_t i = 0; i < result->op_count; i++) {
+        SmartPointerOp* op = result->operations[i];
+        if (op->target_var) free(op->target_var);
+        if (op->arg) free(op->arg);
+        free(op);
+    }
+    free(result->operations);
+    
+    free(result);
 }
