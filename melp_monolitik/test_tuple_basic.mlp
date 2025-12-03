@@ -1,0 +1,15 @@
+func getTuple()
+    -- Return tuple: <age, score, grade>
+    return <25, 100, 85>
+end func
+
+func main()
+    print(999)  -- Start marker
+    
+    -- Call function that returns tuple
+    getTuple()
+    
+    print(111)  -- End marker
+    
+    return 0
+end func

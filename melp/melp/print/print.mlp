@@ -1,0 +1,136 @@
+-- ============================================================================
+-- PRINT MODULE - MLP Implementation
+-- ============================================================================
+-- This module handles print statement code generation for MELP compiler
+-- Self-hosting version (written in MLP, compiles to assembly)
+
+-- Print statement structure (from parser)
+struct PrintStmt
+    Expression value
+end struct
+
+-- Expression type enum (should match parser.mlp)
+numeric EXPR_NUMBER = 0
+numeric EXPR_STRING = 1
+numeric EXPR_VARIABLE = 2
+numeric EXPR_CALL = 3
+numeric EXPR_BINARY_OP = 4
+
+-- Variable type enum
+numeric VAR_NUMERIC = 0
+numeric VAR_STRING = 1
+numeric VAR_BOOLEAN = 2
+
+-- Global print string counter
+state numeric print_string_counter = 0
+
+-- ============================================================================
+-- COLLECT PRINT STRING LITERALS
+-- ============================================================================
+
+-- Collect print string literals from single statement
+function collect_print_strings_from_stmt(numeric file_handle, Statement stmt, numeric str_counter_ptr)
+    if stmt.type == STMT_PRINT then
+        Expression expr = stmt.data.print_stmt.value
+        if expr != null and expr.type == EXPR_STRING then
+            -- Write print string literal to data section
+            write_line(file_handle, "    print_str_" + str(str_counter_ptr) + " db \"" + expr.data.string_value + "\", 10, 0")
+            write_line(file_handle, "    print_str_" + str(str_counter_ptr) + "_len equ $ - print_str_" + str(str_counter_ptr))
+            str_counter_ptr = str_counter_ptr + 1
+        end if
+    else if stmt.type == STMT_IF then
+        -- Recursively collect from if branches
+        collect_print_strings(file_handle, stmt.data.if_stmt.then_body, stmt.data.if_stmt.then_count, str_counter_ptr)
+        if stmt.data.if_stmt.else_body != null then
+            collect_print_strings(file_handle, stmt.data.if_stmt.else_body, stmt.data.if_stmt.else_count, str_counter_ptr)
+        end if
+    else if stmt.type == STMT_WHILE then
+        collect_print_strings(file_handle, stmt.data.while_stmt.body, stmt.data.while_stmt.body_count, str_counter_ptr)
+    else if stmt.type == STMT_FOR then
+        collect_print_strings(file_handle, stmt.data.for_stmt.body, stmt.data.for_stmt.body_count, str_counter_ptr)
+    else if stmt.type == STMT_FUNCTION then
+        collect_print_strings(file_handle, stmt.data.func_stmt.body, stmt.data.func_stmt.body_count, str_counter_ptr)
+    end if
+    
+    return str_counter_ptr
+end function
+
+-- Collect print string literals from statement array
+function collect_print_strings(numeric file_handle, Statement[] stmts, numeric count, numeric str_counter)
+    for i = 0 to count - 1
+        Statement stmt = stmts[i]
+        if stmt != null then
+            str_counter = collect_print_strings_from_stmt(file_handle, stmt, str_counter)
+        end if
+    end for
+    return str_counter
+end function
+
+-- ============================================================================
+-- PRINT STATEMENT CODE GENERATION
+-- ============================================================================
+
+-- Generate code for print statement
+function codegen_print_statement(numeric file_handle, PrintStmt print_stmt)
+    Expression expr = print_stmt.value
+    
+    if expr.type == EXPR_STRING then
+        -- Print string literal
+        numeric str_id = print_string_counter
+        print_string_counter = print_string_counter + 1
+        
+        write_line(file_handle, "    ; print string literal")
+        write_line(file_handle, "    mov rax, 1          ; sys_write")
+        write_line(file_handle, "    mov rdi, 1          ; stdout")
+        write_line(file_handle, "    mov rsi, print_str_" + str(str_id))
+        write_line(file_handle, "    mov rdx, print_str_" + str(str_id) + "_len")
+        write_line(file_handle, "    syscall")
+        
+    else if expr.type == EXPR_VARIABLE then
+        -- Check variable type
+        numeric var_type = get_var_type(expr.data.var_name)
+        
+        if var_type == VAR_STRING then
+            -- Print string variable
+            write_line(file_handle, "    ; print string variable")
+            codegen_expression(file_handle, expr)  -- Gets pointer into rax
+            write_line(file_handle, "    call print_string")
+        else
+            -- Print numeric variable
+            write_line(file_handle, "    ; print numeric variable")
+            codegen_expression(file_handle, expr)
+            write_line(file_handle, "    call print_int")
+        end if
+        
+    else if expr.type == EXPR_CALL then
+        -- Function call - check if string-returning
+        text func_name = expr.data.call.func_name
+        
+        if func_name == "concat" or func_name == "substr" then
+            -- String-returning function
+            write_line(file_handle, "    ; print string function result")
+            codegen_expression(file_handle, expr)
+            write_line(file_handle, "    call print_string")
+        else
+            -- Numeric function
+            write_line(file_handle, "    ; print function result")
+            codegen_expression(file_handle, expr)
+            write_line(file_handle, "    call print_int")
+        end if
+        
+    else
+        -- Print numeric expression
+        write_line(file_handle, "    ; print expression")
+        codegen_expression(file_handle, expr)
+        write_line(file_handle, "    call print_int")
+    end if
+end function
+
+-- ============================================================================
+-- HELPER FUNCTIONS (external dependencies)
+-- ============================================================================
+
+-- These functions are implemented in other modules:
+-- - codegen_expression(file, expr) - from arithmetic module
+-- - get_var_type(name) - from variable module
+-- - write_line(file, text) - file I/O helper

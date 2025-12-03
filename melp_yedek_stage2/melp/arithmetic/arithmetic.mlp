@@ -1,0 +1,4 @@
+numeric BIN_OP_ADD = 0
+numeric BIN_OP_SUB = 1
+numeric BIN_OP_MUL = 2
+numeric BIN_OP_DIV = 3

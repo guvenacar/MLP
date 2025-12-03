@@ -1,0 +1,36 @@
+-- Pattern Matching Modülü - Gelişmiş Eşleştirme
+-- Match, destructuring, guards
+
+-- Pattern tipleri
+numeric PAT_LITERAL = 0         -- 42, "text", true
+numeric PAT_VARIABLE = 1        -- x, name (binding)
+numeric PAT_WILDCARD = 2        -- _ (her şey)
+numeric PAT_STRUCT = 3          -- Person { name, age }
+numeric PAT_ARRAY = 4           -- [x, y, z]
+numeric PAT_RANGE = 5           -- 1..10
+numeric PAT_GUARD = 6           -- pattern when condition
+numeric PAT_OR = 7              -- pattern1 | pattern2
+numeric PAT_TYPE = 8            -- value is Type
+
+-- Match stratejileri
+numeric MATCH_LINEAR = 0        -- Sıralı test
+numeric MATCH_DECISION_TREE = 1 -- Decision tree
+numeric MATCH_JUMP_TABLE = 2    -- Jump table (int range için)
+
+-- Exhaustiveness
+numeric EXHAUSTIVE_YES = 1      -- Tam kapsamlı
+numeric EXHAUSTIVE_NO = 0       -- Kısmi
+
+-- Binding tipi
+numeric BIND_IMMUTABLE = 0      -- let
+numeric BIND_MUTABLE = 1        -- var
+
+-- Rest pattern
+numeric REST_NONE = 0
+numeric REST_ARRAY = 1          -- [head, ...tail]
+numeric REST_STRUCT = 2         -- { x, ...rest }
+
+-- Pattern matching result
+numeric MATCH_SUCCESS = 1
+numeric MATCH_FAILURE = 0
+numeric MATCH_GUARD_FAIL = 2    -- Pattern eşleşti ama guard false

@@ -1,0 +1,19 @@
+-- Generic Types Test
+-- P2 Advanced Features Module #23
+
+-- Generic struct definition
+struct List<T>
+    numeric count
+end
+
+-- Generic function
+function identity<T>(value)
+    return value
+end
+
+-- Type instantiation
+List<numeric> numbers
+
+-- Regular variables
+numeric x = 42
+text result = "Generic Types OK!"

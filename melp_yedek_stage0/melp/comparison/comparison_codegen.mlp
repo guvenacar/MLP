@@ -1,0 +1,2 @@
+numeric CODEGEN_CMP_SUCCESS = 0
+numeric CODEGEN_CMP_ERROR = 1

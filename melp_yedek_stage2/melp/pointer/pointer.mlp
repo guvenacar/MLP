@@ -1,0 +1,21 @@
+-- Pointer Modülü - Pointer İşlemleri
+-- Adres alma, dereference ve pointer aritmetiği
+
+-- Pointer tipleri
+numeric PTR_NUMERIC = 0
+numeric PTR_STRING = 1
+numeric PTR_BOOLEAN = 2
+numeric PTR_STRUCT = 3
+numeric PTR_VOID = 4
+
+-- Pointer operasyonları
+numeric PTR_OP_ADDRESS_OF = 0    -- & operatörü
+numeric PTR_OP_DEREF = 1         -- * operatörü
+numeric PTR_OP_ADD = 2           -- ptr + n
+numeric PTR_OP_SUB = 3           -- ptr - n
+numeric PTR_OP_DIFF = 4          -- ptr1 - ptr2
+
+-- Pointer durumları
+numeric PTR_STATE_NULL = 0
+numeric PTR_STATE_VALID = 1
+numeric PTR_STATE_DANGLING = 2

@@ -1,0 +1,3 @@
+numeric x = 42
+string name = "Ali"
+boolean flag = true

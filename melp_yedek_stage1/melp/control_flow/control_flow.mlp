@@ -1,0 +1,3 @@
+numeric STMT_IF = 0
+numeric STMT_WHILE = 1
+numeric STMT_FOR = 2

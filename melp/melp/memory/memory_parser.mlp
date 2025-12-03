@@ -1,0 +1,16 @@
+-- Memory Parser Modülü
+-- Bellek işlemleri parse sabitleri
+
+-- Parse durumları
+numeric PARSE_ALLOC_KEYWORD = 0
+numeric PARSE_ALLOC_SIZE = 1
+numeric PARSE_ALLOC_ASSIGN = 2
+
+numeric PARSE_FREE_KEYWORD = 0
+numeric PARSE_FREE_VAR = 1
+
+-- Syntax tipleri
+numeric SYNTAX_ALLOCATE = 0      -- allocate(size)
+numeric SYNTAX_NEW = 1           -- new Type[count]
+numeric SYNTAX_FREE = 2          -- free(var)
+numeric SYNTAX_DELETE = 3        -- delete var

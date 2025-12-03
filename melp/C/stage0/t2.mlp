@@ -1,0 +1,5 @@
+string hello = "Hello"
+string world = " World!"
+string result = concat(hello, world)
+print result
+print length(result)

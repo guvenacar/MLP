@@ -1,0 +1,40 @@
+-- Operator Overloading Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_LEFT_OPERAND = 0    -- rdi: left operand (1st param)
+numeric REG_RIGHT_OPERAND = 1   -- rsi: right operand (2nd param)
+numeric REG_RESULT = 2          -- rax: result
+numeric REG_TYPE_INFO = 3       -- rbx: type info
+
+-- Dispatch table layout
+numeric DISPATCH_OP_TYPE_OFFSET = 0
+numeric DISPATCH_LEFT_TYPE_OFFSET = 8
+numeric DISPATCH_RIGHT_TYPE_OFFSET = 16
+numeric DISPATCH_IMPL_PTR_OFFSET = 24
+numeric DISPATCH_ENTRY_SIZE = 32
+
+-- Operator overload layout
+numeric OVERLOAD_OP_OFFSET = 0
+numeric OVERLOAD_TYPE_OFFSET = 8
+numeric OVERLOAD_IMPL_OFFSET = 16
+numeric OVERLOAD_PARAMS_OFFSET = 24
+numeric OVERLOAD_RETURN_OFFSET = 32
+
+-- Calling convention (System V AMD64)
+numeric PARAM_1_REG = 0         -- rdi
+numeric PARAM_2_REG = 1         -- rsi
+numeric PARAM_3_REG = 2         -- rdx
+numeric PARAM_4_REG = 3         -- rcx
+numeric PARAM_5_REG = 4         -- r8
+numeric PARAM_6_REG = 5         -- r9
+
+-- Type checking
+numeric TYPE_MATCH = 1
+numeric TYPE_MISMATCH = 0
+
+-- Label tipleri
+numeric LABEL_OVERLOAD = 0
+numeric LABEL_DISPATCH = 1
+numeric LABEL_TYPE_ERROR = 2
+numeric LABEL_NOT_FOUND = 3

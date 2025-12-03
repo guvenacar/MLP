@@ -1,0 +1,38 @@
+-- Module System Modülü - Modül Yönetimi
+-- Import, export, namespace, visibility
+
+-- Visibility (görünürlük)
+numeric VIS_PUBLIC = 0          -- Herkese açık
+numeric VIS_PRIVATE = 1         -- Sadece modül içi
+numeric VIS_INTERNAL = 2        -- Paket içi
+
+-- Import tipi
+numeric IMPORT_NAMED = 0        -- import { x, y }
+numeric IMPORT_DEFAULT = 1      -- import x
+numeric IMPORT_WILDCARD = 2     -- import *
+numeric IMPORT_ALIAS = 3        -- import x as y
+
+-- Export tipi
+numeric EXPORT_NAMED = 0        -- export func f()
+numeric EXPORT_DEFAULT = 1      -- export default x
+numeric EXPORT_ALL = 2          -- export *
+
+-- Module path tipi
+numeric PATH_RELATIVE = 0       -- ./module, ../module
+numeric PATH_ABSOLUTE = 1       -- /path/to/module
+numeric PATH_PACKAGE = 2        -- module_name
+numeric PATH_BUILTIN = 3        -- std, io, math
+
+-- Module durumu
+numeric MOD_NOT_LOADED = 0
+numeric MOD_LOADING = 1
+numeric MOD_LOADED = 2
+numeric MOD_ERROR = 3
+
+-- Circular dependency detection
+numeric CIRC_NONE = 0
+numeric CIRC_DETECTED = 1
+
+-- Module cache
+numeric CACHE_HIT = 1
+numeric CACHE_MISS = 0

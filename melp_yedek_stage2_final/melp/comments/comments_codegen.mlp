@@ -1,0 +1,5 @@
+-- Comments Codegen Module
+-- Comments do not generate assembly code
+-- No codegen constants needed
+
+numeric COMMENT_CODEGEN_UNUSED = 0

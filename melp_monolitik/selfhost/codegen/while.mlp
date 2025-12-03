@@ -1,0 +1,159 @@
+-- ============================================
+-- MLP Self-Hosting Compiler - Codegen While
+-- ============================================
+-- While and Do-While loop code generation
+-- Generates x86-64 NASM assembly
+-- ============================================
+
+-- Forward declarations
+-- extern func codegen_emit(string line)
+-- extern func codegen_generate_comparison(numeric expr_idx, numeric false_label)
+-- extern func codegen_generate_statement(numeric stmt_idx)
+
+-- Loop context state (shared with for.mlp)
+-- state numeric loop_start_label = -1
+-- state numeric loop_continue_label = -1
+-- state numeric loop_end_label = -1
+-- state numeric in_loop = 0
+
+-- Generate while loop assembly
+func codegen_generate_while(numeric stmt_idx) returns numeric
+    numeric loop_start = get_next_label()
+    numeric loop_end = get_next_label()
+    
+    -- Save previous loop context
+    numeric prev_start = loop_start_label
+    numeric prev_continue = loop_continue_label
+    numeric prev_end = loop_end_label
+    numeric prev_in_loop = in_loop
+    
+    -- Set current loop context (while: continue = start)
+    loop_start_label = loop_start
+    loop_continue_label = loop_start
+    loop_end_label = loop_end
+    in_loop = 1
+    
+    codegen_emit("")
+    codegen_emit("    ; While loop")
+    
+    -- Loop start label
+    string start_lbl = ".L" + to_string(loop_start) + ":  ; while_start"
+    codegen_emit(start_lbl)
+    
+    -- Evaluate condition and jump to end if false
+    numeric cond_expr = get_while_condition(stmt_idx)
+    codegen_generate_comparison(cond_expr, loop_end)
+    
+    -- Loop body
+    codegen_emit("    ; While body")
+    numeric body_start = get_while_body_start(stmt_idx)
+    numeric body_count = get_while_body_count(stmt_idx)
+    
+    for i = 0 to body_count - 1
+        codegen_generate_statement(body_start + i)
+    end for
+    
+    -- Jump back to loop start
+    string jmp_line = "    jmp .L" + to_string(loop_start)
+    codegen_emit(jmp_line)
+    
+    -- Loop end label
+    string end_lbl = ".L" + to_string(loop_end) + ":  ; while_end"
+    codegen_emit(end_lbl)
+    
+    -- Restore previous loop context
+    loop_start_label = prev_start
+    loop_continue_label = prev_continue
+    loop_end_label = prev_end
+    in_loop = prev_in_loop
+    
+    return 0
+end func
+
+-- Generate do-while loop assembly
+func codegen_generate_do_while(numeric stmt_idx) returns numeric
+    numeric loop_start = get_next_label()
+    numeric loop_continue = get_next_label()
+    numeric loop_end = get_next_label()
+    
+    -- Save previous loop context
+    numeric prev_start = loop_start_label
+    numeric prev_continue = loop_continue_label
+    numeric prev_end = loop_end_label
+    numeric prev_in_loop = in_loop
+    
+    -- Set current loop context
+    loop_start_label = loop_start
+    loop_continue_label = loop_continue
+    loop_end_label = loop_end
+    in_loop = 1
+    
+    codegen_emit("")
+    codegen_emit("    ; Do-while loop")
+    
+    -- Loop start label
+    string start_lbl = ".L" + to_string(loop_start) + ":  ; do_while_start"
+    codegen_emit(start_lbl)
+    
+    -- Loop body
+    codegen_emit("    ; Do-while body")
+    numeric body_start = get_do_while_body_start(stmt_idx)
+    numeric body_count = get_do_while_body_count(stmt_idx)
+    
+    for i = 0 to body_count - 1
+        codegen_generate_statement(body_start + i)
+    end for
+    
+    -- Continue label
+    string cont_lbl = ".L" + to_string(loop_continue) + ":  ; do_while_continue"
+    codegen_emit(cont_lbl)
+    
+    -- Check condition
+    codegen_emit("    ; Check condition")
+    numeric cond_expr = get_do_while_condition(stmt_idx)
+    codegen_generate_comparison(cond_expr, loop_end)
+    
+    -- If we reach here, condition was TRUE
+    string jmp_start = "    jmp .L" + to_string(loop_start) + "         ; Condition true, loop"
+    codegen_emit(jmp_start)
+    
+    -- Loop end label
+    string end_lbl = ".L" + to_string(loop_end) + ":  ; do_while_end"
+    codegen_emit(end_lbl)
+    
+    -- Restore previous loop context
+    loop_start_label = prev_start
+    loop_continue_label = prev_continue
+    loop_end_label = prev_end
+    in_loop = prev_in_loop
+    
+    return 0
+end func
+
+-- ============================================
+-- Helper functions to access while statement data
+-- ============================================
+
+func get_while_condition(numeric stmt_idx) returns numeric
+    return stmt_expr_indices[stmt_idx]
+end func
+
+func get_while_body_start(numeric stmt_idx) returns numeric
+    return stmt_body_starts[stmt_idx]
+end func
+
+func get_while_body_count(numeric stmt_idx) returns numeric
+    return stmt_body_counts[stmt_idx]
+end func
+
+func get_do_while_condition(numeric stmt_idx) returns numeric
+    return stmt_expr_indices[stmt_idx]
+end func
+
+func get_do_while_body_start(numeric stmt_idx) returns numeric
+    return stmt_body_starts[stmt_idx]
+end func
+
+func get_do_while_body_count(numeric stmt_idx) returns numeric
+    return stmt_body_counts[stmt_idx]
+end func

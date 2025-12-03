@@ -1,0 +1,35 @@
+-- State Management Parser Modülü
+-- Parse işlemleri sabitleri
+
+-- State machine parse
+numeric PARSE_SM_KEYWORD = 0
+numeric PARSE_SM_NAME = 1
+numeric PARSE_SM_LBRACE = 2
+numeric PARSE_SM_INITIAL = 3
+numeric PARSE_SM_STATES = 4
+numeric PARSE_SM_TRANSITIONS = 5
+numeric PARSE_SM_RBRACE = 6
+
+-- State parse
+numeric PARSE_STATE_KEYWORD = 0
+numeric PARSE_STATE_NAME = 1
+numeric PARSE_STATE_LBRACE = 2
+numeric PARSE_STATE_ENTER = 3
+numeric PARSE_STATE_EXIT = 4
+numeric PARSE_STATE_DATA = 5
+numeric PARSE_STATE_RBRACE = 6
+
+-- Transition parse
+numeric PARSE_TRANS_KEYWORD = 0
+numeric PARSE_TRANS_FROM = 1
+numeric PARSE_TRANS_ARROW = 2       -- ->
+numeric PARSE_TRANS_TO = 3
+numeric PARSE_TRANS_ON = 4          -- on keyword
+numeric PARSE_TRANS_EVENT = 5
+numeric PARSE_TRANS_WHEN = 6        -- when (guard)
+numeric PARSE_TRANS_ACTION = 7
+
+-- Event parse
+numeric PARSE_EVENT_KEYWORD = 0
+numeric PARSE_EVENT_NAME = 1
+numeric PARSE_EVENT_PAYLOAD = 2

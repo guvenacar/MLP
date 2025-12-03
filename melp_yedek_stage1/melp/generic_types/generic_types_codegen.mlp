@@ -1,0 +1,45 @@
+-- Generic Types Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_TYPE_INFO = 0            -- rax: type info pointer
+numeric REG_TYPE_ARG = 1             -- rdi: type argument
+numeric REG_INST_PTR = 2             -- rsi: instantiation pointer
+numeric REG_MONOMORPH_CTX = 3        -- rdx: monomorphization context
+
+-- Generic type metadata layout
+numeric META_NAME_OFFSET = 0
+numeric META_PARAM_COUNT_OFFSET = 8
+numeric META_PARAMS_OFFSET = 16
+numeric META_BODY_OFFSET = 24
+numeric META_SIZE = 32
+
+-- Type parameter layout
+numeric PARAM_NAME_OFFSET = 0
+numeric PARAM_CONSTRAINT_OFFSET = 8
+numeric PARAM_DEFAULT_OFFSET = 16
+numeric PARAM_SIZE = 24
+
+-- Instantiation layout
+numeric INST_GENERIC_OFFSET = 0
+numeric INST_ARGS_OFFSET = 8
+numeric INST_ARG_COUNT_OFFSET = 16
+numeric INST_MANGLED_NAME_OFFSET = 24
+numeric INST_SPECIALIZED_BODY_OFFSET = 32
+numeric INST_SIZE = 40
+
+-- Monomorphization context layout
+numeric MONOMORPH_SUBST_OFFSET = 0
+numeric MONOMORPH_SUBST_COUNT_OFFSET = 8
+numeric MONOMORPH_CURRENT_INST_OFFSET = 16
+numeric MONOMORPH_SIZE = 24
+
+-- Name mangling
+numeric MANGLE_SEPARATOR = 0         -- _ (List_int)
+numeric MANGLE_TEMPLATE = 1          -- T (List_T)
+
+-- Label tipleri
+numeric LABEL_GENERIC_TYPE = 0
+numeric LABEL_SPECIALIZED_TYPE = 1
+numeric LABEL_GENERIC_FUNC = 2
+numeric LABEL_SPECIALIZED_FUNC = 3

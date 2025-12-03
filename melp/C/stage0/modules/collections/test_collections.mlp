@@ -1,0 +1,14 @@
+-- Collections Module Test
+-- P1 Data Structures - Module #14
+
+-- Basic variables
+numeric x = 10
+numeric y = 20
+
+-- Tuple literal example (future feature)
+-- tuple point = <10, 20, 30>
+-- numeric first = point<0>
+
+-- List literal example (future feature)
+-- list items = (1, "hello", true)
+-- text second = items(1)

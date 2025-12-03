@@ -33,7 +33,7 @@ MLP, kullanıcı dostu söz dizimi ile yüksek performansı birleştiren, **Tran
 
 ### 1.2 Tasarım Felsefesi
 
-1. **Basitlik:** Kullanıcı sadece `numeric` ve `text` görür
+1. **Basitlik:** Kullanıcı sadece `numeric` ve `string` görür
 2. **Performans:** Arka planda int64/double/BigDecimal ve SSO/heap otomatik seçilir
 3. **Güvenlik:** Null safety, exception handling
 4. **Modülerlik:** Import/export sistemi
@@ -111,7 +111,7 @@ melp/
 | Tip | Açıklama | Örnek |
 |-----|----------|-------|
 | `numeric` | Sayısal değer (TTO ile optimize) | `42`, `3.14`, `123_456` |
-| `text` | Metin değeri (SSO ile optimize) | `"Merhaba"` |
+| `string` | Metin değeri (SSO ile optimize) | `"Merhaba"` |
 | `boolean` | Mantıksal değer | `true`, `false` |
 | `decimal` | Ondalık sayı (legacy, numeric'e yönlendir) | `3.14159` |
 
@@ -159,10 +159,10 @@ call bigdecimal_create
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    SSO Text Hiyerarşisi                     │
+│                    SSO String Hiyerarşisi                   │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│   text s = "Ali"                                            │
+│   string s = "Ali"                                          │
 │        ↓                                                    │
 │   ┌─────────────────────────────────────────────┐           │
 │   │  Uzunluk kontrolü:                          │           │
@@ -191,7 +191,7 @@ call bigdecimal_create
 
 ```mlp
 numeric? maybe_num = null
-text? maybe_text = null
+string? maybe_text = null
 
 -- Null check
 if maybe_num != null then
@@ -202,14 +202,14 @@ end if
 numeric value = maybe_num ?? 0
 
 -- Optional chaining
-text result = obj?.field?.subfield ?? "default"
+string result = obj?.field?.subfield ?? "default"
 ```
 
 ### 3.5 Type Aliases
 
 ```mlp
 type PersonId = numeric
-type Name = text
+type Name = string
 type Callback = func(numeric) returns numeric
 ```
 
@@ -233,12 +233,12 @@ yorum bloğu
 ```mlp
 -- Temel tanımlama
 numeric x = 42
-text name = "Ali"
+string name = "Ali"
 boolean flag = true
 
 -- Çoklu tanımlama (Phase 21)
 numeric a, b, c = 1, 2, 3
-numeric, text x, y = 42, "hello"
+numeric, string x, y = 42, "hello"
 
 -- Büyük sayı formatları (Planlanan)
 numeric big = 123_456_789        -- Python style
@@ -251,7 +251,7 @@ numeric decimal_tr = 123,45      -- Türkçe ondalık (, ondalık ayracı)
 ```mlp
 -- State ile global değişken
 state numeric counter = 0
-state text app_name = "MyApp"
+state string app_name = "MyApp"
 
 -- Shared state (thread-safe, planlanan)
 shared state numeric global_counter = 0
@@ -261,21 +261,21 @@ shared state numeric global_counter = 0
 
 ```mlp
 -- Basit string
-text s1 = "Merhaba Dünya"
+string s1 = "Merhaba Dünya"
 
 -- Escape sequences
-text s2 = "Satır 1\nSatır 2"
-text s3 = "Tab:\tdeğer"
-text s4 = "Tırnak: \"alıntı\""
-text s5 = "Backslash: \\"
+string s2 = "Satır 1\nSatır 2"
+string s3 = "Tab:\tdeğer"
+string s4 = "Tırnak: \"alıntı\""
+string s5 = "Backslash: \\"
 
 -- String interpolation
-text name = "Ali"
+string name = "Ali"
 numeric age = 25
-text message = $"Merhaba {name}, yaşın {age}"
+string message = $"Merhaba {name}, yaşın {age}"
 
 -- Multi-line string (Planlanan)
-text long = """
+string long = """
 Bu çok satırlı
 bir metin
 """
@@ -501,7 +501,7 @@ numeric min, max = minmax(10, 5)
 
 ```mlp
 -- Lambda tanımlama
-numeric list() numbers = [1, 2, 3, 4, 5]
+numeric[] numbers = [1, 2, 3, 4, 5]
 numbers.map(lambda x => x * 2)
 numbers.filter(lambda x => x > 2)
 
@@ -541,8 +541,8 @@ end for
 ### 7.4 Async/Await (Temel)
 
 ```mlp
-async func fetchData() returns text
-    text data = await http_get("https://api.example.com")
+async func fetchData() returns string
+    string data = await http_get("https://api.example.com")
     return data
 end func
 ```
@@ -554,14 +554,14 @@ end func
 ### 8.1 Arrays
 
 ```mlp
--- Array literal
-numeric list() numbers = [1, 2, 3, 4, 5]
+-- Array literal (homojen, [])
+numeric[] numbers = [1, 2, 3, 4, 5]
 
 -- Boş array
-numeric list() empty = []
+numeric[] empty = []
 
--- Dinamik array (Planlanan)
-list() mixed = ["Ali", 10, true]  -- Heterojen
+-- List (heterojen, ())
+list mixed = ("Ali", 10, true)  -- Farklı tipler
 
 -- Array işlemleri
 numbers[0] = 100        -- Index erişim
@@ -574,7 +574,7 @@ numeric last = array_pop(numbers)
 
 ```mlp
 struct Person
-    text name
+    string name
     numeric age
 end struct
 
@@ -620,7 +620,7 @@ func identity<T>(T value) returns T
 end func
 
 numeric x = identity<numeric>(42)
-text s = identity<text>("hello")
+string s = identity<string>("hello")
 ```
 
 ---
@@ -639,7 +639,7 @@ import string as str
 
 -- Kullanım
 numeric result = math.sqrt(16)
-text upper = str.to_upper("hello")
+string upper = str.to_upper("hello")
 ```
 
 ### 9.2 Module Tanımlama
@@ -736,8 +736,8 @@ numeric bytes = gc_get_total_bytes()
 | Fonksiyon | Açıklama | Örnek |
 |-----------|----------|-------|
 | `print(value)` | Ekrana yaz | `print("Hello")` |
-| `input()` | Kullanıcıdan oku | `text s = input()` |
-| `input(prompt)` | Prompt ile oku | `text s = input("İsim: ")` |
+| `input()` | Kullanıcıdan oku | `string s = input()` |
+| `input(prompt)` | Prompt ile oku | `string s = input("İsim: ")` |
 
 ### 12.2 String İşlemleri
 
@@ -758,7 +758,7 @@ numeric bytes = gc_get_total_bytes()
 | Fonksiyon | Açıklama | Örnek |
 |-----------|----------|-------|
 | `to_numeric(s)` | String → Sayı | `to_numeric("42")` |
-| `to_text(n)` | Sayı → String | `to_text(42)` |
+| `to_string(n)` | Sayı → String | `to_string(42)` |
 
 ### 12.4 Matematik
 
@@ -842,9 +842,9 @@ numeric b = 123.456,78               -- Türkçe format (Kullanıcı)
 
 ```mlp
 -- Sayı → Formatlı string
-text s1 = format_number(12345.67, "tr")     -- "12.345,67"
-text s2 = format_number(12345.67, "en")     -- "12,345.67"
-text s3 = format_number(12345.67, "_")      -- "12_345.67"
+string s1 = format_number(12345.67, "tr")     -- "12.345,67"
+string s2 = format_number(12345.67, "en")     -- "12,345.67"
+string s3 = format_number(12345.67, "_")      -- "12_345.67"
 
 -- Formatlı string → Sayı
 numeric n1 = parse_number("12.345,67", "tr") -- 12345.67
@@ -858,14 +858,14 @@ MLP'de üç temel koleksiyon tipi vardır. Her birinin kendine özgü syntax'ı 
 |--------|-----|----------|----------|--------|----------------|
 | `[]` | **Array** | ✅ Evet | ✅ Evet | Stack/Heap | Aynı tipte veri dizisi |
 | `()` | **List** | ❌ Hayır | ✅ Evet | Heap | Heterojen dinamik koleksiyon |
-| `<>` | **Tuple** | ❌ Hayır | ❌ Hayır | Stack ⚡ | Immutable kayıt, hızlı |
+| `{}` | **Tuple** | ❌ Hayır | ❌ Hayır | Stack ⚡ | Immutable kayıt, hızlı |
 
 #### 13.2.1 Array `[]` - Homojen, Mutable
 
 ```mlp
 -- Array tanımlama: Tüm elemanlar aynı tipte
 numeric[] sayılar = [1, 2, 3, 4, 5]
-text[] isimler = ["Ali", "Veli", "Ayşe"]
+string[] isimler = ["Ali", "Veli", "Ayşe"]
 
 -- Eleman erişimi ve değiştirme
 sayılar[0] = 100                    -- ✅ OK, mutable
@@ -886,7 +886,7 @@ numeric[] boş = []
 kişi() = ("Ali", 25, true, 3.14)
 
 -- Eleman erişimi (runtime tip kontrolü)
-text isim = kişi[0]                 -- "Ali"
+string isim = kişi[0]                 -- "Ali"
 numeric yaş = kişi[1]               -- 25
 boolean aktif = kişi[2]             -- true
 
@@ -902,17 +902,17 @@ kişi.remove(0)                      -- ✅ OK, eleman sil
 boş() = ()
 
 -- Tip güvenli erişim
-if type_of(kişi[0]) == "text" then
-    text ad = kişi[0] as text
+if type_of(kişi[0]) == "string" then
+    string ad = kişi[0] as string
 end if
 ```
 
-#### 13.2.3 Tuple `<>` - Heterojen, Immutable, Stack-allocated
+#### 13.2.3 Tuple `{}` - Heterojen, Immutable, Stack-allocated
 
 ```mlp
 -- Tuple tanımlama: Farklı tipler, değiştirilemez
-koordinat<> = <10, 20, "point">
-renk<> = <255, 128, 0>
+koordinat{} = {10, 20, "point"}
+renk{} = {255, 128, 0}
 
 -- Eleman erişimi (sadece okuma)
 print(koordinat[0])                 -- 10
@@ -923,21 +923,21 @@ koordinat[0] = 99                   -- ❌ HATA! Compile error
 koordinat.add(5)                    -- ❌ HATA! Boyut sabit
 
 -- Fonksiyondan tuple döndürme (stack'te, hızlı!)
-func minmax(numeric[] arr) returns <numeric, numeric>
-    return <min(arr), max(arr)>
+func minmax(numeric[] arr) returns {numeric, numeric}
+    return {min(arr), max(arr)}
 end func
 
-sonuç<> = minmax([3, 1, 4, 1, 5])
+sonuç{} = minmax([3, 1, 4, 1, 5])
 print(sonuç[0])                     -- 1 (min)
 print(sonuç[1])                     -- 5 (max)
 
 -- Tuple destructuring
-<min_val, max_val> = minmax([3, 1, 4, 1, 5])
+{min_val, max_val} = minmax([3, 1, 4, 1, 5])
 print(min_val)                      -- 1
 print(max_val)                      -- 5
 
 -- Swap işlemi (tuple ile)
-<a, b> = <b, a>
+{a, b} = {b, a}
 ```
 
 #### 13.2.4 Karşılaştırma ve Kullanım Senaryoları
@@ -946,8 +946,8 @@ print(max_val)                      -- 5
 |---------|--------------|--------|
 | Sayı dizisi işleme | `numeric[]` Array | Homojen, hızlı indeksleme |
 | Veritabanı kaydı | `kişi()` List | Farklı tipler, değiştirilebilir |
-| Fonksiyon çoklu return | `<a, b>` Tuple | Stack'te, allocation yok |
-| Koordinat, RGB | `<x, y, z>` Tuple | Sabit yapı, immutable |
+| Fonksiyon çoklu return | `{a, b}` Tuple | Stack'te, allocation yok |
+| Koordinat, RGB | `{x, y, z}` Tuple | Sabit yapı, immutable |
 | Dinamik koleksiyon | `items()` List | Eleman ekle/çıkar |
 
 ### 13.3 Çoklu Değişken Tanımlama (Orta Öncelik)
@@ -960,17 +960,17 @@ numeric a, b, c = 1, 2, 3
 numeric x = 0, y = 0, z = 0
 
 -- Swap (tuple ile)
-<a, b> = <b, a>
+{a, b} = {b, a}
 
 -- Fonksiyondan çoklu dönüş (tuple destructuring)
-<text ad, numeric yaş> = get_user_info()
+{string ad, numeric yaş} = get_user_info()
 ```
 
 ### 13.4 Default ve Named Parametreler (Orta Öncelik)
 
 ```mlp
 -- Default parametreler
-func selamla(text isim = "Dünya", text mesaj = "Merhaba")
+func selamla(string isim = "Dünya", string mesaj = "Merhaba")
     print(mesaj + " " + isim + "!")
 end func
 

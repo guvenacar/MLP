@@ -1,0 +1,4 @@
+numeric FUNC_DECL = 11
+numeric FUNC_CALL = 12
+numeric FUNC_RETURN = 13
+numeric FUNC_PARAM = 14

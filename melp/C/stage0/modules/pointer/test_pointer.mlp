@@ -1,0 +1,15 @@
+-- Pointer Module Test
+-- P1 Data Structures - Module #16
+
+-- Basic variables
+numeric x = 42
+numeric y = 100
+
+-- Pointer declaration (future feature)
+-- numeric* ptr = &x
+
+-- Dereference (future feature)
+-- numeric z = *ptr
+
+-- Pointer arithmetic (future feature)
+-- ptr = ptr + 1

@@ -1,0 +1,18 @@
+#ifndef LOGICAL_PARSER_H
+#define LOGICAL_PARSER_H
+
+#include "logical.h"
+#include "../../parser.h"
+#include "../arithmetic/arithmetic_parser.h"
+
+typedef struct LogicalExpr {
+    Expression expr;     // Base expression (type should be EXPR_LOGICAL)
+    LogicalOp op;
+    Expression* left;   // NULL for unary NOT
+    Expression* right;  // Operand for NOT, right side for AND/OR
+} LogicalExpr;
+
+LogicalExpr* logical_parse(Parser* parser);
+void logical_free(LogicalExpr* logical);
+
+#endif

@@ -1,0 +1,4 @@
+numeric sum = 0
+for i = 1 to 5
+    sum = sum + i
+end for

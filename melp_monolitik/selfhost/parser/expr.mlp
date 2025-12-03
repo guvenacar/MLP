@@ -1,0 +1,288 @@
+-- ============================================
+-- MLP Self-Hosting Compiler - Expression Parser
+-- ============================================
+-- Parses expressions: numbers, variables, 
+-- binary ops, comparisons, function calls
+-- ============================================
+
+import types
+import lexer
+
+-- ============================================
+-- Forward declarations (parser state)
+-- ============================================
+state numeric p_current_token = 0
+
+-- ============================================
+-- Parser utilities
+-- ============================================
+
+-- Get current token type
+func parser_current_token() returns numeric
+    return g_tok_type
+end func
+
+-- Get current token value
+func parser_current_value() returns string
+    return g_tok_value
+end func
+
+-- Advance to next token
+func parser_advance()
+    lexer_next()
+end func
+
+-- Check if current token matches expected type
+func parser_check(numeric expected) returns boolean
+    return g_tok_type == expected
+end func
+
+-- Consume expected token or report error
+func parser_expect(numeric expected)
+    if g_tok_type != expected then
+        print("Parser Error: Unexpected token at line ")
+        print(g_tok_line)
+        print("\n")
+    end if
+    parser_advance()
+end func
+
+-- ============================================
+-- Expression Parsing - Recursive Descent
+-- ============================================
+
+-- Forward declarations for recursive descent
+-- parse_expression -> parse_comparison -> parse_term -> parse_factor -> parse_primary
+
+-- Parse primary expression (number, variable, string, parenthesized)
+func parse_primary() returns numeric
+    numeric token_type = g_tok_type
+    
+    -- Number literal
+    if token_type == TOKEN_NUMBER then
+        numeric value = str_to_num(g_tok_value)
+        parser_advance()
+        return create_expr_number(value)
+    end if
+    
+    -- String literal
+    if token_type == TOKEN_STRING then
+        string value = g_tok_value
+        parser_advance()
+        return create_expr_string(value)
+    end if
+    
+    -- Variable or function call
+    if token_type == TOKEN_IDENTIFIER then
+        string name = g_tok_value
+        parser_advance()
+        
+        -- Check for function call
+        if g_tok_type == TOKEN_LPAREN then
+            parser_advance()  -- consume (
+            -- TODO: Parse arguments
+            parser_expect(TOKEN_RPAREN)  -- consume )
+            return create_expr_func_call(name, -1, 0)
+        end if
+        
+        -- Check for array index
+        if g_tok_type == TOKEN_LBRACKET then
+            parser_advance()  -- consume [
+            numeric index_expr = parse_expression()
+            parser_expect(TOKEN_RBRACKET)  -- consume ]
+            return create_expr_array_index(name, index_expr)
+        end if
+        
+        -- Simple variable
+        return create_expr_variable(name)
+    end if
+    
+    -- Parenthesized expression
+    if token_type == TOKEN_LPAREN then
+        parser_advance()  -- consume (
+        numeric expr = parse_expression()
+        parser_expect(TOKEN_RPAREN)  -- consume )
+        return expr
+    end if
+    
+    -- Boolean literals
+    if token_type == TOKEN_BOOLEAN then
+        numeric value = 0
+        if g_tok_value == "true" then
+            value = 1
+        end if
+        parser_advance()
+        return create_expr_number(value)
+    end if
+    
+    print("Parser Error: Unexpected token in expression\n")
+    return -1
+end func
+
+-- Parse unary expression (NOT, negation)
+func parse_unary() returns numeric
+    if g_tok_type == TOKEN_MINUS then
+        parser_advance()
+        numeric operand = parse_unary()
+        -- Create negation: 0 - operand
+        numeric zero = create_expr_number(0)
+        return create_expr_binary(zero, operand, BIN_OP_SUB)
+    end if
+    
+    if g_tok_type == TOKEN_NOT then
+        parser_advance()
+        numeric operand = parse_unary()
+        return create_expr_logical_not(operand)
+    end if
+    
+    return parse_primary()
+end func
+
+-- Parse factor (multiplication, division, modulo)
+func parse_factor() returns numeric
+    numeric left = parse_unary()
+    
+    while g_tok_type == TOKEN_MULTIPLY or g_tok_type == TOKEN_DIVIDE
+        numeric op = BIN_OP_MUL
+        if g_tok_type == TOKEN_DIVIDE then
+            op = BIN_OP_DIV
+        end if
+        parser_advance()
+        numeric right = parse_unary()
+        left = create_expr_binary(left, right, op)
+    end while
+    
+    return left
+end func
+
+-- Parse term (addition, subtraction)
+func parse_term() returns numeric
+    numeric left = parse_factor()
+    
+    while g_tok_type == TOKEN_PLUS or g_tok_type == TOKEN_MINUS
+        numeric op = BIN_OP_ADD
+        if g_tok_type == TOKEN_MINUS then
+            op = BIN_OP_SUB
+        end if
+        parser_advance()
+        numeric right = parse_factor()
+        left = create_expr_binary(left, right, op)
+    end while
+    
+    return left
+end func
+
+-- Parse comparison expression
+func parse_comparison() returns numeric
+    numeric left = parse_term()
+    
+    -- Check for comparison operators
+    numeric cmp_op = -1
+    
+    if g_tok_type == TOKEN_EQUAL then
+        cmp_op = CMP_EQUAL
+    else if g_tok_type == TOKEN_NOT_EQUAL then
+        cmp_op = CMP_NOT_EQUAL
+    else if g_tok_type == TOKEN_LESS then
+        cmp_op = CMP_LESS
+    else if g_tok_type == TOKEN_LESS_EQUAL then
+        cmp_op = CMP_LESS_EQUAL
+    else if g_tok_type == TOKEN_GREATER then
+        cmp_op = CMP_GREATER
+    else if g_tok_type == TOKEN_GREATER_EQUAL then
+        cmp_op = CMP_GREATER_EQUAL
+    end if
+    
+    if cmp_op >= 0 then
+        parser_advance()
+        numeric right = parse_term()
+        return create_expr_comparison(left, right, cmp_op)
+    end if
+    
+    return left
+end func
+
+-- Parse logical AND expression
+func parse_and() returns numeric
+    numeric left = parse_comparison()
+    
+    while g_tok_type == TOKEN_AND
+        parser_advance()
+        numeric right = parse_comparison()
+        left = create_expr_logical_and(left, right)
+    end while
+    
+    return left
+end func
+
+-- Parse logical OR expression (top level)
+func parse_or() returns numeric
+    numeric left = parse_and()
+    
+    while g_tok_type == TOKEN_OR
+        parser_advance()
+        numeric right = parse_and()
+        left = create_expr_logical_or(left, right)
+    end while
+    
+    return left
+end func
+
+-- Main expression parser
+func parse_expression() returns numeric
+    return parse_or()
+end func
+
+-- ============================================
+-- Additional expression creators
+-- ============================================
+
+-- Create a function call expression
+func create_expr_func_call(string name, numeric args_start, numeric args_count) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_FUNC_CALL
+    expr_var_names[idx] = name
+    expr_left_indices[idx] = args_start   -- First argument index
+    expr_right_indices[idx] = args_count  -- Argument count
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create an array index expression
+func create_expr_array_index(string name, numeric index_expr) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_ARRAY_INDEX
+    expr_var_names[idx] = name
+    expr_left_indices[idx] = index_expr
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create a logical NOT expression
+func create_expr_logical_not(numeric operand) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_LOGICAL_NOT
+    expr_left_indices[idx] = operand
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create a logical AND expression
+func create_expr_logical_and(numeric left, numeric right) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_LOGICAL_AND
+    expr_left_indices[idx] = left
+    expr_right_indices[idx] = right
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create a logical OR expression
+func create_expr_logical_or(numeric left, numeric right) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_LOGICAL_OR
+    expr_left_indices[idx] = left
+    expr_right_indices[idx] = right
+    expr_count = expr_count + 1
+    return idx
+end func

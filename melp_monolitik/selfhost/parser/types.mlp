@@ -1,0 +1,243 @@
+-- ============================================
+-- MLP Self-Hosting Compiler - Parser Types
+-- ============================================
+-- Shared type definitions for parser modules
+-- Uses state variables for global access
+-- ============================================
+
+-- Expression Types (numeric constants)
+state numeric EXPR_NUMBER = 0
+state numeric EXPR_VARIABLE = 1
+state numeric EXPR_COMPARISON = 2
+state numeric EXPR_BINARY_OP = 3
+state numeric EXPR_FUNC_CALL = 4
+state numeric EXPR_STRING = 5
+state numeric EXPR_NULL = 6
+state numeric EXPR_FIELD_ACCESS = 7
+state numeric EXPR_TERNARY = 8
+state numeric EXPR_ARRAY_INDEX = 9
+state numeric EXPR_ADDRESS_OF = 10
+state numeric EXPR_DEREFERENCE = 11
+state numeric EXPR_LOGICAL_AND = 12
+state numeric EXPR_LOGICAL_OR = 13
+state numeric EXPR_LOGICAL_NOT = 14
+state numeric EXPR_LAMBDA = 15
+state numeric EXPR_AWAIT = 16
+state numeric EXPR_ARRAY_LITERAL = 17
+state numeric EXPR_OPTIONAL_CHAIN = 18
+state numeric EXPR_NULL_COALESCE = 19
+state numeric EXPR_LIST_LITERAL = 20
+state numeric EXPR_TUPLE_LITERAL = 21
+
+-- Statement Types (numeric constants)
+state numeric STMT_DECLARATION = 0
+state numeric STMT_MULTI_DECLARATION = 1
+state numeric STMT_ASSIGNMENT = 2
+state numeric STMT_MULTI_ASSIGNMENT = 3
+state numeric STMT_DESTRUCTURE = 4
+state numeric STMT_PRINT = 5
+state numeric STMT_IF = 6
+state numeric STMT_FOR = 7
+state numeric STMT_WHILE = 8
+state numeric STMT_DO_WHILE = 9
+state numeric STMT_SWITCH = 10
+state numeric STMT_EXIT = 11
+state numeric STMT_CONTINUE = 12
+state numeric STMT_FUNC_DEF = 13
+state numeric STMT_RETURN = 14
+state numeric STMT_EXPR_STMT = 15
+state numeric STMT_STRUCT_DEF = 16
+state numeric STMT_INTERFACE_DEF = 17
+state numeric STMT_ENUM_DEF = 18
+state numeric STMT_TYPE_ALIAS = 19
+state numeric STMT_TRY_CATCH = 20
+state numeric STMT_THROW = 21
+state numeric STMT_YIELD = 22
+state numeric STMT_FOR_IN = 23
+state numeric STMT_DEBUG_LABEL = 24
+state numeric STMT_DEBUG_GOTO = 25
+state numeric STMT_DEBUG_IF = 26
+state numeric STMT_DEBUG_PAUSE = 27
+state numeric STMT_IMPORT = 28
+state numeric STMT_MODULE_DEF = 29
+state numeric STMT_OPERATOR_DEF = 30
+state numeric STMT_MATCH = 31
+state numeric STMT_STATE_DECL = 32
+
+-- Variable Types (numeric constants)
+state numeric TYPE_NUMERIC = 0
+state numeric TYPE_DECIMAL = 1
+state numeric TYPE_BOOLEAN = 2
+state numeric TYPE_STRING = 3
+state numeric TYPE_STRUCT = 4
+state numeric TYPE_VOID = 5
+state numeric TYPE_ARRAY = 6
+state numeric TYPE_LIST = 7
+state numeric TYPE_TUPLE = 8
+state numeric TYPE_POINTER = 9
+state numeric TYPE_ANY = 10
+state numeric TYPE_ENUM = 11
+state numeric TYPE_GENERIC = 12
+
+-- Binary Operators (numeric constants)
+state numeric BIN_OP_ADD = 0
+state numeric BIN_OP_SUB = 1
+state numeric BIN_OP_MUL = 2
+state numeric BIN_OP_DIV = 3
+state numeric BIN_OP_MOD = 4
+state numeric BIN_OP_BITAND = 5
+state numeric BIN_OP_BITOR = 6
+state numeric BIN_OP_BITXOR = 7
+state numeric BIN_OP_SHL = 8
+state numeric BIN_OP_SHR = 9
+
+-- Comparison Operators (numeric constants)
+state numeric CMP_EQUAL = 0
+state numeric CMP_NOT_EQUAL = 1
+state numeric CMP_LESS = 2
+state numeric CMP_LESS_EQUAL = 3
+state numeric CMP_GREATER = 4
+state numeric CMP_GREATER_EQUAL = 5
+
+-- ============================================
+-- AST Node Pool (using arrays)
+-- ============================================
+-- Maximum nodes per type
+state numeric MAX_NODES = 1024
+
+-- Expression pool
+state numeric[] expr_types[MAX_NODES]
+state numeric[] expr_number_values[MAX_NODES]
+state string[] expr_string_values[MAX_NODES]
+state string[] expr_var_names[MAX_NODES]
+state numeric[] expr_left_indices[MAX_NODES]
+state numeric[] expr_right_indices[MAX_NODES]
+state numeric[] expr_op_codes[MAX_NODES]
+state numeric expr_count = 0
+
+-- Statement pool
+state numeric[] stmt_types[MAX_NODES]
+state numeric[] stmt_expr_indices[MAX_NODES]
+state numeric[] stmt_body_starts[MAX_NODES]
+state numeric[] stmt_body_counts[MAX_NODES]
+state string[] stmt_var_names[MAX_NODES]
+state string[] stmt_func_names[MAX_NODES]
+state numeric stmt_count = 0
+
+-- ============================================
+-- Helper Functions
+-- ============================================
+
+-- Create a new number expression
+func create_expr_number(numeric value) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_NUMBER
+    expr_number_values[idx] = value
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create a new variable expression
+func create_expr_variable(string name) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_VARIABLE
+    expr_var_names[idx] = name
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create a new string expression
+func create_expr_string(string value) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_STRING
+    expr_string_values[idx] = value
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create a binary operation expression
+func create_expr_binary(numeric left_idx, numeric right_idx, numeric op) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_BINARY_OP
+    expr_left_indices[idx] = left_idx
+    expr_right_indices[idx] = right_idx
+    expr_op_codes[idx] = op
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Create a comparison expression
+func create_expr_comparison(numeric left_idx, numeric right_idx, numeric cmp_op) returns numeric
+    numeric idx = expr_count
+    expr_types[idx] = EXPR_COMPARISON
+    expr_left_indices[idx] = left_idx
+    expr_right_indices[idx] = right_idx
+    expr_op_codes[idx] = cmp_op
+    expr_count = expr_count + 1
+    return idx
+end func
+
+-- Get expression type
+func get_expr_type(numeric idx) returns numeric
+    return expr_types[idx]
+end func
+
+-- Get expression number value
+func get_expr_number_value(numeric idx) returns numeric
+    return expr_number_values[idx]
+end func
+
+-- Get expression string value
+func get_expr_string_value(numeric idx) returns string
+    return expr_string_values[idx]
+end func
+
+-- Get expression variable name
+func get_expr_var_name(numeric idx) returns string
+    return expr_var_names[idx]
+end func
+
+-- ============================================
+-- Statement Creation Functions
+-- ============================================
+
+-- Create a print statement
+func create_stmt_print(numeric expr_idx) returns numeric
+    numeric idx = stmt_count
+    stmt_types[idx] = STMT_PRINT
+    stmt_expr_indices[idx] = expr_idx
+    stmt_count = stmt_count + 1
+    return idx
+end func
+
+-- Create an assignment statement
+func create_stmt_assignment(string var_name, numeric expr_idx) returns numeric
+    numeric idx = stmt_count
+    stmt_types[idx] = STMT_ASSIGNMENT
+    stmt_var_names[idx] = var_name
+    stmt_expr_indices[idx] = expr_idx
+    stmt_count = stmt_count + 1
+    return idx
+end func
+
+-- Create a declaration statement
+func create_stmt_declaration(string var_name, numeric type_code, numeric init_expr_idx) returns numeric
+    numeric idx = stmt_count
+    stmt_types[idx] = STMT_DECLARATION
+    stmt_var_names[idx] = var_name
+    stmt_expr_indices[idx] = init_expr_idx
+    -- Type info stored separately (simplified for now)
+    stmt_count = stmt_count + 1
+    return idx
+end func
+
+-- Get statement type
+func get_stmt_type(numeric idx) returns numeric
+    return stmt_types[idx]
+end func
+
+-- Reset AST for new compilation
+func reset_ast()
+    expr_count = 0
+    stmt_count = 0
+end func

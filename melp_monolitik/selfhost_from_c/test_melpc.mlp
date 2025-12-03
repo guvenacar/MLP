@@ -1,0 +1,4 @@
+numeric x = 42
+print(x)
+numeric y = 10
+print(y)

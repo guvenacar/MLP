@@ -1,0 +1,7 @@
+// Debug test
+int x = 42;
+assert(x > 0);
+debug(x);
+trace("checkpoint");
+log("info", "started");
+println("Debug OK!");

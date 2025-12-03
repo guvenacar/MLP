@@ -1,0 +1,24 @@
+-- File I/O Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_FILE_HANDLE = 0     -- rdi: dosya handle (FILE*)
+numeric REG_FILE_BUFFER = 1     -- rsi: buffer adresi
+numeric REG_FILE_SIZE = 2       -- rdx: boyut
+numeric REG_FILE_COUNT = 3      -- rcx: eleman sayısı
+
+-- C runtime fonksiyonları
+numeric RUNTIME_FOPEN = 0
+numeric RUNTIME_FCLOSE = 1
+numeric RUNTIME_FREAD = 2
+numeric RUNTIME_FWRITE = 3
+numeric RUNTIME_FSEEK = 4
+numeric RUNTIME_FTELL = 5
+numeric RUNTIME_FFLUSH = 6
+numeric RUNTIME_FEOF = 7
+numeric RUNTIME_FERROR = 8
+
+-- Buffer boyutları
+numeric FILE_BUFFER_SMALL = 256
+numeric FILE_BUFFER_MEDIUM = 4096
+numeric FILE_BUFFER_LARGE = 65536

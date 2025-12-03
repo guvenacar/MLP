@@ -1,0 +1,13 @@
+numeric INTERNAL_INT64 = 0
+numeric INTERNAL_DOUBLE = 1
+numeric INTERNAL_BIGDECIMAL = 2
+
+numeric INTERNAL_SSO = 0
+numeric INTERNAL_HEAP = 1
+numeric INTERNAL_RODATA = 2
+
+numeric STORAGE_REGISTER = 0
+numeric STORAGE_STACK = 1
+numeric STORAGE_DATA = 2
+numeric STORAGE_BSS = 3
+numeric STORAGE_HEAP = 4

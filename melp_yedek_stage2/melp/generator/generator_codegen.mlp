@@ -1,0 +1,30 @@
+-- Generator Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_GEN_CONTEXT = 0     -- rdi: context pointer
+numeric REG_GEN_STATE = 1       -- eax: state field
+numeric REG_GEN_RESUME = 2      -- eax: resume point
+numeric REG_GEN_VALUE = 3       -- rax: yield değeri
+
+-- Stack layout (generator frame)
+numeric STACK_CONTEXT_PTR = 32      -- Context pointer offset
+numeric STACK_STATE = 28            -- State offset
+numeric STACK_RESUME = 24           -- Resume point offset
+numeric STACK_VALUE = 16            -- Current value offset
+numeric STACK_LOCALS_START = 64     -- Local vars başlangıcı
+
+-- State machine etiketleri
+numeric LABEL_GEN_START = 0
+numeric LABEL_GEN_FINISHED = 1
+numeric LABEL_GEN_RETURN = 2
+numeric LABEL_YIELD_POINT = 3
+
+-- Context operasyonları
+numeric CTX_OP_SAVE = 0
+numeric CTX_OP_RESTORE = 1
+numeric CTX_OP_UPDATE = 2
+
+-- Generator isimlendirme
+numeric GEN_PREFIX = 0              -- .gen_
+numeric GEN_YIELD_PREFIX = 1        -- .yield_point_

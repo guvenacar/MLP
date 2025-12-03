@@ -1,0 +1,17 @@
+-- Test Variable Module
+--# Simple variable declarations with TTO support
+
+-- INT64 optimization
+numeric x = 42
+
+-- DOUBLE optimization
+numeric pi = 3.14159
+
+-- SSO optimization (≤23 chars)
+text greeting = "Hello, World!"
+
+-- Boolean
+boolean flag = true
+
+-- Another boolean
+boolean ready = false

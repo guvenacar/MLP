@@ -1,0 +1,33 @@
+-- Enum Modülü - Numaralandırma Tipleri
+-- Simple enums, tagged unions, pattern matching
+
+-- Enum tipi
+numeric ENUM_SIMPLE = 0              -- enum Color { Red, Green, Blue }
+numeric ENUM_TAGGED_UNION = 1        -- enum Option<T> { Some(T), None }
+numeric ENUM_STRUCT_VARIANT = 2      -- enum Shape { Circle { r: f64 }, ... }
+
+-- Variant data tipi
+numeric VARIANT_NO_DATA = 0          -- Red
+numeric VARIANT_TUPLE = 1            -- Some(T)
+numeric VARIANT_STRUCT = 2           -- Point { x: int, y: int }
+
+-- Match tipi
+numeric MATCH_EXHAUSTIVE = 0         -- Tüm variantlar match
+numeric MATCH_WITH_DEFAULT = 1       -- _ wildcard var
+
+-- Cast tipi
+numeric CAST_SAFE = 0                -- Tag kontrolü yapılır
+numeric CAST_UNSAFE = 1              -- Tag kontrolü yapılmaz
+
+-- Tag size
+numeric TAG_SIZE_8 = 0               -- 1 byte (max 256 variants)
+numeric TAG_SIZE_16 = 1              -- 2 bytes (max 65536 variants)
+numeric TAG_SIZE_32 = 2              -- 4 bytes (default)
+
+-- Enum layout
+numeric LAYOUT_TAG_OFFSET = 0        -- Tag ilk 4 byte
+numeric LAYOUT_DATA_OFFSET = 4       -- Data tag'den sonra
+
+-- Discriminant (tag value)
+numeric DISC_AUTO = 0                -- Otomatik artan (0, 1, 2, ...)
+numeric DISC_EXPLICIT = 1            -- Manuel atanan (Red = 10)

@@ -1,0 +1,31 @@
+-- Null Safety Modülü - Güvenli Null Yönetimi
+-- Optional tipler, null kontrol, safe navigation
+
+-- Optional durumları
+numeric OPT_NONE = 0            -- Değer yok (null)
+numeric OPT_SOME = 1            -- Değer var
+
+-- Null kontrol tipleri
+numeric CHECK_IS_NULL = 0       -- value == null
+numeric CHECK_IS_NOT_NULL = 1   -- value != null
+numeric CHECK_HAS_VALUE = 2     -- optional.has_value()
+
+-- Optional operatörleri
+numeric OP_UNWRAP = 0           -- opt! (assertion)
+numeric OP_COALESCE = 1         -- a ?? b (null-coalescing)
+numeric OP_SAFE_NAV = 2         -- a?.b (safe navigation)
+numeric OP_SAFE_CALL = 3        -- a?() (safe function call)
+
+-- Optional metotları
+numeric METHOD_GET = 0          -- get() - değer al veya panic
+numeric METHOD_GET_OR = 1       -- get_or(default) - değer al veya default
+numeric METHOD_HAS_VALUE = 2    -- has_value() - değer var mı?
+numeric METHOD_MAP = 3          -- map(fn) - transform
+numeric METHOD_FILTER = 4       -- filter(predicate)
+
+-- Optional struct layout
+numeric OPT_STATE_OFFSET = 0    -- State field (1 byte)
+numeric OPT_VALUE_OFFSET = 8    -- Value pointer (8 byte)
+numeric OPT_TYPE_OFFSET = 16    -- Type name pointer (8 byte)
+numeric OPT_SIZE_OFFSET = 24    -- Value size (8 byte)
+numeric OPT_TOTAL_SIZE = 32     -- Total struct size

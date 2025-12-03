@@ -1,0 +1,29 @@
+-- CLI I/O Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_PRINT_FORMAT = 0    -- rdi: format string
+numeric REG_PRINT_ARG1 = 1      -- rsi: ilk argüman
+numeric REG_PRINT_ARG2 = 2      -- rdx: ikinci argüman
+numeric REG_PRINT_ARG3 = 3      -- rcx: üçüncü argüman
+
+numeric REG_INPUT_BUFFER = 0    -- rdi: buffer adresi
+numeric REG_INPUT_SIZE = 1      -- rsi: buffer boyutu
+numeric REG_INPUT_STREAM = 2    -- rdx: stdin/FILE*
+
+-- C runtime fonksiyonları
+numeric RUNTIME_PRINTF = 0
+numeric RUNTIME_PUTS = 1
+numeric RUNTIME_PUTCHAR = 2
+numeric RUNTIME_SCANF = 3
+numeric RUNTIME_FGETS = 4
+numeric RUNTIME_GETCHAR = 5
+
+-- stdin/stdout/stderr tanıtıcıları
+numeric STDIN_FD = 0
+numeric STDOUT_FD = 1
+numeric STDERR_FD = 2
+
+-- Buffer boyutları
+numeric INPUT_BUFFER_DEFAULT = 1024
+numeric INPUT_LINE_MAX = 4096

@@ -1,0 +1,48 @@
+-- Pattern Matching Parser Modülü
+-- Parse işlemleri sabitleri
+
+-- Match parse
+numeric PARSE_MATCH_KEYWORD = 0
+numeric PARSE_MATCH_EXPR = 1
+numeric PARSE_MATCH_LBRACE = 2
+numeric PARSE_MATCH_ARMS = 3
+numeric PARSE_MATCH_RBRACE = 4
+
+-- Match arm parse
+numeric PARSE_ARM_PATTERN = 0
+numeric PARSE_ARM_OR = 1            -- |
+numeric PARSE_ARM_WHEN = 2          -- when (guard)
+numeric PARSE_ARM_ARROW = 3         -- =>
+numeric PARSE_ARM_BODY = 4
+numeric PARSE_ARM_COMMA = 5
+
+-- Pattern parse
+numeric PARSE_PAT_START = 0
+numeric PARSE_PAT_LITERAL = 1
+numeric PARSE_PAT_WILDCARD = 2      -- _
+numeric PARSE_PAT_VARIABLE = 3
+numeric PARSE_PAT_STRUCT = 4        -- { }
+numeric PARSE_PAT_ARRAY = 5         -- [ ]
+numeric PARSE_PAT_RANGE = 6         -- ..
+numeric PARSE_PAT_OR = 7            -- |
+numeric PARSE_PAT_GUARD = 8         -- when
+
+-- Struct pattern parse
+numeric PARSE_STRUCT_LBRACE = 0
+numeric PARSE_STRUCT_FIELD = 1
+numeric PARSE_STRUCT_COMMA = 2
+numeric PARSE_STRUCT_REST = 3       -- ...
+numeric PARSE_STRUCT_RBRACE = 4
+
+-- Array pattern parse
+numeric PARSE_ARRAY_LBRACKET = 0
+numeric PARSE_ARRAY_ELEMENT = 1
+numeric PARSE_ARRAY_COMMA = 2
+numeric PARSE_ARRAY_REST = 3        -- ...
+numeric PARSE_ARRAY_RBRACKET = 4
+
+-- Destructure parse
+numeric PARSE_DEST_LET = 0
+numeric PARSE_DEST_PATTERN = 1
+numeric PARSE_DEST_ASSIGN = 2
+numeric PARSE_DEST_VALUE = 3

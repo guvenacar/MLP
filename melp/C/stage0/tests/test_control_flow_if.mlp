@@ -1,0 +1,58 @@
+-- Test: Control Flow - If Statements
+-- Tests: basic if, if-else, nested if, multiple conditions
+
+numeric x = 10
+numeric y = 20
+boolean result = 0
+
+-- Test 1: Basic if (true condition)
+if x < y then
+    result = 1
+end if
+
+-- Test 2: If-else (true branch)
+numeric max = 0
+if x > y then
+    max = x
+else
+    max = y
+end if
+
+-- Test 3: If-else (false branch)  
+numeric min = 0
+if x < y then
+    min = x
+else
+    min = y
+end if
+
+-- Test 4: Nested if
+numeric score = 85
+numeric grade = 0
+if score >= 60 then
+    if score >= 90 then
+        grade = 90
+    else
+        if score >= 80 then
+            grade = 80
+        else
+            grade = 70
+        end if
+    end if
+end if
+
+-- Test 5: Multiple conditions (nested if = AND)
+numeric valid = 0
+if x > 0 then
+    if y > 0 then
+        valid = 1
+    end if
+end if
+
+-- Test 6: Comparison in if
+numeric a = 100
+numeric b = 100
+numeric equal = 0
+if a == b then
+    equal = 1
+end if

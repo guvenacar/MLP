@@ -1,0 +1,84 @@
+-- Asenkron Programlama Temel Sabitleri
+-- async/await, Future, Promise, Async Runtime
+
+-- Future durumları
+numeric FUTURE_PENDING = 0      -- Henüz tamamlanmadı
+numeric FUTURE_RUNNING = 1      -- Şu anda çalışıyor
+numeric FUTURE_COMPLETED = 2    -- Başarıyla tamamlandı
+numeric FUTURE_FAILED = 3       -- Hata ile tamamlandı
+numeric FUTURE_CANCELLED = 4    -- İptal edildi
+
+-- Promise durumları
+numeric PROMISE_UNFULFILLED = 0 -- Henüz yerine getirilmedi
+numeric PROMISE_FULFILLED = 1   -- Başarıyla yerine getirildi
+numeric PROMISE_REJECTED = 2    -- Reddedildi
+
+-- Async fonksiyon türleri
+numeric ASYNC_FUNCTION = 0      -- Normal async fonksiyon
+numeric ASYNC_GENERATOR = 1     -- Async generator (yield)
+numeric ASYNC_COROUTINE = 2     -- Coroutine (yield from)
+
+-- Await operasyonu türleri
+numeric AWAIT_FUTURE = 0        -- Future await
+numeric AWAIT_PROMISE = 1       -- Promise await
+numeric AWAIT_VALUE = 2         -- Direct value await
+numeric AWAIT_ALL = 3           -- Tüm future'ları bekle
+numeric AWAIT_ANY = 4           -- Herhangi birini bekle
+numeric AWAIT_RACE = 5          -- İlk tamamlananı al
+
+-- Executor stratejileri
+numeric EXECUTOR_SINGLE_THREAD = 0  -- Tek thread
+numeric EXECUTOR_THREAD_POOL = 1    -- Thread pool
+numeric EXECUTOR_WORK_STEALING = 2  -- Work-stealing scheduler
+
+-- Event loop durumları
+numeric LOOP_IDLE = 0           -- Boşta
+numeric LOOP_RUNNING = 1        -- Çalışıyor
+numeric LOOP_STOPPED = 2        -- Durduruldu
+
+-- Future callback türleri
+numeric CALLBACK_THEN = 0       -- then() callback
+numeric CALLBACK_CATCH = 1      -- catch() callback
+numeric CALLBACK_FINALLY = 2    -- finally() callback
+
+-- Task öncelik seviyeleri
+numeric PRIORITY_LOW = 0        -- Düşük öncelik
+numeric PRIORITY_NORMAL = 1     -- Normal öncelik
+numeric PRIORITY_HIGH = 2       -- Yüksek öncelik
+numeric PRIORITY_CRITICAL = 3   -- Kritik öncelik
+
+-- Task durumları
+numeric TASK_PENDING = 0        -- Bekliyor
+numeric TASK_RUNNING = 1        -- Çalışıyor
+numeric TASK_COMPLETED = 2      -- Tamamlandı
+numeric TASK_FAILED = 3         -- Başarısız
+numeric TASK_CANCELLED = 4      -- İptal edildi
+
+-- Async runtime durumları
+numeric RUNTIME_UNINITIALIZED = 0 -- Başlatılmadı
+numeric RUNTIME_INITIALIZED = 1   -- Başlatıldı
+numeric RUNTIME_RUNNING = 2       -- Çalışıyor
+numeric RUNTIME_SHUTTING_DOWN = 3 -- Kapatılıyor
+numeric RUNTIME_SHUTDOWN = 4      -- Kapatıldı
+
+-- Future combinator türleri
+numeric COMBINATOR_ALL = 0      -- Hepsini bekle
+numeric COMBINATOR_ANY = 1      -- Herhangi birini bekle
+numeric COMBINATOR_RACE = 2     -- İlk tamamlananı al
+numeric COMBINATOR_JOIN = 3     -- Join (parallel)
+numeric COMBINATOR_SEQUENCE = 4 -- Sequence (serial)
+
+-- Timeout ayarları
+numeric TIMEOUT_NONE = 0        -- Timeout yok
+numeric TIMEOUT_IMMEDIATE = 1   -- Hemen timeout
+numeric TIMEOUT_DEFAULT = 5000  -- Varsayılan timeout (ms)
+
+-- Cancel davranışı
+numeric CANCEL_IMMEDIATE = 0    -- Hemen iptal et
+numeric CANCEL_GRACEFUL = 1     -- Nazikçe iptal et
+numeric CANCEL_COOPERATIVE = 2  -- İşbirlikçi iptal
+
+-- Yield davranışı (generator için)
+numeric YIELD_VALUE = 0         -- Değer yield et
+numeric YIELD_FROM = 1          -- Başka generator'dan yield et
+numeric YIELD_BREAK = 2         -- Generator'ı sonlandır

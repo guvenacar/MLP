@@ -1,0 +1,6 @@
+numeric small_int = 42
+numeric large_int = 999999999999
+numeric pi = 3.14159
+string short_name = "Ali"
+string long_text = "This is a very long string that exceeds the SSO threshold"
+boolean flag = true

@@ -1,0 +1,5 @@
+numeric x = 5
+numeric y = 10
+if x < y then
+    x = 20
+end if

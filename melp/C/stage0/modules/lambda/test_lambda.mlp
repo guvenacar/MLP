@@ -1,0 +1,21 @@
+-- Lambda/Closure Test
+-- P2 Advanced Features Module #21
+
+-- Simple variables
+numeric x = 10
+numeric y = 20
+
+-- Simple lambda (arrow function)
+func double = (n) => n * 2
+
+-- Lambda with multiple params
+func add = (a, b) => a + b
+
+-- Closure with captures
+func multiplier = [x](n) => n * x
+
+-- Closure with ref capture
+func counter = [&y]() => y
+
+-- Result
+text result = "Lambda OK!"

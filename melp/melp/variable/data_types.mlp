@@ -1,0 +1,3 @@
+numeric TYPE_NUMERIC = 0
+numeric TYPE_STRING = 1
+numeric TYPE_BOOLEAN = 2

@@ -1,0 +1,4 @@
+numeric x = 10
+numeric y = 20
+boolean less = true
+boolean greater = false

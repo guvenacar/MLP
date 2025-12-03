@@ -1,0 +1,4 @@
+numeric STMT_IF = 7
+numeric STMT_WHILE = 8
+numeric STMT_FOR = 9
+numeric STMT_EXIT = 10

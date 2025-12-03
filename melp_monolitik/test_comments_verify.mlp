@@ -1,0 +1,19 @@
+-- Bu tek satır yorum
+
+---
+Bu çok satırlı
+yorum bloğu
+---
+
+--# Bu tek satır dokümantasyon yorumu
+
+---#
+Bu çok satırlı
+dokümantasyon yorumu
+---#
+
+numeric x = 42 -- satır sonu yorum
+numeric y = 10 --- yine yorum ---
+
+print(x)
+print(y)

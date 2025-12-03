@@ -1,0 +1,5 @@
+-- Comments Parser Module
+-- Comments are handled at lexer level, not parser level
+-- No parser constants needed
+
+numeric COMMENT_PARSER_UNUSED = 0

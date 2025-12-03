@@ -1,0 +1,9 @@
+numeric x = 0
+numeric y = 0
+for i = 1 to 3
+    if i < 2 then
+        x = x + 1
+    else
+        y = y + 1
+    end if
+end for

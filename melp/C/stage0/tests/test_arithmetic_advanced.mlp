@@ -1,0 +1,14 @@
+-- Test: Arithmetic Operations
+-- Tests: addition, subtraction, multiplication, division
+
+numeric a = 10
+numeric b = 5
+numeric sum = 15
+numeric diff = 5
+numeric product = 50
+numeric quotient = 2
+
+-- Complex expressions
+numeric expr1 = 100
+numeric expr2 = 25
+numeric expr3 = 200

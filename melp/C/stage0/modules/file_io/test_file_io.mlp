@@ -1,0 +1,11 @@
+// File I/O test
+str filename = "test.txt";
+file fp = fopen("test.txt", "w");
+fwrite(fp, "Hello World", 11);
+fclose(fp);
+file fp2 = fopen("test.txt", "r");
+str content = readfile("test.txt");
+fclose(fp2);
+bool exists = fileexists("test.txt");
+deletefile("test.txt");
+print("File I/O OK!");

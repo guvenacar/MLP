@@ -1,0 +1,22 @@
+-- Generator Test
+-- P2 Advanced Features Module #22
+
+-- Generator function definition
+generator range(start, end)
+    numeric i = start
+    while i <= end
+        yield i
+        i = i + 1
+    end
+end
+
+-- Iterator usage
+iter nums = range(1, 5)
+
+-- for-in loop
+for x in range(1, 3)
+    print x
+end
+
+-- Result
+text result = "Generator OK!"

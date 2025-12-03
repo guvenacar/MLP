@@ -1,0 +1,127 @@
+-- ============================================
+-- MLP Self-Hosting Compiler - If Statement Parser
+-- ============================================
+-- Parses if-then-else statements
+-- ============================================
+
+import types
+import expr
+
+-- ============================================
+-- If Statement Pool
+-- ============================================
+state numeric[] if_condition_indices[MAX_NODES]
+state numeric[] if_then_starts[MAX_NODES]
+state numeric[] if_then_counts[MAX_NODES]
+state numeric[] if_else_starts[MAX_NODES]
+state numeric[] if_else_counts[MAX_NODES]
+state numeric if_stmt_count = 0
+
+-- ============================================
+-- If Statement Parsing
+-- ============================================
+
+-- Forward declaration for parse_statement (from stmt.mlp)
+-- func parse_statement() returns numeric
+
+-- Parse if-then-else statement
+-- Syntax: if <condition> then <body> [else <body>] end if
+func parse_if_statement() returns numeric
+    parser_advance()  -- consume 'if'
+    
+    -- Parse condition
+    numeric condition_idx = parse_expression()
+    
+    -- Expect 'then'
+    parser_expect(TOKEN_THEN)
+    
+    -- Parse then body
+    numeric then_start = stmt_count
+    numeric then_count = 0
+    
+    while g_tok_type != TOKEN_ELSE and g_tok_type != TOKEN_END and g_tok_type != TOKEN_EOF
+        parse_statement()
+        then_count = then_count + 1
+    end while
+    
+    -- Parse else body (if present)
+    numeric else_start = stmt_count
+    numeric else_count = 0
+    
+    if g_tok_type == TOKEN_ELSE then
+        parser_advance()  -- consume 'else'
+        
+        -- Check for else if
+        if g_tok_type == TOKEN_IF then
+            parse_statement()  -- Recursive if parsing
+            else_count = 1
+        else
+            while g_tok_type != TOKEN_END and g_tok_type != TOKEN_EOF
+                parse_statement()
+                else_count = else_count + 1
+            end while
+        end if
+    end if
+    
+    -- Expect 'end if'
+    parser_expect(TOKEN_END)
+    parser_expect(TOKEN_IF)
+    
+    -- Create if statement node
+    return create_stmt_if(condition_idx, then_start, then_count, else_start, else_count)
+end func
+
+-- Create an if statement
+func create_stmt_if(numeric condition_idx, numeric then_start, numeric then_count, numeric else_start, numeric else_count) returns numeric
+    numeric idx = stmt_count
+    stmt_types[idx] = STMT_IF
+    
+    -- Store if-specific data in separate arrays
+    if_condition_indices[if_stmt_count] = condition_idx
+    if_then_starts[if_stmt_count] = then_start
+    if_then_counts[if_stmt_count] = then_count
+    if_else_starts[if_stmt_count] = else_start
+    if_else_counts[if_stmt_count] = else_count
+    
+    -- Link statement to if data
+    stmt_expr_indices[idx] = if_stmt_count
+    
+    if_stmt_count = if_stmt_count + 1
+    stmt_count = stmt_count + 1
+    return idx
+end func
+
+-- Get if statement condition
+func get_if_condition(numeric stmt_idx) returns numeric
+    numeric if_idx = stmt_expr_indices[stmt_idx]
+    return if_condition_indices[if_idx]
+end func
+
+-- Get if statement then body start
+func get_if_then_start(numeric stmt_idx) returns numeric
+    numeric if_idx = stmt_expr_indices[stmt_idx]
+    return if_then_starts[if_idx]
+end func
+
+-- Get if statement then body count
+func get_if_then_count(numeric stmt_idx) returns numeric
+    numeric if_idx = stmt_expr_indices[stmt_idx]
+    return if_then_counts[if_idx]
+end func
+
+-- Get if statement else body start
+func get_if_else_start(numeric stmt_idx) returns numeric
+    numeric if_idx = stmt_expr_indices[stmt_idx]
+    return if_else_starts[if_idx]
+end func
+
+-- Get if statement else body count
+func get_if_else_count(numeric stmt_idx) returns numeric
+    numeric if_idx = stmt_expr_indices[stmt_idx]
+    return if_else_counts[if_idx]
+end func
+
+-- Reset if statement pool
+func reset_if_stmts()
+    if_stmt_count = 0
+end func

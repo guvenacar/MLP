@@ -1,0 +1,432 @@
+-- ============================================
+-- MLP Minimal Self-Hosting Compiler v0.1
+-- ============================================
+-- Desteklenen syntax:
+--   numeric x = 42
+--   print(x)
+--   numeric y = x + 10
+-- ============================================
+
+-- Token types
+numeric TOKEN_EOF = 0
+numeric TOKEN_NUMERIC = 1
+numeric TOKEN_IDENTIFIER = 2
+numeric TOKEN_NUMBER = 3
+numeric TOKEN_ASSIGN = 4
+numeric TOKEN_PRINT = 5
+numeric TOKEN_LPAREN = 6
+numeric TOKEN_RPAREN = 7
+numeric TOKEN_PLUS = 8
+numeric TOKEN_MINUS = 9
+
+-- Global state
+state text g_source = ""
+state numeric g_pos = 0
+state numeric g_length = 0
+state numeric g_current_token = 0
+state text g_token_value = ""
+
+-- Variables (symbol table)
+state text[100] g_var_names
+state numeric[100] g_var_offsets
+state numeric g_var_count = 0
+
+-- Output assembly
+state text g_output = ""
+
+-- ============================================
+-- HELPER FUNCTIONS
+-- ============================================
+
+func is_digit(text c) returns numeric
+    if c == "0" then return 1 end if
+    if c == "1" then return 1 end if
+    if c == "2" then return 1 end if
+    if c == "3" then return 1 end if
+    if c == "4" then return 1 end if
+    if c == "5" then return 1 end if
+    if c == "6" then return 1 end if
+    if c == "7" then return 1 end if
+    if c == "8" then return 1 end if
+    if c == "9" then return 1 end if
+    return 0
+end func
+
+func is_alpha(text c) returns numeric
+    numeric idx = indexOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", c)
+    if idx >= 0 then
+        return 1
+    end if
+    return 0
+end func
+
+func is_whitespace(text c) returns numeric
+    if c == " " then return 1 end if
+    if c == "\n" then return 1 end if
+    if c == "\r" then return 1 end if
+    if c == "\t" then return 1 end if
+    return 0
+end func
+
+-- ============================================
+-- LEXER
+-- ============================================
+
+func skip_whitespace()
+    for g_pos = g_pos to g_length - 1
+        text c = charAt(g_source, g_pos)
+        numeric is_ws = is_whitespace(c)
+        if is_ws == 0 then
+            return 0
+        end if
+    end for
+    return 0
+end func
+
+func next_token() returns numeric
+    skip_whitespace()
+    
+    if g_pos >= g_length then
+        g_current_token = TOKEN_EOF
+        return TOKEN_EOF
+    end if
+    
+    text c = charAt(g_source, g_pos)
+    
+    -- Single character tokens
+    if c == "=" then
+        g_pos = g_pos + 1
+        g_current_token = TOKEN_ASSIGN
+        return TOKEN_ASSIGN
+    end if
+    
+    if c == "(" then
+        g_pos = g_pos + 1
+        g_current_token = TOKEN_LPAREN
+        return TOKEN_LPAREN
+    end if
+    
+    if c == ")" then
+        g_pos = g_pos + 1
+        g_current_token = TOKEN_RPAREN
+        return TOKEN_RPAREN
+    end if
+    
+    if c == "+" then
+        g_pos = g_pos + 1
+        g_current_token = TOKEN_PLUS
+        return TOKEN_PLUS
+    end if
+    
+    if c == "-" then
+        g_pos = g_pos + 1
+        g_current_token = TOKEN_MINUS
+        return TOKEN_MINUS
+    end if
+    
+    -- Number
+    numeric is_d = is_digit(c)
+    if is_d == 1 then
+        numeric start = g_pos
+        for g_pos = g_pos to g_length - 1
+            text ch = charAt(g_source, g_pos)
+            numeric is_d2 = is_digit(ch)
+            if is_d2 == 0 then
+                g_pos = g_pos - 1
+                numeric len = g_pos - start + 1
+                g_token_value = substring(g_source, start, len)
+                g_pos = g_pos + 1
+                g_current_token = TOKEN_NUMBER
+                return TOKEN_NUMBER
+            end if
+        end for
+        numeric len2 = g_pos - start
+        g_token_value = substring(g_source, start, len2)
+        g_current_token = TOKEN_NUMBER
+        return TOKEN_NUMBER
+    end if
+    
+    -- Identifier or keyword
+    numeric is_a = is_alpha(c)
+    if is_a == 1 then
+        numeric start2 = g_pos
+        for g_pos = g_pos to g_length - 1
+            text ch2 = charAt(g_source, g_pos)
+            numeric is_a2 = is_alpha(ch2)
+            numeric is_d3 = is_digit(ch2)
+            if is_a2 == 0 then
+                if is_d3 == 0 then
+                    g_pos = g_pos - 1
+                    numeric len3 = g_pos - start2 + 1
+                    g_token_value = substring(g_source, start2, len3)
+                    g_pos = g_pos + 1
+                    
+                    -- Check keywords
+                    if g_token_value == "numeric" then
+                        g_current_token = TOKEN_NUMERIC
+                        return TOKEN_NUMERIC
+                    end if
+                    if g_token_value == "print" then
+                        g_current_token = TOKEN_PRINT
+                        return TOKEN_PRINT
+                    end if
+                    
+                    g_current_token = TOKEN_IDENTIFIER
+                    return TOKEN_IDENTIFIER
+                end if
+            end if
+        end for
+        numeric len4 = g_pos - start2
+        g_token_value = substring(g_source, start2, len4)
+        
+        if g_token_value == "numeric" then
+            g_current_token = TOKEN_NUMERIC
+            return TOKEN_NUMERIC
+        end if
+        if g_token_value == "print" then
+            g_current_token = TOKEN_PRINT
+            return TOKEN_PRINT
+        end if
+        
+        g_current_token = TOKEN_IDENTIFIER
+        return TOKEN_IDENTIFIER
+    end if
+    
+    return TOKEN_EOF
+end func
+
+-- ============================================
+-- SYMBOL TABLE
+-- ============================================
+
+func add_variable(text name) returns numeric
+    g_var_names[g_var_count] = name
+    g_var_offsets[g_var_count] = (g_var_count + 1) * 8
+    numeric offset = g_var_offsets[g_var_count]
+    g_var_count = g_var_count + 1
+    return offset
+end func
+
+func find_variable(text name) returns numeric
+    numeric i = 0
+    for i = 0 to g_var_count - 1
+        if g_var_names[i] == name then
+            return g_var_offsets[i]
+        end if
+    end for
+    return -1
+end func
+
+-- ============================================
+-- CODE GENERATION
+-- ============================================
+
+func emit(text code)
+    g_output = g_output + code
+end func
+
+-- ============================================
+-- PARSER
+-- ============================================
+
+func parse_expression() returns numeric
+    if g_current_token == TOKEN_NUMBER then
+        numeric value = str_to_int(g_token_value)
+        next_token()
+        return value
+    end if
+    
+    if g_current_token == TOKEN_IDENTIFIER then
+        text var_name = g_token_value
+        numeric offset = find_variable(var_name)
+        if offset < 0 then
+            print("Error: Unknown variable")
+            return -1
+        end if
+        
+        emit("    mov rax, [rbp-")
+        emit(int_to_string(offset))
+        emit("]\n")
+        
+        next_token()
+        
+        -- Handle binary operations
+        if g_current_token == TOKEN_PLUS then
+            next_token()
+            emit("    push rax\n")
+            numeric right = parse_expression()
+            emit("    pop rbx\n")
+            emit("    add rax, rbx\n")
+        end if
+        
+        if g_current_token == TOKEN_MINUS then
+            next_token()
+            emit("    push rax\n")
+            numeric right2 = parse_expression()
+            emit("    pop rbx\n")
+            emit("    sub rbx, rax\n")
+            emit("    mov rax, rbx\n")
+        end if
+        
+        return 0
+    end if
+    
+    return -1
+end func
+
+func parse_statement()
+    if g_current_token == TOKEN_NUMERIC then
+        -- Variable declaration: numeric x = 42
+        next_token()
+        
+        if g_current_token != TOKEN_IDENTIFIER then
+            print("Error: Expected variable name")
+            return 0
+        end if
+        
+        text var_name = g_token_value
+        next_token()
+        
+        if g_current_token != TOKEN_ASSIGN then
+            print("Error: Expected =")
+            return 0
+        end if
+        next_token()
+        
+        -- Add variable to symbol table
+        numeric offset = add_variable(var_name)
+        
+        -- Parse expression
+        if g_current_token == TOKEN_NUMBER then
+            numeric value = str_to_int(g_token_value)
+            emit("    mov rax, ")
+            emit(g_token_value)
+            emit("\n")
+            next_token()
+        end if
+        
+        if g_current_token == TOKEN_IDENTIFIER then
+            parse_expression()
+        end if
+        
+        -- Store in variable
+        emit("    mov [rbp-")
+        emit(int_to_string(offset))
+        emit("], rax\n\n")
+        
+        return 0
+    end if
+    
+    if g_current_token == TOKEN_PRINT then
+        -- Print statement: print(x)
+        next_token()
+        
+        if g_current_token != TOKEN_LPAREN then
+            print("Error: Expected (")
+            return 0
+        end if
+        next_token()
+        
+        if g_current_token == TOKEN_IDENTIFIER then
+            parse_expression()
+        end if
+        
+        if g_current_token == TOKEN_NUMBER then
+            emit("    mov rax, ")
+            emit(g_token_value)
+            emit("\n")
+            next_token()
+        end if
+        
+        emit("    mov rdi, rax\n")
+        emit("    call print_number\n\n")
+        
+        if g_current_token != TOKEN_RPAREN then
+            print("Error: Expected )")
+            return 0
+        end if
+        next_token()
+        
+        return 0
+    end if
+    
+    return 0
+end func
+
+-- ============================================
+-- MAIN COMPILER
+-- ============================================
+
+func compile(text source)
+    g_source = source
+    g_length = str_length(source)
+    g_pos = 0
+    g_var_count = 0
+    g_output = ""
+    
+    -- Generate assembly header
+    emit("section .data\n\n")
+    emit("section .text\n")
+    emit("extern print_number\n")
+    emit("global _start\n\n")
+    emit("_start:\n")
+    emit("    push rbp\n")
+    emit("    mov rbp, rsp\n")
+    emit("    sub rsp, 128  ; Space for variables\n\n")
+    
+    -- Parse all statements
+    next_token()
+    for g_pos = g_pos to g_length
+        if g_current_token == TOKEN_EOF then
+            g_pos = g_length
+        end if
+        parse_statement()
+    end for
+    
+    -- Generate exit code
+    emit("    mov rax, 60\n")
+    emit("    xor rdi, rdi\n")
+    emit("    syscall\n")
+    
+    return 0
+end func
+
+-- Helper: Convert string to int
+func str_to_int(text s) returns numeric
+    numeric result = 0
+    numeric len = str_length(s)
+    numeric i = 0
+    for i = 0 to len - 1
+        text c = charAt(s, i)
+        numeric digit = 0
+        if c == "0" then digit = 0 end if
+        if c == "1" then digit = 1 end if
+        if c == "2" then digit = 2 end if
+        if c == "3" then digit = 3 end if
+        if c == "4" then digit = 4 end if
+        if c == "5" then digit = 5 end if
+        if c == "6" then digit = 6 end if
+        if c == "7" then digit = 7 end if
+        if c == "8" then digit = 8 end if
+        if c == "9" then digit = 9 end if
+        result = result * 10 + digit
+    end for
+    return result
+end func
+
+-- ============================================
+-- MAIN
+-- ============================================
+
+func main()
+    -- Test program
+    text source = "numeric x = 42\nprint(x)\nnumeric y = 10\nprint(y)"
+    
+    compile(source)
+    
+    -- Output the generated assembly
+    print("=== GENERATED ASSEMBLY ===")
+    print(g_output)
+    
+    return 0
+end func

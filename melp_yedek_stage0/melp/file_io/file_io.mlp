@@ -1,0 +1,28 @@
+-- File I/O Modülü - Dosya İşlemleri
+-- Dosya okuma, yazma, açma, kapatma
+
+-- Dosya açma modları
+numeric FILE_READ = 0           -- "r" - Okuma
+numeric FILE_WRITE = 1          -- "w" - Yazma (üzerine yaz)
+numeric FILE_APPEND = 2         -- "a" - Ekleme (sona ekle)
+numeric FILE_READ_WRITE = 3     -- "r+" - Okuma/Yazma
+numeric FILE_WRITE_READ = 4     -- "w+" - Yazma/Okuma (sıfırdan)
+numeric FILE_APPEND_READ = 5    -- "a+" - Ekleme/Okuma
+
+-- Dosya tipleri
+numeric FILE_TEXT = 0           -- Metin modu
+numeric FILE_BINARY = 1         -- Binary mod
+
+-- Seek başlangıç noktaları
+numeric SEEK_SET = 0            -- Baştan
+numeric SEEK_CUR = 1            -- Mevcut konumdan
+numeric SEEK_END = 2            -- Sondan
+
+-- Dosya operasyonları
+numeric FILE_OP_OPEN = 0
+numeric FILE_OP_CLOSE = 1
+numeric FILE_OP_READ = 2
+numeric FILE_OP_WRITE = 3
+numeric FILE_OP_SEEK = 4
+numeric FILE_OP_TELL = 5
+numeric FILE_OP_FLUSH = 6

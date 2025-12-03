@@ -1,0 +1,41 @@
+-- Interface/Trait Parser Modülü
+-- Parse işlemleri sabitleri
+
+-- Trait definition parse
+numeric PARSE_TRAIT_KEYWORD = 0      -- trait
+numeric PARSE_TRAIT_NAME = 1
+numeric PARSE_TRAIT_GENERIC = 2      -- <T> (optional)
+numeric PARSE_TRAIT_COLON = 3        -- : (super traits)
+numeric PARSE_TRAIT_SUPERS = 4
+numeric PARSE_TRAIT_LBRACE = 5       -- {
+numeric PARSE_TRAIT_BODY = 6
+numeric PARSE_TRAIT_RBRACE = 7       -- }
+
+-- Trait method parse
+numeric PARSE_METHOD_FUNC = 0        -- func
+numeric PARSE_METHOD_NAME = 1
+numeric PARSE_METHOD_LPAREN = 2      -- (
+numeric PARSE_METHOD_PARAMS = 3
+numeric PARSE_METHOD_RPAREN = 4      -- )
+numeric PARSE_METHOD_ARROW = 5       -- ->
+numeric PARSE_METHOD_RETURN = 6
+numeric PARSE_METHOD_SEMI = 7        -- ; (no body)
+numeric PARSE_METHOD_LBRACE = 8      -- { (default body)
+numeric PARSE_METHOD_BODY = 9
+numeric PARSE_METHOD_RBRACE = 10     -- }
+
+-- Trait implementation parse
+numeric PARSE_IMPL_KEYWORD = 0       -- impl
+numeric PARSE_IMPL_GENERIC = 1       -- <T> (optional)
+numeric PARSE_IMPL_TRAIT = 2
+numeric PARSE_IMPL_FOR = 3           -- for
+numeric PARSE_IMPL_TYPE = 4
+numeric PARSE_IMPL_LBRACE = 5        -- {
+numeric PARSE_IMPL_METHODS = 6
+numeric PARSE_IMPL_RBRACE = 7        -- }
+
+-- Trait bound parse
+numeric PARSE_BOUND_PARAM = 0        -- T
+numeric PARSE_BOUND_COLON = 1        -- :
+numeric PARSE_BOUND_TRAIT = 2
+numeric PARSE_BOUND_PLUS = 3         -- + (multiple)

@@ -1,0 +1,22 @@
+-- CLI I/O Parser Modülü
+-- I/O işlemleri parse sabitleri
+
+-- Parse durumları
+numeric PARSE_PRINT_KEYWORD = 0
+numeric PARSE_PRINT_LPAREN = 1
+numeric PARSE_PRINT_ARGS = 2
+numeric PARSE_PRINT_RPAREN = 3
+
+numeric PARSE_INPUT_KEYWORD = 0
+numeric PARSE_INPUT_PROMPT = 1
+numeric PARSE_INPUT_ASSIGN = 2
+
+-- Argüman erişimi
+numeric PARSE_ARGS_KEYWORD = 0
+numeric PARSE_ARGS_INDEX = 1
+numeric PARSE_ARGC_ACCESS = 2
+numeric PARSE_ARGV_ACCESS = 3
+
+-- Format string parse
+numeric PARSE_FORMAT_STRING = 0
+numeric PARSE_FORMAT_ARGS = 1

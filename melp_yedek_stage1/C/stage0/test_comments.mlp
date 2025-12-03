@@ -1,0 +1,4 @@
+-- Test yorumlar
+numeric x = 42  -- satır sonu yorumu
+-- Bu satır tamamen yorum
+numeric y = 10

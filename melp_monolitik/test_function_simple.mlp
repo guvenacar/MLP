@@ -1,0 +1,8 @@
+-- Basit fonksiyon testi
+
+function add(numeric a, numeric b) numeric
+    return a + b
+end function
+
+numeric result = add(10, 20)
+print(result)

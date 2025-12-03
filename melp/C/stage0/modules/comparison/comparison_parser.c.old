@@ -1,0 +1,82 @@
+#include "comparison_parser.h"
+#include "../arithmetic/arithmetic_parser.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+// Comparison expression parsing
+// Stage 1: Parse comparison operations (==, !=, <, >, <=, >=)
+
+void comparison_free(ComparisonExpr* cmp) {
+    if (!cmp) return;
+    expression_free(cmp->left);
+    expression_free(cmp->right);
+    free(cmp);
+}
+
+// Helper: Check if current token is a comparison operator
+static int is_comparison_op(TokenType type) {
+    return type == TOKEN_EQUAL ||
+           type == TOKEN_NOT_EQUAL ||
+           type == TOKEN_LESS ||
+           type == TOKEN_GREATER ||
+           type == TOKEN_LESS_EQUAL ||
+           type == TOKEN_GREATER_EQUAL;
+}
+
+// Helper: Convert token type to ComparisonOp
+static ComparisonOp token_to_cmpop(TokenType type) {
+    switch (type) {
+        case TOKEN_EQUAL:         return CMP_EQUAL;
+        case TOKEN_NOT_EQUAL:     return CMP_NOT_EQUAL;
+        case TOKEN_LESS:          return CMP_LESS;
+        case TOKEN_GREATER:       return CMP_GREATER;
+        case TOKEN_LESS_EQUAL:    return CMP_LESS_EQUAL;
+        case TOKEN_GREATER_EQUAL: return CMP_GREATER_EQUAL;
+        default:
+            fprintf(stderr, "Error: Unknown comparison operator: %d\n", type);
+            return CMP_EQUAL;  // fallback
+    }
+}
+
+// Helper: Advance to next token
+static void advance(Parser* parser) {
+    if (parser->current_token) {
+        token_free(parser->current_token);
+    }
+    parser->current_token = lexer_next_token(parser->lexer);
+}
+
+// Main comparison parser
+// Parses: arithmetic_expr ( cmp_op arithmetic_expr )?
+ComparisonExpr* comparison_parse(Parser* parser) {
+    // Parse left arithmetic expression
+    Expression* left = expression_parse(parser);
+    if (!left) return NULL;
+    
+    // Check if comparison operator follows
+    if (!parser->current_token || !is_comparison_op(parser->current_token->type)) {
+        // No comparison operator - this is just an expression, not a comparison
+        expression_free(left);
+        return NULL;
+    }
+    
+    // Get comparison operator
+    TokenType op_type = parser->current_token->type;
+    advance(parser);  // consume operator
+    
+    // Parse right arithmetic expression
+    Expression* right = expression_parse(parser);
+    if (!right) {
+        expression_free(left);
+        return NULL;
+    }
+    
+    // Build comparison node
+    ComparisonExpr* cmp = malloc(sizeof(ComparisonExpr));
+    cmp->expr.type = EXPR_COMPARISON;  // Set expression type
+    cmp->left = left;
+    cmp->right = right;
+    cmp->op = token_to_cmpop(op_type);
+    
+    return cmp;
+}

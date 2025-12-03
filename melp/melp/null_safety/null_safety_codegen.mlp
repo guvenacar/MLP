@@ -1,0 +1,37 @@
+-- Null Safety Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_OPT_PTR = 0         -- rax: optional pointer
+numeric REG_OPT_STATE = 1       -- al: state byte
+numeric REG_OPT_VALUE = 2       -- rax: value
+numeric REG_DEFAULT = 3         -- rbx: default value
+
+-- Stack layout (optional)
+numeric STACK_OPT_STATE = 8     -- State offset
+numeric STACK_OPT_VALUE = 24    -- Value offset
+numeric STACK_OPT_TYPE = 32     -- Type name offset
+numeric STACK_OPT_SIZE = 40     -- Value size offset
+
+-- Null kontrol etiketleri
+numeric LABEL_NULL_CHECK = 0
+numeric LABEL_NULL_TRUE = 1
+numeric LABEL_NULL_FALSE = 2
+numeric LABEL_NULL_DONE = 3
+
+-- Null-coalescing etiketleri
+numeric LABEL_COAL_USE_LEFT = 0
+numeric LABEL_COAL_USE_RIGHT = 1
+numeric LABEL_COAL_DONE = 2
+
+-- Safe navigation etiketleri
+numeric LABEL_SAFE_NULL = 0
+numeric LABEL_SAFE_ACCESS = 1
+numeric LABEL_SAFE_DONE = 2
+
+-- Assertion etiketleri
+numeric LABEL_ASSERT_OK = 0
+numeric LABEL_ASSERT_PANIC = 1
+
+-- Panic çağrısı
+numeric PANIC_EXIT_CODE = 1

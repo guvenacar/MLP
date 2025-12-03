@@ -1,0 +1,19 @@
+-- Memory Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_MEM_ADDR = 0     -- rdi: adres (malloc/free için)
+numeric REG_MEM_SIZE = 1     -- rsi: boyut
+numeric REG_MEM_SRC = 2      -- rsi: kaynak (copy için)
+numeric REG_MEM_DST = 3      -- rdi: hedef (copy için)
+
+-- C runtime fonksiyonları
+numeric RUNTIME_MALLOC = 0
+numeric RUNTIME_FREE = 1
+numeric RUNTIME_REALLOC = 2
+numeric RUNTIME_MEMCPY = 3
+numeric RUNTIME_MEMSET = 4
+
+-- Threshold değerleri
+numeric INLINE_COPY_MAX = 64      -- Bu boyuta kadar inline kopyalama
+numeric INLINE_ZERO_MAX = 64      -- Bu boyuta kadar inline sıfırlama

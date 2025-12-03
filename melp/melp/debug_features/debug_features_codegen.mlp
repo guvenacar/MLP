@@ -1,0 +1,33 @@
+-- Debug Features Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_DEBUG_MODE = 0           -- al: debug mode flag
+numeric REG_CONDITION = 1            -- rax: condition result
+numeric REG_LABEL_PTR = 2            -- rbx: label pointer
+numeric REG_VAR_VALUE = 3            -- rsi: variable value
+
+-- Debug mode flag (.data section)
+numeric DEBUG_MODE_OFFSET = 0        -- .debug_mode byte (0 or 1)
+
+-- Label naming
+numeric LABEL_PREFIX_DEBUG = 0       -- .debug_label_
+numeric LABEL_PREFIX_SKIP = 1        -- .debug_skip_
+
+-- Jump types
+numeric JUMP_UNCONDITIONAL = 0       -- jmp
+numeric JUMP_CONDITIONAL = 1         -- je/jne
+
+-- Breakpoint implementation
+numeric BP_NOP = 0                   -- nop (simple)
+numeric BP_INT3 = 1                  -- int3 (CPU breakpoint)
+numeric BP_CALL = 2                  -- call debugger_hook
+
+-- Print format
+numeric FMT_DECIMAL = 0              -- %ld
+numeric FMT_HEX = 1                  -- %lx
+numeric FMT_STRING = 2               -- %s
+
+-- Production strip
+numeric STRIP_COMMENT = 0            -- Comment olarak bırak
+numeric STRIP_REMOVE = 1             -- Tamamen sil

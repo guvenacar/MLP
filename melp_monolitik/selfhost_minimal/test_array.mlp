@@ -1,0 +1,23 @@
+-- MLP Minimal Self-Hosting Compiler v0.3
+-- Array support via malloc
+
+func main()
+    -- Test: Create array and use it
+    numeric[] offsets = malloc(5)
+    
+    offsets[0] = 8
+    offsets[1] = 16
+    offsets[2] = 24
+    
+    print("Offset 0:")
+    print(offsets[0])
+    print("Offset 1:")
+    print(offsets[1])
+    print("Offset 2:")
+    print(offsets[2])
+    
+    free(offsets)
+    
+    print("Array test complete!")
+    return 0
+end func

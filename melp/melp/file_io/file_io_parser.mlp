@@ -1,0 +1,21 @@
+-- File I/O Parser Modülü
+-- Dosya işlemleri parse sabitleri
+
+-- Parse durumları
+numeric PARSE_FILE_OPEN = 0
+numeric PARSE_FILE_NAME = 1
+numeric PARSE_FILE_MODE = 2
+numeric PARSE_FILE_ASSIGN = 3
+
+-- Operasyon parse durumları
+numeric PARSE_READ_FILE = 0
+numeric PARSE_READ_BUFFER = 1
+numeric PARSE_READ_SIZE = 2
+
+numeric PARSE_WRITE_FILE = 0
+numeric PARSE_WRITE_DATA = 1
+numeric PARSE_WRITE_SIZE = 2
+
+-- Syntax varyasyonları
+numeric SYNTAX_OPEN_FUNCTION = 0    -- open("file", "r")
+numeric SYNTAX_FILE_NEW = 1         -- file = File.new("name", "r")

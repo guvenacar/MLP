@@ -1,0 +1,43 @@
+-- Module System Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_MOD_PTR = 0         -- rax: module pointer
+numeric REG_SYM_PTR = 1         -- rbx: symbol pointer
+numeric REG_CACHE_PTR = 2       -- rcx: cache pointer
+numeric REG_NAME_PTR = 3        -- rdi: name pointer
+
+-- Module layout
+numeric MOD_NAME_OFFSET = 0
+numeric MOD_PATH_OFFSET = 8
+numeric MOD_EXPORTS_OFFSET = 16
+numeric MOD_EXPORT_COUNT_OFFSET = 24
+numeric MOD_IMPORTS_OFFSET = 32
+numeric MOD_IMPORT_COUNT_OFFSET = 40
+numeric MOD_LOADED_FLAG_OFFSET = 48
+
+-- Export table entry
+numeric EXP_NAME_OFFSET = 0
+numeric EXP_VALUE_OFFSET = 8
+numeric EXP_DEFAULT_FLAG_OFFSET = 16
+
+-- Symbol table entry
+numeric SYM_NAME_OFFSET = 0
+numeric SYM_VISIBILITY_OFFSET = 8
+numeric SYM_VALUE_OFFSET = 16
+numeric SYM_TYPE_OFFSET = 24
+
+-- Module cache
+numeric CACHE_MODULES_OFFSET = 0
+numeric CACHE_COUNT_OFFSET = 8
+numeric CACHE_CAPACITY_OFFSET = 16
+
+-- Label tipleri
+numeric LABEL_MODULE_INIT = 0
+numeric LABEL_EXPORT_TABLE = 1
+numeric LABEL_IMPORT_RESOLVE = 2
+numeric LABEL_LAZY_LOAD = 3
+
+-- Global symbols
+numeric GLOBAL_PUBLIC = 1
+numeric GLOBAL_PRIVATE = 0

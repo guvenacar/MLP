@@ -1,0 +1,42 @@
+-- Generic Types Parser Modülü
+-- Parse işlemleri sabitleri
+
+-- Generic type parse
+numeric PARSE_GENERIC_NAME = 0
+numeric PARSE_GENERIC_LANGLE = 1         -- <
+numeric PARSE_GENERIC_PARAMS = 2
+numeric PARSE_GENERIC_RANGLE = 3         -- >
+numeric PARSE_GENERIC_BODY = 4
+
+-- Type parameter parse
+numeric PARSE_PARAM_NAME = 0
+numeric PARSE_PARAM_COLON = 1            -- :
+numeric PARSE_PARAM_CONSTRAINT = 2
+numeric PARSE_PARAM_EQUALS = 3           -- =
+numeric PARSE_PARAM_DEFAULT = 4
+numeric PARSE_PARAM_COMMA = 5            -- ,
+
+-- Type constraint parse (where clause)
+numeric PARSE_WHERE_KEYWORD = 0
+numeric PARSE_WHERE_PARAM = 1
+numeric PARSE_WHERE_COLON = 2
+numeric PARSE_WHERE_TRAIT = 3
+numeric PARSE_WHERE_PLUS = 4             -- + (multiple traits)
+
+-- Type instantiation parse
+numeric PARSE_INST_BASE = 0              -- List
+numeric PARSE_INST_LANGLE = 1            -- <
+numeric PARSE_INST_ARGS = 2              -- int, string
+numeric PARSE_INST_RANGLE = 3            -- >
+
+-- Generic function parse
+numeric PARSE_GFUNC_NAME = 0
+numeric PARSE_GFUNC_LANGLE = 1
+numeric PARSE_GFUNC_PARAMS = 2
+numeric PARSE_GFUNC_RANGLE = 3
+numeric PARSE_GFUNC_LPAREN = 4
+numeric PARSE_GFUNC_ARGS = 5
+numeric PARSE_GFUNC_RPAREN = 6
+numeric PARSE_GFUNC_ARROW = 7
+numeric PARSE_GFUNC_RETURN = 8
+numeric PARSE_GFUNC_BODY = 9

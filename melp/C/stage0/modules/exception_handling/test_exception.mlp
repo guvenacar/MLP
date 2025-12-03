@@ -1,0 +1,21 @@
+-- Exception Handling Module Test
+
+-- Simple try-catch block
+try
+    numeric x = 10
+    numeric y = 0
+    -- This would throw in real code
+catch DivisionError as e
+    print "Division error caught"
+catch ValueError as e
+    print "Value error caught"
+finally
+    print "Cleanup done"
+end try
+
+-- Throw statement
+throw CustomError
+
+-- Variable declarations
+numeric result = 42
+text status = "ok"

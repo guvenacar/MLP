@@ -1,0 +1,3 @@
+numeric EXPR_NUMBER = 0
+numeric EXPR_VARIABLE = 1
+numeric EXPR_BINARY_OP = 2

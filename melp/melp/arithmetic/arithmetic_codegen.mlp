@@ -1,0 +1,2 @@
+numeric CODEGEN_SUCCESS = 0
+numeric CODEGEN_ERROR = 1

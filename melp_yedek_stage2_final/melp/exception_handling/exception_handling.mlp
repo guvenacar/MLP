@@ -1,0 +1,42 @@
+-- Exception Handling Modülü - Hata Yönetimi
+-- Try-catch-finally, exception chaining, custom exceptions
+
+-- Exception tipleri (built-in)
+numeric EXC_VALUE_ERROR = 0
+numeric EXC_TYPE_ERROR = 1
+numeric EXC_IO_ERROR = 2
+numeric EXC_RUNTIME_ERROR = 3
+numeric EXC_DIVIDE_BY_ZERO = 4
+numeric EXC_NULL_POINTER = 5
+numeric EXC_OUT_OF_BOUNDS = 6
+numeric EXC_CUSTOM = 99
+
+-- Try-catch durumu
+numeric TRY_RUNNING = 0
+numeric TRY_CAUGHT = 1
+numeric TRY_FINALLY = 2
+numeric TRY_COMPLETED = 3
+
+-- Catch tipi
+numeric CATCH_SPECIFIC = 0      -- Belirli exception tipi
+numeric CATCH_ALL = 1           -- Tüm exceptionlar
+
+-- Exception propagation
+numeric PROP_STOP = 0           -- Exception yakalandı
+numeric PROP_CONTINUE = 1       -- Exception yukarı ilet
+numeric PROP_RETHROW = 2        -- Exception yeniden fırlat
+
+-- Exception struct layout
+numeric EXC_TYPE_OFFSET = 0     -- Type string (8 byte)
+numeric EXC_MSG_OFFSET = 8      -- Message string (8 byte)
+numeric EXC_FILE_OFFSET = 16    -- File name (8 byte)
+numeric EXC_LINE_OFFSET = 24    -- Line number (4 byte)
+numeric EXC_DATA_OFFSET = 32    -- User data (8 byte)
+numeric EXC_CAUSE_OFFSET = 40   -- Cause exception (8 byte)
+numeric EXC_TOTAL_SIZE = 64     -- Total struct size
+
+-- Stack unwinding
+numeric UNWIND_NONE = 0
+numeric UNWIND_FINALLY = 1
+numeric UNWIND_CATCH = 2
+numeric UNWIND_FULL = 3

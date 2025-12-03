@@ -1,0 +1,15 @@
+-- Array Module Test
+-- P1 Data Structures - Module #12
+
+-- Basic variables
+numeric x = 10
+numeric y = 20
+
+-- Array declaration (future feature)
+-- numeric[] numbers = [1, 2, 3, 4, 5]
+
+-- List declaration (future feature)
+-- list() items = (10; 20; 30;)
+
+-- Tuple declaration (future feature)
+-- tuple<> point = <10, 20, "point">

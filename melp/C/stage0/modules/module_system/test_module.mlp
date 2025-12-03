@@ -1,0 +1,22 @@
+-- Module System Test
+
+-- Import statements
+import math from "std/math"
+import io
+
+-- Export statements
+export function calculate
+export default MyClass
+
+-- Module definition
+module MathUtils
+    numeric PI = 314
+end module
+
+-- Namespace
+namespace Utils
+    text version = "1.0"
+end namespace
+
+-- Variables
+numeric count = 42

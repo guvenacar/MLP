@@ -1,0 +1,6 @@
+-- Arithmetic assignment test
+-- Variable declarations with expressions
+
+numeric x = 2
+numeric y = 3
+numeric result = 0

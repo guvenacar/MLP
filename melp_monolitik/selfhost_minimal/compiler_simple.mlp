@@ -1,0 +1,58 @@
+-- MLP Minimal Self-Hosting Compiler v0.4
+-- PURE FUNCTIONAL - No state, just functions
+
+-- This compiler compiles itself! (Eventually)
+-- For now: hardcoded to generate assembly for:
+--   numeric x = 42
+--   print(x)
+
+func emit_header() returns text
+    text out = ""
+    out = out + "section .text\n"
+    out = out + "extern print_number\n"
+    out = out + "global _start\n\n"
+    out = out + "_start:\n"
+    out = out + "    push rbp\n"
+    out = out + "    mov rbp, rsp\n"
+    out = out + "    sub rsp, 64\n\n"
+    return out
+end func
+
+func emit_footer() returns text
+    text out = ""
+    out = out + "    mov rax, 60\n"
+    out = out + "    xor rdi, rdi\n"
+    out = out + "    syscall\n"
+    return out
+end func
+
+func compile_hardcoded() returns text
+    text output = ""
+    
+    output = output + emit_header()
+    
+    -- numeric x = 42
+    output = output + "    ; numeric x = 42\n"
+    output = output + "    mov rax, 42\n"
+    output = output + "    mov [rbp-8], rax\n\n"
+    
+    -- print(x)
+    output = output + "    ; print(x)\n"
+    output = output + "    mov rax, [rbp-8]\n"
+    output = output + "    mov rdi, rax\n"
+    output = output + "    call print_number\n\n"
+    
+    output = output + emit_footer()
+    
+    return output
+end func
+
+func main()
+    text assembly = compile_hardcoded()
+    
+    print("=== MLP Self-Hosting Compiler v0.4 ===")
+    print("Generated assembly:")
+    print(assembly)
+    
+    return 0
+end func

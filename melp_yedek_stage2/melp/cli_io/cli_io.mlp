@@ -1,0 +1,36 @@
+-- CLI I/O Modülü - Komut Satırı ve Girdi/Çıktı
+-- Print, input, argüman işlemleri
+
+-- Çıktı tipleri
+numeric OUT_STRING = 0      -- String çıktısı
+numeric OUT_NUMBER = 1      -- Sayısal çıktı
+numeric OUT_BOOLEAN = 2     -- Boolean çıktı
+numeric OUT_FORMATTED = 3   -- Formatlanmış çıktı
+
+-- Print varyasyonları
+numeric PRINT_NORMAL = 0    -- print() - newline yok
+numeric PRINT_LINE = 1      -- println() - newline var
+numeric PRINT_FORMAT = 2    -- printf() - format string
+
+-- Input tipleri
+numeric INPUT_STRING = 0    -- String girdi
+numeric INPUT_NUMBER = 1    -- Sayısal girdi
+numeric INPUT_LINE = 2      -- Satır girdi (fgets)
+numeric INPUT_CHAR = 3      -- Tek karakter
+
+-- ANSI renkler
+numeric COLOR_RESET = 0
+numeric COLOR_BLACK = 1
+numeric COLOR_RED = 2
+numeric COLOR_GREEN = 3
+numeric COLOR_YELLOW = 4
+numeric COLOR_BLUE = 5
+numeric COLOR_MAGENTA = 6
+numeric COLOR_CYAN = 7
+numeric COLOR_WHITE = 8
+
+-- Stil seçenekleri
+numeric STYLE_BOLD = 1
+numeric STYLE_DIM = 2
+numeric STYLE_ITALIC = 3
+numeric STYLE_UNDERLINE = 4

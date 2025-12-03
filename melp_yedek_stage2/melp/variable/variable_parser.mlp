@@ -1,0 +1,3 @@
+numeric VAR_DECLARATION = 0
+numeric VAR_ASSIGNMENT = 1
+numeric VAR_MULTI_DECLARATION = 2

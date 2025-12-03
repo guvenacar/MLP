@@ -1,0 +1,6 @@
+-- Test comparison operators
+-- MELP Stage 0 Bootstrap Compiler
+
+numeric x = 10
+numeric y = 20
+numeric z = 10

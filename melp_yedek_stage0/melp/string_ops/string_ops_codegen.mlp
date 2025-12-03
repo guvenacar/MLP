@@ -1,0 +1,5 @@
+numeric CODEGEN_STR_SUCCESS = 0
+numeric CODEGEN_STR_ERROR = 1
+numeric STR_STORAGE_SSO = 0
+numeric STR_STORAGE_HEAP = 1
+numeric STR_STORAGE_RODATA = 2

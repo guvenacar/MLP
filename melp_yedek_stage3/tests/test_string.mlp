@@ -1,0 +1,3 @@
+text hello = "Hello World"
+text name = "MLP Compiler"
+text empty = ""

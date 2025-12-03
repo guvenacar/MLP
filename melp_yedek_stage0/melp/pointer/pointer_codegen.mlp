@@ -1,0 +1,15 @@
+-- Pointer Codegen Modülü
+-- Assembly üretimi için sabitler
+
+-- Register kullanımı
+numeric REG_PTR_ADDR = 0     -- rax: pointer adresi
+numeric REG_PTR_VALUE = 1    -- rbx: işaret edilen değer
+numeric REG_PTR_OFFSET = 2   -- rcx: offset hesaplama
+
+-- Pointer boyutları (byte)
+numeric PTR_SIZE = 8          -- 64-bit pointer
+numeric PTR_ALIGN = 8         -- Hizalama
+
+-- Hata kontrol etiketleri
+numeric ERROR_NULL_PTR = 0
+numeric ERROR_INVALID_PTR = 1

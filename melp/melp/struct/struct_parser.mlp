@@ -1,0 +1,15 @@
+-- Struct Parser Modülü
+-- Yapı parse işlemleri için sabitler
+
+-- Parse durumları
+numeric PARSE_STRUCT_DEF_START = 0
+numeric PARSE_STRUCT_DEF_NAME = 1
+numeric PARSE_STRUCT_DEF_BODY = 2
+numeric PARSE_STRUCT_DEF_MEMBER = 3
+numeric PARSE_STRUCT_DEF_END = 4
+
+-- Üye parse durumları
+numeric PARSE_MEMBER_NAME = 0
+numeric PARSE_MEMBER_COLON = 1
+numeric PARSE_MEMBER_TYPE = 2
+numeric PARSE_MEMBER_COMMA = 3

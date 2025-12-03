@@ -1,0 +1,37 @@
+-- Exception Handling Codegen Modülü
+-- Assembly üretimi sabitleri
+
+-- Register kullanımı
+numeric REG_EXC_PTR = 0         -- rax: exception pointer
+numeric REG_JUMP_BUF = 1        -- rdi: jmp_buf pointer
+numeric REG_EXC_VALUE = 2       -- rsi: exception value (setjmp/longjmp)
+numeric REG_HANDLER = 3         -- rbx: current handler
+
+-- setjmp/longjmp değerleri
+numeric SETJMP_NO_EXC = 0       -- Normal dönüş (exception yok)
+numeric SETJMP_EXC = 1          -- Exception yakalandı
+numeric LONGJMP_VALUE = 1       -- longjmp için value
+
+-- Exception context layout
+numeric CTX_JUMP_BUF_OFFSET = 0
+numeric CTX_CURRENT_EXC_OFFSET = 8
+numeric CTX_HANDLER_STACK_OFFSET = 16
+numeric CTX_STACK_SIZE_OFFSET = 24
+
+-- Label tipleri
+numeric LABEL_TRY_BLOCK = 0
+numeric LABEL_CATCH_DISPATCH = 1
+numeric LABEL_CATCH_HANDLER = 2
+numeric LABEL_FINALLY = 3
+numeric LABEL_TRY_SUCCESS = 4
+numeric LABEL_TRY_END = 5
+numeric LABEL_UNHANDLED = 6
+
+-- Stack unwinding flags
+numeric UNWIND_FLAG_FINALLY = 1
+numeric UNWIND_FLAG_RETHROW = 2
+
+-- Exception string sections
+numeric STR_EXC_TYPE = 0
+numeric STR_EXC_MSG = 1
+numeric STR_EXC_FILE = 2

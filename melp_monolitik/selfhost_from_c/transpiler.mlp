@@ -1,0 +1,43 @@
+-- ============================================
+-- MLP → C Transpiler (Prototype)
+-- ============================================
+-- Converts MLP code to C code
+-- Example: numeric x = 42  →  long x = 42;
+-- ============================================
+
+-- Helper: Read file content (simulated)
+function transpile_line(numeric line_num)
+    -- Hardcoded example: "numeric x = 42"
+    
+    -- Check if line starts with "numeric"
+    -- Convert to: long x = 42;
+    
+    print("Processing line")
+    print(line_num)
+    
+    return 0
+end function
+
+function transpile_file()
+    print("=== MLP → C Transpiler ===")
+    print("Input: numeric x = 42")
+    print("Output: long x = 42;")
+    print("")
+    
+    -- Hardcoded transpilation
+    print("/* Generated C code */")
+    print("#include <stdio.h>")
+    print("")
+    print("int main() {")
+    print("    long x = 42;")
+    print("    printf(\"%ld\\n\", x);")
+    print("    return 0;")
+    print("}")
+    
+    return 0
+end function
+
+function main()
+    transpile_file()
+    return 0
+end function
