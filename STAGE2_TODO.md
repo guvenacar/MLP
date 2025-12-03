@@ -107,15 +107,15 @@ compiler/MODULE_NAME/
 - [x] `compiler/codegen/Makefile` ✅
 - [x] Test et ve doğrula ✅
 
-### 6. Router Implementation
-- [ ] `melpc.mlp` yaz (~80 satır)
+### 6. Router Implementation ✅ TAMAMLANDI
+- [x] `melpc.mlp` yaz (~117 satır) ✅
   - Command line argument parsing
   - Pipeline coordination
   - Module invocation
   - Error propagation
   - Output management
-- [ ] `melpc_compiler` (C Stage 0)
-- [ ] Test entire pipeline
+- [x] `router_compiler.c` (C Stage 0) ✅
+- [x] Test entire pipeline ✅
 
 ### 7. Bootstrap Script
 - [ ] `bootstrap_stage2.sh` yaz
@@ -187,7 +187,7 @@ compiler/MODULE_NAME/
 [✓] Parser   (100% - Complete - 579 lines)
 [✓] Memory   (100% - Complete - 345 lines)
 [✓] Codegen  (100% - Complete - 490 lines)
-[ ] Router   (0% - Not started)
+[✓] Router   (100% - Complete - 117 lines)
 ```
 
 ### Test Coverage
