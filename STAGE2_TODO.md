@@ -92,17 +92,20 @@ compiler/MODULE_NAME/
 - [x] `compiler/memory/Makefile` ✅
 - [x] Test et ve doğrula ✅
 
-### 5. Codegen Modülü
-- [ ] `compiler/codegen/codegen.mlp` yaz (~500 satır)
+### 5. Codegen Modülü ✅ TAMAMLANDI
+
+- [x] `compiler/codegen/codegen.mlp` yaz (~490 satır) ✅
   - x86-64 assembly generation
   - Register allocation
   - Stack management
   - Function prologue/epilogue
-  - Optimization passes
-- [ ] `compiler/codegen/codegen_compiler` (C Stage 0)
-- [ ] `compiler/codegen/test_codegen.mlp`
-- [ ] `compiler/codegen/Makefile`
-- [ ] Test et ve doğrula
+  - Binary/unary operators
+  - Control flow (if/while/return)
+  - Function calls
+- [x] `compiler/codegen/codegen_compiler` (C Stage 0) ✅
+- [x] `compiler/codegen/test_codegen.mlp` ✅
+- [x] `compiler/codegen/Makefile` ✅
+- [x] Test et ve doğrula ✅
 
 ### 6. Router Implementation
 - [ ] `melpc.mlp` yaz (~80 satır)
@@ -183,7 +186,7 @@ compiler/MODULE_NAME/
 [✓] Lexer    (100% - Complete - 377 lines)
 [✓] Parser   (100% - Complete - 579 lines)
 [✓] Memory   (100% - Complete - 345 lines)
-[ ] Codegen  (0% - Not started)
+[✓] Codegen  (100% - Complete - 490 lines)
 [ ] Router   (0% - Not started)
 ```
 
