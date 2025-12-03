@@ -1,0 +1,46 @@
+# AI Instructions for MELP Project
+
+## 🚨 BEFORE DOING ANYTHING:
+
+1. Read `README_FOR_AI.md`
+2. Read `AI_HANDOFF_DOCUMENT.md` (771 lines - COMPREHENSIVE)
+3. Read `STAGE2_COMPLETE.md`
+4. Read `STAGE3_PLAN_REVISED.md`
+
+## Current Working State
+
+- Stage 2: COMPLETE (1908 lines, 5 modules)
+- Stage 3 Phase 1: COMPLETE (GC, 270 lines)
+- All tests passing
+- Bootstrap working
+
+## Your Mission
+
+Enhance existing C compilers (Phase 2-6 of Stage 3):
+- melp/compiler/lexer/lexer_compiler.c (52 → 400 lines)
+- melp/compiler/parser/parser_compiler.c (placeholder → 600 lines)
+- melp/compiler/memory/memory_compiler.c (placeholder → 500 lines)
+- melp/compiler/codegen/codegen_compiler.c (placeholder → 700 lines + GC integration)
+
+## Critical Rules
+
+DO NOT:
+- Rewrite existing modules
+- Merge modules
+- Change architecture
+- Suggest "simpler" approaches
+
+DO:
+- Enhance incrementally
+- Test frequently
+- Commit often
+- Preserve modular structure
+
+## User's Pain Point
+
+"kaçıncı defa yapılan işlerim çöp oldu"
+(This is the 10th+ attempt - previous AIs destroyed working code)
+
+## Success = Enhance, Not Replace
+
+Read documentation first. Build on what works. Don't start over.
