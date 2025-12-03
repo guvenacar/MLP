@@ -1,0 +1,579 @@
+// Parser Module for MELP Compiler
+// Builds Abstract Syntax Tree (AST) from tokens
+// Maximum ~400 lines to stay within AI token limits
+
+// ============================================
+// AST NODE TYPES
+// ============================================
+
+const NODE_PROGRAM = 0
+const NODE_FUNC_DECL = 1
+const NODE_VAR_DECL = 2
+const NODE_STRUCT_DECL = 3
+const NODE_ENUM_DECL = 4
+const NODE_IMPORT = 5
+
+// Statements
+const NODE_EXPR_STMT = 10
+const NODE_BLOCK = 11
+const NODE_IF = 12
+const NODE_WHILE = 13
+const NODE_FOR = 14
+const NODE_RETURN = 15
+const NODE_BREAK = 16
+const NODE_CONTINUE = 17
+const NODE_DEFER = 18
+
+// Expressions
+const NODE_BINARY = 20
+const NODE_UNARY = 21
+const NODE_LITERAL = 22
+const NODE_IDENTIFIER = 23
+const NODE_CALL = 24
+const NODE_INDEX = 25
+const NODE_MEMBER = 26
+const NODE_ASSIGN = 27
+const NODE_CAST = 28
+
+// ============================================
+// AST NODE STRUCTURE
+// ============================================
+
+struct ASTNode {
+    type: i32
+    token: Token
+    children: [ASTNode]
+    value: i64
+    name: string
+}
+
+// ============================================
+// PARSER STATE
+// ============================================
+
+struct Parser {
+    tokens: [Token]
+    current: i32
+    had_error: bool
+    panic_mode: bool
+}
+
+// ============================================
+// PARSER INITIALIZATION
+// ============================================
+
+fn parser_init(tokens: [Token]) -> Parser {
+    let parser: Parser
+    parser.tokens = tokens
+    parser.current = 0
+    parser.had_error = false
+    parser.panic_mode = false
+    return parser
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+fn parser_current_token(parser: &Parser) -> Token {
+    return parser.tokens[parser.current]
+}
+
+fn parser_peek_token(parser: &Parser, offset: i32) -> Token {
+    let index = parser.current + offset
+    if index < parser.tokens.length {
+        return parser.tokens[index]
+    }
+    let eof_token: Token
+    eof_token.type = TOKEN_EOF
+    return eof_token
+}
+
+fn parser_advance(parser: &Parser) {
+    if parser.current < parser.tokens.length - 1 {
+        parser.current = parser.current + 1
+    }
+}
+
+fn parser_check(parser: &Parser, token_type: i32) -> bool {
+    let token = parser_current_token(parser)
+    return token.type == token_type
+}
+
+fn parser_match(parser: &Parser, token_type: i32) -> bool {
+    if parser_check(parser, token_type) {
+        parser_advance(parser)
+        return true
+    }
+    return false
+}
+
+fn parser_expect(parser: &Parser, token_type: i32) -> bool {
+    if parser_check(parser, token_type) {
+        parser_advance(parser)
+        return true
+    }
+    parser.had_error = true
+    return false
+}
+
+fn parser_synchronize(parser: &Parser) {
+    parser.panic_mode = false
+    
+    while !parser_check(parser, TOKEN_EOF) {
+        let token = parser_current_token(parser)
+        
+        // Stop at statement boundaries
+        if token.type == TOKEN_SEMICOLON {
+            parser_advance(parser)
+            return
+        }
+        
+        // Stop at keyword boundaries
+        if token.type == TOKEN_FN { return }
+        if token.type == TOKEN_LET { return }
+        if token.type == TOKEN_CONST { return }
+        if token.type == TOKEN_IF { return }
+        if token.type == TOKEN_WHILE { return }
+        if token.type == TOKEN_FOR { return }
+        if token.type == TOKEN_RETURN { return }
+        if token.type == TOKEN_STRUCT { return }
+        
+        parser_advance(parser)
+    }
+}
+
+// ============================================
+// EXPRESSION PARSING (Pratt Parsing)
+// ============================================
+
+fn parser_primary(parser: &Parser) -> ASTNode {
+    let node: ASTNode
+    let token = parser_current_token(parser)
+    
+    // Number literal
+    if token.type == TOKEN_NUMBER {
+        node.type = NODE_LITERAL
+        node.token = token
+        parser_advance(parser)
+        return node
+    }
+    
+    // String literal
+    if token.type == TOKEN_STRING {
+        node.type = NODE_LITERAL
+        node.token = token
+        parser_advance(parser)
+        return node
+    }
+    
+    // Identifier
+    if token.type == TOKEN_IDENTIFIER {
+        node.type = NODE_IDENTIFIER
+        node.token = token
+        parser_advance(parser)
+        return node
+    }
+    
+    // True/False
+    if token.type == TOKEN_TRUE || token.type == TOKEN_FALSE {
+        node.type = NODE_LITERAL
+        node.token = token
+        parser_advance(parser)
+        return node
+    }
+    
+    // Null
+    if token.type == TOKEN_NULL {
+        node.type = NODE_LITERAL
+        node.token = token
+        parser_advance(parser)
+        return node
+    }
+    
+    // Parenthesized expression
+    if parser_match(parser, TOKEN_LPAREN) {
+        node = parser_expression(parser)
+        parser_expect(parser, TOKEN_RPAREN)
+        return node
+    }
+    
+    // Error case
+    node.type = NODE_LITERAL
+    parser.had_error = true
+    return node
+}
+
+fn parser_call(parser: &Parser) -> ASTNode {
+    let node = parser_primary(parser)
+    
+    while true {
+        // Function call: identifier(args)
+        if parser_match(parser, TOKEN_LPAREN) {
+            let call_node: ASTNode
+            call_node.type = NODE_CALL
+            call_node.token = node.token
+            // TODO: Parse arguments
+            parser_expect(parser, TOKEN_RPAREN)
+            node = call_node
+        }
+        // Array indexing: expr[index]
+        else if parser_match(parser, TOKEN_LBRACKET) {
+            let index_node: ASTNode
+            index_node.type = NODE_INDEX
+            // TODO: Parse index expression
+            parser_expect(parser, TOKEN_RBRACKET)
+            node = index_node
+        }
+        // Member access: expr.member
+        else if parser_match(parser, TOKEN_DOT) {
+            let member_node: ASTNode
+            member_node.type = NODE_MEMBER
+            parser_expect(parser, TOKEN_IDENTIFIER)
+            node = member_node
+        }
+        else {
+            break
+        }
+    }
+    
+    return node
+}
+
+fn parser_unary(parser: &Parser) -> ASTNode {
+    // Unary operators: !, -, ~, &, *
+    let token = parser_current_token(parser)
+    
+    if token.type == TOKEN_NOT || token.type == TOKEN_MINUS || 
+       token.type == TOKEN_TILDE || token.type == TOKEN_AMP || 
+       token.type == TOKEN_STAR {
+        parser_advance(parser)
+        let node: ASTNode
+        node.type = NODE_UNARY
+        node.token = token
+        // TODO: Add child node
+        return node
+    }
+    
+    return parser_call(parser)
+}
+
+fn parser_multiplicative(parser: &Parser) -> ASTNode {
+    let left = parser_unary(parser)
+    
+    while true {
+        let token = parser_current_token(parser)
+        if token.type == TOKEN_STAR || token.type == TOKEN_SLASH || 
+           token.type == TOKEN_PERCENT {
+            parser_advance(parser)
+            let node: ASTNode
+            node.type = NODE_BINARY
+            node.token = token
+            // TODO: Add left and right children
+            left = node
+        } else {
+            break
+        }
+    }
+    
+    return left
+}
+
+fn parser_additive(parser: &Parser) -> ASTNode {
+    let left = parser_multiplicative(parser)
+    
+    while true {
+        let token = parser_current_token(parser)
+        if token.type == TOKEN_PLUS || token.type == TOKEN_MINUS {
+            parser_advance(parser)
+            let node: ASTNode
+            node.type = NODE_BINARY
+            node.token = token
+            left = node
+        } else {
+            break
+        }
+    }
+    
+    return left
+}
+
+fn parser_comparison(parser: &Parser) -> ASTNode {
+    let left = parser_additive(parser)
+    
+    while true {
+        let token = parser_current_token(parser)
+        if token.type == TOKEN_LT || token.type == TOKEN_GT || 
+           token.type == TOKEN_LT_EQ || token.type == TOKEN_GT_EQ {
+            parser_advance(parser)
+            let node: ASTNode
+            node.type = NODE_BINARY
+            node.token = token
+            left = node
+        } else {
+            break
+        }
+    }
+    
+    return left
+}
+
+fn parser_equality(parser: &Parser) -> ASTNode {
+    let left = parser_comparison(parser)
+    
+    while true {
+        let token = parser_current_token(parser)
+        if token.type == TOKEN_EQ_EQ || token.type == TOKEN_NOT_EQ {
+            parser_advance(parser)
+            let node: ASTNode
+            node.type = NODE_BINARY
+            node.token = token
+            left = node
+        } else {
+            break
+        }
+    }
+    
+    return left
+}
+
+fn parser_logical_and(parser: &Parser) -> ASTNode {
+    let left = parser_equality(parser)
+    
+    while parser_match(parser, TOKEN_AND_AND) {
+        let token = parser_current_token(parser)
+        let node: ASTNode
+        node.type = NODE_BINARY
+        node.token = token
+        left = node
+    }
+    
+    return left
+}
+
+fn parser_logical_or(parser: &Parser) -> ASTNode {
+    let left = parser_logical_and(parser)
+    
+    while parser_match(parser, TOKEN_OR_OR) {
+        let token = parser_current_token(parser)
+        let node: ASTNode
+        node.type = NODE_BINARY
+        node.token = token
+        left = node
+    }
+    
+    return left
+}
+
+fn parser_assignment(parser: &Parser) -> ASTNode {
+    let left = parser_logical_or(parser)
+    
+    if parser_match(parser, TOKEN_EQUAL) {
+        let node: ASTNode
+        node.type = NODE_ASSIGN
+        node.token = parser_current_token(parser)
+        return node
+    }
+    
+    return left
+}
+
+fn parser_expression(parser: &Parser) -> ASTNode {
+    return parser_assignment(parser)
+}
+
+// ============================================
+// STATEMENT PARSING
+// ============================================
+
+fn parser_expression_statement(parser: &Parser) -> ASTNode {
+    let node: ASTNode
+    node.type = NODE_EXPR_STMT
+    // TODO: Parse expression
+    parser_expect(parser, TOKEN_SEMICOLON)
+    return node
+}
+
+fn parser_block(parser: &Parser) -> ASTNode {
+    parser_expect(parser, TOKEN_LBRACE)
+    
+    let node: ASTNode
+    node.type = NODE_BLOCK
+    
+    while !parser_check(parser, TOKEN_RBRACE) && !parser_check(parser, TOKEN_EOF) {
+        // TODO: Parse statements and add to children
+        parser_statement(parser)
+    }
+    
+    parser_expect(parser, TOKEN_RBRACE)
+    return node
+}
+
+fn parser_if_statement(parser: &Parser) -> ASTNode {
+    parser_expect(parser, TOKEN_IF)
+    
+    let node: ASTNode
+    node.type = NODE_IF
+    
+    // Parse condition
+    parser_expression(parser)
+    
+    // Parse then block
+    parser_block(parser)
+    
+    // Parse optional else
+    if parser_match(parser, TOKEN_ELSE) {
+        if parser_check(parser, TOKEN_IF) {
+            // else if
+            parser_if_statement(parser)
+        } else {
+            // else block
+            parser_block(parser)
+        }
+    }
+    
+    return node
+}
+
+fn parser_while_statement(parser: &Parser) -> ASTNode {
+    parser_expect(parser, TOKEN_WHILE)
+    
+    let node: ASTNode
+    node.type = NODE_WHILE
+    
+    parser_expression(parser)
+    parser_block(parser)
+    
+    return node
+}
+
+fn parser_return_statement(parser: &Parser) -> ASTNode {
+    parser_expect(parser, TOKEN_RETURN)
+    
+    let node: ASTNode
+    node.type = NODE_RETURN
+    
+    if !parser_check(parser, TOKEN_SEMICOLON) {
+        parser_expression(parser)
+    }
+    
+    parser_expect(parser, TOKEN_SEMICOLON)
+    return node
+}
+
+fn parser_statement(parser: &Parser) -> ASTNode {
+    let token = parser_current_token(parser)
+    
+    if token.type == TOKEN_IF {
+        return parser_if_statement(parser)
+    }
+    if token.type == TOKEN_WHILE {
+        return parser_while_statement(parser)
+    }
+    if token.type == TOKEN_RETURN {
+        return parser_return_statement(parser)
+    }
+    if token.type == TOKEN_LBRACE {
+        return parser_block(parser)
+    }
+    
+    return parser_expression_statement(parser)
+}
+
+// ============================================
+// DECLARATION PARSING
+// ============================================
+
+fn parser_variable_declaration(parser: &Parser) -> ASTNode {
+    parser_expect(parser, TOKEN_LET)
+    
+    let node: ASTNode
+    node.type = NODE_VAR_DECL
+    
+    parser_expect(parser, TOKEN_IDENTIFIER)
+    
+    // Optional type annotation
+    if parser_match(parser, TOKEN_COLON) {
+        parser_expect(parser, TOKEN_IDENTIFIER)
+    }
+    
+    // Optional initializer
+    if parser_match(parser, TOKEN_EQUAL) {
+        parser_expression(parser)
+    }
+    
+    parser_expect(parser, TOKEN_SEMICOLON)
+    return node
+}
+
+fn parser_function_declaration(parser: &Parser) -> ASTNode {
+    parser_expect(parser, TOKEN_FN)
+    
+    let node: ASTNode
+    node.type = NODE_FUNC_DECL
+    
+    parser_expect(parser, TOKEN_IDENTIFIER)
+    parser_expect(parser, TOKEN_LPAREN)
+    
+    // Parse parameters
+    while !parser_check(parser, TOKEN_RPAREN) {
+        parser_expect(parser, TOKEN_IDENTIFIER)
+        parser_expect(parser, TOKEN_COLON)
+        parser_expect(parser, TOKEN_IDENTIFIER)
+        
+        if !parser_check(parser, TOKEN_RPAREN) {
+            parser_expect(parser, TOKEN_COMMA)
+        }
+    }
+    
+    parser_expect(parser, TOKEN_RPAREN)
+    
+    // Optional return type
+    if parser_match(parser, TOKEN_ARROW) {
+        parser_expect(parser, TOKEN_IDENTIFIER)
+    }
+    
+    // Parse body
+    parser_block(parser)
+    
+    return node
+}
+
+fn parser_declaration(parser: &Parser) -> ASTNode {
+    let token = parser_current_token(parser)
+    
+    if token.type == TOKEN_FN {
+        return parser_function_declaration(parser)
+    }
+    if token.type == TOKEN_LET {
+        return parser_variable_declaration(parser)
+    }
+    
+    return parser_statement(parser)
+}
+
+// ============================================
+// TOP LEVEL
+// ============================================
+
+fn parser_parse(parser: &Parser) -> ASTNode {
+    let root: ASTNode
+    root.type = NODE_PROGRAM
+    
+    while !parser_check(parser, TOKEN_EOF) {
+        if parser.panic_mode {
+            parser_synchronize(parser)
+        }
+        parser_declaration(parser)
+    }
+    
+    return root
+}
+
+// ============================================
+// MAIN (for testing)
+// ============================================
+
+fn main() {
+    print("Parser module compiled")
+}
