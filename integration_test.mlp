@@ -1,0 +1,21 @@
+// integration_test.mlp - Gerçek bir MELP programı
+// Bu dosya: arithmetic, control flow, function call test eder
+
+func factorial(n: i32) -> i32 {
+    if n <= 1 {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+func main() -> i32 {
+    let x = 5;
+    let result = factorial(x);
+    
+    // result should be 120
+    if result == 120 {
+        return 0;  // Success
+    }
+    
+    return 1;  // Failure
+}
