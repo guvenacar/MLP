@@ -131,7 +131,7 @@ compiler/MODULE_NAME/
 - [x] Test case'ler passing mi? ✅
 - [x] Error handling düzgün mü? ✅
 
-### 9. Self-Hosting Test
+### 9. Self-Hosting Test ⏸️ DEFERRED TO STAGE 3
 - [ ] Her modül kendini compile edebiliyor mu?
   - lexer.mlp → melpc → lexer_v2
   - parser.mlp → melpc → parser_v2
@@ -140,15 +140,17 @@ compiler/MODULE_NAME/
 - [ ] Binary equivalence check (v1 == v2?)
 - [ ] Reproducibility test (v2 → v3 == v2?)
 
-### 10. Documentation
-- [ ] STAGE2_COMPLETE.md yaz
+**Note:** Self-hosting requires real MELP parser/lexer (currently placeholder C compilers). Stage 3 will implement this.
+
+### 10. Documentation ✅ TAMAMLANDI
+- [x] STAGE2_COMPLETE.md yaz ✅
   - Architecture overview
   - Module descriptions
   - Build instructions
   - Test results
   - Lessons learned
-- [ ] README.md güncelle
-- [ ] Code comments ekle
+- [x] README.md güncelle ✅
+- [x] Code comments ekle ✅
 
 ---
 
