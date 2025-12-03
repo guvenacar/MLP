@@ -1,0 +1,413 @@
+// Lexer Module for MELP Compiler
+// Tokenizes MELP source code into tokens for the parser
+// Maximum ~300 lines to stay within AI token limits
+
+// ============================================
+// TOKEN TYPES
+// ============================================
+
+const TOKEN_EOF = 0
+const TOKEN_ERROR = 1
+
+// Literals
+const TOKEN_IDENTIFIER = 10
+const TOKEN_NUMBER = 11
+const TOKEN_STRING = 12
+
+// Keywords
+const TOKEN_FN = 20
+const TOKEN_LET = 21
+const TOKEN_CONST = 22
+const TOKEN_IF = 23
+const TOKEN_ELSE = 24
+const TOKEN_WHILE = 25
+const TOKEN_FOR = 26
+const TOKEN_RETURN = 27
+const TOKEN_BREAK = 28
+const TOKEN_CONTINUE = 29
+const TOKEN_STRUCT = 30
+const TOKEN_ENUM = 31
+const TOKEN_IMPORT = 32
+const TOKEN_EXPORT = 33
+const TOKEN_DEFER = 34
+const TOKEN_MATCH = 35
+const TOKEN_TRUE = 36
+const TOKEN_FALSE = 37
+const TOKEN_NULL = 38
+
+// Operators
+const TOKEN_PLUS = 50       // +
+const TOKEN_MINUS = 51      // -
+const TOKEN_STAR = 52       // *
+const TOKEN_SLASH = 53      // /
+const TOKEN_PERCENT = 54    // %
+const TOKEN_EQUAL = 55      // =
+const TOKEN_EQ_EQ = 56      // ==
+const TOKEN_NOT_EQ = 57     // !=
+const TOKEN_LT = 58         // <
+const TOKEN_GT = 59         // >
+const TOKEN_LT_EQ = 60      // <=
+const TOKEN_GT_EQ = 61      // >=
+const TOKEN_AND_AND = 62    // &&
+const TOKEN_OR_OR = 63      // ||
+const TOKEN_NOT = 64        // !
+const TOKEN_AMP = 65        // &
+const TOKEN_PIPE = 66       // |
+const TOKEN_CARET = 67      // ^
+const TOKEN_TILDE = 68      // ~
+const TOKEN_LSHIFT = 69     // <<
+const TOKEN_RSHIFT = 70     // >>
+const TOKEN_ARROW = 71      // ->
+const TOKEN_DOT = 72        // .
+const TOKEN_COLON_COLON = 73 // ::
+
+// Delimiters
+const TOKEN_LPAREN = 80     // (
+const TOKEN_RPAREN = 81     // )
+const TOKEN_LBRACE = 82     // {
+const TOKEN_RBRACE = 83     // }
+const TOKEN_LBRACKET = 84   // [
+const TOKEN_RBRACKET = 85   // ]
+const TOKEN_COMMA = 86      // ,
+const TOKEN_SEMICOLON = 87  // ;
+const TOKEN_COLON = 88      // :
+const TOKEN_AT = 89         // @
+
+// ============================================
+// TOKEN STRUCTURE
+// ============================================
+
+struct Token {
+    type: i32
+    lexeme: string
+    line: i32
+    column: i32
+    value: i64  // For numbers
+}
+
+// ============================================
+// LEXER STATE
+// ============================================
+
+struct Lexer {
+    source: string
+    position: i32
+    line: i32
+    column: i32
+    current_char: i8
+}
+
+// ============================================
+// KEYWORD MAP
+// ============================================
+
+fn is_keyword(lexeme: string) -> i32 {
+    if lexeme == "fn" { return TOKEN_FN }
+    if lexeme == "let" { return TOKEN_LET }
+    if lexeme == "const" { return TOKEN_CONST }
+    if lexeme == "if" { return TOKEN_IF }
+    if lexeme == "else" { return TOKEN_ELSE }
+    if lexeme == "while" { return TOKEN_WHILE }
+    if lexeme == "for" { return TOKEN_FOR }
+    if lexeme == "return" { return TOKEN_RETURN }
+    if lexeme == "break" { return TOKEN_BREAK }
+    if lexeme == "continue" { return TOKEN_CONTINUE }
+    if lexeme == "struct" { return TOKEN_STRUCT }
+    if lexeme == "enum" { return TOKEN_ENUM }
+    if lexeme == "import" { return TOKEN_IMPORT }
+    if lexeme == "export" { return TOKEN_EXPORT }
+    if lexeme == "defer" { return TOKEN_DEFER }
+    if lexeme == "match" { return TOKEN_MATCH }
+    if lexeme == "true" { return TOKEN_TRUE }
+    if lexeme == "false" { return TOKEN_FALSE }
+    if lexeme == "null" { return TOKEN_NULL }
+    return TOKEN_IDENTIFIER
+}
+
+// ============================================
+// CHARACTER CHECKS
+// ============================================
+
+fn is_alpha(c: i8) -> bool {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+fn is_digit(c: i8) -> bool {
+    return c >= '0' && c <= '9'
+}
+
+fn is_whitespace(c: i8) -> bool {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n'
+}
+
+// ============================================
+// LEXER FUNCTIONS
+// ============================================
+
+fn lexer_init(source: string) -> Lexer {
+    let lexer: Lexer
+    lexer.source = source
+    lexer.position = 0
+    lexer.line = 1
+    lexer.column = 1
+    if source.length > 0 {
+        lexer.current_char = source[0]
+    } else {
+        lexer.current_char = 0
+    }
+    return lexer
+}
+
+fn lexer_advance(lexer: &Lexer) {
+    if lexer.current_char == '\n' {
+        lexer.line = lexer.line + 1
+        lexer.column = 1
+    } else {
+        lexer.column = lexer.column + 1
+    }
+    
+    lexer.position = lexer.position + 1
+    if lexer.position < lexer.source.length {
+        lexer.current_char = lexer.source[lexer.position]
+    } else {
+        lexer.current_char = 0
+    }
+}
+
+fn lexer_peek(lexer: &Lexer, offset: i32) -> i8 {
+    let pos = lexer.position + offset
+    if pos < lexer.source.length {
+        return lexer.source[pos]
+    }
+    return 0
+}
+
+fn lexer_skip_whitespace(lexer: &Lexer) {
+    while is_whitespace(lexer.current_char) {
+        lexer_advance(lexer)
+    }
+}
+
+fn lexer_skip_comment(lexer: &Lexer) {
+    // Single line comment //
+    if lexer.current_char == '/' && lexer_peek(lexer, 1) == '/' {
+        while lexer.current_char != '\n' && lexer.current_char != 0 {
+            lexer_advance(lexer)
+        }
+        return
+    }
+    
+    // Multi-line comment /* */
+    if lexer.current_char == '/' && lexer_peek(lexer, 1) == '*' {
+        lexer_advance(lexer)  // skip /
+        lexer_advance(lexer)  // skip *
+        while true {
+            if lexer.current_char == 0 {
+                break
+            }
+            if lexer.current_char == '*' && lexer_peek(lexer, 1) == '/' {
+                lexer_advance(lexer)  // skip *
+                lexer_advance(lexer)  // skip /
+                break
+            }
+            lexer_advance(lexer)
+        }
+    }
+}
+
+fn lexer_read_identifier(lexer: &Lexer) -> Token {
+    let start_line = lexer.line
+    let start_column = lexer.column
+    let start_pos = lexer.position
+    
+    while is_alpha(lexer.current_char) || is_digit(lexer.current_char) {
+        lexer_advance(lexer)
+    }
+    
+    let lexeme = lexer.source.substring(start_pos, lexer.position)
+    let token_type = is_keyword(lexeme)
+    
+    let token: Token
+    token.type = token_type
+    token.lexeme = lexeme
+    token.line = start_line
+    token.column = start_column
+    return token
+}
+
+fn lexer_read_number(lexer: &Lexer) -> Token {
+    let start_line = lexer.line
+    let start_column = lexer.column
+    let start_pos = lexer.position
+    
+    // Read digits
+    while is_digit(lexer.current_char) {
+        lexer_advance(lexer)
+    }
+    
+    // Check for decimal point
+    if lexer.current_char == '.' && is_digit(lexer_peek(lexer, 1)) {
+        lexer_advance(lexer)  // skip .
+        while is_digit(lexer.current_char) {
+            lexer_advance(lexer)
+        }
+    }
+    
+    let lexeme = lexer.source.substring(start_pos, lexer.position)
+    
+    let token: Token
+    token.type = TOKEN_NUMBER
+    token.lexeme = lexeme
+    token.line = start_line
+    token.column = start_column
+    // TODO: Parse value
+    return token
+}
+
+fn lexer_read_string(lexer: &Lexer) -> Token {
+    let start_line = lexer.line
+    let start_column = lexer.column
+    
+    lexer_advance(lexer)  // skip opening "
+    let start_pos = lexer.position
+    
+    while lexer.current_char != '"' && lexer.current_char != 0 {
+        if lexer.current_char == '\\' {
+            lexer_advance(lexer)  // skip escape char
+        }
+        lexer_advance(lexer)
+    }
+    
+    let lexeme = lexer.source.substring(start_pos, lexer.position)
+    
+    if lexer.current_char == '"' {
+        lexer_advance(lexer)  // skip closing "
+    }
+    
+    let token: Token
+    token.type = TOKEN_STRING
+    token.lexeme = lexeme
+    token.line = start_line
+    token.column = start_column
+    return token
+}
+
+fn lexer_next_token(lexer: &Lexer) -> Token {
+    // Skip whitespace and comments
+    while true {
+        lexer_skip_whitespace(lexer)
+        if lexer.current_char == '/' && (lexer_peek(lexer, 1) == '/' || lexer_peek(lexer, 1) == '*') {
+            lexer_skip_comment(lexer)
+        } else {
+            break
+        }
+    }
+    
+    let token: Token
+    token.line = lexer.line
+    token.column = lexer.column
+    
+    // EOF
+    if lexer.current_char == 0 {
+        token.type = TOKEN_EOF
+        return token
+    }
+    
+    // Identifier or keyword
+    if is_alpha(lexer.current_char) {
+        return lexer_read_identifier(lexer)
+    }
+    
+    // Number
+    if is_digit(lexer.current_char) {
+        return lexer_read_number(lexer)
+    }
+    
+    // String
+    if lexer.current_char == '"' {
+        return lexer_read_string(lexer)
+    }
+    
+    // Single character tokens and operators
+    let c = lexer.current_char
+    lexer_advance(lexer)
+    
+    // Check for two-character operators
+    if c == '=' && lexer.current_char == '=' {
+        lexer_advance(lexer)
+        token.type = TOKEN_EQ_EQ
+        return token
+    }
+    if c == '!' && lexer.current_char == '=' {
+        lexer_advance(lexer)
+        token.type = TOKEN_NOT_EQ
+        return token
+    }
+    if c == '<' && lexer.current_char == '=' {
+        lexer_advance(lexer)
+        token.type = TOKEN_LT_EQ
+        return token
+    }
+    if c == '>' && lexer.current_char == '=' {
+        lexer_advance(lexer)
+        token.type = TOKEN_GT_EQ
+        return token
+    }
+    if c == '&' && lexer.current_char == '&' {
+        lexer_advance(lexer)
+        token.type = TOKEN_AND_AND
+        return token
+    }
+    if c == '|' && lexer.current_char == '|' {
+        lexer_advance(lexer)
+        token.type = TOKEN_OR_OR
+        return token
+    }
+    
+    // Single character tokens
+    if c == '+' { token.type = TOKEN_PLUS }
+    else if c == '-' { token.type = TOKEN_MINUS }
+    else if c == '*' { token.type = TOKEN_STAR }
+    else if c == '/' { token.type = TOKEN_SLASH }
+    else if c == '%' { token.type = TOKEN_PERCENT }
+    else if c == '=' { token.type = TOKEN_EQUAL }
+    else if c == '<' { token.type = TOKEN_LT }
+    else if c == '>' { token.type = TOKEN_GT }
+    else if c == '!' { token.type = TOKEN_NOT }
+    else if c == '&' { token.type = TOKEN_AMP }
+    else if c == '|' { token.type = TOKEN_PIPE }
+    else if c == '(' { token.type = TOKEN_LPAREN }
+    else if c == ')' { token.type = TOKEN_RPAREN }
+    else if c == '{' { token.type = TOKEN_LBRACE }
+    else if c == '}' { token.type = TOKEN_RBRACE }
+    else if c == '[' { token.type = TOKEN_LBRACKET }
+    else if c == ']' { token.type = TOKEN_RBRACKET }
+    else if c == ',' { token.type = TOKEN_COMMA }
+    else if c == ';' { token.type = TOKEN_SEMICOLON }
+    else if c == ':' { token.type = TOKEN_COLON }
+    else if c == '@' { token.type = TOKEN_AT }
+    else if c == '.' { token.type = TOKEN_DOT }
+    else {
+        token.type = TOKEN_ERROR
+        token.lexeme = "Invalid character"
+    }
+    
+    return token
+}
+
+// ============================================
+// MAIN (for testing)
+// ============================================
+
+fn main() {
+    let source = "let x = 42"
+    let lexer = lexer_init(source)
+    
+    while true {
+        let token = lexer_next_token(&lexer)
+        if token.type == TOKEN_EOF {
+            break
+        }
+        print(token.lexeme)
+    }
+}

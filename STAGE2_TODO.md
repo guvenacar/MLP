@@ -44,23 +44,25 @@ compiler/MODULE_NAME/
 ## 🔄 STAGE 2 GÖREVLER
 
 ### 1. Dizin Yapısını Oluştur
-- [ ] `melp/compiler/` ana dizini
-- [ ] `melp/compiler/lexer/` modülü
-- [ ] `melp/compiler/parser/` modülü
-- [ ] `melp/compiler/memory/` modülü
-- [ ] `melp/compiler/codegen/` modülü
-- [ ] `melp/compiler/examples/` örnek dosyalar
 
-### 2. Lexer Modülü (İlk Modül)
-- [ ] `compiler/lexer/lexer.mlp` yaz (~300 satır)
+- [x] `melp/compiler/` ana dizini
+- [x] `melp/compiler/lexer/` modülü
+- [x] `melp/compiler/parser/` modülü
+- [x] `melp/compiler/memory/` modülü
+- [x] `melp/compiler/codegen/` modülü
+- [x] `melp/compiler/examples/` örnek dosyalar
+
+### 2. Lexer Modülü (İlk Modül) ✅ TAMAMLANDI
+
+- [x] `compiler/lexer/lexer.mlp` yaz (~377 satır) ✅
   - Token tanımları (IDENTIFIER, NUMBER, STRING, vb.)
   - Tokenization logic
   - Error handling
   - Position tracking
-- [ ] `compiler/lexer/lexer_compiler` (C Stage 0)
-- [ ] `compiler/lexer/test_lexer.mlp`
-- [ ] `compiler/lexer/Makefile`
-- [ ] Test et ve doğrula
+- [x] `compiler/lexer/lexer_compiler` (C Stage 0) ✅
+- [x] `compiler/lexer/test_lexer.mlp` ✅
+- [x] `compiler/lexer/Makefile` ✅
+- [x] Test et ve doğrula ✅
 
 ### 3. Parser Modülü
 - [ ] `compiler/parser/parser.mlp` yaz (~400 satır)
