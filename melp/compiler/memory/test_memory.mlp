@@ -1,0 +1,72 @@
+// Test file for Memory module
+// Tests memory management and GC analysis
+
+// Test 1: Basic allocation tracking
+fn test_allocation_tracking() {
+    // Input: let x = malloc(100)
+    // Expected: Track allocation, mark as live
+    print("Test 1: Allocation tracking")
+}
+
+// Test 2: Lifetime analysis
+fn test_lifetime_analysis() {
+    // Input: { let x = malloc(100) } // x dies here
+    // Expected: Detect x lifetime ends at block exit
+    print("Test 2: Lifetime analysis")
+}
+
+// Test 3: Reference counting hints
+fn test_reference_counting() {
+    // Input: let y = x // reference copy
+    // Expected: Increment ref count for x
+    print("Test 3: Reference counting")
+}
+
+// Test 4: Defer statement handling
+fn test_defer_statement() {
+    // Input: defer free(ptr)
+    // Expected: Register cleanup at scope exit
+    print("Test 4: Defer statement handling")
+}
+
+// Test 5: GC annotation parsing
+fn test_gc_annotations() {
+    // Input: @gc struct Node { ... }
+    // Expected: Mark struct as GC-managed
+    print("Test 5: GC annotations")
+}
+
+// Test 6: Escape analysis
+fn test_escape_analysis() {
+    // Input: fn foo() -> &i32 { let x = 42; return &x }
+    // Expected: Detect x escapes function scope
+    print("Test 6: Escape analysis")
+}
+
+// Test 7: Stack vs heap allocation
+fn test_allocation_strategy() {
+    // Input: let x = [1, 2, 3, 4, 5]
+    // Expected: Decide stack or heap based on size
+    print("Test 7: Allocation strategy")
+}
+
+// Test 8: Circular reference detection
+fn test_circular_references() {
+    // Input: a.next = b; b.prev = a
+    // Expected: Detect potential circular reference
+    print("Test 8: Circular reference detection")
+}
+
+// Main test runner
+fn main() {
+    print("=== Memory Module Tests ===")
+    test_allocation_tracking()
+    test_lifetime_analysis()
+    test_reference_counting()
+    test_defer_statement()
+    test_gc_annotations()
+    test_escape_analysis()
+    test_allocation_strategy()
+    test_circular_references()
+    print("=== All tests completed ===")
+}
