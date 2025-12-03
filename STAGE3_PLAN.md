@@ -1,39 +1,19 @@
-# Stage 3 Plan - Self-Hosting + Full GC
+# Stage 3 Plan - Pragmatic Self-Hosting + Full GC
 
-## 🎯 Stage 3 Hedefleri
+## 🎯 Stage 3 Hedefleri (REVİZE EDİLDİ)
 
-### Öncelik 1: Self-Hosting (Real Compiler)
-**Amaç:** C placeholder compiler'ları gerçek MELP compiler'larıyla değiştir
+### Yeni Yaklaşım: Pragmatic Self-Hosting
+**Sorun:** Tam self-hosting (tüm compiler'ları MELP'e port) ~4000 lines kod + ~5 hafta sürer.
 
-**Sorun:** Stage 2'de her modül için C Stage 0 compiler var (placeholder). Gerçek MELP lexer/parser yok.
+**Yeni Strateji:**
+1. **Öncelik 1: WORKING GC** - En kritik eksik özellik
+2. **Öncelik 2: Enhanced C Compilers** - Placeholder'ları gerçek compiler'lara çevir
+3. **Öncelik 3: Partial Self-Hosting** - Sadece basit modüller (test için)
 
-**Çözüm:** Her modül için gerçek MELP compiler yaz:
-1. `lexer_compiler.mlp` - Lexer için gerçek MELP compiler
-2. `parser_compiler.mlp` - Parser için gerçek MELP compiler
-3. `memory_compiler.mlp` - Memory için gerçek MELP compiler
-4. `codegen_compiler.mlp` - Codegen için gerçek MELP compiler
-5. `router_compiler.mlp` - Router için gerçek MELP compiler
-
-### Öncelik 2: Full GC Implementation
-**Amaç:** Otomatik memory management
-
-**Özellikler:**
-- Mark & Sweep garbage collector
-- Reference counting
-- Cycle detection
-- Automatic allocation/deallocation
-- Memory leak prevention
-- Generational GC (optional)
-
-### Öncelik 3: Binary Equivalence Testing
-**Amaç:** Self-compiled ve C-compiled aynı output vermeli
-
-**Test:**
-```bash
-# Stage 0 (C): lexer.mlp → lexer_v1.s
-# Stage 1 (MELP): lexer.mlp → lexer_v2.s
-# Compare: diff lexer_v1.s lexer_v2.s (should be identical or semantically equivalent)
-```
+**Rationale:**
+- Self-hosting "nice to have" ama GC "must have"
+- C compiler'ları improve etmek daha hızlı (C biliyoruz)
+- Full self-hosting Stage 4'e ertelenebilir
 
 ---
 
