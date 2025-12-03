@@ -1,6 +1,0 @@
-// CLI I/O test
-str name = input("Enter name: ");
-print("Hello, " + name);
-int count = argc;
-str first_arg = argv[0];
-println("CLI I/O OK!");

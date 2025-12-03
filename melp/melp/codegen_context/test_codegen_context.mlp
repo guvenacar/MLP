@@ -1,0 +1,2 @@
+-- Test: Codegen Context
+function test() numeric x=1

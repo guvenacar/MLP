@@ -1,6 +1,0 @@
--- Simple arithmetic test
--- Just variable declarations with arithmetic expressions
-
-numeric x = 5
-numeric y = 10
-numeric sum = 15

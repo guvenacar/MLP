@@ -1,0 +1,3 @@
+-- Test: Ownership System
+owned String s="test"
+move(s)

@@ -1,0 +1,11 @@
+-- Test: Memory Management with GC
+-- malloc/free
+numeric* ptr = malloc(100)
+free(ptr)
+
+-- defer (automatic cleanup)
+defer free(ptr)
+
+-- GC hint
+@gc
+gc.collect()

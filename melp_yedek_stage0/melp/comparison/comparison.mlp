@@ -1,6 +1,0 @@
-numeric CMP_EQUAL = 0
-numeric CMP_NOT_EQUAL = 1
-numeric CMP_LESS = 2
-numeric CMP_GREATER = 3
-numeric CMP_LESS_EQUAL = 4
-numeric CMP_GREATER_EQUAL = 5

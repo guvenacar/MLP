@@ -1,5 +1,0 @@
--- Simple lexer test
-
-try
-    print("Test")
-end try

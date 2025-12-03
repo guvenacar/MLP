@@ -64,3 +64,7 @@ void mlp_print_num(long num) {
 void mlp_print_str(const char* str) {
     printf("%s\n", str);
 }
+
+void mlp_print(const char* str) {
+    printf("%s", str);
+}

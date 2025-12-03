@@ -1,0 +1,10 @@
+-- Test if melpc supports multiple functions
+
+function add(numeric a, numeric b) numeric
+    return a + b
+end function
+
+function main() numeric
+    numeric result = add(5, 10)
+    return 0
+end function

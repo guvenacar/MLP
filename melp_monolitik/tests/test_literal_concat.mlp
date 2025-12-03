@@ -1,3 +1,0 @@
--- Literal concat test
-text msg = "Hello" + " World"
-print(msg)

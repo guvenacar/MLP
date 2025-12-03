@@ -1,7 +1,0 @@
--- Test string interpolation
-
-text name = "Alice"
-numeric age = 30
-
-text msg = $"Hello {name}, you are {age} years old"
-print(msg)

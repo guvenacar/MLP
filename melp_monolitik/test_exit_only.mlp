@@ -1,6 +1,0 @@
-for x = 1 to 10
-    if x == 5 then
-        exit
-    end if
-    print(x)
-end for

@@ -1,0 +1,2 @@
+-- Test: Parser Core
+parse("numeric x=1")

@@ -1,8 +1,0 @@
--- Module with variables and functions
-module Math
-    numeric PI = 314159
-    
-    func square(numeric n)
-        return n * n
-    end func
-end module

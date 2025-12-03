@@ -1,5 +1,0 @@
-numeric STORAGE_REGISTER = 0
-numeric STORAGE_STACK = 1
-numeric STORAGE_DATA = 2
-numeric STORAGE_BSS = 3
-numeric STORAGE_HEAP = 4

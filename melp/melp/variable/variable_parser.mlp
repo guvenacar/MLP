@@ -1,3 +1,3 @@
-numeric VAR_DECLARATION = 0
-numeric VAR_ASSIGNMENT = 1
-numeric VAR_MULTI_DECLARATION = 2
+numeric VAR_DECL = 0
+numeric VAR_ASSIGN = 1
+numeric VAR_ACCESS = 2

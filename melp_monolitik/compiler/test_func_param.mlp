@@ -1,9 +1,0 @@
-func test(text s)
-    print(s)
-    return 1
-end func
-
-func main()
-    numeric x = test("hello")
-    return 0
-end func

@@ -1,20 +1,3 @@
--- ============================================================================
--- PRINT PARSER MODULE - MLP Implementation
--- ============================================================================
--- This module handles print statement parsing for MELP compiler
--- Self-hosting version (written in MLP, compiles to assembly)
-
--- Print statement parsing is already implemented in statement_parser.mlp
--- This file is kept minimal for module structure consistency
-
--- The parse_print_statement() function is defined in statement_parser.mlp:
--- function parse_print_statement(Lexer lexer, Token current_token) returns Statement
---     1. Expect "print" keyword
---     2. Parse expression (value to print)
---     3. Create STMT_PRINT statement with expression
---     4. Return statement
-
--- Export notes:
--- - Main parsing logic in statement_parser.mlp module
--- - This module provides modular structure for print functionality
--- - Parser integration point for print statements
+numeric PRINT_STMT = 20
+numeric PRINT_EXPR = 21
+numeric PRINT_NEWLINE = 22

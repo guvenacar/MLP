@@ -1,7 +1,0 @@
-func main()
-    numeric x = 42
-    numeric* ptr = &x
-    numeric y = *ptr
-    print(y)
-    return 0
-end func

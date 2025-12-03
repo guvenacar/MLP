@@ -1,1 +1,0 @@
-fn main() { print("hello"); } fn helper() { return 42; } int x = 10;

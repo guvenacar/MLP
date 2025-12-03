@@ -1,0 +1,20 @@
+-- Arithmetic Module Test
+-- Testing basic arithmetic operations
+
+-- Addition
+numeric sum = 10 + 5
+
+-- Subtraction  
+numeric diff = 20 - 8
+
+-- Multiplication
+numeric product = 6 * 7
+
+-- Division
+numeric quotient = 100 / 5
+
+-- Modulo
+numeric remainder = 17 % 5
+
+-- Simple assignment
+numeric simple = 42

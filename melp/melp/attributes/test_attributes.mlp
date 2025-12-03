@@ -1,0 +1,3 @@
+-- Test: Attributes
+@inline
+function add(x,y) x+y

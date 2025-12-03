@@ -1,5 +1,0 @@
-func main()
-    text x = "hello"
-    print(x)
-    return 0
-end func

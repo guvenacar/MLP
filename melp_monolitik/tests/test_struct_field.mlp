@@ -1,8 +1,0 @@
--- Test struct with simple field access
-struct Person
-    text name
-    numeric age
-end struct
-
-numeric x = 10
-print(x)

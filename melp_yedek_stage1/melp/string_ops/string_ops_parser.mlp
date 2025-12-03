@@ -1,3 +1,0 @@
-numeric EXPR_STR_CONCAT = 15
-numeric EXPR_STR_FUNC = 16
-numeric EXPR_STR_LITERAL = 17

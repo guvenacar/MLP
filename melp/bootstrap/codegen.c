@@ -1,0 +1,101 @@
+// MELP Bootstrap Compiler - Code Generator
+// Generates x86-64 assembly that uses runtime.c functions
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "codegen.h"
+#include "parser.h"
+
+static FILE *output;
+static int var_count = 0;
+
+void codegen_init(const char *filename) {
+    output = fopen(filename, "w");
+    if (!output) {
+        fprintf(stderr, "Error: cannot open output file %s\n", filename);
+        exit(1);
+    }
+}
+
+void codegen_close() {
+    if (output) {
+        fclose(output);
+        output = NULL;
+    }
+}
+
+static void emit(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(output, fmt, args);
+    va_end(args);
+}
+
+static void gen_header() {
+    emit("; MELP Bootstrap Compiler Output\n");
+    emit("; Generated assembly using runtime.c functions\n\n");
+    emit("section .data\n");
+    emit("    startup_msg: db 'MELP Module Running...', 10, 0\n\n");
+}
+
+static void gen_bss() {
+    emit("\nsection .bss\n");
+}
+
+static void gen_var_decl(ASTNode *node) {
+    if (!node->left) return;
+    
+    const char *var_name = node->left->value;
+    const char *type = node->value;
+    
+    // Allocate space in .bss section
+    if (strcmp(type, "numeric") == 0) {
+        emit("    %s: resq 1    ; numeric variable\n", var_name);
+    } else if (strcmp(type, "string") == 0) {
+        emit("    %s: resq 1    ; string pointer\n", var_name);
+    } else if (strcmp(type, "boolean") == 0) {
+        emit("    %s: resb 1    ; boolean variable\n", var_name);
+    }
+    
+    var_count++;
+}
+
+static void gen_text_section() {
+    emit("\nsection .text\n");
+    emit("    global _start\n");
+    emit("    extern mlp_print_string\n");
+    emit("    extern mlp_exit\n\n");
+}
+
+static void gen_main() {
+    emit("_start:\n");
+    emit("    ; Print startup message\n");
+    emit("    lea rdi, [startup_msg]\n");
+    emit("    call mlp_print_string\n\n");
+    
+    emit("    ; Exit program\n");
+    emit("    xor rdi, rdi\n");
+    emit("    call mlp_exit\n");
+}
+
+void codegen(ASTNode *ast) {
+    if (!output) return;
+    
+    gen_header();
+    gen_bss();
+    
+    // Generate variable declarations
+    ASTNode *node = ast;
+    while (node) {
+        if (node->type == NODE_VAR_DECL) {
+            gen_var_decl(node);
+        }
+        node = node->next;
+    }
+    
+    gen_text_section();
+    gen_main();
+    
+    fprintf(stderr, "[Codegen] Generated assembly with %d variables\n", var_count);
+}

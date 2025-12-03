@@ -1,2 +1,0 @@
-numeric CODEGEN_CF_SUCCESS = 0
-numeric CODEGEN_CF_ERROR = 1

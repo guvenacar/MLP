@@ -1,8 +1,0 @@
--- Test string length function
-text msg = "Hello World"
-numeric len = length(msg)
-print(len)
-
-text empty = ""
-numeric len2 = length(empty)
-print(len2)

@@ -1,7 +1,0 @@
--- Test print with string
-
-numeric x = 10
-
-if x > 5 then
-    print("hello")
-end if

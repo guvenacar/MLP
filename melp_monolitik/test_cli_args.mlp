@@ -1,7 +1,0 @@
--- Test CLI arguments - Get argc
-
-func main()
-    numeric argc = get_argc()
-    print(argc)
-    return 0
-end func

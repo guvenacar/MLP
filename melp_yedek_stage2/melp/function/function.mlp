@@ -1,3 +1,0 @@
-numeric FUNC_REGULAR = 0
-numeric FUNC_ANONYMOUS = 1
-numeric FUNC_LAMBDA = 2

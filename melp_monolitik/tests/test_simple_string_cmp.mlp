@@ -1,8 +1,0 @@
--- Simple test
-text a = "Hello"
-text b = "Hello"
-
-if a == b then
-    numeric x = 1
-    print(x)
-end if

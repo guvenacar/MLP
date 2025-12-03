@@ -1,8 +1,0 @@
--- circular_b.mlp - Imports back to A
-import circular_a
-
-module ModuleB
-    func funcB()
-        return 2
-    end func
-end module

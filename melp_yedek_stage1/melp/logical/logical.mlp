@@ -1,3 +1,0 @@
-numeric LOG_AND = 0
-numeric LOG_OR = 1
-numeric LOG_NOT = 2

@@ -1,8 +1,0 @@
--- Test struct definition
-struct Person
-    text name
-    numeric age
-end struct
-
-numeric x = 42
-print(x)

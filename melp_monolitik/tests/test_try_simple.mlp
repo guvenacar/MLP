@@ -1,7 +1,0 @@
--- Try-Catch Test
-
-try
-    print(42)
-catch
-    print(99)
-end try

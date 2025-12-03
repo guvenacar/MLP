@@ -1,7 +1,0 @@
--- Simple import test
-import MathUtils
-
-func main()
-    numeric result = MathUtils.add(5, 3)
-    print(result)
-end func

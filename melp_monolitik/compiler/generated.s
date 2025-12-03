@@ -1,1 +1,0 @@
-section .datasection .text    global _start    extern mlp_print_num_start:    push rbp    mov rbp, rsp    sub rsp, 16    ; Declaration: numeric x = 42    mov rax, 42    mov [rbp-8], rax    ; Exit    mov rsp, rbp    pop rbp    mov rax, 60    xor rdi, rdi    syscall

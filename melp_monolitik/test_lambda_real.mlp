@@ -1,5 +1,0 @@
-func main()
-    numeric add5 = func(x) = x + 5
-    numeric result = add5(10)
-    print(result)
-end func

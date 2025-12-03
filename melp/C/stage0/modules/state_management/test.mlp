@@ -1,4 +1,0 @@
-state { mut counter = 0; const MAX = 100; }
-static cache = [];
-get value() { return counter; }
-set value(v) { counter = v; }

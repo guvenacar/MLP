@@ -1,6 +1,0 @@
-func makeCalculator(numeric a, numeric b)
-    return func(x) = (a + b) * x
-end func
-
-numeric calc = makeCalculator(3, 7)
-print(calc(5))

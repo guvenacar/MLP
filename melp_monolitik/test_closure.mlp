@@ -1,6 +1,0 @@
-func makeAdder(numeric x)
-    return func(y) = x + y
-end func
-
-numeric add5 = makeAdder(5)
-print(add5(10))

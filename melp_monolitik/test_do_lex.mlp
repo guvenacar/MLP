@@ -1,7 +1,0 @@
--- Test if 'do' keyword is being lexed correctly
-numeric x = 0
-do
-    print(100)
-    x = x + 1
-while x < 2
-print(999)

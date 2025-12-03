@@ -1,3 +1,0 @@
-numeric EXPR_LOGICAL_AND = 4
-numeric EXPR_LOGICAL_OR = 5
-numeric EXPR_LOGICAL_NOT = 6

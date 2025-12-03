@@ -1,0 +1,3 @@
+-- Test: Result Option
+Result<numeric> r=Ok(42)
+numeric x=r.unwrap()

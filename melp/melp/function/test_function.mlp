@@ -1,0 +1,16 @@
+-- Test functions in MELP Stage 1
+-- function definition and calls
+
+-- Define a simple function that returns a value
+function get_value() : numeric
+    return 100;
+end function
+
+-- Define another function
+function double_ten() : numeric
+    return 20;
+end function
+
+-- Main code - call functions
+numeric result1 = get_value();
+numeric result2 = double_ten();

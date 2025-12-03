@@ -1,9 +1,0 @@
--- Test struct instance and field access
-struct Person
-    text name
-    numeric age
-end struct
-
-Person p
-numeric x = 42
-print(x)

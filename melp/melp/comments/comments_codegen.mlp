@@ -1,5 +1,3 @@
--- Comments Codegen Module
--- Comments do not generate assembly code
--- No codegen constants needed
-
-numeric COMMENT_CODEGEN_UNUSED = 0
+numeric CODEGEN_COMMENT_SUCCESS = 0
+numeric CODEGEN_COMMENT_SKIP = 1
+numeric COMMENT_NO_OUTPUT = 2

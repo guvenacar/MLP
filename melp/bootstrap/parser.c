@@ -1,0 +1,187 @@
+// MELP Bootstrap Compiler - Parser
+// Simple recursive descent parser for MELP
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "parser.h"
+#include "lexer.h"
+
+static Token current_token;
+static ASTNode *ast_root = NULL;
+
+static void advance() {
+    current_token = next_token();
+}
+
+static int match(TokenType type, const char *value) {
+    if (current_token.type != type) return 0;
+    if (value && strcmp(current_token.value, value) != 0) return 0;
+    return 1;
+}
+
+static int expect(TokenType type, const char *value) {
+    if (!match(type, value)) {
+        fprintf(stderr, "Parse error at line %d:%d: expected %s '%s', got %s '%s'\n",
+                current_token.line, current_token.col,
+                token_type_name(type), value ? value : "any",
+                token_type_name(current_token.type), current_token.value);
+        return 0;
+    }
+    advance();
+    return 1;
+}
+
+ASTNode* create_node(NodeType type) {
+    ASTNode *node = (ASTNode*)malloc(sizeof(ASTNode));
+    node->type = type;
+    node->value[0] = '\0';
+    node->left = NULL;
+    node->right = NULL;
+    node->next = NULL;
+    return node;
+}
+
+// Parse variable declaration: numeric x = 42
+static ASTNode* parse_var_decl() {
+    if (!match(TK_KEYWORD, NULL)) return NULL;
+    
+    // Check if it's a type keyword
+    if (strcmp(current_token.value, "numeric") != 0 &&
+        strcmp(current_token.value, "string") != 0 &&
+        strcmp(current_token.value, "boolean") != 0) {
+        return NULL;
+    }
+    
+    ASTNode *node = create_node(NODE_VAR_DECL);
+    strcpy(node->value, current_token.value); // type
+    advance();
+    
+    if (!expect(TK_IDENTIFIER, NULL)) return NULL;
+    node->left = create_node(NODE_IDENTIFIER);
+    strcpy(node->left->value, current_token.value);
+    
+    if (match(TK_OPERATOR, "=")) {
+        advance();
+        // Parse expression (simple: just number or string for now)
+        if (current_token.type == TK_NUMBER || current_token.type == TK_STRING) {
+            node->right = create_node(NODE_LITERAL);
+            strcpy(node->right->value, current_token.value);
+            advance();
+        }
+    }
+    
+    return node;
+}
+
+// Parse print statement: print "message" or print variable
+static ASTNode* parse_print() {
+    if (!match(TK_KEYWORD, "print")) return NULL;
+    
+    ASTNode *node = create_node(NODE_PRINT);
+    advance();
+    
+    // Parse expression to print (simple: string literal, number, or identifier)
+    if (current_token.type == TK_STRING || 
+        current_token.type == TK_NUMBER || 
+        current_token.type == TK_IDENTIFIER) {
+        node->left = create_node(NODE_LITERAL);
+        strcpy(node->left->value, current_token.value);
+        node->left->type = (current_token.type == TK_STRING) ? NODE_LITERAL : 
+                          (current_token.type == TK_NUMBER) ? NODE_LITERAL : NODE_IDENTIFIER;
+        advance();
+    }
+    
+    return node;
+}
+
+// Parse function declaration
+static ASTNode* parse_function() {
+    if (!match(TK_KEYWORD, "function")) return NULL;
+    
+    ASTNode *node = create_node(NODE_FUNCTION);
+    advance();
+    
+    if (!expect(TK_IDENTIFIER, NULL)) return NULL;
+    strcpy(node->value, current_token.value);
+    
+    // Skip parameters for now
+    if (match(TK_SYMBOL, "(")) {
+        advance();
+        while (!match(TK_SYMBOL, ")") && current_token.type != TK_EOF) {
+            advance();
+        }
+        expect(TK_SYMBOL, ")");
+    }
+    
+    // Parse function body until "end function"
+    ASTNode *body = NULL;
+    ASTNode *last = NULL;
+    
+    while (!match(TK_KEYWORD, "end") && current_token.type != TK_EOF) {
+        ASTNode *stmt = parse_var_decl();
+        if (stmt) {
+            if (!body) {
+                body = stmt;
+                last = stmt;
+            } else {
+                last->next = stmt;
+                last = stmt;
+            }
+        } else {
+            advance(); // Skip unknown statements
+        }
+    }
+    
+    node->left = body;
+    
+    if (match(TK_KEYWORD, "end")) {
+        advance();
+        expect(TK_KEYWORD, "function");
+    }
+    
+    return node;
+}
+
+ASTNode* parse(const char *source) {
+    lexer_init(source);
+    advance();
+    
+    ASTNode *root = NULL;
+    ASTNode *last = NULL;
+    
+    while (current_token.type != TK_EOF) {
+        ASTNode *node = NULL;
+        
+        if (match(TK_KEYWORD, "function")) {
+            node = parse_function();
+        } else if (match(TK_KEYWORD, "print")) {
+            node = parse_print();
+        } else if (match(TK_KEYWORD, NULL)) {
+            node = parse_var_decl();
+        } else {
+            advance(); // Skip unknown
+        }
+        
+        if (node) {
+            if (!root) {
+                root = node;
+                last = node;
+            } else {
+                last->next = node;
+                last = node;
+            }
+        }
+    }
+    
+    ast_root = root;
+    return root;
+}
+
+void free_ast(ASTNode *node) {
+    if (!node) return;
+    free_ast(node->left);
+    free_ast(node->right);
+    free_ast(node->next);
+    free(node);
+}

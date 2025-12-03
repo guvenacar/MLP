@@ -1,0 +1,2 @@
+-- Test: Trait System Advanced
+trait Display function show()

@@ -1,3 +1,0 @@
-Result<int, str> r = Ok(42);
-let e = Err("error");
-match r { Ok(v) => v, Err(e) => 0 }

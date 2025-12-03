@@ -1,0 +1,3 @@
+-- Test: Decorator System
+@log
+function test() 0

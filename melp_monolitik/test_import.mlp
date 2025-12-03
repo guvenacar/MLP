@@ -1,6 +1,0 @@
--- Test Import Statement
-import math
-import string as str
-
-numeric result = 100
-print(result)

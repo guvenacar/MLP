@@ -1,0 +1,16 @@
+-- Test logical operators in MELP Stage 1
+-- Three operators: AND, OR, NOT
+
+-- Test AND operator
+boolean and_true_true = true AND true;
+boolean and_true_false = true AND false;
+boolean and_false_false = false AND false;
+
+-- Test OR operator
+boolean or_true_true = true OR true;
+boolean or_true_false = true OR false;
+boolean or_false_false = false OR false;
+
+-- Test NOT operator
+boolean not_true = NOT true;
+boolean not_false = NOT false;

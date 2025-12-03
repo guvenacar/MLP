@@ -1,8 +1,0 @@
-// Test lexer module
-import "lexer.mlp"
-
-// Simple test: tokenize a string
-function main() {
-    print("Lexer module compiled successfully!\n")
-    print("This proves MLP can compile itself.\n")
-}

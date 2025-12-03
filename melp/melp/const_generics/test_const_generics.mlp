@@ -1,0 +1,2 @@
+-- Test: Const Generics
+Array<numeric,10> arr

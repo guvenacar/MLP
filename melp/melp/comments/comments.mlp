@@ -1,6 +1,3 @@
--- Comments Module - Type Definitions
--- Single-line comment support with -- syntax
--- Multi-line comment support deferred to Stage 2
-
-numeric COMMENT_SINGLE_LINE = 0
-numeric COMMENT_MULTI_LINE = 1
+numeric COMMENT_SINGLE = 0
+numeric COMMENT_MULTI = 1
+numeric COMMENT_DOC = 2

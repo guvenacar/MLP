@@ -1,3 +1,0 @@
-numeric COLL_ARRAY = 0
-numeric COLL_LIST = 1
-numeric COLL_TUPLE = 2

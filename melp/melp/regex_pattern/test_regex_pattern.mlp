@@ -1,0 +1,3 @@
+-- Test: Regex Pattern
+regex r=/\d+/
+match("123",r)

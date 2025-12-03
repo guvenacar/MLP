@@ -1,0 +1,3 @@
+-- Test: Expression
+numeric x=2+3*4
+numeric y=(x+1)*2

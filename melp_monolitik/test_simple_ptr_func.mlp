@@ -1,7 +1,0 @@
-func swap(numeric* a, numeric* b)
-    return 0
-end func
-
-func main()
-    return 0
-end func

@@ -1,4 +1,0 @@
-boolean a = true
-boolean b = false
-boolean and_result = false
-boolean or_result = true
