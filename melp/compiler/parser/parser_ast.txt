@@ -1,0 +1,82 @@
+=== MELP Parser AST Output ===
+
+[PROGRAM]
+  [FUNC_DECL] name=parser_init
+  [VAR_DECL] name=parser
+  [FUNC_DECL] name=parser_current_token
+  [FUNC_DECL] name=parser_peek_token
+  [VAR_DECL] name=index
+  [VAR_DECL] name=eof_token
+  [FUNC_DECL] name=parser_advance
+  [FUNC_DECL] name=parser_check
+  [VAR_DECL] name=token
+  [FUNC_DECL] name=parser_match
+  [FUNC_DECL] name=parser_expect
+  [FUNC_DECL] name=parser_synchronize
+  [VAR_DECL] name=token
+  [FUNC_DECL] name=parser_primary
+  [VAR_DECL] name=node
+  [VAR_DECL] name=token
+  [FUNC_DECL] name=parser_call
+  [VAR_DECL] name=node
+  [VAR_DECL] name=call_node
+  [VAR_DECL] name=index_node
+  [VAR_DECL] name=member_node
+  [FUNC_DECL] name=parser_unary
+  [VAR_DECL] name=token
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_multiplicative
+  [VAR_DECL] name=left
+  [VAR_DECL] name=token
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_additive
+  [VAR_DECL] name=left
+  [VAR_DECL] name=token
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_comparison
+  [VAR_DECL] name=left
+  [VAR_DECL] name=token
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_equality
+  [VAR_DECL] name=left
+  [VAR_DECL] name=token
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_logical_and
+  [VAR_DECL] name=left
+  [VAR_DECL] name=token
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_logical_or
+  [VAR_DECL] name=left
+  [VAR_DECL] name=token
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_assignment
+  [VAR_DECL] name=left
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_expression
+  [FUNC_DECL] name=parser_expression_statement
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_block
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_if_statement
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_while_statement
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_return_statement
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_statement
+  [VAR_DECL] name=token
+  [FUNC_DECL] name=parser_variable_declaration
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_function_declaration
+  [VAR_DECL] name=node
+  [FUNC_DECL] name=parser_declaration
+  [VAR_DECL] name=token
+  [FUNC_DECL] name=parser_parse
+  [VAR_DECL] name=root
+  [FUNC_DECL] name=main
+
+=== Statistics ===
+Functions: 30
+Variables: 43
+Statements: 106
+Total Tokens: 1984

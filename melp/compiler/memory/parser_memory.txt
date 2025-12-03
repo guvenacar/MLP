@@ -1,0 +1,601 @@
+=== MELP Memory Analysis Report ===
+
+GC Mode: Automatic
+Max Scope Depth: 30
+
+=== Allocations (73 total) ===
+[0] parser_init:
+    Type: STACK
+    Lifetime: line 4
+    Escapes: NO
+    Scope depth: 1
+    GC Hint: stack
+
+[1] parser:
+    Type: STACK
+    Lifetime: line 5
+    Escapes: NO
+    Scope depth: 1
+    GC Hint: stack
+
+[2] parser_current_token:
+    Type: STACK
+    Lifetime: line 6
+    Escapes: NO
+    Scope depth: 2
+    GC Hint: stack
+
+[3] parser_peek_token:
+    Type: STACK
+    Lifetime: line 7
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[4] index:
+    Type: STACK
+    Lifetime: line 8
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[5] eof_token:
+    Type: STACK
+    Lifetime: line 9
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[6] parser_advance:
+    Type: STACK
+    Lifetime: line 10
+    Escapes: NO
+    Scope depth: 4
+    GC Hint: stack
+
+[7] parser_check:
+    Type: STACK
+    Lifetime: line 11
+    Escapes: NO
+    Scope depth: 5
+    GC Hint: stack
+
+[8] token:
+    Type: STACK
+    Lifetime: line 12
+    Escapes: NO
+    Scope depth: 5
+    GC Hint: stack
+
+[9] parser_match:
+    Type: STACK
+    Lifetime: line 13
+    Escapes: NO
+    Scope depth: 6
+    GC Hint: stack
+
+[10] parser_expect:
+    Type: STACK
+    Lifetime: line 14
+    Escapes: NO
+    Scope depth: 7
+    GC Hint: stack
+
+[11] parser_synchronize:
+    Type: STACK
+    Lifetime: line 15
+    Escapes: NO
+    Scope depth: 8
+    GC Hint: stack
+
+[12] token:
+    Type: STACK
+    Lifetime: line 16
+    Escapes: NO
+    Scope depth: 8
+    GC Hint: stack
+
+[13] parser_primary:
+    Type: STACK
+    Lifetime: line 17
+    Escapes: NO
+    Scope depth: 9
+    GC Hint: stack
+
+[14] node:
+    Type: STACK
+    Lifetime: line 18
+    Escapes: NO
+    Scope depth: 9
+    GC Hint: stack
+
+[15] token:
+    Type: STACK
+    Lifetime: line 19
+    Escapes: NO
+    Scope depth: 9
+    GC Hint: stack
+
+[16] parser_call:
+    Type: STACK
+    Lifetime: line 20
+    Escapes: NO
+    Scope depth: 10
+    GC Hint: stack
+
+[17] node:
+    Type: STACK
+    Lifetime: line 21
+    Escapes: NO
+    Scope depth: 10
+    GC Hint: stack
+
+[18] call_node:
+    Type: STACK
+    Lifetime: line 22
+    Escapes: NO
+    Scope depth: 10
+    GC Hint: stack
+
+[19] index_node:
+    Type: STACK
+    Lifetime: line 23
+    Escapes: NO
+    Scope depth: 10
+    GC Hint: stack
+
+[20] member_node:
+    Type: STACK
+    Lifetime: line 24
+    Escapes: NO
+    Scope depth: 10
+    GC Hint: stack
+
+[21] parser_unary:
+    Type: STACK
+    Lifetime: line 25
+    Escapes: NO
+    Scope depth: 11
+    GC Hint: stack
+
+[22] token:
+    Type: STACK
+    Lifetime: line 26
+    Escapes: NO
+    Scope depth: 11
+    GC Hint: stack
+
+[23] node:
+    Type: STACK
+    Lifetime: line 27
+    Escapes: NO
+    Scope depth: 11
+    GC Hint: stack
+
+[24] parser_multiplicative:
+    Type: STACK
+    Lifetime: line 28
+    Escapes: NO
+    Scope depth: 12
+    GC Hint: stack
+
+[25] left:
+    Type: STACK
+    Lifetime: line 29
+    Escapes: NO
+    Scope depth: 12
+    GC Hint: stack
+
+[26] token:
+    Type: STACK
+    Lifetime: line 30
+    Escapes: NO
+    Scope depth: 12
+    GC Hint: stack
+
+[27] node:
+    Type: STACK
+    Lifetime: line 31
+    Escapes: NO
+    Scope depth: 12
+    GC Hint: stack
+
+[28] parser_additive:
+    Type: STACK
+    Lifetime: line 32
+    Escapes: NO
+    Scope depth: 13
+    GC Hint: stack
+
+[29] left:
+    Type: STACK
+    Lifetime: line 33
+    Escapes: NO
+    Scope depth: 13
+    GC Hint: stack
+
+[30] token:
+    Type: STACK
+    Lifetime: line 34
+    Escapes: NO
+    Scope depth: 13
+    GC Hint: stack
+
+[31] node:
+    Type: STACK
+    Lifetime: line 35
+    Escapes: NO
+    Scope depth: 13
+    GC Hint: stack
+
+[32] parser_comparison:
+    Type: STACK
+    Lifetime: line 36
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[33] left:
+    Type: STACK
+    Lifetime: line 37
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[34] token:
+    Type: STACK
+    Lifetime: line 38
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[35] node:
+    Type: STACK
+    Lifetime: line 39
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[36] parser_equality:
+    Type: STACK
+    Lifetime: line 40
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[37] left:
+    Type: STACK
+    Lifetime: line 41
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[38] token:
+    Type: STACK
+    Lifetime: line 42
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[39] node:
+    Type: STACK
+    Lifetime: line 43
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[40] parser_logical_and:
+    Type: STACK
+    Lifetime: line 44
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[41] left:
+    Type: STACK
+    Lifetime: line 45
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[42] token:
+    Type: STACK
+    Lifetime: line 46
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[43] node:
+    Type: STACK
+    Lifetime: line 47
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[44] parser_logical_or:
+    Type: STACK
+    Lifetime: line 48
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[45] left:
+    Type: STACK
+    Lifetime: line 49
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[46] token:
+    Type: STACK
+    Lifetime: line 50
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[47] node:
+    Type: STACK
+    Lifetime: line 51
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[48] parser_assignment:
+    Type: STACK
+    Lifetime: line 52
+    Escapes: NO
+    Scope depth: 18
+    GC Hint: stack
+
+[49] left:
+    Type: STACK
+    Lifetime: line 53
+    Escapes: NO
+    Scope depth: 18
+    GC Hint: stack
+
+[50] node:
+    Type: STACK
+    Lifetime: line 54
+    Escapes: NO
+    Scope depth: 18
+    GC Hint: stack
+
+[51] parser_expression:
+    Type: STACK
+    Lifetime: line 55
+    Escapes: NO
+    Scope depth: 19
+    GC Hint: stack
+
+[52] parser_expression_statement:
+    Type: STACK
+    Lifetime: line 56
+    Escapes: NO
+    Scope depth: 20
+    GC Hint: stack
+
+[53] node:
+    Type: STACK
+    Lifetime: line 57
+    Escapes: NO
+    Scope depth: 20
+    GC Hint: stack
+
+[54] parser_block:
+    Type: STACK
+    Lifetime: line 58
+    Escapes: NO
+    Scope depth: 21
+    GC Hint: stack
+
+[55] node:
+    Type: STACK
+    Lifetime: line 59
+    Escapes: NO
+    Scope depth: 21
+    GC Hint: stack
+
+[56] parser_if_statement:
+    Type: STACK
+    Lifetime: line 60
+    Escapes: NO
+    Scope depth: 22
+    GC Hint: stack
+
+[57] node:
+    Type: STACK
+    Lifetime: line 61
+    Escapes: NO
+    Scope depth: 22
+    GC Hint: stack
+
+[58] parser_while_statement:
+    Type: STACK
+    Lifetime: line 62
+    Escapes: NO
+    Scope depth: 23
+    GC Hint: stack
+
+[59] node:
+    Type: STACK
+    Lifetime: line 63
+    Escapes: NO
+    Scope depth: 23
+    GC Hint: stack
+
+[60] parser_return_statement:
+    Type: STACK
+    Lifetime: line 64
+    Escapes: NO
+    Scope depth: 24
+    GC Hint: stack
+
+[61] node:
+    Type: STACK
+    Lifetime: line 65
+    Escapes: NO
+    Scope depth: 24
+    GC Hint: stack
+
+[62] parser_statement:
+    Type: STACK
+    Lifetime: line 66
+    Escapes: NO
+    Scope depth: 25
+    GC Hint: stack
+
+[63] token:
+    Type: STACK
+    Lifetime: line 67
+    Escapes: NO
+    Scope depth: 25
+    GC Hint: stack
+
+[64] parser_variable_declaration:
+    Type: STACK
+    Lifetime: line 68
+    Escapes: NO
+    Scope depth: 26
+    GC Hint: stack
+
+[65] node:
+    Type: STACK
+    Lifetime: line 69
+    Escapes: NO
+    Scope depth: 26
+    GC Hint: stack
+
+[66] parser_function_declaration:
+    Type: STACK
+    Lifetime: line 70
+    Escapes: NO
+    Scope depth: 27
+    GC Hint: stack
+
+[67] node:
+    Type: STACK
+    Lifetime: line 71
+    Escapes: NO
+    Scope depth: 27
+    GC Hint: stack
+
+[68] parser_declaration:
+    Type: STACK
+    Lifetime: line 72
+    Escapes: NO
+    Scope depth: 28
+    GC Hint: stack
+
+[69] token:
+    Type: STACK
+    Lifetime: line 73
+    Escapes: NO
+    Scope depth: 28
+    GC Hint: stack
+
+[70] parser_parse:
+    Type: STACK
+    Lifetime: line 74
+    Escapes: NO
+    Scope depth: 29
+    GC Hint: stack
+
+[71] root:
+    Type: STACK
+    Lifetime: line 75
+    Escapes: NO
+    Scope depth: 29
+    GC Hint: stack
+
+[72] main:
+    Type: STACK
+    Lifetime: line 76
+    Escapes: NO
+    Scope depth: 30
+    GC Hint: stack
+
+=== Statistics ===
+Stack allocations: 73
+Heap allocations (GC): 0
+Escaping variables: 0
+Memory operations: 73
+
+=== Memory Operations ===
+[0] ALLOC: parser_init at line 4
+[1] ALLOC: parser at line 5
+[2] ALLOC: parser_current_token at line 6
+[3] ALLOC: parser_peek_token at line 7
+[4] ALLOC: index at line 8
+[5] ALLOC: eof_token at line 9
+[6] ALLOC: parser_advance at line 10
+[7] ALLOC: parser_check at line 11
+[8] ALLOC: token at line 12
+[9] ALLOC: parser_match at line 13
+[10] ALLOC: parser_expect at line 14
+[11] ALLOC: parser_synchronize at line 15
+[12] ALLOC: token at line 16
+[13] ALLOC: parser_primary at line 17
+[14] ALLOC: node at line 18
+[15] ALLOC: token at line 19
+[16] ALLOC: parser_call at line 20
+[17] ALLOC: node at line 21
+[18] ALLOC: call_node at line 22
+[19] ALLOC: index_node at line 23
+[20] ALLOC: member_node at line 24
+[21] ALLOC: parser_unary at line 25
+[22] ALLOC: token at line 26
+[23] ALLOC: node at line 27
+[24] ALLOC: parser_multiplicative at line 28
+[25] ALLOC: left at line 29
+[26] ALLOC: token at line 30
+[27] ALLOC: node at line 31
+[28] ALLOC: parser_additive at line 32
+[29] ALLOC: left at line 33
+[30] ALLOC: token at line 34
+[31] ALLOC: node at line 35
+[32] ALLOC: parser_comparison at line 36
+[33] ALLOC: left at line 37
+[34] ALLOC: token at line 38
+[35] ALLOC: node at line 39
+[36] ALLOC: parser_equality at line 40
+[37] ALLOC: left at line 41
+[38] ALLOC: token at line 42
+[39] ALLOC: node at line 43
+[40] ALLOC: parser_logical_and at line 44
+[41] ALLOC: left at line 45
+[42] ALLOC: token at line 46
+[43] ALLOC: node at line 47
+[44] ALLOC: parser_logical_or at line 48
+[45] ALLOC: left at line 49
+[46] ALLOC: token at line 50
+[47] ALLOC: node at line 51
+[48] ALLOC: parser_assignment at line 52
+[49] ALLOC: left at line 53
+[50] ALLOC: node at line 54
+[51] ALLOC: parser_expression at line 55
+[52] ALLOC: parser_expression_statement at line 56
+[53] ALLOC: node at line 57
+[54] ALLOC: parser_block at line 58
+[55] ALLOC: node at line 59
+[56] ALLOC: parser_if_statement at line 60
+[57] ALLOC: node at line 61
+[58] ALLOC: parser_while_statement at line 62
+[59] ALLOC: node at line 63
+[60] ALLOC: parser_return_statement at line 64
+[61] ALLOC: node at line 65
+[62] ALLOC: parser_statement at line 66
+[63] ALLOC: token at line 67
+[64] ALLOC: parser_variable_declaration at line 68
+[65] ALLOC: node at line 69
+[66] ALLOC: parser_function_declaration at line 70
+[67] ALLOC: node at line 71
+[68] ALLOC: parser_declaration at line 72
+[69] ALLOC: token at line 73
+[70] ALLOC: parser_parse at line 74
+[71] ALLOC: root at line 75
+[72] ALLOC: main at line 76
+
+=== GC Integration Hints ===
+Replace malloc() with gc_alloc() for 0 heap allocations
+Stack variables require no GC management

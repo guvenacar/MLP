@@ -1,0 +1,34 @@
+=== MELP Lexer Token Output ===
+
+[0] Type=20, Lexeme="fn", Line=2, Col=1
+[1] Type=10, Lexeme="add", Line=2, Col=4
+[2] Type=80, Lexeme="(", Line=2, Col=7
+[3] Type=10, Lexeme="x", Line=2, Col=8
+[4] Type=88, Lexeme=":", Line=2, Col=9
+[5] Type=10, Lexeme="i32", Line=2, Col=11
+[6] Type=86, Lexeme=",", Line=2, Col=14
+[7] Type=10, Lexeme="y", Line=2, Col=16
+[8] Type=88, Lexeme=":", Line=2, Col=17
+[9] Type=10, Lexeme="i32", Line=2, Col=19
+[10] Type=81, Lexeme=")", Line=2, Col=22
+[11] Type=51, Lexeme="-", Line=2, Col=24
+[12] Type=59, Lexeme=">", Line=2, Col=25
+[13] Type=10, Lexeme="i32", Line=2, Col=27
+[14] Type=82, Lexeme="{", Line=2, Col=31
+[15] Type=27, Lexeme="return", Line=3, Col=5
+[16] Type=10, Lexeme="x", Line=3, Col=12
+[17] Type=50, Lexeme="+", Line=3, Col=14
+[18] Type=10, Lexeme="y", Line=3, Col=16
+[19] Type=83, Lexeme="}", Line=4, Col=1
+[20] Type=21, Lexeme="let", Line=6, Col=1
+[21] Type=10, Lexeme="result", Line=6, Col=5
+[22] Type=55, Lexeme="=", Line=6, Col=12
+[23] Type=10, Lexeme="add", Line=6, Col=14
+[24] Type=80, Lexeme="(", Line=6, Col=17
+[25] Type=11, Lexeme="10", Line=6, Col=18, Value=10
+[26] Type=86, Lexeme=",", Line=6, Col=20
+[27] Type=11, Lexeme="20", Line=6, Col=22, Value=20
+[28] Type=81, Lexeme=")", Line=6, Col=24
+[29] EOF at line 7, col 1
+
+=== Total Tokens: 29 ===

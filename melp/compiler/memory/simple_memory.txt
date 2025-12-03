@@ -1,0 +1,33 @@
+=== MELP Memory Analysis Report ===
+
+GC Mode: Automatic
+Max Scope Depth: 1
+
+=== Allocations (2 total) ===
+[0] add:
+    Type: STACK
+    Lifetime: line 4
+    Escapes: NO
+    Scope depth: 1
+    GC Hint: stack
+
+[1] result:
+    Type: STACK
+    Lifetime: line 5
+    Escapes: NO
+    Scope depth: 1
+    GC Hint: stack
+
+=== Statistics ===
+Stack allocations: 2
+Heap allocations (GC): 0
+Escaping variables: 0
+Memory operations: 2
+
+=== Memory Operations ===
+[0] ALLOC: add at line 4
+[1] ALLOC: result at line 5
+
+=== GC Integration Hints ===
+Replace malloc() with gc_alloc() for 0 heap allocations
+Stack variables require no GC management
