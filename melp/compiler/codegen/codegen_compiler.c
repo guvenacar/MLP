@@ -6,10 +6,12 @@
 #include <stdarg.h>
 
 // ============================================
-// CODEGEN COMPILER - STAGE 0
+// CODEGEN COMPILER - STAGE 0 (REAL x86-64)
 // ============================================
-// This compiler takes memory analysis output and generates
-// x86-64 assembly with GC integration
+// This compiler generates real x86-64 assembly from MELP source
+// Strategy: Direct source-to-assembly compilation
+// Input: MELP source code (.mlp file)
+// Output: x86-64 assembly (.s file) with GC integration
 
 // Register constants
 #define REG_RAX 0

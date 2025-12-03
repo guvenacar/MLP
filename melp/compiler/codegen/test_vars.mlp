@@ -1,0 +1,9 @@
+// Test: variables and arithmetic
+fn main() {
+    let x = 5;
+    let y = 10;
+    let z = x + y;
+    print("Result:");
+    print_int(z);
+    return 0;
+}
