@@ -1,0 +1,19 @@
+=== MELP Parser AST Output ===
+
+[PROGRAM]
+  [FUNC_DECL] name=factorial
+  [FUNC_DECL] name=allocate_data
+  [VAR_DECL] name=data
+  [FUNC_DECL] name=main
+  [VAR_DECL] name=x
+  [VAR_DECL] name=y
+  [VAR_DECL] name=sum
+  [VAR_DECL] name=result
+  [VAR_DECL] name=allocated
+  [VAR_DECL] name=i
+
+=== Statistics ===
+Functions: 3
+Variables: 7
+Statements: 7
+Total Tokens: 110
