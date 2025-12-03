@@ -1,0 +1,267 @@
+// ============================================
+// MELP STANDARD LIBRARY - Stage 4
+// ============================================
+// Basic runtime functions needed for self-hosting
+
+// ============================================
+// STRING FUNCTIONS
+// ============================================
+
+fn string_length(s: string) -> i32 {
+    let len = 0
+    while s[len] != '\0' {
+        len = len + 1
+    }
+    return len
+}
+
+fn string_char_at(s: string, index: i32) -> char {
+    return s[index]
+}
+
+fn string_substring(s: string, start: i32, end: i32) -> string {
+    let len = end - start
+    let result = alloc_string(len + 1)
+    let i = 0
+    while i < len {
+        result[i] = s[start + i]
+        i = i + 1
+    }
+    result[len] = '\0'
+    return result
+}
+
+fn string_concat(a: string, b: string) -> string {
+    let len_a = string_length(a)
+    let len_b = string_length(b)
+    let result = alloc_string(len_a + len_b + 1)
+    
+    let i = 0
+    while i < len_a {
+        result[i] = a[i]
+        i = i + 1
+    }
+    
+    let j = 0
+    while j < len_b {
+        result[len_a + j] = b[j]
+        j = j + 1
+    }
+    
+    result[len_a + len_b] = '\0'
+    return result
+}
+
+fn string_concat_char(s: string, c: char) -> string {
+    let len = string_length(s)
+    let result = alloc_string(len + 2)
+    
+    let i = 0
+    while i < len {
+        result[i] = s[i]
+        i = i + 1
+    }
+    
+    result[len] = c
+    result[len + 1] = '\0'
+    return result
+}
+
+fn string_from_char(c: char) -> string {
+    let result = alloc_string(2)
+    result[0] = c
+    result[1] = '\0'
+    return result
+}
+
+fn string_equals(a: string, b: string) -> bool {
+    let len_a = string_length(a)
+    let len_b = string_length(b)
+    
+    if len_a != len_b {
+        return false
+    }
+    
+    let i = 0
+    while i < len_a {
+        if a[i] != b[i] {
+            return false
+        }
+        i = i + 1
+    }
+    
+    return true
+}
+
+// ============================================
+// CHARACTER FUNCTIONS
+// ============================================
+
+fn char_to_int(c: char) -> i32 {
+    return c - '0'
+}
+
+fn int_to_char(n: i32) -> char {
+    return '0' + n
+}
+
+fn char_is_alpha(c: char) -> bool {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+fn char_is_digit(c: char) -> bool {
+    return c >= '0' && c <= '9'
+}
+
+fn char_is_whitespace(c: char) -> bool {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r'
+}
+
+fn char_is_alnum(c: char) -> bool {
+    return char_is_alpha(c) || char_is_digit(c)
+}
+
+// ============================================
+// MEMORY ALLOCATION
+// ============================================
+
+fn alloc_string(size: i32) -> string {
+    // Will use gc_alloc from runtime
+    return gc_alloc(size)
+}
+
+fn alloc_array(size: i32, element_size: i32) -> &i8 {
+    return gc_alloc(size * element_size)
+}
+
+// ============================================
+// FILE I/O
+// ============================================
+
+struct File {
+    handle: i64,
+    valid: bool
+}
+
+fn file_open(filename: string, mode: string) -> File {
+    // TODO: Implement with C runtime
+    let f = File {
+        handle: 0,
+        valid: false
+    }
+    return f
+}
+
+fn file_close(f: &File) {
+    // TODO: Implement with C runtime
+}
+
+fn file_is_valid(f: File) -> bool {
+    return f.valid
+}
+
+fn file_write_string(f: &File, s: string) {
+    // TODO: Implement with C runtime
+}
+
+fn file_write_int(f: &File, n: i32) {
+    // TODO: Implement with C runtime
+}
+
+fn file_write_char(f: &File, c: char) {
+    // TODO: Implement with C runtime
+}
+
+fn file_read_all(filename: string) -> string {
+    // TODO: Implement with C runtime
+    return ""
+}
+
+// ============================================
+// CONSOLE I/O
+// ============================================
+
+fn print(s: string) {
+    // Implemented in C runtime
+}
+
+fn print_int(n: i32) {
+    // Implemented in C runtime
+}
+
+fn print_char(c: char) {
+    // Implemented in C runtime
+}
+
+fn println(s: string) {
+    print(s)
+    print("\n")
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+fn int_to_string(n: i32) -> string {
+    if n == 0 {
+        return "0"
+    }
+    
+    let is_negative = n < 0
+    if is_negative {
+        n = -n
+    }
+    
+    // Count digits
+    let temp = n
+    let digits = 0
+    while temp > 0 {
+        digits = digits + 1
+        temp = temp / 10
+    }
+    
+    let result_len = digits
+    if is_negative {
+        result_len = result_len + 1
+    }
+    
+    let result = alloc_string(result_len + 1)
+    result[result_len] = '\0'
+    
+    let i = result_len - 1
+    while n > 0 {
+        let digit = n % 10
+        result[i] = int_to_char(digit)
+        n = n / 10
+        i = i - 1
+    }
+    
+    if is_negative {
+        result[0] = '-'
+    }
+    
+    return result
+}
+
+fn string_to_int(s: string) -> i32 {
+    let result = 0
+    let i = 0
+    let is_negative = false
+    
+    if s[0] == '-' {
+        is_negative = true
+        i = 1
+    }
+    
+    while s[i] != '\0' && char_is_digit(s[i]) {
+        let digit = char_to_int(s[i])
+        result = result * 10 + digit
+        i = i + 1
+    }
+    
+    if is_negative {
+        result = -result
+    }
+    
+    return result
+}

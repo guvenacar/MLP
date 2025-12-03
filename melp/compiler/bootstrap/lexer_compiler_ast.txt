@@ -1,0 +1,57 @@
+=== MELP Parser AST Output ===
+
+[PROGRAM]
+  [FUNC_DECL] name=is_keyword
+  [FUNC_DECL] name=is_alpha
+  [FUNC_DECL] name=is_digit
+  [FUNC_DECL] name=is_whitespace
+  [FUNC_DECL] name=is_alnum
+  [FUNC_DECL] name=lexer_init
+  [VAR_DECL] name=lexer
+  [FUNC_DECL] name=lexer_advance
+  [FUNC_DECL] name=lexer_peek
+  [VAR_DECL] name=pos
+  [FUNC_DECL] name=lexer_skip_whitespace
+  [FUNC_DECL] name=lexer_skip_comment
+  [FUNC_DECL] name=make_token
+  [VAR_DECL] name=token
+  [FUNC_DECL] name=make_token_with_value
+  [VAR_DECL] name=token
+  [FUNC_DECL] name=lexer_read_identifier
+  [VAR_DECL] name=start_pos
+  [VAR_DECL] name=start_col
+  [VAR_DECL] name=lexeme
+  [VAR_DECL] name=token_type
+  [FUNC_DECL] name=lexer_read_number
+  [VAR_DECL] name=start_pos
+  [VAR_DECL] name=start_col
+  [VAR_DECL] name=value
+  [VAR_DECL] name=digit
+  [VAR_DECL] name=lexeme
+  [FUNC_DECL] name=lexer_read_string
+  [VAR_DECL] name=start_col
+  [VAR_DECL] name=str_value
+  [FUNC_DECL] name=lexer_read_char
+  [VAR_DECL] name=start_col
+  [VAR_DECL] name=char_value
+  [VAR_DECL] name=lexeme
+  [FUNC_DECL] name=lexer_next_token
+  [VAR_DECL] name=start_col
+  [VAR_DECL] name=c
+  [VAR_DECL] name=lexeme
+  [FUNC_DECL] name=read_file
+  [FUNC_DECL] name=write_token
+  [FUNC_DECL] name=main
+  [VAR_DECL] name=input_file
+  [VAR_DECL] name=output_file
+  [VAR_DECL] name=source
+  [VAR_DECL] name=lexer
+  [VAR_DECL] name=out
+  [VAR_DECL] name=token_count
+  [VAR_DECL] name=token
+
+=== Statistics ===
+Functions: 20
+Variables: 28
+Statements: 155
+Total Tokens: 2618
