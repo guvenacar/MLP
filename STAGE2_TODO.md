@@ -221,14 +221,61 @@ Reproducibility: [ ] Not attempted
 
 ---
 
+## 🔮 STAGE 3 - GC Implementation (Stage 2'den Sonra)
+
+### Not: Stage 1'de GC Kısmen Yapıldı
+
+Stage 1'de `memory` modülünde sadece GC **sabitleri ve placeholder'lar** vardı:
+
+- malloc/free constant'ları
+- @gc annotation sabitleri  
+- defer keyword sabitleri
+- GC function pointer'ları
+
+Ama **gerçek GC implementasyonu yapılmadı**. Stage 3'te ekleyeceğiz.
+
+### Stage 3 Görevleri
+
+- [ ] **GC Modülü Oluştur** (`melp/C/stage0/modules/gc/`)
+  - [ ] `gc.h` - GC interface tanımları
+  - [ ] `gc.c` - Mark & Sweep implementasyonu
+  - [ ] `gc_compiler` - C Stage 0 derleyicisi
+  - [ ] `test_gc.mlp` - GC test dosyası
+  
+- [ ] **GC Algoritması**
+  - [ ] Mark phase (reachability analysis)
+  - [ ] Sweep phase (garbage collection)
+  - [ ] Root set tracking
+  - [ ] Reference counting (optional, hybrid)
+  - [ ] Generation support (optional)
+
+- [ ] **Integration**
+  - [ ] Memory modülü ile entegrasyon
+  - [ ] Compiler'a GC hints ekleme
+  - [ ] Runtime'a GC çağrıları ekleme
+  - [ ] Automatic vs manual GC modes
+
+- [ ] **Testing & Benchmarking**
+  - [ ] Memory leak testleri
+  - [ ] Performance benchmarks
+  - [ ] Stress tests (büyük allocation'lar)
+  - [ ] Fragmentation testleri
+
+**Stratejisi**: Stage 2'yi tamamla, self-hosting çalışıyor duruma getir. Sonra GC'yi ayrı bir modül olarak ekle. Bu sayıs GC implementasyonu Stage 2'yi geciktirmez.
+
+---
+
 ## 🚀 Sonraki Adım
 
 **ŞİMDİ:** Lexer modülünden başla
+
 1. `mkdir -p melp/compiler/lexer/`
 2. `compiler/lexer/test_lexer.mlp` yaz (TDD)
 3. `compiler/lexer/lexer.mlp` implement et
 4. `compiler/lexer/lexer_compiler` (C Stage 0) yaz
 5. Test et, doğrula, commit et
+
+**SONRA:** Stage 2 tamamlandıktan sonra Stage 3'te GC implementasyonunu ekle.
 
 ---
 
