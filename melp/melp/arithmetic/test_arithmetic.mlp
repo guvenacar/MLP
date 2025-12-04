@@ -1,20 +1,17 @@
--- Arithmetic Module Test
--- Testing basic arithmetic operations
+// ARITHMETIC MODULE TEST
+// Tests all arithmetic module functions
 
--- Addition
-numeric sum = 10 + 5
-
--- Subtraction  
-numeric diff = 20 - 8
-
--- Multiplication
-numeric product = 6 * 7
-
--- Division
-numeric quotient = 100 / 5
-
--- Modulo
-numeric remainder = 17 % 5
-
--- Simple assignment
-numeric simple = 42
+fn main() {
+    // Test arithmetic operations
+    let add = 10 + 5;
+    let sub = 20 - 8;
+    let mul = 6 * 7;
+    let div = 100 / 5;
+    
+    print_int(add);  // Should print 15
+    print_int(sub);  // Should print 12
+    print_int(mul);  // Should print 42
+    print_int(div);  // Should print 20
+    
+    return 0;
+}

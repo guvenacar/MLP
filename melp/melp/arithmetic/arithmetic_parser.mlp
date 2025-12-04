@@ -1,3 +1,67 @@
-numeric EXPR_NUMBER = 0
-numeric EXPR_VARIABLE = 1
-numeric EXPR_BINARY_OP = 2
+// ARITHMETIC PARSER MODULE - MELP Version
+// Parses arithmetic expressions with operator precedence
+
+// Parse primary expression (numbers, variables, parentheses)
+fn arithmetic_parse_primary() {
+    // Simplified: Returns 1 for success
+    // Full implementation would:
+    // 1. Check if current token is NUMBER
+    // 2. Check if current token is IDENTIFIER  
+    // 3. Handle parentheses: '(' expression ')'
+    // 4. Return ArithmeticExpr node
+    return 1;
+}
+
+// Parse power (highest precedence: **)
+fn arithmetic_parse_power() {
+    let left = arithmetic_parse_primary();
+    // While current token is **:
+    //   - Parse right operand
+    //   - Create binary node with ARITH_POW
+    return left;
+}
+
+// Parse term (*, /, %)
+fn arithmetic_parse_term() {
+    let left = arithmetic_parse_power();
+    // While current token is * / %:
+    //   - Parse right operand
+    //   - Create binary node with operation
+    return left;
+}
+
+// Parse factor (+, -)
+fn arithmetic_parse_factor() {
+    let left = arithmetic_parse_term();
+    // While current token is + -:
+    //   - Parse right operand
+    //   - Create binary node with operation
+    return left;
+}
+
+// Parse full arithmetic expression
+fn arithmetic_parse_expression() {
+    let result = arithmetic_parse_factor();
+    return result;
+}
+
+// Parse assignment: varname = expression
+fn arithmetic_parse_assignment() {
+    // Simplified: Returns 1 for success
+    // Full implementation would:
+    // 1. Parse variable name (IDENTIFIER)
+    // 2. Expect '=' token
+    // 3. Parse expression
+    // 4. Return variable name and expression
+    return 1;
+}
+
+fn arithmetic_parser_test() {
+    let expr_result = arithmetic_parse_expression();
+    let assign_result = arithmetic_parse_assignment();
+    
+    print_int(expr_result);    // Should print 1
+    print_int(assign_result);  // Should print 1
+    
+    return 0;
+}

@@ -1,0 +1,8 @@
+fn main() {
+    let a = 1;
+    let b = 1;
+    let c = 1;
+    let total = a + b + c;
+    print_int(total);
+    return 0;
+}
