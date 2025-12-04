@@ -1,12 +1,53 @@
-# YENİ AI İÇİN TALİMAT
+# ⚠️ YENİ AI İÇİN KRİTİK TALİMAT ⚠️
 
 **Tarih:** 4 Aralık 2025  
 **Branch:** mlp-true-syntax  
-**Durum:** Bootstrap compiler'a if/while/for desteği eklenecek
+**Yedek Branch:** mlp-true-syntax-YEDEK (DOKUNMA!)
 
 ---
 
-## 🎯 ŞU ANDA NEREDEYIZ?
+## 🔴 ÖNEMLİ UYARILAR - ÖNCE OKU!
+
+### ❌ YAPMA BUNLARI:
+1. **Mevcut dosyaları EZME!** (lexer.mlp, parser.mlp, codegen.mlp, main.mlp)
+2. **Bootstrap C kodlarını DEĞİŞTİRME!** (lexer.c, parser.c, codegen.c, main.c)
+3. **Yeni syntax önerme!** (Syntax belli: function, numeric, --, end)
+4. **Stage 2 modüllerini düzeltmeye kalkma!** (Onlar yanlış syntax'ta, ignore et)
+5. **"Daha iyi yol" önerme!** (Plan belli, takip et)
+
+### ✅ SADECE BUNLARI YAP:
+1. **parser.h'ye 3 satır ekle** (NODE_IF, NODE_WHILE, NODE_FOR)
+2. **parser.c'ye 3 fonksiyon ekle** (parse_if, parse_while, parse_for)
+3. **codegen.c'ye 2 fonksiyon ekle** (gen_if, gen_while)
+4. **Test et**
+5. **Commit + push et**
+6. **BİTTİ!**
+
+### 🎯 GÖREV TANIMI
+**Sadece ve sadece:** Bootstrap melpc'ye if/while/for desteği ekle.
+**Süre:** 1-2 saat
+**Başarı kriteri:** if/while içeren MLP kodu derleniyor
+
+---
+
+## 🚨 BAŞLAMADAN ÖNCE MUTLAKA OKU
+
+### Bu Projeyi Bozan AI'lar Oldu - Sen Olma!
+
+**Önceki AI'lar ne yaptı:**
+- ❌ "Daha iyi syntax önerelim" dedi, her şeyi bozdu
+- ❌ "Stage 2'yi düzeltelim" dedi, 3 gün harcadı
+- ❌ Mevcut çalışan kodu ezdi, yeniden yazdı
+- ❌ Kendi planını yaptı, talimatı ignore etti
+
+**Sen ne yapmalısın:**
+- ✅ **SADECE** belirtilen dosyaları düzenle
+- ✅ **SADECE** belirtilen fonksiyonları ekle
+- ✅ **SADECE** verilen kod örneklerini kullan
+- ✅ Değişiklik yapmadan önce **mevcut kodu oku**
+- ✅ Her değişiklikten sonra **test et**
+
+---
 
 ### ✅ TAMAMLANAN
 1. **Bootstrap melpc (C derleyici)** - %90 çalışıyor
@@ -33,11 +74,60 @@
 
 ---
 
-## 🚀 YAPILACAK İŞ: IF/WHILE/FOR DESTEĞI EKLE
+## 📋 ADIM ADIM TALİMAT
 
-### Süre Tahmini: 1-2 saat
+**Her adımı sırayla yap, atlama!**
 
-### Adım 1: parser.h'ye Node Types Ekle (5 dakika)
+### ADIM 1: Mevcut Durumu Kontrol Et (5 dakika)
+
+```bash
+cd /home/pardus/projeler/MLP/MLP
+git status
+git log --oneline -5
+ls -la melp/bootstrap/*.mlp
+```
+
+**Kontrol et:**
+- ✅ Branch: mlp-true-syntax
+- ✅ lexer.mlp, parser.mlp, codegen.mlp, main.mlp var mı?
+- ✅ melp/bootstrap/melpc binary çalışıyor mu?
+
+---
+
+### ADIM 2: parser.h'yi Düzenle (5 dakika)
+
+**Dosya:** `melp/bootstrap/parser.h`
+
+**Eklenecek yer:** NodeType enum içine (satır ~15 civarı)
+
+```c
+typedef enum {
+    NODE_PROGRAM,
+    NODE_FUNCTION,
+    NODE_VAR_DECL,
+    NODE_RETURN,
+    NODE_STRUCT,
+    NODE_IDENTIFIER,
+    NODE_LITERAL,
+    NODE_TYPE,
+    NODE_IF,        // ← BU SATIRI EKLE
+    NODE_WHILE,     // ← BU SATIRI EKLE
+    NODE_FOR        // ← BU SATIRI EKLE
+} NodeType;
+```
+
+**Kaydet ve test et:**
+```bash
+cd melp/bootstrap
+make clean
+make
+```
+
+**Beklenen:** ✅ Derleme başarılı
+
+---
+
+### ADIM 3: parser.c'ye parse_if() Ekle (20 dakika)
 
 **Dosya:** `melp/bootstrap/parser.h`
 
