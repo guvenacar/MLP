@@ -1,0 +1,10 @@
+// Test function calls and parameters
+fn add(x, y) {
+    return x + y;
+}
+
+fn main() {
+    let result = add(5, 3);
+    print_int(result);
+    return 0;
+}

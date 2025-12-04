@@ -1,0 +1,13 @@
+// Minimal lexer test - only constants and one function
+const TOKEN_EOF = 0
+const TOKEN_NUMBER = 11
+
+fn make_number(val) {
+    return val + 10;
+}
+
+fn main() {
+    let result = make_number(42);
+    print_int(result);
+    return 0;
+}

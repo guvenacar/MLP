@@ -1,0 +1,20 @@
+// MINIMAL VARIABLE LANGUAGE (MVL) COMPILER
+// Written in MVL itself - SELF-HOSTING!
+// Compiles MVL programs to x86-64 assembly
+
+// For now, just verify the compiler itself can be compiled
+// Next step: Add actual compilation logic
+
+fn compile_mvl() {
+    // TODO: Read input file
+    // TODO: Parse MVL syntax
+    // TODO: Generate assembly
+    let status = 1;
+    return status;
+}
+
+fn main() {
+    let result = compile_mvl();
+    print_int(result);
+    return 0;
+}

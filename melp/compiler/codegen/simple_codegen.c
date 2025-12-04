@@ -8,6 +8,9 @@
 // Simple MELP to x86-64 codegen - Proof of concept
 // Compiles very simple MELP programs to working x86-64 assembly
 
+// Global debug flag
+static bool g_debug = false;
+
 typedef struct {
     char *source;
     int pos;
@@ -154,13 +157,52 @@ static void compile_primary(Codegen *gen, Lexer *lex) {
     }
     else if (isalpha(lex->current) || lex->current == '_') {
         char *id = lexer_read_identifier(lex);
-        int var_idx = find_variable(gen, id);
-        if (var_idx >= 0) {
-            emit(gen, "    movq -%d(%%rbp), %%rax  # load %s", 
-                 gen->vars[var_idx].offset, id);
+        
+        lexer_skip_whitespace(lex);
+        
+        // Check if it's a function call
+        if (lex->current == '(') {
+            // Function call: id(arg1, arg2, ...)
+            const char *param_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+            int arg_count = 0;
+            
+            lexer_advance(lex);  // Skip (
+            lexer_skip_whitespace(lex);
+            
+            // Parse arguments and place in registers
+            while (lex->current != ')' && lex->current != '\0') {
+                // Compile argument expression
+                compile_expression(gen, lex);
+                
+                // Move result to parameter register
+                if (arg_count < 6) {
+                    emit(gen, "    movq %%rax, %%%s  # arg %d", param_regs[arg_count], arg_count);
+                }
+                
+                arg_count++;
+                
+                lexer_skip_whitespace(lex);
+                if (lex->current == ',') {
+                    lexer_advance(lex);
+                    lexer_skip_whitespace(lex);
+                }
+            }
+            
+            if (lex->current == ')') lexer_advance(lex);
+            
+            // Call function
+            emit(gen, "    call %s", id);
+            // Result is in RAX
         } else {
-            emit(gen, "    # Unknown variable: %s", id);
-            emit(gen, "    movq $0, %%rax");
+            // Variable load
+            int var_idx = find_variable(gen, id);
+            if (var_idx >= 0) {
+                emit(gen, "    movq -%d(%%rbp), %%rax  # load %s", 
+                     gen->vars[var_idx].offset, id);
+            } else {
+                emit(gen, "    # Unknown variable: %s", id);
+                emit(gen, "    movq $0, %%rax");
+            }
         }
         free(id);
     }
@@ -306,14 +348,20 @@ static void compile_print(Codegen *gen, Lexer *lex) {
 }
 
 static void compile_return(Codegen *gen, Lexer *lex) {
-    // return N -> movq $N, %rax; leave; ret
+    // return expr -> evaluate expr, movq result to %rax, leave, ret
     lexer_skip_whitespace(lex);
-    int value = 0;
-    if (isdigit(lex->current)) {
-        value = lexer_read_number(lex);
+    
+    if (lex->current != ';' && lex->current != '}' && lex->current != '\0') {
+        // Compile return expression
+        compile_expression(gen, lex);
+        // Result is already in RAX
+        emit(gen, "    # return expression");
+    } else {
+        // return without value (return 0)
+        emit(gen, "    # return (no value)");
+        emit(gen, "    movq $0, %%rax");
     }
-    emit(gen, "    # return %d", value);
-    emit(gen, "    movq $%d, %%rax", value);
+    
     emit(gen, "    leave");
     emit(gen, "    ret");
 }
@@ -484,9 +532,13 @@ static void compile_statement(Codegen *gen, Lexer *lex) {
 }
 
 static void compile_function(Codegen *gen, Lexer *lex) {
-    // fn name() { ... }
+    // fn name(param1, param2, ...) { ... }
     lexer_skip_whitespace(lex);
     char *name = lexer_read_identifier(lex);
+    
+    if (g_debug) {
+        fprintf(stderr, "[DEBUG] Compiling function: %s (line %d)\n", name, lex->line);
+    }
     
     // Reset function-local state
     gen->var_count = 0;
@@ -500,13 +552,62 @@ static void compile_function(Codegen *gen, Lexer *lex) {
     emit(gen, "    pushq %%rbp");
     emit(gen, "    movq %%rsp, %%rbp");
     
-    // Skip () {
+    // Parse parameters and store them on stack
+    // System V ABI: first 6 params in RDI, RSI, RDX, RCX, R8, R9
+    const char *param_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+    int param_count = 0;
+    
     lexer_skip_whitespace(lex);
     if (lex->current == '(') {
         lexer_advance(lex);
-        while (lex->current != ')' && lex->current != '\0') lexer_advance(lex);
+        lexer_skip_whitespace(lex);
+        
+        while (lex->current != ')' && lex->current != '\0') {
+            if (isalpha(lex->current) || lex->current == '_') {
+                char *param_name = lexer_read_identifier(lex);
+                
+                // Skip type annotation if present (: i32)
+                lexer_skip_whitespace(lex);
+                if (lex->current == ':') {
+                    lexer_advance(lex);
+                    while (isalnum(lex->current) || lex->current == '_') {
+                        lexer_advance(lex);
+                    }
+                }
+                
+                // Add parameter as variable
+                add_variable(gen, param_name);
+                
+                // Move from parameter register to stack
+                if (param_count < 6) {
+                    emit(gen, "    movq %%%s, -%d(%%rbp)  # param %s", 
+                         param_regs[param_count], gen->vars[gen->var_count - 1].offset, param_name);
+                }
+                
+                free(param_name);
+                param_count++;
+            }
+            
+            lexer_skip_whitespace(lex);
+            if (lex->current == ',') {
+                lexer_advance(lex);
+                lexer_skip_whitespace(lex);
+            }
+        }
+        
         if (lex->current == ')') lexer_advance(lex);
     }
+    
+    // Skip return type if present (-> type)
+    lexer_skip_whitespace(lex);
+    if (lex->current == '-' && lex->source[lex->pos + 1] == '>') {
+        lexer_advance(lex);
+        lexer_advance(lex);
+        while (isalnum(lex->current) || lex->current == '_') {
+            lexer_advance(lex);
+        }
+    }
+    
     lexer_skip_whitespace(lex);
     if (lex->current == '{') lexer_advance(lex);
     
@@ -570,6 +671,12 @@ int main(int argc, char **argv) {
         return 1;
     }
     
+    // Check for --debug flag
+    if (argc > 3 && strcmp(argv[3], "--debug") == 0) {
+        g_debug = true;
+        fprintf(stderr, "[DEBUG] Debug mode enabled\n");
+    }
+    
     // Read input file
     FILE *f = fopen(argv[1], "r");
     if (!f) {
@@ -586,6 +693,10 @@ int main(int argc, char **argv) {
     source[size] = '\0';
     fclose(f);
     
+    if (g_debug) {
+        fprintf(stderr, "[DEBUG] Read %ld bytes from %s\n", size, argv[1]);
+    }
+    
     // Open output file
     FILE *out = fopen(argv[2], "w");
     if (!out) {
@@ -601,6 +712,10 @@ int main(int argc, char **argv) {
     gen.out = out;
     gen.label_count = 0;
     gen.string_count = 0;
+    
+    if (g_debug) {
+        fprintf(stderr, "[DEBUG] Starting compilation...\n");
+    }
     
     compile_program(&gen, &lex);
     

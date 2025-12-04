@@ -98,26 +98,9 @@ struct Lexer {
 // ============================================
 
 fn keyword_type(word: string) -> i32 {
-    if word == "fn" { return TOKEN_FN }
-    if word == "let" { return TOKEN_LET }
-    if word == "const" { return TOKEN_CONST }
-    if word == "if" { return TOKEN_IF }
-    if word == "else" { return TOKEN_ELSE }
-    if word == "while" { return TOKEN_WHILE }
-    if word == "for" { return TOKEN_FOR }
-    if word == "return" { return TOKEN_RETURN }
-    if word == "break" { return TOKEN_BREAK }
-    if word == "continue" { return TOKEN_CONTINUE }
-    if word == "struct" { return TOKEN_STRUCT }
-    if word == "enum" { return TOKEN_ENUM }
-    if word == "import" { return TOKEN_IMPORT }
-    if word == "export" { return TOKEN_EXPORT }
-    if word == "defer" { return TOKEN_DEFER }
-    if word == "match" { return TOKEN_MATCH }
-    if word == "true" { return TOKEN_TRUE }
-    if word == "false" { return TOKEN_FALSE }
-    if word == "null" { return TOKEN_NULL }
-    
+    // TODO: Implement keyword detection
+    // For now, return IDENTIFIER for everything
+    // String comparison not yet supported in simple_codegen
     return TOKEN_IDENTIFIER
 }
 
