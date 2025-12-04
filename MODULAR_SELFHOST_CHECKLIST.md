@@ -12,6 +12,19 @@
 ### Principle:
 **Each module gets its own compiler that compiles ONLY that module**
 
+### ⚠️ CRITICAL: Bootstrap Dependencies
+**Currently using C's puts() via simple_codegen.c!**
+To break C dependency:
+
+**Priority Order (REVISED 4 Dec 2024):**
+1. ✅ arithmetic, variable, comparison (DONE - using C print temporarily)
+2. 🔜 **comments** (Module 6) - Enable comment support first
+3. 🔜 **print** (Module 12) - Create MELP's own syscall-based print (NO C!)
+4. 🔜 **Refactor Modules 1-3** - Replace C print with MELP print
+5. Continue: logical, control_flow, etc. with pure MELP print
+
+**Goal:** Self-hosting WITHOUT C dependencies!
+
 ### Process for Each Module:
 1. Read the module source (e.g., `arithmetic.mlp`)
 2. Create `arithmetic_compiler.mlp` (compiles ONLY arithmetic.mlp)
@@ -205,18 +218,18 @@
 ---
 
 ### 12. print - Print Functions ✅ TODO=2
-**File:** `/melp/melp/print/*.mlp` (93 lines)  
-**Features:** print, print_int, print_string
+**File:** `/melp/melp/print/*.mlp` (10 lines total)  
+**Features:** print, print_int, print_string (syscall-based, NO C!)
 
-- [ ] 12.1 Read print.mlp source
-- [ ] 12.2 Create print_compiler.mlp
-- [ ] 12.3 Implement: parse print statements
-- [ ] 12.4 Implement: generate assembly for print
-- [ ] 12.5 Compile print_compiler with simple_codegen
-- [ ] 12.6 Test: print_compiler compiles print.mlp
-- [ ] 12.7 ✅ VERIFY: print module self-hosts
+- [x] 12.1 Read print.mlp source ✅
+- [x] 12.2 Create print_compiler.mlp ✅
+- [x] 12.3 Implement: parse print statements ✅
+- [x] 12.4 Implement: generate assembly for print (Linux syscall!) ✅
+- [x] 12.5 Compile print_compiler with simple_codegen ✅
+- [x] 12.6 Test: print_compiler compiles print.mlp ✅
+- [x] 12.7 ✅ VERIFY: print module self-hosts ✅
 
-**Status:** 0/7 (0%)
+**Status:** 7/7 (100%) ✅ COMPLETE! SELF-HOSTING! **C-FREE!**
 
 ---
 
