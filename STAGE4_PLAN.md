@@ -427,42 +427,69 @@ A self-hosting compiler can compile its own source code.
    - Print: `print("string")`, `print_int(expr)`
    - Tests passing: test_simple.mlp, test_vars.mlp, test_control.mlp
 
-### 🔨 Current Status:
+### 🔨 Current Status (4 Aralık 2025 - Evening):
 
-**Problem Identified:** Original plan was lexer→parser→memory→codegen rewrite, but we took a better approach:
+**⚠️ STRATEGY CORRECTION:**
 
-**New Strategy - Real Codegen First:**
-- ✅ Built `simple_codegen.c` that generates real x86-64 assembly
-- ✅ Can now compile small MELP programs to working binaries
-- 🔄 Need to add: function parameters, function calls
-- 🔄 Then: compile lexer_compiler.mlp to binary
-- 🔄 Finally: bootstrap - use that binary to compile lexer.mlp
+**Previous Approach (DISCONTINUED):**
+- ❌ Started building `simple_codegen.c` (613 lines, growing)
+- ❌ This was creating a NEW monolithic C compiler
+- ❌ Would grow to 10,000+ lines for 50+ modules
+- ❌ **VIOLATES modular philosophy that made Stage 2 successful**
 
-### 📋 Next Steps:
+**Corrected Approach (ACTIVE):**
+- ✅ **Stage 3 is COMPLETE and WORKING** - Full pipeline verified:
+  - lexer_compiler.c (538 lines) ✓
+  - parser_compiler.c (868 lines) ✓
+  - memory_compiler.c (363 lines) ✓
+  - codegen_compiler.c (695 lines) ✓
+  - Full pipeline tested and working ✓
 
-1. **Add Function Calls to simple_codegen.c**
-   - Function parameters (RDI, RSI, RDX registers)
-   - Function call mechanism with proper ABI
-   - Test with multi-function programs
+- ✅ **Stage 4 Real Goal:** Rewrite C compilers to MELP (self-hosting)
+  - NOT: Grow simple_codegen.c
+  - YES: Write lexer_compiler.mlp, parser_compiler.mlp, etc.
 
-2. **Test with Larger Code**
-   - Compile subset of lexer_compiler.mlp
-   - Verify assembly quality
-   - Fix any issues
+**Why We Have 2 Different Things:**
+```
+codegen.mlp (490 lines)           → MELP module (compiles MELP code)
+codegen_compiler.c (695 lines)    → C Stage 0 (compiles codegen.mlp)
+codegen_compiler.mlp (NEXT GOAL)  → MELP Stage 0 (self-hosting!)
+```
 
-3. **Pipeline Integration**
-   - Replace codegen_compiler.c with simple_codegen.c
-   - Update bootstrap scripts
-   - Test full pipeline
+### 📋 Corrected Next Steps (Plan A - Modular):
 
-4. **Bootstrap Verification**
-   - Compile lexer_compiler.mlp to binary
-   - Use that binary to compile lexer.mlp
-   - Compare output with C compiler
+1. **STOP: simple_codegen.c development**
+   - Keep current version as reference (613 lines)
+   - Do NOT grow it further
+   - Focus on MELP modules instead
 
-### 🎯 Key Achievement:
+2. **Enhance codegen.mlp (modular addition)**
+   - Add function parameters support
+   - Add function calls support
+   - Keep it under 600 lines
+   - Use System V ABI (RDI, RSI, RDX, RCX, R8, R9)
 
-**We now have a REAL compiler, not a placeholder!** This changes everything - we can now actually compile MELP to executable binaries. The path to self-hosting is clear.
+3. **Write lexer_compiler.mlp (~600 lines)**
+   - MELP version of lexer_compiler.c
+   - File I/O, tokenization, output writing
+   - First self-hosting component!
+
+4. **Test Bootstrap Chain**
+   - Compile lexer_compiler.mlp with codegen_compiler.c
+   - Use resulting binary to compile lexer.mlp
+   - Verify output matches C version
+
+5. **Continue with Other Compilers**
+   - parser_compiler.mlp (~900 lines)
+   - memory_compiler.mlp (~400 lines)
+   - codegen_compiler.mlp (~750 lines)
+   - router_compiler.mlp (~200 lines)
+
+### 🎯 Key Understanding:
+
+**Stage 4 = Self-Hosting, NOT building a new C compiler!**
+
+We already have working C compilers (Stage 3). Now we rewrite THEM in MELP, achieving self-hosting where MELP compiles MELP compilers.
 
 ---
 
