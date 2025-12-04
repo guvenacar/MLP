@@ -49,6 +49,12 @@ static void gen_var_decl(ASTNode *node) {
     const char *var_name = node->left->value;
     const char *type = node->value;
     
+    // Debug: check if variable name is empty
+    if (!var_name || var_name[0] == '\0') {
+        fprintf(stderr, "[Warning] Empty variable name, using placeholder\n");
+        var_name = "var_unknown";
+    }
+    
     // Allocate space in .bss section
     if (strcmp(type, "numeric") == 0) {
         emit("    %s: resq 1    ; numeric variable\n", var_name);

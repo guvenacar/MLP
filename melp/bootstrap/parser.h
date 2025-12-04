@@ -9,7 +9,10 @@ typedef enum {
     NODE_PRINT,
     NODE_IDENTIFIER,
     NODE_LITERAL,
-    NODE_EXPRESSION
+    NODE_EXPRESSION,
+    NODE_TYPE,
+    NODE_RETURN,
+    NODE_STRUCT
 } NodeType;
 
 typedef struct ASTNode {

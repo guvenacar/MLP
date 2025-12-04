@@ -57,9 +57,11 @@ static ASTNode* parse_var_decl() {
     strcpy(node->value, current_token.value); // type
     advance();
     
-    if (!expect(TK_IDENTIFIER, NULL)) return NULL;
+    // Save identifier name BEFORE advancing
+    if (!match(TK_IDENTIFIER, NULL)) return NULL;
     node->left = create_node(NODE_IDENTIFIER);
     strcpy(node->left->value, current_token.value);
+    advance();
     
     if (match(TK_OPERATOR, "=")) {
         advance();
@@ -114,12 +116,38 @@ static ASTNode* parse_function() {
         expect(TK_SYMBOL, ")");
     }
     
+    // Parse return type (optional)
+    if (current_token.type == TK_KEYWORD) {
+        if (strcmp(current_token.value, "numeric") == 0 ||
+            strcmp(current_token.value, "string") == 0 ||
+            strcmp(current_token.value, "boolean") == 0) {
+            // Store return type
+            node->right = create_node(NODE_TYPE);
+            strcpy(node->right->value, current_token.value);
+            advance();
+        }
+    }
+    
     // Parse function body until "end function"
     ASTNode *body = NULL;
     ASTNode *last = NULL;
     
     while (!match(TK_KEYWORD, "end") && current_token.type != TK_EOF) {
         ASTNode *stmt = parse_var_decl();
+        
+        // Try return statement
+        if (!stmt && match(TK_KEYWORD, "return")) {
+            stmt = create_node(NODE_RETURN);
+            advance();
+            
+            // Parse return value (simple expression for now)
+            if (current_token.type == TK_NUMBER) {
+                stmt->left = create_node(NODE_LITERAL);
+                strcpy(stmt->left->value, current_token.value);
+                advance();
+            }
+        }
+        
         if (stmt) {
             if (!body) {
                 body = stmt;
@@ -143,6 +171,47 @@ static ASTNode* parse_function() {
     return node;
 }
 
+// Parse struct declaration
+static ASTNode* parse_struct() {
+    if (!match(TK_KEYWORD, "struct")) return NULL;
+    
+    ASTNode *node = create_node(NODE_STRUCT);
+    advance();
+    
+    // Struct name
+    if (!expect(TK_IDENTIFIER, NULL)) return NULL;
+    strcpy(node->value, current_token.value);
+    
+    // Parse fields
+    ASTNode *fields = NULL;
+    ASTNode *last_field = NULL;
+    
+    while (!match(TK_KEYWORD, "end") && current_token.type != TK_EOF) {
+        ASTNode *field = parse_var_decl();
+        if (field) {
+            if (!fields) {
+                fields = field;
+                last_field = field;
+            } else {
+                last_field->next = field;
+                last_field = field;
+            }
+        } else {
+            advance();
+        }
+    }
+    
+    node->left = fields;
+    
+    // Expect "end struct"
+    if (match(TK_KEYWORD, "end")) {
+        advance();
+        expect(TK_KEYWORD, "struct");
+    }
+    
+    return node;
+}
+
 ASTNode* parse(const char *source) {
     lexer_init(source);
     advance();
@@ -153,7 +222,9 @@ ASTNode* parse(const char *source) {
     while (current_token.type != TK_EOF) {
         ASTNode *node = NULL;
         
-        if (match(TK_KEYWORD, "function")) {
+        if (match(TK_KEYWORD, "struct")) {
+            node = parse_struct();
+        } else if (match(TK_KEYWORD, "function")) {
             node = parse_function();
         } else if (match(TK_KEYWORD, "print")) {
             node = parse_print();

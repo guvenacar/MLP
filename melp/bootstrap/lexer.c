@@ -93,6 +93,7 @@ Token next_token() {
             strcmp(tok.value, "string") == 0 ||
             strcmp(tok.value, "boolean") == 0 ||
             strcmp(tok.value, "function") == 0 ||
+            strcmp(tok.value, "struct") == 0 ||
             strcmp(tok.value, "return") == 0 ||
             strcmp(tok.value, "if") == 0 ||
             strcmp(tok.value, "then") == 0 ||
