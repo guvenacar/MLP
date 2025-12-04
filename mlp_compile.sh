@@ -64,16 +64,40 @@ else
     echo "   ⚠️  Comments compiler not found"
 fi
 
-# Stage 4: Print Module (if available)
-echo "[4/5] Print Module..."
+# Stage 4: Functions Module
+echo "[4/8] Functions Module..."
+if [ -x "$MODULES_DIR/functions/functions_standalone" ]; then
+    "$MODULES_DIR/functions/functions_standalone" "$INPUT_FILE" "$TEMP_DIR/functions.s" 2>&1 | grep -E "(✓|✅|Error)" || true
+else
+    echo "   ⚠️  Functions compiler not found"
+fi
+
+# Stage 5: Control Flow Module
+echo "[5/8] Control Flow Module..."
+if [ -x "$MODULES_DIR/control_flow/control_flow_standalone" ]; then
+    "$MODULES_DIR/control_flow/control_flow_standalone" "$INPUT_FILE" "$TEMP_DIR/control_flow.s" 2>&1 | grep -E "(✓|✅|Error)" || true
+else
+    echo "   ⚠️  Control Flow compiler not found"
+fi
+
+# Stage 6: Print Module
+echo "[6/8] Print Module..."
 if [ -x "$MODULES_DIR/print/print_standalone" ]; then
     "$MODULES_DIR/print/print_standalone" "$INPUT_FILE" "$TEMP_DIR/print.s" 2>&1 | grep -E "(✓|✅|Error)" || true
 else
     echo "   ⚠️  Print compiler not found"
 fi
 
-# Stage 5: Combine and Build
-echo "[5/5] Linking..."
+# Stage 7: Comparison Module (for if conditions)
+echo "[7/8] Comparison Module..."
+if [ -x "$MODULES_DIR/comparison/comparison_standalone" ]; then
+    "$MODULES_DIR/comparison/comparison_standalone" "$INPUT_FILE" "$TEMP_DIR/comparison.s" 2>&1 | grep -E "(✓|✅|Error)" || true
+else
+    echo "   ⚠️  Comparison compiler not found"
+fi
+
+# Stage 8: Combine and Build
+echo "[8/8] Linking..."
 
 # Create main assembly file
 cat > "$TEMP_DIR/main.s" << 'EOF'
