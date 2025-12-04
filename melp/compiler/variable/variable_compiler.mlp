@@ -1,5 +1,5 @@
-// MELP Variable Module Compiler
-// Self-hosting compiler for variable declarations
+-- MELP Variable Module Compiler (REAL MELP SYNTAX!)
+-- Self-hosting compiler for variable declarations
 
 numeric VAR_NUMERIC = 0
 numeric VAR_STRING = 1

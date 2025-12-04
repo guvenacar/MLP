@@ -55,7 +55,14 @@ static void lexer_skip_whitespace(Lexer *lex) {
 }
 
 static void lexer_skip_comment(Lexer *lex) {
-    if (lex->current == '/' && lex->source[lex->pos + 1] == '/') {
+    // MELP comment: -- single line
+    if (lex->current == '-' && lex->source[lex->pos + 1] == '-') {
+        while (lex->current != '\n' && lex->current != '\0') {
+            lexer_advance(lex);
+        }
+    }
+    // Legacy C-style comment: // single line
+    else if (lex->current == '/' && lex->source[lex->pos + 1] == '/') {
         while (lex->current != '\n' && lex->current != '\0') {
             lexer_advance(lex);
         }
@@ -482,8 +489,9 @@ static void compile_statement(Codegen *gen, Lexer *lex) {
         compile_while(gen, lex);
         return; // while handles its own semicolons
     }
-    else if (lexer_match(lex, "let")) {
-        // let var = expr;
+    else if (lexer_match(lex, "numeric") || lexer_match(lex, "string") || 
+             lexer_match(lex, "boolean") || lexer_match(lex, "let")) {
+        // MELP: numeric var = expr; or let var = expr (legacy)
         lexer_skip_whitespace(lex);
         char *var_name = lexer_read_identifier(lex);
         add_variable(gen, var_name);

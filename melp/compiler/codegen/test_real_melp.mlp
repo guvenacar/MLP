@@ -1,0 +1,13 @@
+-- Test Real MELP Syntax
+-- This should work with updated simple_codegen
+
+numeric x = 10
+numeric y = 20
+numeric sum = x + y
+
+fn main() -> numeric {
+    numeric a = 5
+    numeric b = 3
+    numeric result = a + b
+    return result
+}
