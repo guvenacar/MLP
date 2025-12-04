@@ -1,0 +1,8 @@
+-- Simple MLP Program
+-- Tests variable and arithmetic modules
+
+numeric x = 10
+numeric y = 20
+numeric result = 0
+
+-- result should be x + y = 30

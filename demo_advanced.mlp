@@ -1,0 +1,14 @@
+-- MLP Demo Program
+-- Tests multiple module integration
+
+-- Variables
+numeric counter = 0
+numeric max = 10
+numeric result = 0
+
+-- Arithmetic operations
+numeric sum = 5 + 3
+numeric product = 4 * 2
+numeric difference = 10 - 3
+
+-- This will be compiled by our modular chain!
