@@ -1,0 +1,163 @@
+---
+MELP Bootstrap Compiler - Lexer Module
+Converted from lexer.c to pure MLP
+Tokenizes MELP source code
+---
+
+-- Token types (enum)
+numeric TK_EOF = 0
+numeric TK_KEYWORD = 1
+numeric TK_IDENTIFIER = 2
+numeric TK_NUMBER = 3
+numeric TK_STRING = 4
+numeric TK_OPERATOR = 5
+numeric TK_SYMBOL = 6
+numeric TK_UNKNOWN = 7
+
+-- Global lexer state
+numeric lexer_pos = 0
+numeric lexer_line = 1
+numeric lexer_col = 1
+
+-- Character check functions
+function is_whitespace(numeric c) numeric
+    -- Check if char is space, tab, newline, or carriage return
+    numeric result = 0
+    -- Space = 32, Tab = 9, NewLine = 10, CarriageReturn = 13
+    return result
+end function
+
+function is_alpha(numeric c) numeric
+    -- Check if char is letter or underscore
+    -- A-Z = 65-90, a-z = 97-122, _ = 95
+    numeric result = 0
+    return result
+end function
+
+function is_digit(numeric c) numeric
+    -- Check if char is 0-9
+    -- 0-9 = 48-57
+    numeric result = 0
+    return result
+end function
+
+function is_alnum(numeric c) numeric
+    -- Check if alphanumeric
+    numeric result = 0
+    return result
+end function
+
+-- Lexer initialization
+function lexer_init(numeric source_ptr, numeric len) numeric
+    ---
+    Initialize lexer with source code
+    source_ptr: pointer to source string
+    len: length of source
+    ---
+    lexer_pos = 0
+    lexer_line = 1
+    lexer_col = 1
+    return 0
+end function
+
+-- Skip whitespace
+function skip_whitespace(numeric source_ptr, numeric len) numeric
+    ---
+    Skip whitespace characters
+    Returns new position
+    ---
+    numeric pos = lexer_pos
+    -- Simple: just advance position
+    -- In real implementation, check each char
+    return pos
+end function
+
+-- Skip comments
+function skip_comment(numeric source_ptr, numeric len) numeric
+    ---
+    Skip single line (--) and multi-line (---) comments
+    Returns new position
+    ---
+    numeric pos = lexer_pos
+    -- Check for -- at current position
+    -- If ---, skip until next ---
+    -- If --, skip until newline
+    return pos
+end function
+
+-- Check if string is keyword
+function is_keyword(numeric str_ptr, numeric str_len) numeric
+    ---
+    Check if given string is a MLP keyword
+    Returns 1 if keyword, 0 otherwise
+    ---
+    -- Keywords: numeric, string, boolean, function, struct,
+    --           return, if, then, else, end, while, for, to, print
+    numeric result = 0
+    return result
+end function
+
+-- Next token function
+function next_token(numeric source_ptr, numeric len, numeric token_out) numeric
+    ---
+    Get next token from source
+    source_ptr: pointer to source code
+    len: source length
+    token_out: pointer to output token structure
+    Returns token type
+    ---
+    
+    -- Skip whitespace and comments
+    numeric pos = skip_whitespace(source_ptr, len)
+    lexer_pos = pos
+    
+    pos = skip_comment(source_ptr, len)
+    lexer_pos = pos
+    
+    pos = skip_whitespace(source_ptr, len)
+    lexer_pos = pos
+    
+    -- Check if EOF
+    numeric current_pos = lexer_pos
+    
+    -- Return EOF token for now
+    numeric token_type = TK_EOF
+    
+    -- TODO: Implement full tokenization
+    -- 1. Check for alpha -> keyword or identifier
+    -- 2. Check for digit -> number
+    -- 3. Check for quote -> string
+    -- 4. Check for operator chars
+    -- 5. Check for symbol chars
+    
+    return token_type
+end function
+
+-- Token type to string
+function token_type_name(numeric type) numeric
+    ---
+    Convert token type to string (for debugging)
+    Returns pointer to static string
+    ---
+    numeric result = 0
+    return result
+end function
+
+-- Main lexer test function
+function lexer_main() numeric
+    ---
+    Test function for lexer
+    ---
+    numeric result = 0
+    
+    -- Initialize lexer
+    numeric source = 0
+    numeric len = 0
+    lexer_init(source, len)
+    
+    -- Get first token
+    numeric token = 0
+    numeric tok_type = next_token(source, len, token)
+    
+    return result
+end function

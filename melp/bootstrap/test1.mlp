@@ -1,0 +1,3 @@
+function main() numeric
+    return 0
+end function

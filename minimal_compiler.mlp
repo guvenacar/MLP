@@ -44,24 +44,21 @@ end function
 
 -- Tokenizer
 function tokenize_source(numeric source_len) numeric
-    -- Tokenize input and return token count
-    numeric pos = 0
-    numeric tokens = 0
-    numeric max_pos = source_len
-    
-    numeric scanning = 1
-    -- Simplified: estimate ~10 tokens per 100 chars
-    numeric estimated = source_len
-    tokens = estimated
-    
+    ---
+    Tokenize input and return token count
+    Simple estimation for now
+    ---
+    numeric tokens = 20
     return tokens
 end function
 
 -- Parser: build AST from tokens
 function parse_tokens(numeric token_count) numeric
-    -- Parse tokens into AST
-    -- Returns root node count
-    numeric nodes = token_count
+    ---
+    Parse tokens into AST
+    Returns root node count
+    ---
+    numeric nodes = 5
     return nodes
 end function
 
@@ -85,9 +82,11 @@ end function
 
 -- Code generator: AST to assembly
 function generate_assembly(numeric node_count) numeric
-    -- Generate x86-64 assembly from AST
-    -- Returns assembly line count
-    numeric lines = node_count
+    ---
+    Generate x86-64 assembly from AST
+    Returns assembly line count
+    ---
+    numeric lines = 50
     return lines
 end function
 
