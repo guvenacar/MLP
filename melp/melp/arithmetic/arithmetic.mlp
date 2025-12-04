@@ -1,34 +1,13 @@
-// ARITHMETIC MODULE - MELP Version
-// Handles arithmetic operations: +, -, *, /, %, **, &, |, ^
+-- ARITHMETIC MODULE - MELP Version
+-- Handles arithmetic operations: +, -, *, /, %, **, &, |, ^
 
-// Arithmetic operation types (enums)
-fn ARITH_ADD() { return 0; }
-fn ARITH_SUB() { return 1; }
-fn ARITH_MUL() { return 2; }
-fn ARITH_DIV() { return 3; }
-fn ARITH_MOD() { return 4; }
-fn ARITH_POW() { return 5; }
-fn ARITH_AND() { return 6; }
-fn ARITH_OR()  { return 7; }
-fn ARITH_XOR() { return 8; }
-
-// Arithmetic expression node (simplified - using integers)
-// In full implementation, this would be a struct with:
-// - op: operation type
-// - left: left operand  
-// - right: right operand
-// - is_literal: 1 if number, 0 if variable
-// - value: number or variable name
-
-fn arithmetic_module_test() {
-    // Test that operation constants work
-    let add_op = ARITH_ADD();
-    let mul_op = ARITH_MUL();
-    let pow_op = ARITH_POW();
-    
-    print_int(add_op);  // Should print 0
-    print_int(mul_op);  // Should print 2
-    print_int(pow_op);  // Should print 5
-    
-    return 0;
-}
+-- Arithmetic operation types
+numeric ARITH_ADD = 0
+numeric ARITH_SUB = 1
+numeric ARITH_MUL = 2
+numeric ARITH_DIV = 3
+numeric ARITH_MOD = 4
+numeric ARITH_POW = 5
+numeric ARITH_AND = 6
+numeric ARITH_OR = 7
+numeric ARITH_XOR = 8

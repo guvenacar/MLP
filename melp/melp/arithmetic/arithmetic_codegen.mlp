@@ -1,43 +1,11 @@
-// ARITHMETIC CODEGEN MODULE - MELP Version
-// Generates x86-64 assembly for arithmetic expressions
+-- ARITHMETIC CODEGEN MODULE - MELP Version
+-- Generates x86-64 assembly for arithmetic expressions
 
-// Generate code for arithmetic expression
-fn arithmetic_generate_code() {
-    // Simplified: Returns 1 for success
-    // Full implementation would:
-    // 1. Traverse expression tree (post-order)
-    // 2. Generate assembly for each operation
-    // 3. Use r8, r9, r10 registers for intermediate values
-    // 4. Result in r8
-    //
-    // Example for "5 + 3":
-    //   mov r8, 5
-    //   mov r9, 3
-    //   add r8, r9
-    return 1;
-}
+-- Codegen result codes
+numeric CODEGEN_SUCCESS = 0
+numeric CODEGEN_ERROR = 1
 
-// Generate assignment: variable = expression
-fn arithmetic_generate_assignment() {
-    // Simplified: Returns 1 for success
-    // Full implementation would:
-    // 1. Generate code for expression (result in r8)
-    // 2. Store r8 to variable location
-    //
-    // Example for "x = 5 + 3":
-    //   mov r8, 5
-    //   mov r9, 3
-    //   add r8, r9
-    //   mov [x], r8
-    return 1;
-}
-
-fn arithmetic_codegen_test() {
-    let code_result = arithmetic_generate_code();
-    let assign_result = arithmetic_generate_assignment();
-    
-    print_int(code_result);    // Should print 1
-    print_int(assign_result);  // Should print 1
-    
-    return 0;
-}
+-- Register allocation
+numeric REG_R8 = 0
+numeric REG_R9 = 1
+numeric REG_R10 = 2
