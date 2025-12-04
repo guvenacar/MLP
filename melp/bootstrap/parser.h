@@ -12,7 +12,10 @@ typedef enum {
     NODE_EXPRESSION,
     NODE_TYPE,
     NODE_RETURN,
-    NODE_STRUCT
+    NODE_STRUCT,
+    NODE_IF,
+    NODE_WHILE,
+    NODE_FOR
 } NodeType;
 
 typedef struct ASTNode {

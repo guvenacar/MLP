@@ -42,6 +42,12 @@ ASTNode* create_node(NodeType type) {
     return node;
 }
 
+// Forward declarations
+static ASTNode* parse_var_decl();
+static ASTNode* parse_if();
+static ASTNode* parse_while();
+static ASTNode* parse_for();
+
 // Parse variable declaration: numeric x = 42
 static ASTNode* parse_var_decl() {
     if (!match(TK_KEYWORD, NULL)) return NULL;
@@ -133,7 +139,24 @@ static ASTNode* parse_function() {
     ASTNode *last = NULL;
     
     while (!match(TK_KEYWORD, "end") && current_token.type != TK_EOF) {
-        ASTNode *stmt = parse_var_decl();
+        ASTNode *stmt = NULL;
+        
+        // Try if statement
+        if (match(TK_KEYWORD, "if")) {
+            stmt = parse_if();
+        }
+        // Try while statement
+        else if (match(TK_KEYWORD, "while")) {
+            stmt = parse_while();
+        }
+        // Try for statement
+        else if (match(TK_KEYWORD, "for")) {
+            stmt = parse_for();
+        }
+        // Try variable declaration
+        else {
+            stmt = parse_var_decl();
+        }
         
         // Try return statement
         if (!stmt && match(TK_KEYWORD, "return")) {
@@ -212,6 +235,138 @@ static ASTNode* parse_struct() {
     return node;
 }
 
+// Parse if statement
+static ASTNode* parse_if() {
+    if (!match(TK_KEYWORD, "if")) return NULL;
+    
+    ASTNode *node = create_node(NODE_IF);
+    advance();
+    
+    // Parse condition (simple: just identifier or number)
+    if (current_token.type == TK_IDENTIFIER || current_token.type == TK_NUMBER) {
+        node->left = create_node(NODE_LITERAL);
+        strcpy(node->left->value, current_token.value);
+        advance();
+    }
+    
+    // Expect "then"
+    if (match(TK_KEYWORD, "then")) {
+        advance();
+    }
+    
+    // Parse body statements until "end if"
+    ASTNode *body = NULL;
+    ASTNode *last = NULL;
+    
+    while (!match(TK_KEYWORD, "end") && current_token.type != TK_EOF) {
+        ASTNode *stmt = parse_var_decl();
+        
+        if (stmt) {
+            if (!body) {
+                body = stmt;
+                last = stmt;
+            } else {
+                last->next = stmt;
+                last = stmt;
+            }
+        } else {
+            advance();
+        }
+    }
+    
+    node->right = body;
+    
+    // Expect "end if"
+    if (match(TK_KEYWORD, "end")) {
+        advance();
+        if (match(TK_KEYWORD, "if")) {
+            advance();
+        }
+    }
+    
+    return node;
+}
+
+// Parse while statement
+static ASTNode* parse_while() {
+    if (!match(TK_KEYWORD, "while")) return NULL;
+    
+    ASTNode *node = create_node(NODE_WHILE);
+    advance();
+    
+    // Parse condition
+    if (current_token.type == TK_IDENTIFIER || current_token.type == TK_NUMBER) {
+        node->left = create_node(NODE_LITERAL);
+        strcpy(node->left->value, current_token.value);
+        advance();
+    }
+    
+    // Parse body until "end while"
+    ASTNode *body = NULL;
+    ASTNode *last = NULL;
+    
+    while (!match(TK_KEYWORD, "end") && current_token.type != TK_EOF) {
+        ASTNode *stmt = parse_var_decl();
+        
+        if (stmt) {
+            if (!body) {
+                body = stmt;
+                last = stmt;
+            } else {
+                last->next = stmt;
+                last = stmt;
+            }
+        } else {
+            advance();
+        }
+    }
+    
+    node->right = body;
+    
+    // Expect "end while"
+    if (match(TK_KEYWORD, "end")) {
+        advance();
+        if (match(TK_KEYWORD, "while")) {
+            advance();
+        }
+    }
+    
+    return node;
+}
+
+// Parse for statement
+static ASTNode* parse_for() {
+    if (!match(TK_KEYWORD, "for")) return NULL;
+    
+    ASTNode *node = create_node(NODE_FOR);
+    advance();
+    
+    // Parse loop variable (simple: just identifier)
+    if (current_token.type == TK_IDENTIFIER) {
+        node->left = create_node(NODE_IDENTIFIER);
+        strcpy(node->left->value, current_token.value);
+        advance();
+    }
+    
+    // Skip rest of for header (to/in/etc)
+    while (!match(TK_KEYWORD, "end") && current_token.type != TK_EOF) {
+        ASTNode *stmt = parse_var_decl();
+        if (!stmt) {
+            advance();
+        }
+    }
+    
+    // Expect "end for"
+    if (match(TK_KEYWORD, "end")) {
+        advance();
+        if (match(TK_KEYWORD, "for")) {
+            advance();
+        }
+    }
+    
+    return node;
+}
+
 ASTNode* parse(const char *source) {
     lexer_init(source);
     advance();
@@ -226,6 +381,12 @@ ASTNode* parse(const char *source) {
             node = parse_struct();
         } else if (match(TK_KEYWORD, "function")) {
             node = parse_function();
+        } else if (match(TK_KEYWORD, "if")) {
+            node = parse_if();
+        } else if (match(TK_KEYWORD, "while")) {
+            node = parse_while();
+        } else if (match(TK_KEYWORD, "for")) {
+            node = parse_for();
         } else if (match(TK_KEYWORD, "print")) {
             node = parse_print();
         } else if (match(TK_KEYWORD, NULL)) {
