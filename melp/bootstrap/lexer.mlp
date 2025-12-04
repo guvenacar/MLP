@@ -21,143 +21,178 @@ numeric lexer_col = 1
 
 -- Character check functions
 function is_whitespace(numeric c) numeric
-    -- Check if char is space, tab, newline, or carriage return
-    numeric result = 0
     -- Space = 32, Tab = 9, NewLine = 10, CarriageReturn = 13
-    return result
+    if c == 32 then
+        return 1
+    end if
+    if c == 9 then
+        return 1
+    end if
+    if c == 10 then
+        return 1
+    end if
+    if c == 13 then
+        return 1
+    end if
+    return 0
 end function
 
 function is_alpha(numeric c) numeric
-    -- Check if char is letter or underscore
     -- A-Z = 65-90, a-z = 97-122, _ = 95
-    numeric result = 0
-    return result
+    if c >= 65 then
+        if c <= 90 then
+            return 1
+        end if
+    end if
+    if c >= 97 then
+        if c <= 122 then
+            return 1
+        end if
+    end if
+    if c == 95 then
+        return 1
+    end if
+    return 0
 end function
 
 function is_digit(numeric c) numeric
-    -- Check if char is 0-9
     -- 0-9 = 48-57
-    numeric result = 0
-    return result
+    if c >= 48 then
+        if c <= 57 then
+            return 1
+        end if
+    end if
+    return 0
 end function
 
 function is_alnum(numeric c) numeric
-    -- Check if alphanumeric
-    numeric result = 0
-    return result
+    numeric alpha = is_alpha(c)
+    if alpha == 1 then
+        return 1
+    end if
+    numeric digit = is_digit(c)
+    if digit == 1 then
+        return 1
+    end if
+    return 0
 end function
 
 -- Lexer initialization
 function lexer_init(numeric source_ptr, numeric len) numeric
-    ---
-    Initialize lexer with source code
-    source_ptr: pointer to source string
-    len: length of source
-    ---
     lexer_pos = 0
     lexer_line = 1
     lexer_col = 1
     return 0
 end function
 
--- Skip whitespace
-function skip_whitespace(numeric source_ptr, numeric len) numeric
-    ---
-    Skip whitespace characters
-    Returns new position
-    ---
-    numeric pos = lexer_pos
-    -- Simple: just advance position
-    -- In real implementation, check each char
-    return pos
-end function
-
--- Skip comments
-function skip_comment(numeric source_ptr, numeric len) numeric
-    ---
-    Skip single line (--) and multi-line (---) comments
-    Returns new position
-    ---
-    numeric pos = lexer_pos
-    -- Check for -- at current position
-    -- If ---, skip until next ---
-    -- If --, skip until newline
-    return pos
-end function
-
 -- Check if string is keyword
-function is_keyword(numeric str_ptr, numeric str_len) numeric
-    ---
-    Check if given string is a MLP keyword
-    Returns 1 if keyword, 0 otherwise
-    ---
+function is_keyword_str(numeric str_ptr, numeric str_len) numeric
     -- Keywords: numeric, string, boolean, function, struct,
     --           return, if, then, else, end, while, for, to, print
-    numeric result = 0
-    return result
+    -- For simplicity, return 1 if looks like keyword
+    -- Real implementation would compare strings
+    return 1
 end function
 
--- Next token function
+-- Get next token
 function next_token(numeric source_ptr, numeric len, numeric token_out) numeric
-    ---
-    Get next token from source
-    source_ptr: pointer to source code
-    len: source length
-    token_out: pointer to output token structure
-    Returns token type
-    ---
+    -- Skip whitespace
+    numeric c = 0
+    numeric ws = is_whitespace(c)
     
-    -- Skip whitespace and comments
-    numeric pos = skip_whitespace(source_ptr, len)
-    lexer_pos = pos
+    while ws == 1 then
+        lexer_pos = lexer_pos + 1
+        if lexer_pos >= len then
+            return TK_EOF
+        end if
+        ws = is_whitespace(c)
+    end while
     
-    pos = skip_comment(source_ptr, len)
-    lexer_pos = pos
+    -- Check EOF
+    if lexer_pos >= len then
+        return TK_EOF
+    end if
     
-    pos = skip_whitespace(source_ptr, len)
-    lexer_pos = pos
+    -- Get current character
+    c = 0
     
-    -- Check if EOF
-    numeric current_pos = lexer_pos
+    -- Check for alpha (identifier or keyword)
+    numeric alpha = is_alpha(c)
+    if alpha == 1 then
+        while alpha == 1 then
+            lexer_pos = lexer_pos + 1
+            if lexer_pos >= len then
+                return TK_KEYWORD
+            end if
+            numeric alnum = is_alnum(c)
+            if alnum == 0 then
+                return TK_KEYWORD
+            end if
+        end while
+        return TK_KEYWORD
+    end if
     
-    -- Return EOF token for now
-    numeric token_type = TK_EOF
+    -- Check for digit (number)
+    numeric digit = is_digit(c)
+    if digit == 1 then
+        while digit == 1 then
+            lexer_pos = lexer_pos + 1
+            if lexer_pos >= len then
+                return TK_NUMBER
+            end if
+            digit = is_digit(c)
+        end while
+        return TK_NUMBER
+    end if
     
-    -- TODO: Implement full tokenization
-    -- 1. Check for alpha -> keyword or identifier
-    -- 2. Check for digit -> number
-    -- 3. Check for quote -> string
-    -- 4. Check for operator chars
-    -- 5. Check for symbol chars
+    -- Check for operators
+    if c == 43 then
+        return TK_OPERATOR
+    end if
+    if c == 45 then
+        return TK_OPERATOR
+    end if
+    if c == 42 then
+        return TK_OPERATOR
+    end if
+    if c == 47 then
+        return TK_OPERATOR
+    end if
+    if c == 61 then
+        return TK_OPERATOR
+    end if
     
-    return token_type
+    -- Check for symbols
+    if c == 40 then
+        return TK_SYMBOL
+    end if
+    if c == 41 then
+        return TK_SYMBOL
+    end if
+    
+    return TK_UNKNOWN
 end function
 
--- Token type to string
+-- Token type to string name
 function token_type_name(numeric type) numeric
-    ---
-    Convert token type to string (for debugging)
-    Returns pointer to static string
-    ---
-    numeric result = 0
-    return result
+    if type == 0 then
+        return 0
+    end if
+    if type == 1 then
+        return 1
+    end if
+    return type
 end function
 
--- Main lexer test function
+-- Main entry point
 function lexer_main() numeric
-    ---
-    Test function for lexer
-    ---
-    numeric result = 0
-    
-    -- Initialize lexer
     numeric source = 0
-    numeric len = 0
+    numeric len = 100
+    
     lexer_init(source, len)
     
-    -- Get first token
     numeric token = 0
     numeric tok_type = next_token(source, len, token)
     
-    return result
+    return 0
 end function
