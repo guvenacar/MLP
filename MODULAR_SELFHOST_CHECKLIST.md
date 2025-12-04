@@ -27,13 +27,13 @@ Router orchestrates all modules into full MELP compiler
 **Lines:** < 300
 
 - [x] 1.1 Create skeleton (17 lines) ✅
-- [ ] 1.2 Add lexer (tokenize)
+- [x] 1.2 Add lexer (tokenize) ✅ 89 lines, works!
 - [ ] 1.3 Add parser (AST)
 - [ ] 1.4 Add codegen (x86-64)
 - [ ] 1.5 Bootstrap: compile test.mvl
 - [ ] 1.6 Self-host: MVL compiles mvl_compiler.mlp
 
-**Status:** 1/6 (17%)
+**Status:** 2/6 (33%)
 
 ---
 
@@ -244,8 +244,8 @@ Router orchestrates all modules into full MELP compiler
 
 ### Phase 1: Bootstrap Compiler
 - **Total Tasks:** 28
-- **Completed:** 1 (4%)
-- **Current:** Module 1 (MVL) - Task 1.2
+- **Completed:** 2 (7%)
+- **Current:** Module 1 (MVL) - Task 1.3
 
 ### Phase 2: Self-Host 66 Modules
 - **Total Modules:** 66
@@ -255,9 +255,9 @@ Router orchestrates all modules into full MELP compiler
 
 ### Combined Progress
 - **Total Tasks:** 94 (28 bootstrap + 66 modules)
-- **Completed:** 19 (20%)
+- **Completed:** 20 (21%)
 - **In Progress:** 1
-- **Remaining:** 74 (79%)
+- **Remaining:** 73 (78%)
 
 ---
 
@@ -265,13 +265,13 @@ Router orchestrates all modules into full MELP compiler
 
 **Phase:** 1 (Bootstrap Compiler)  
 **Module:** MVL (Minimal Variable Language)  
-**Task:** 1.2 - Add MVL lexer
+**Task:** 1.3 - Add MVL parser
 
 **Next Steps:**
-1. Add tokenize_mvl() function
-2. Test with simple MVL code
-3. Compile with simple_codegen
-4. Verify output
+1. Add parse_statement() function
+2. Add parse_expression() function
+3. Build simple AST structures
+4. Test with MVL code
 
 ---
 
@@ -313,5 +313,5 @@ Router orchestrates all modules into full MELP compiler
 
 ---
 
-**Last Updated:** 4 Aralık 2024 09:15  
-**Status:** Phase 1, Module 1, Task 1.2 (MVL lexer)
+**Last Updated:** 4 Aralık 2024 09:20  
+**Status:** Phase 1, Module 1, Task 1.3 (MVL parser)
