@@ -1,3 +1,0 @@
-numeric PARSE_COMMENT = 10
-numeric SKIP_COMMENT = 11
-numeric COMMENT_END = 12

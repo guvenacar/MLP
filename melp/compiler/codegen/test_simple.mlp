@@ -1,5 +1,0 @@
-// Very simple MELP test for codegen
-fn main() {
-    print("Hello World");
-    return 0;
-}

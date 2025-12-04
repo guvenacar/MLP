@@ -1,3 +1,0 @@
-numeric COMMENT_SINGLE = 0
-numeric COMMENT_MULTI = 1
-numeric COMMENT_DOC = 2

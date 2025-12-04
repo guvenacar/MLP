@@ -1,6 +1,0 @@
--- Test comments in MELP Stage 1
--- Single line comment test
-
-numeric x = 42
--- This is a comment
-numeric y = 100
