@@ -1,17 +1,35 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g -I../..
 
-OBJS = type_system.o type_system_parser.o type_system_codegen.o
+SOURCES = type_system_standalone.c \
+          type_system.c \
+          type_system_parser.c \
+          type_system_codegen.c \
+          ../comments/comments.c \
+          ../../lexer.c
 
-all: $(OBJS) type_system_standalone
+OBJECTS = $(SOURCES:.c=.o)
+TARGET = type_system_standalone
 
-%.o: %.c %.h
+.PHONY: all clean test
+
+all: $(TARGET)
+	@echo "✅ Type System Module built successfully!"
+	@cp $(TARGET) type_system_standalone || true
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
+
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-type_system_standalone: type_system_standalone.c $(OBJS) ../../lexer.o
-	$(CC) $(CFLAGS) $^ -o $@
+test: $(TARGET)
+	@echo 'numeric x: int = 42' > test_types.mlp
+	@echo 'text s: string = "hello"' >> test_types.mlp
+	./$(TARGET) test_types.mlp test_types.s
+	@echo "✅ Test completed!"
 
 clean:
-	rm -f $(OBJS) type_system_standalone *.s
+	rm -f $(OBJECTS) $(TARGET) test_types.mlp test_types.s
 
-.PHONY: all clean
+.PHONY: all clean test

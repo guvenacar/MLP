@@ -1,14 +1,22 @@
 CC = gcc
 CFLAGS = -Wall -g -O2
+TARGET = performance_standalone
 SOURCES = performance_standalone.c performance_parser.c performance_codegen.c
 OBJECTS = $(SOURCES:.c=.o)
-TARGET = performance_test
+
 all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
+
 %.o: %.c performance.h
 	$(CC) $(CFLAGS) -c $< -o $@
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o $(TARGET)
+
 test: $(TARGET)
+	@echo "Testing performance..."
 	@./$(TARGET)
+
 clean:
-	rm -f $(OBJECTS) $(TARGET) *.s *.o
+	rm -f $(OBJECTS) $(TARGET) performance_test *.s
+
+.PHONY: all test clean

@@ -1,17 +1,37 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g -I../..
 
-OBJS = linking.o
+SOURCES = linking_standalone.c \
+          linking.c
 
-all: $(OBJS) linking_standalone
+OBJECTS = $(SOURCES:.c=.o)
+TARGET = linking_standalone
 
-%.o: %.c %.h
+.PHONY: all clean test
+
+all: $(TARGET)
+	@echo "✅ Linking Module built successfully!"
+	@cp $(TARGET) linking_standalone || true
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
+
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-linking_standalone: linking_standalone.c $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@
+test: $(TARGET)
+	@echo 'section .data' > test1.s
+	@echo '    msg1: db "Hello"' >> test1.s
+	@echo 'section .text' >> test1.s
+	@echo '    mov rax, 1' >> test1.s
+	@echo 'section .data' > test2.s
+	@echo '    msg2: db "World"' >> test2.s
+	@echo 'section .text' >> test2.s
+	@echo '    mov rbx, 2' >> test2.s
+	./$(TARGET) test1.s test2.s linked.s
+	@echo "✅ Test completed!"
 
 clean:
-	rm -f $(OBJS) linking_standalone *.out
+	rm -f $(OBJECTS) $(TARGET) test1.s test2.s linked.s
 
-.PHONY: all clean
+.PHONY: all clean test

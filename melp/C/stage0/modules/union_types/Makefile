@@ -1,26 +1,22 @@
 CC = gcc
 CFLAGS = -Wall -g -O2
-TARGET = union_types_test
-OBJS = union_types_parser.o union_types_codegen.o union_types_standalone.o
+TARGET = union_types_standalone
+SOURCES = union_types_standalone.c union_types_parser.c union_types_codegen.c
+OBJECTS = $(SOURCES:.c=.o)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
 
-union_types_parser.o: union_types_parser.c union_types.h
-	$(CC) $(CFLAGS) -c union_types_parser.c
-
-union_types_codegen.o: union_types_codegen.c union_types.h
-	$(CC) $(CFLAGS) -c union_types_codegen.c
-
-union_types_standalone.o: union_types_standalone.c union_types.h
-	$(CC) $(CFLAGS) -c union_types_standalone.c
+%.o: %.c union_types.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
 test: $(TARGET)
-	./$(TARGET)
+	@echo "Testing union_types..."
+	@./$(TARGET)
 
 clean:
-	rm -f $(OBJS) $(TARGET) union_types_test.s
+	rm -f $(OBJECTS) $(TARGET) union_types_test *.s
 
 .PHONY: all test clean

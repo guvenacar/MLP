@@ -1,26 +1,22 @@
 CC = gcc
 CFLAGS = -Wall -g -O2
-TARGET = unsafe_blocks_test
-OBJS = unsafe_blocks_parser.o unsafe_blocks_codegen.o unsafe_blocks_standalone.o
+TARGET = unsafe_blocks_standalone
+SOURCES = unsafe_blocks_standalone.c unsafe_blocks_parser.c unsafe_blocks_codegen.c
+OBJECTS = $(SOURCES:.c=.o)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
 
-unsafe_blocks_parser.o: unsafe_blocks_parser.c unsafe_blocks.h
-	$(CC) $(CFLAGS) -c unsafe_blocks_parser.c
-
-unsafe_blocks_codegen.o: unsafe_blocks_codegen.c unsafe_blocks.h
-	$(CC) $(CFLAGS) -c unsafe_blocks_codegen.c
-
-unsafe_blocks_standalone.o: unsafe_blocks_standalone.c unsafe_blocks.h
-	$(CC) $(CFLAGS) -c unsafe_blocks_standalone.c
+%.o: %.c unsafe_blocks.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
 test: $(TARGET)
-	./$(TARGET)
+	@echo "Testing unsafe_blocks..."
+	@./$(TARGET)
 
 clean:
-	rm -f $(OBJS) $(TARGET) unsafe_blocks_test.s
+	rm -f $(OBJECTS) $(TARGET) unsafe_blocks_test *.s
 
 .PHONY: all test clean

@@ -1,6 +1,7 @@
 #ifndef STANDARD_LIBRARY_H
 #define STANDARD_LIBRARY_H
 
+#include <stdio.h>
 #include <stdbool.h>
 
 // Library types

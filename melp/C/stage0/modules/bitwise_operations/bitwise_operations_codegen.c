@@ -7,18 +7,52 @@
 void codegen_bitwise_operation(FILE* out, BitwiseExpr* expr) {
     if (!expr) return;
 
-    // TODO: Implement bitwise operation code generation
-    // Bu fonksiyon şunları yapmalı:
-    // 1. BitwiseExpr tree'yi traverse et
-    // 2. Her operasyon için x86-64 assembly üret:
-    //    - AND: and instruction
-    //    - OR:  or instruction
-    //    - XOR: xor instruction
-    //    - NOT: not instruction
-    //    - <<:  sal/shl instruction
-    //    - >>:  sar/shr instruction
-    // 3. Register allocation yap (%rax, %rbx, vb.)
-    // 4. Stack management yap
+    fprintf(out, "; Bitwise operation\n");
 
-    fprintf(out, "    # TODO: Bitwise operation codegen not implemented\n");
+    // Load left operand into rax
+    if (expr->is_literal) {
+        fprintf(out, "    mov rax, %s\n", expr->value);
+    } else {
+        fprintf(out, "    mov rax, [%s]\n", expr->value);
+    }
+
+    // If we have a right operand, load it into rbx
+    if (expr->right) {
+        if (expr->right->is_literal) {
+            fprintf(out, "    mov rbx, %s\n", expr->right->value);
+        } else {
+            fprintf(out, "    mov rbx, [%s]\n", expr->right->value);
+        }
+    }
+
+    // Perform the operation
+    switch (expr->op) {
+        case BITWISE_AND:
+            fprintf(out, "    and rax, rbx    ; Bitwise AND\n");
+            break;
+        case BITWISE_OR:
+            fprintf(out, "    or rax, rbx     ; Bitwise OR\n");
+            break;
+        case BITWISE_XOR:
+            fprintf(out, "    xor rax, rbx    ; Bitwise XOR\n");
+            break;
+        case BITWISE_NOT:
+            fprintf(out, "    not rax         ; Bitwise NOT\n");
+            break;
+        case BITWISE_LSHIFT:
+            fprintf(out, "    mov rcx, rbx\n");
+            fprintf(out, "    shl rax, cl     ; Left shift\n");
+            break;
+        case BITWISE_RSHIFT:
+            fprintf(out, "    mov rcx, rbx\n");
+            fprintf(out, "    shr rax, cl     ; Right shift\n");
+            break;
+        case BITWISE_ARSHIFT:
+            fprintf(out, "    mov rcx, rbx\n");
+            fprintf(out, "    sar rax, cl     ; Arithmetic right shift\n");
+            break;
+    }
+
+    // Result is in rax
+    fprintf(out, "    ; Result in rax\n\n");
 }

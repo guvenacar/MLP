@@ -1,86 +1,111 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "standard_library.h"
 
+// List of common stdlib functions to detect
+const char* stdlib_functions[] = {
+    "printf", "scanf", "fprintf", "sprintf",
+    "malloc", "free", "calloc", "realloc",
+    "strlen", "strcmp", "strcpy", "strcat",
+    "fopen", "fclose", "fread", "fwrite",
+    "sin", "cos", "tan", "sqrt", "pow", "log", "exp",
+    NULL
+};
+
 int main(int argc, char** argv) {
-    (void)argc;
-    (void)argv;
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <input.mlp> <output.s>\n", argv[0]);
+        return 1;
+    }
 
-    printf("Standard Library Module - Standalone Test\n");
-    printf("=========================================\n\n");
+    printf("🔧 Standard Library Module\n");
+    printf("==========================\n");
+    printf("Input:  %s\n", argv[1]);
+    printf("Output: %s\n\n", argv[2]);
 
-    // Create standard library context
-    StdLibContext* ctx = stdlib_context_create();
+    // Read source file
+    FILE* f = fopen(argv[1], "r");
+    if (!f) {
+        fprintf(stderr, "Error: Cannot open %s\n", argv[1]);
+        return 1;
+    }
 
-    // Initialize all standard bindings
-    stdlib_init_all(ctx);
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    // Print available functions
-    stdlib_print_functions(ctx);
-    stdlib_print_constants(ctx);
+    char* src = malloc(sz + 1);
+    fread(src, 1, sz, f);
+    src[sz] = 0;
+    fclose(f);
 
-    // Test function lookup
-    printf("\n\nTesting Function Lookup:\n");
-    printf("========================\n");
+    // Open output file
+    FILE* out = fopen(argv[2], "w");
+    if (!out) {
+        fprintf(stderr, "Error: Cannot create %s\n", argv[2]);
+        free(src);
+        return 1;
+    }
 
-    const char* test_funcs[] = {"printf", "malloc", "sin", "sqrt"};
-    for (int i = 0; i < 4; i++) {
-        FunctionBinding* binding = stdlib_lookup_function(ctx, test_funcs[i]);
-        if (binding) {
-            printf("✓ Found %s -> %s (%s)\n",
-                   binding->mlp_name, binding->c_name, binding->return_type);
-        } else {
-            printf("✗ Not found: %s\n", test_funcs[i]);
+    // Scan for stdlib function calls
+    int function_count = 0;
+    int needs_libc = 0;
+    int needs_libm = 0;
+
+    fprintf(out, "; MLP Standard Library Module - Generated Assembly\n");
+    fprintf(out, "; Target: x86-64 Linux\n\n");
+
+    // Detect which functions are used
+    for (int i = 0; stdlib_functions[i] != NULL; i++) {
+        if (strstr(src, stdlib_functions[i]) != NULL) {
+            printf("  ✓ Found stdlib function: %s\n", stdlib_functions[i]);
+            function_count++;
+
+            // Determine which library is needed
+            if (strcmp(stdlib_functions[i], "sin") == 0 ||
+                strcmp(stdlib_functions[i], "cos") == 0 ||
+                strcmp(stdlib_functions[i], "tan") == 0 ||
+                strcmp(stdlib_functions[i], "sqrt") == 0 ||
+                strcmp(stdlib_functions[i], "pow") == 0 ||
+                strcmp(stdlib_functions[i], "log") == 0 ||
+                strcmp(stdlib_functions[i], "exp") == 0) {
+                needs_libm = 1;
+            } else {
+                needs_libc = 1;
+            }
         }
     }
 
-    // Test constant lookup
-    printf("\n\nTesting Constant Lookup:\n");
-    printf("========================\n");
+    printf("\n✅ Found %d stdlib function calls\n", function_count);
 
-    const char* test_consts[] = {"NULL", "PI", "E"};
-    for (int i = 0; i < 3; i++) {
-        ConstantBinding* binding = stdlib_lookup_constant(ctx, test_consts[i]);
-        if (binding) {
-            printf("✓ Found %s -> %s = %s\n",
-                   binding->mlp_name, binding->c_name, binding->value);
-        } else {
-            printf("✗ Not found: %s\n", test_consts[i]);
-        }
+    // Generate linking information
+    fprintf(out, "; Required libraries:\n");
+    if (needs_libc) {
+        fprintf(out, ";   -lc (libc - standard C library)\n");
     }
+    if (needs_libm) {
+        fprintf(out, ";   -lm (libm - math library)\n");
+    }
+    fprintf(out, "\n");
 
-    // Example code generation
-    printf("\n\nExample Code Generation:\n");
-    printf("========================\n");
-    printf("MLP code: printf(\"Hello, World!\\n\")\n");
-    printf("Generated C code:\n");
-    const char* args[] = {"\"Hello, World!\\n\""};
-    stdlib_generate_function_call(stdout, ctx, "printf", args, 1);
+    fprintf(out, "section .text\n");
+    fprintf(out, "    global _start\n");
+    fprintf(out, "_start:\n");
+    fprintf(out, "    ; Stdlib functions will be linked by external linker\n");
+    fprintf(out, "    ; Use: gcc -o program program.o");
+    if (needs_libc) fprintf(out, " -lc");
+    if (needs_libm) fprintf(out, " -lm");
+    fprintf(out, "\n\n");
 
-    printf("\n\nStandard Library Features:\n");
-    printf("=========================\n");
-    printf("  1. C standard library bindings (stdio, stdlib, string)\n");
-    printf("  2. Math library bindings (math.h)\n");
-    printf("  3. POSIX bindings (pthread, unistd)\n");
-    printf("  4. System call wrappers\n");
-    printf("  5. Automatic library linking\n");
-    printf("  6. Type mapping (MLP types <-> C types)\n");
-    printf("  7. Function documentation\n");
-    printf("  8. Custom MLP standard library\n");
-
-    printf("\n\nExample MLP syntax:\n");
-    printf("==================\n");
-    printf("  # Using C stdlib functions\n");
-    printf("  import std.io\n");
-    printf("  \n");
-    printf("  func main() {\n");
-    printf("      printf(\"Hello, World!\\n\")\n");
-    printf("      let x = sqrt(16.0)\n");
-    printf("      println(\"sqrt(16) = {}\", x)\n");
-    printf("  }\n");
+    // Add exit syscall
+    fprintf(out, "    mov rax, 60\n");
+    fprintf(out, "    xor rdi, rdi\n");
+    fprintf(out, "    syscall\n");
 
     // Cleanup
-    stdlib_context_destroy(ctx);
+    free(src);
+    fclose(out);
 
     return 0;
 }

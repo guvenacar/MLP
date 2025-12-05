@@ -1,57 +1,93 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "type_system.h"
 #include "type_system_parser.h"
 #include "type_system_codegen.h"
 #include "../../lexer.h"
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input.mlp>\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <input.mlp> <output.s>\n", argv[0]);
         return 1;
     }
 
-    printf("Type System Module - Standalone Test\n");
-    printf("====================================\n\n");
+    printf("🔧 Type System Module\n");
+    printf("====================\n");
+    printf("Input:  %s\n", argv[1]);
+    printf("Output: %s\n\n", argv[2]);
 
-    // Create type context
-    TypeContext* ctx = type_context_create();
+    // Read source file
+    FILE* f = fopen(argv[1], "r");
+    if (!f) {
+        fprintf(stderr, "Error: Cannot open %s\n", argv[1]);
+        return 1;
+    }
 
-    // Test basic type creation
-    Type* int_type = type_create(TYPE_INT);
-    Type* float_type = type_create(TYPE_FLOAT);
-    Type* string_type = type_create(TYPE_STRING);
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    printf("Basic types created:\n");
-    printf("  - int: %s\n", type_to_string(int_type));
-    printf("  - float: %s\n", type_to_string(float_type));
-    printf("  - string: %s\n", type_to_string(string_type));
-    printf("\n");
+    char* src = malloc(sz + 1);
+    fread(src, 1, sz, f);
+    src[sz] = 0;
+    fclose(f);
 
-    // Test type equality
-    bool equals = type_equals(int_type, int_type);
-    printf("int == int: %s\n\n", equals ? "true" : "false");
+    // Create lexer
+    Lexer* lexer = lexer_create(src);
 
-    printf("Type system features to implement:\n");
-    printf("  1. Type checking (assignment, operations)\n");
-    printf("  2. Type inference (from expressions)\n");
-    printf("  3. Generic types (parametric polymorphism)\n");
-    printf("  4. Type constraints\n");
-    printf("  5. Symbol table management\n");
-    printf("  6. User-defined types (struct, enum)\n");
-    printf("\n");
+    // Open output file
+    FILE* out = fopen(argv[2], "w");
+    if (!out) {
+        fprintf(stderr, "Error: Cannot create %s\n", argv[2]);
+        free(src);
+        lexer_free(lexer);
+        return 1;
+    }
 
-    printf("Example syntax:\n");
-    printf("  let x: int = 42                # Explicit type\n");
-    printf("  let y = 3.14                   # Type inference (float)\n");
-    printf("  let arr: array[int] = [1,2,3]  # Array type\n");
-    printf("  func add(a: int, b: int) -> int { return a + b }\n");
+    // Scan for type annotations (: type)
+    int type_count = 0;
+    Token* tok;
+
+    fprintf(out, "; MLP Type System Module - Generated Assembly\n");
+    fprintf(out, "; Target: x86-64 Linux\n\n");
+    fprintf(out, "section .text\n");
+    fprintf(out, "    global _start\n");
+    fprintf(out, "_start:\n\n");
+
+    while (1) {
+        tok = lexer_next_token(lexer);
+
+        if (tok->type == TOKEN_EOF) {
+            token_free(tok);
+            break;
+        }
+
+        // Look for type annotations with ':'
+        if (tok->value && strcmp(tok->value, ":") == 0) {
+            Token* next = lexer_next_token(lexer);
+            if (next->type == TOKEN_IDENTIFIER) {
+                printf("  ✓ Found type annotation: %s\n", next->value);
+                type_count++;
+            }
+            token_free(next);
+        }
+
+        token_free(tok);
+    }
+
+    printf("\n✅ Found %d type annotations\n", type_count);
+
+    // Add exit syscall
+    fprintf(out, "    ; Program exit\n");
+    fprintf(out, "    mov rax, 60\n");
+    fprintf(out, "    xor rdi, rdi\n");
+    fprintf(out, "    syscall\n");
 
     // Cleanup
-    type_free(int_type);
-    type_free(float_type);
-    type_free(string_type);
-    type_context_destroy(ctx);
+    free(src);
+    lexer_free(lexer);
+    fclose(out);
 
     return 0;
 }

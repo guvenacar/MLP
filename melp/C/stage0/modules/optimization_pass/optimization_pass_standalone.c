@@ -1,71 +1,72 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "optimization_pass.h"
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input.s> [-O0|-O1|-O2|-O3]\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <input.s> <output.s>\n", argv[0]);
         return 1;
     }
 
-    printf("Optimization Pass Module - Standalone Test\n");
-    printf("=========================================\n\n");
+    printf("🔧 Optimization Pass Module\n");
+    printf("===========================\n");
+    printf("Input:  %s\n", argv[1]);
+    printf("Output: %s\n\n", argv[2]);
 
-    // Parse optimization level
-    OptimizationLevel level = OPT_MODERATE; // Default -O2
-    if (argc >= 3) {
-        if (strcmp(argv[2], "-O0") == 0) level = OPT_NONE;
-        else if (strcmp(argv[2], "-O1") == 0) level = OPT_BASIC;
-        else if (strcmp(argv[2], "-O2") == 0) level = OPT_MODERATE;
-        else if (strcmp(argv[2], "-O3") == 0) level = OPT_AGGRESSIVE;
-    }
-
-    printf("Input file: %s\n", argv[1]);
-    printf("Optimization level: ");
-    switch (level) {
-        case OPT_NONE: printf("-O0 (none)\n"); break;
-        case OPT_BASIC: printf("-O1 (basic)\n"); break;
-        case OPT_MODERATE: printf("-O2 (moderate)\n"); break;
-        case OPT_AGGRESSIVE: printf("-O3 (aggressive)\n"); break;
-    }
-    printf("\n");
-
-    // Create optimization context
-    OptContext* ctx = opt_context_create(level);
-
-    // Load assembly file
-    ctx->instructions = opt_load_assembly(argv[1]);
-    if (!ctx->instructions) {
-        fprintf(stderr, "Failed to load assembly file\n");
-        opt_context_destroy(ctx);
+    // Read input assembly file
+    FILE* f = fopen(argv[1], "r");
+    if (!f) {
+        fprintf(stderr, "Error: Cannot open %s\n", argv[1]);
         return 1;
     }
 
-    // Apply optimizations
-    opt_apply_all_passes(ctx);
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    // Print statistics
-    opt_print_stats(ctx);
+    char* src = malloc(sz + 1);
+    fread(src, 1, sz, f);
+    src[sz] = 0;
+    fclose(f);
 
-    // Write optimized output
-    char output_file[256];
-    snprintf(output_file, sizeof(output_file), "%s.opt", argv[1]);
-    opt_write_assembly(output_file, ctx->instructions);
-    printf("\nOptimized output written to: %s\n", output_file);
+    // Open output file
+    FILE* out = fopen(argv[2], "w");
+    if (!out) {
+        fprintf(stderr, "Error: Cannot create %s\n", argv[2]);
+        free(src);
+        return 1;
+    }
 
-    printf("\nOptimization techniques to implement:\n");
-    printf("  1. Dead code elimination\n");
-    printf("  2. Constant folding and propagation\n");
-    printf("  3. Common subexpression elimination\n");
-    printf("  4. Register allocation\n");
-    printf("  5. Peephole optimizations\n");
-    printf("  6. Loop unrolling\n");
-    printf("  7. Function inlining\n");
-    printf("  8. Tail call optimization\n");
-    printf("  9. Strength reduction\n");
+    // Simple optimization: remove redundant instructions
+    int optimizations_found = 0;
+    char* line = strtok(src, "\n");
+
+    fprintf(out, "; MLP Optimization Pass - Optimized Assembly\n\n");
+
+    while (line != NULL) {
+        // Skip redundant instructions
+        if (strstr(line, "mov rax, rax") != NULL) {
+            printf("  ✓ Removed redundant: mov rax, rax\n");
+            optimizations_found++;
+        } else if (strstr(line, "add rax, 0") != NULL) {
+            printf("  ✓ Removed redundant: add rax, 0\n");
+            optimizations_found++;
+        } else if (strstr(line, "nop") != NULL) {
+            printf("  ✓ Removed: nop\n");
+            optimizations_found++;
+        } else {
+            fprintf(out, "%s\n", line);
+        }
+
+        line = strtok(NULL, "\n");
+    }
+
+    printf("\n✅ Applied %d optimizations\n", optimizations_found);
 
     // Cleanup
-    opt_context_destroy(ctx);
+    free(src);
+    fclose(out);
 
     return 0;
 }

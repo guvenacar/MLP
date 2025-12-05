@@ -1,14 +1,22 @@
 CC = gcc
 CFLAGS = -Wall -g -O2
+TARGET = documentation_standalone
 SOURCES = documentation_standalone.c documentation_parser.c documentation_codegen.c
 OBJECTS = $(SOURCES:.c=.o)
-TARGET = documentation_test
+
 all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
+
 %.o: %.c documentation.h
 	$(CC) $(CFLAGS) -c $< -o $@
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o $(TARGET)
+
 test: $(TARGET)
+	@echo "Testing documentation..."
 	@./$(TARGET)
+
 clean:
-	rm -f $(OBJECTS) $(TARGET) *.s *.o
+	rm -f $(OBJECTS) $(TARGET) documentation_test *.s
+
+.PHONY: all test clean

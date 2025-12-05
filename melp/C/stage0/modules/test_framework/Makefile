@@ -1,14 +1,22 @@
 CC = gcc
 CFLAGS = -Wall -g -O2
+TARGET = test_framework_standalone
 SOURCES = test_framework_standalone.c test_framework_parser.c test_framework_codegen.c
 OBJECTS = $(SOURCES:.c=.o)
-TARGET = test_framework_test
+
 all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
+
 %.o: %.c test_framework.h
 	$(CC) $(CFLAGS) -c $< -o $@
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o $(TARGET)
+
 test: $(TARGET)
+	@echo "Testing test_framework..."
 	@./$(TARGET)
+
 clean:
-	rm -f $(OBJECTS) $(TARGET) *.s *.o
+	rm -f $(OBJECTS) $(TARGET) test_framework_test *.s
+
+.PHONY: all test clean
