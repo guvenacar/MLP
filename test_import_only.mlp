@@ -1,7 +1,0 @@
--- Test only imports
-
-import "compiler_core/token_types.mlp"
-
-function main()
-    print "OK"
-end_function

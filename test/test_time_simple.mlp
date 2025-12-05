@@ -1,9 +1,0 @@
-// Simple Time Test
-
-function main() then
-    print("Testing get_time_string:\n")
-    string time_str = get_time_string()
-    print(time_str)
-    print("\n")
-    return 0
-end

@@ -1,0 +1,3 @@
+-- Test: Channels
+chan<numeric> ch
+ch <- 42

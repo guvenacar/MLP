@@ -1,0 +1,15 @@
+--- Test functions module ---
+
+function add(numeric a, numeric b)
+    return a + b
+end function
+
+function greet(text name)
+    print ( "Hello" )
+end function
+
+function calculate(numeric x, numeric y, numeric z)
+    return x + y + z
+end function
+
+print ( "Functions defined" )

@@ -1,0 +1,7 @@
+---
+Simple test for 45 modules
+---
+
+numeric x = 10
+numeric y = 20
+numeric z = x + y

@@ -1,0 +1,158 @@
+-- MLP Self-Hosting: Collections Codegen Module
+-- Generates x86-64 assembly for Tuple and List literals and access
+-- Corresponds to C modules/collections/collections_codegen.c
+
+-- Generate code for tuple literal: <expr1, expr2, expr3>
+-- Tuples are immutable and stack-allocated
+function codegen_tuple_literal(gen, tuple)
+    -- Empty tuple
+    if tuple.count == 0 then
+        emit(gen, "")
+        emit(gen, "    ; Empty tuple")
+        emit(gen, "    xor rax, rax        ; Empty tuple = 0")
+        return
+    end if
+    
+    -- Allocate stack space
+    numeric tuple_size = tuple.count * 8
+    emit(gen, "")
+    emit(gen, "    ; Tuple literal <" + to_string(tuple.count) + " elements> - immutable, stack")
+    emit(gen, "    sub rsp, " + to_string(tuple_size) + "         ; Allocate tuple space")
+    
+    -- Store each element
+    for i = 0 to tuple.count - 1
+        emit(gen, "")
+        emit(gen, "    ; Tuple element " + to_string(i))
+        
+        -- Generate expression code (result in rax)
+        codegen_generate_expression(gen, tuple.elements[i])
+        
+        -- Store at correct offset
+        numeric offset = i * 8
+        emit(gen, "    mov [rsp+" + to_string(offset) + "], rax   ; tuple<" + to_string(i) + "> = value")
+    end for
+    
+    -- Return tuple pointer
+    emit(gen, "    mov rax, rsp        ; Return tuple pointer")
+end function
+
+-- Generate code for list literal: (expr1, expr2, expr3)
+-- Lists are mutable and heap-allocated
+function codegen_list_literal(gen, list)
+    -- Empty list
+    if list.count == 0 then
+        emit(gen, "")
+        emit(gen, "    ; Empty list")
+        emit(gen, "    mov rdi, 16         ; List header: count + capacity")
+        emit(gen, "    call gc_alloc       ; Allocate empty list")
+        emit(gen, "    mov qword [rax], 0  ; count = 0")
+        emit(gen, "    mov qword [rax+8], 0 ; capacity = 0")
+        return
+    end if
+    
+    -- Calculate size: header (16) + elements
+    numeric header_size = 16
+    numeric data_size = list.count * 8
+    numeric total_size = header_size + data_size
+    
+    emit(gen, "")
+    emit(gen, "    ; List literal (" + to_string(list.count) + " elements) - mutable, heap")
+    emit(gen, "    mov rdi, " + to_string(total_size) + "         ; List size")
+    emit(gen, "    call gc_alloc       ; Allocate list on heap")
+    emit(gen, "    push rax            ; Save list pointer")
+    
+    -- Store count and capacity
+    emit(gen, "    mov qword [rax], " + to_string(list.count) + " ; list.count")
+    emit(gen, "    mov qword [rax+8], " + to_string(list.count) + " ; list.capacity")
+    
+    -- Store each element
+    for i = 0 to list.count - 1
+        emit(gen, "")
+        emit(gen, "    ; List element " + to_string(i))
+        
+        -- Save list pointer
+        emit(gen, "    mov rbx, [rsp]      ; Load list pointer")
+        emit(gen, "    push rbx            ; Save again")
+        
+        -- Generate expression
+        codegen_generate_expression(gen, list.elements[i])
+        
+        -- Restore and store
+        emit(gen, "    pop rbx             ; Restore list pointer")
+        numeric offset = 16 + i * 8
+        emit(gen, "    mov [rbx+" + to_string(offset) + "], rax   ; list(" + to_string(i) + ") = value")
+        emit(gen, "    mov [rsp], rbx      ; Update saved pointer")
+    end for
+    
+    -- Return list pointer
+    emit(gen, "    pop rax             ; Return list pointer")
+end function
+
+-- Generate code for tuple access: tuple<index>
+function codegen_tuple_access(gen, access)
+    emit(gen, "")
+    emit(gen, "    ; Tuple access: tuple<" + to_string(access.index) + ">")
+    
+    -- Generate tuple expression (result = tuple pointer in rax)
+    codegen_generate_expression(gen, access.tuple_expr)
+    
+    -- Access element at offset (compile-time constant)
+    numeric offset = access.index * 8
+    emit(gen, "    mov rax, [rax+" + to_string(offset) + "]   ; Load tuple<" + to_string(access.index) + ">")
+end function
+
+-- Generate code for list access: list(index)
+function codegen_list_access(gen, access)
+    emit(gen, "")
+    emit(gen, "    ; List access: list(index)")
+    
+    -- Generate list expression (result = list pointer in rax)
+    codegen_generate_expression(gen, access.list_expr)
+    emit(gen, "    push rax            ; Save list pointer")
+    
+    -- Generate index expression (result = index in rax)
+    codegen_generate_expression(gen, access.index_expr)
+    
+    -- Runtime bounds check
+    emit(gen, "    mov rbx, rax        ; index in rbx")
+    emit(gen, "    pop rax             ; Restore list pointer")
+    emit(gen, "    mov rcx, [rax]      ; Load list.count")
+    emit(gen, "    cmp rbx, rcx        ; Compare index with count")
+    emit(gen, "    jae .list_index_error ; Jump if index >= count")
+    
+    -- Calculate offset: 16 (header) + index * 8
+    emit(gen, "    lea rax, [rax+rbx*8+16] ; Calculate element address")
+    emit(gen, "    mov rax, [rax]      ; Load list(index)")
+    emit(gen, "    jmp .list_access_done")
+    
+    -- Error handling
+    emit(gen, ".list_index_error:")
+    emit(gen, "    ; Index out of bounds error")
+    emit(gen, "    mov rax, 60         ; sys_exit")
+    emit(gen, "    mov rdi, 1          ; error code")
+    emit(gen, "    syscall")
+    
+    emit(gen, ".list_access_done:")
+end function
+
+-- Helper functions
+function emit(gen, line)
+    -- Emit assembly line
+    -- Implementation: write line to gen.output
+end function
+
+function codegen_generate_expression(gen, expr)
+    -- Generate code for expression (result in rax)
+    -- This delegates to expression codegen module
+end function
+
+function to_string(num)
+    -- Convert number to string
+    return "" + num
+end function
+
+-- Module exports
+-- export codegen_tuple_literal
+-- export codegen_list_literal
+-- export codegen_tuple_access
+-- export codegen_list_access

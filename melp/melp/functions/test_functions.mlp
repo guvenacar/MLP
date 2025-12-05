@@ -1,0 +1,3 @@
+-- Test: Functions
+function add(x,y) x+y
+numeric z=add(2,3)

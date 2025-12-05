@@ -1,0 +1,3 @@
+-- Test: Documentation
+--- Module doc
+function test() 0

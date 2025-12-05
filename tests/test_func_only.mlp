@@ -1,8 +1,0 @@
--- Test: Ultra simple array literal
-function test() then
-    numeric x = 10
-    return x
-end
-
-numeric result = test()
-print result

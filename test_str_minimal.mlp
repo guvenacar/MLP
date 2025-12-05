@@ -1,3 +1,0 @@
--- Minimal test
-numeric x = 42
-print str(x)

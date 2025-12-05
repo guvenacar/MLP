@@ -1,0 +1,39 @@
+-- Exception Handling Parser Modülü
+-- Parse işlemleri sabitleri
+
+-- Try-catch-finally parse
+numeric PARSE_TRY_KEYWORD = 0
+numeric PARSE_TRY_LBRACE = 1
+numeric PARSE_TRY_BLOCK = 2
+numeric PARSE_TRY_RBRACE = 3
+numeric PARSE_CATCH_LIST = 4
+numeric PARSE_FINALLY_OPT = 5
+
+-- Catch parse
+numeric PARSE_CATCH_KEYWORD = 0
+numeric PARSE_CATCH_LPAREN = 1      -- (
+numeric PARSE_CATCH_TYPE = 2        -- ValueError, * (catch-all)
+numeric PARSE_CATCH_VAR = 3         -- e, error, vb.
+numeric PARSE_CATCH_RPAREN = 4      -- )
+numeric PARSE_CATCH_LBRACE = 5
+numeric PARSE_CATCH_HANDLER = 6
+numeric PARSE_CATCH_RBRACE = 7
+
+-- Finally parse
+numeric PARSE_FINALLY_KEYWORD = 0
+numeric PARSE_FINALLY_LBRACE = 1
+numeric PARSE_FINALLY_BLOCK = 2
+numeric PARSE_FINALLY_RBRACE = 3
+
+-- Throw parse
+numeric PARSE_THROW_KEYWORD = 0
+numeric PARSE_THROW_EXPR = 1        -- Exception expression
+numeric PARSE_THROW_TYPE = 2        -- Exception type name
+numeric PARSE_THROW_MSG = 3         -- Message string
+numeric PARSE_THROW_SEMI = 4        -- ;
+
+-- Exception type parse
+numeric PARSE_EXC_NAME = 0
+numeric PARSE_EXC_LPAREN = 1
+numeric PARSE_EXC_ARGS = 2
+numeric PARSE_EXC_RPAREN = 3

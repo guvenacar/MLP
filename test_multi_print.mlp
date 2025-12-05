@@ -1,0 +1,9 @@
+---
+Multi-print test
+Test multiple print statements
+---
+
+print("İlk satır")
+print("İkinci satır")
+print("Üçüncü satır")
+print("Son satır!")

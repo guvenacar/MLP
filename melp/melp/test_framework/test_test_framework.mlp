@@ -1,0 +1,2 @@
+-- Test: Test Framework
+test "add" assert(1+1==2)

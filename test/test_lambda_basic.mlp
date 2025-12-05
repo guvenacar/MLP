@@ -1,6 +1,0 @@
-// Phase 7.1: Lambda Functions - Basic Test
-// Testing lambda code generation
-
-// Test: Simple lambda expression (should generate lambda function)
-numeric result = lambda(x) => x + 10
-print result

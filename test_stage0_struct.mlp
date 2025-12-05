@@ -1,5 +1,0 @@
--- lang: en-US
-struct Point
-    numeric x
-    numeric y
-end struct

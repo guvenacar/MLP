@@ -1,0 +1,11 @@
+-- test_real_function.mlp
+function add(numeric a, numeric b)
+    return a + b
+end function
+
+function main() numeric
+    numeric result = add(10, 20)
+    print(result)
+    return 0
+end function
+end function

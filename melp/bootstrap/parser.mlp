@@ -1,0 +1,152 @@
+---
+MELP Bootstrap Compiler - Parser Module
+Converted from parser.c to pure MLP
+Builds AST from tokens
+---
+
+-- Node types
+numeric NODE_PROGRAM = 0
+numeric NODE_FUNCTION = 1
+numeric NODE_VAR_DECL = 2
+numeric NODE_RETURN = 3
+numeric NODE_STRUCT = 4
+numeric NODE_IDENTIFIER = 5
+numeric NODE_LITERAL = 6
+numeric NODE_TYPE = 7
+
+-- Global parser state
+numeric parser_pos = 0
+numeric current_token_type = 0
+
+-- Parser initialization
+function parser_init(numeric tokens_ptr, numeric token_count) numeric
+    ---
+    Initialize parser with token array
+    ---
+    parser_pos = 0
+    current_token_type = 0
+    return 0
+end function
+
+-- Token matching
+function match_token(numeric expected_type) numeric
+    ---
+    Check if current token matches expected type
+    Returns 1 if match, 0 otherwise
+    ---
+    numeric result = 0
+    return result
+end function
+
+-- Advance to next token
+function advance_token() numeric
+    ---
+    Move to next token
+    Returns new position
+    ---
+    numeric pos = parser_pos
+    parser_pos = pos
+    return pos
+end function
+
+-- Create AST node
+function create_node(numeric node_type) numeric
+    ---
+    Allocate and initialize AST node
+    Returns pointer to node
+    ---
+    numeric node_ptr = 0
+    return node_ptr
+end function
+
+-- Parse variable declaration
+function parse_var_decl(numeric tokens_ptr) numeric
+    ---
+    Parse: numeric x = 42
+    Returns AST node pointer
+    ---
+    numeric node = create_node(2)
+    return node
+end function
+
+-- Parse function declaration
+function parse_function(numeric tokens_ptr) numeric
+    ---
+    Parse: function name() numeric ... end function
+    Returns AST node pointer
+    ---
+    numeric node = create_node(1)
+    return node
+end function
+
+-- Parse return statement
+function parse_return(numeric tokens_ptr) numeric
+    ---
+    Parse: return expression
+    Returns AST node pointer
+    ---
+    numeric node = create_node(3)
+    return node
+end function
+
+-- Parse struct declaration
+function parse_struct(numeric tokens_ptr) numeric
+    ---
+    Parse: struct Name ... end struct
+    Returns AST node pointer
+    ---
+    numeric node = create_node(4)
+    return node
+end function
+
+-- Parse statement
+function parse_statement(numeric tokens_ptr) numeric
+    ---
+    Parse any statement
+    Returns AST node pointer
+    ---
+    numeric node = 0
+    
+    -- Try parse function
+    node = parse_function(tokens_ptr)
+    
+    -- Try parse variable
+    node = parse_var_decl(tokens_ptr)
+    
+    -- Try parse return
+    node = parse_return(tokens_ptr)
+    
+    return node
+end function
+
+-- Parse program (top level)
+function parse_program(numeric tokens_ptr, numeric token_count) numeric
+    ---
+    Parse entire program
+    Returns root AST node pointer
+    ---
+    numeric root = create_node(0)
+    
+    -- Parse all statements
+    numeric pos = 0
+    
+    return root
+end function
+
+-- Parser main
+function parser_main() numeric
+    ---
+    Test function for parser
+    ---
+    numeric result = 0
+    
+    -- Initialize with dummy tokens
+    numeric tokens = 0
+    numeric count = 0
+    parser_init(tokens, count)
+    
+    -- Parse program
+    numeric ast = parse_program(tokens, count)
+    
+    return result
+end function

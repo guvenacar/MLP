@@ -1,3 +1,0 @@
--- Test: Global array literal
-numeric arr[] = [10]
-print 42

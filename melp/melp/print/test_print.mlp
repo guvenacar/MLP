@@ -1,0 +1,5 @@
+-- Test print statement in MELP Stage 1
+-- Basic print functionality test
+
+numeric value1 = 42
+numeric value2 = 100

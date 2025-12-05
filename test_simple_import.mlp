@@ -1,5 +1,0 @@
-import "compiler_core/token_types.mlp"
-
-function main()
-    print "Import test successful!"
-end_function

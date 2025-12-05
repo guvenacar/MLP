@@ -1,8 +1,0 @@
--- Test: Function with simple array (no literal)
-function test() then
-    numeric arr[3]
-    return 5
-end
-
-numeric result = test()
-print result

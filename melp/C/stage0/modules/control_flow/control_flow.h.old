@@ -1,0 +1,108 @@
+#ifndef CONTROL_FLOW_H
+#define CONTROL_FLOW_H
+
+typedef enum {
+    STMT_IF,
+    STMT_WHILE,
+    STMT_FOR,
+    STMT_DECLARATION,   // numeric x = 42
+    STMT_ASSIGNMENT,    // x = x + 1
+    STMT_PRINT,         // print(x)
+    STMT_FUNCTION,      // function definition
+    STMT_RETURN,        // return expr
+    STMT_CALL,          // function call
+    STMT_EXIT,          // exit for/while
+    STMT_CONTINUE       // continue for/while
+} StatementType;
+
+// Forward declarations
+typedef struct Expression Expression;
+typedef struct Statement Statement;
+
+// If-Then-Else statement
+typedef struct {
+    Expression* condition;      // Boolean expression
+    Statement** then_body;      // Array of statements in 'then' block
+    int then_count;             // Number of statements in 'then' block
+    Statement** else_body;      // Array of statements in 'else' block (NULL if no else)
+    int else_count;             // Number of statements in 'else' block
+} IfStatement;
+
+// While loop
+typedef struct {
+    Expression* condition;
+    Statement** body;
+    int body_count;
+} WhileStatement;
+
+// For loop
+typedef struct {
+    char* variable;             // Loop variable name
+    Expression* start;          // Start value
+    Expression* end;            // End value
+    Statement** body;
+    int body_count;
+} ForStatement;
+
+// Declaration statement (type name = value)
+typedef struct {
+    int var_type;               // VarType: VAR_NUMERIC, VAR_STRING, VAR_BOOLEAN
+    char* name;
+    Expression* value;
+} DeclarationStmt;
+
+// Assignment statement (name = expr)
+typedef struct {
+    char* name;
+    Expression* value;
+} AssignmentStmt;
+
+// Print statement
+typedef struct {
+    Expression* value;
+} PrintStmt;
+
+// Function parameter
+typedef struct {
+    char* name;
+    int var_type;   // VarType
+} FunctionParam;
+
+// Function definition statement
+typedef struct {
+    char* name;
+    FunctionParam** params;
+    int param_count;
+    Statement** body;
+    int body_count;
+} FunctionStmt;
+
+// Return statement
+typedef struct {
+    Expression* value;  // NULL for void return
+} ReturnStmt;
+
+// Function call statement/expression
+typedef struct {
+    char* name;
+    Expression** args;
+    int arg_count;
+} CallStmt;
+
+// Generic statement wrapper
+struct Statement {
+    StatementType type;
+    union {
+        IfStatement if_stmt;
+        WhileStatement while_stmt;
+        ForStatement for_stmt;
+        DeclarationStmt decl_stmt;
+        AssignmentStmt assign_stmt;
+        PrintStmt print_stmt;
+        FunctionStmt func_stmt;
+        ReturnStmt return_stmt;
+        CallStmt call_stmt;
+    } data;
+};
+
+#endif

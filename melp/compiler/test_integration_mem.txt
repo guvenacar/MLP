@@ -1,0 +1,97 @@
+=== MELP Memory Analysis Report ===
+
+GC Mode: Automatic
+Max Scope Depth: 3
+
+=== Allocations (10 total) ===
+[0] factorial:
+    Type: STACK
+    Lifetime: line 4
+    Escapes: NO
+    Scope depth: 1
+    GC Hint: stack
+
+[1] allocate_data:
+    Type: STACK
+    Lifetime: line 5
+    Escapes: NO
+    Scope depth: 2
+    GC Hint: stack
+
+[2] data:
+    Type: STACK
+    Lifetime: line 6
+    Escapes: NO
+    Scope depth: 2
+    GC Hint: stack
+
+[3] main:
+    Type: STACK
+    Lifetime: line 7
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[4] x:
+    Type: STACK
+    Lifetime: line 8
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[5] y:
+    Type: STACK
+    Lifetime: line 9
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[6] sum:
+    Type: STACK
+    Lifetime: line 10
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[7] result:
+    Type: STACK
+    Lifetime: line 11
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[8] allocated:
+    Type: STACK
+    Lifetime: line 12
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[9] i:
+    Type: STACK
+    Lifetime: line 13
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+=== Statistics ===
+Stack allocations: 10
+Heap allocations (GC): 0
+Escaping variables: 0
+Memory operations: 10
+
+=== Memory Operations ===
+[0] ALLOC: factorial at line 4
+[1] ALLOC: allocate_data at line 5
+[2] ALLOC: data at line 6
+[3] ALLOC: main at line 7
+[4] ALLOC: x at line 8
+[5] ALLOC: y at line 9
+[6] ALLOC: sum at line 10
+[7] ALLOC: result at line 11
+[8] ALLOC: allocated at line 12
+[9] ALLOC: i at line 13
+
+=== GC Integration Hints ===
+Replace malloc() with gc_alloc() for 0 heap allocations
+Stack variables require no GC management

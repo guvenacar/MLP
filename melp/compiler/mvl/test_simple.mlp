@@ -1,0 +1,7 @@
+fn main() {
+    let x = 5;
+    let y = 3;
+    let result = x + y;
+    print_int(result);
+    return 0;
+}

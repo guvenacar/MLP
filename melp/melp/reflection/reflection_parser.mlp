@@ -1,0 +1,104 @@
+-- Reflection Parser Sabitleri
+-- Type metadata ve reflection parsing
+
+-- Type declaration parse durumları
+numeric PARSE_TYPE_KEYWORD = 0     -- type/struct/enum keyword
+numeric PARSE_TYPE_NAME = 1        -- Tip adı
+numeric PARSE_TYPE_BODY = 2        -- Tip body
+numeric PARSE_TYPE_COMPLETE = 3    -- Parse tamamlandı
+
+-- Field declaration parse
+numeric PARSE_FIELD_NAME = 10      -- Field adı
+numeric PARSE_FIELD_TYPE = 11      -- Field tipi
+numeric PARSE_FIELD_DEFAULT = 12   -- Default değer
+numeric PARSE_FIELD_ATTRS = 13     -- Attributes
+numeric PARSE_FIELD_COMPLETE = 14  -- Parse tamamlandı
+
+-- Method declaration parse
+numeric PARSE_METHOD_NAME = 20     -- Method adı
+numeric PARSE_METHOD_PARAMS = 21   -- Parametreler
+numeric PARSE_METHOD_RETURN = 22   -- Return type
+numeric PARSE_METHOD_BODY = 23     -- Method body
+numeric PARSE_METHOD_ATTRS = 24    -- Attributes
+numeric PARSE_METHOD_COMPLETE = 25 -- Parse tamamlandı
+
+-- Attribute parse
+numeric PARSE_ATTR_NAME = 30       -- Attribute adı
+numeric PARSE_ATTR_ARGS = 31       -- Attribute argümanları
+numeric PARSE_ATTR_COMPLETE = 32   -- Parse tamamlandı
+
+-- typeof expression parse
+numeric PARSE_TYPEOF_KEYWORD = 40  -- typeof keyword
+numeric PARSE_TYPEOF_LPAREN = 41   -- (
+numeric PARSE_TYPEOF_EXPR = 42     -- Expression
+numeric PARSE_TYPEOF_RPAREN = 43   -- )
+
+-- Type assertion parse (x as Type)
+numeric PARSE_ASSERT_EXPR = 50     -- Expression
+numeric PARSE_ASSERT_AS = 51       -- as keyword
+numeric PARSE_ASSERT_TYPE = 52     -- Target type
+numeric PARSE_ASSERT_COMPLETE = 53 -- Parse tamamlandı
+
+-- Type check parse (x is Type)
+numeric PARSE_CHECK_EXPR = 60      -- Expression
+numeric PARSE_CHECK_IS = 61        -- is keyword
+numeric PARSE_CHECK_TYPE = 62      -- Target type
+numeric PARSE_CHECK_COMPLETE = 63  -- Parse tamamlandı
+
+-- Reflective field access
+numeric PARSE_REFL_TARGET = 70     -- Target object
+numeric PARSE_REFL_DOT = 71        -- .
+numeric PARSE_REFL_FIELD = 72      -- Field name
+numeric PARSE_REFL_COMPLETE = 73   -- Parse tamamlandı
+
+-- Reflective method invocation
+numeric PARSE_INV_TARGET = 80      -- Target object
+numeric PARSE_INV_DOT = 81         -- .
+numeric PARSE_INV_METHOD = 82      -- Method name
+numeric PARSE_INV_LPAREN = 83      -- (
+numeric PARSE_INV_ARGS = 84        -- Arguments
+numeric PARSE_INV_RPAREN = 85      -- )
+numeric PARSE_INV_COMPLETE = 86    -- Parse tamamlandı
+
+-- Attribute query parse
+numeric PARSE_ATTRQ_TARGET = 90    -- Target (type/field/method)
+numeric PARSE_ATTRQ_AT = 91        -- @
+numeric PARSE_ATTRQ_NAME = 92      -- Attribute name
+numeric PARSE_ATTRQ_COMPLETE = 93  -- Parse tamamlandı
+
+-- Keyword tanıma
+numeric KW_TYPE = 100              -- type
+numeric KW_STRUCT = 101            -- struct
+numeric KW_ENUM = 102              -- enum
+numeric KW_INTERFACE = 103         -- interface
+numeric KW_TYPEOF = 104            -- typeof
+numeric KW_AS = 105                -- as
+numeric KW_IS = 106                -- is
+numeric KW_REFLECT = 107           -- reflect
+
+-- Modifier keywords
+numeric KW_PUBLIC = 110            -- public
+numeric KW_PRIVATE = 111           -- private
+numeric KW_PROTECTED = 112         -- protected
+numeric KW_STATIC = 113            -- static
+numeric KW_VIRTUAL = 114           -- virtual
+numeric KW_ABSTRACT = 115          -- abstract
+numeric KW_READONLY = 116          -- readonly
+
+-- Syntax kontrol
+numeric SYNTAX_TYPE_DECL = 1       -- Type declaration syntax
+numeric SYNTAX_ATTRIBUTE = 1       -- Attribute syntax
+
+-- Parse hata kodları
+numeric ERROR_INVALID_TYPE_NAME = 1 -- Geçersiz tip adı
+numeric ERROR_MISSING_BODY = 2     -- Body eksik
+numeric ERROR_INVALID_FIELD = 3    -- Geçersiz field
+numeric ERROR_INVALID_METHOD = 4   -- Geçersiz method
+numeric ERROR_MISSING_AS = 5       -- as keyword eksik
+numeric ERROR_MISSING_IS = 6       -- is keyword eksik
+numeric ERROR_INVALID_ATTRIBUTE = 7 -- Geçersiz attribute
+
+-- Context tracking
+numeric CTX_IN_TYPE_DECL = 200     -- Type declaration içinde
+numeric CTX_IN_METHOD = 201        -- Method içinde
+numeric CTX_IN_ATTRIBUTE = 202     -- Attribute içinde

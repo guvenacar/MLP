@@ -1,7 +1,0 @@
-function test_basic()
-    numeric x = 5
-    return x
-end_function
-
-numeric result = test_basic()
-print result

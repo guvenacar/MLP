@@ -1,0 +1,259 @@
+-- ============================================
+-- MLP Self-Hosting Lexer (Stage 1)
+-- Simple bottom-up approach using working syntax
+-- ============================================
+
+-- Global lexer state (NO global initialization with constants!)
+text g_source = ""
+numeric g_pos = 0
+numeric g_line = 1
+numeric g_source_len = 0
+numeric g_token_type = 0
+text g_token_value = ""
+numeric g_token_line = 1
+
+-- Initialize lexer with source code
+function lexer_init(text source) numeric
+    g_source = source
+    g_pos = 0
+    g_line = 1
+    g_source_len = str_length(source)
+    return 0
+end function
+
+-- Helper: Get character at current position
+function current_char() text
+    if g_pos >= g_source_len then
+        return ""
+    end if
+    return charAt(g_source, g_pos)
+end function
+
+-- Helper: Peek next character
+function peek_char() text
+    if g_pos + 1 >= g_source_len then
+        return ""
+    end if
+    return charAt(g_source, g_pos + 1)
+end function
+
+-- Helper: Advance position
+function advance() numeric
+    g_pos = g_pos + 1
+    return 0
+end function
+
+-- Helper: Check if character is digit
+function is_digit(text c) numeric
+    if c == "0" then return 1 end if
+    if c == "1" then return 1 end if
+    if c == "2" then return 1 end if
+    if c == "3" then return 1 end if
+    if c == "4" then return 1 end if
+    if c == "5" then return 1 end if
+    if c == "6" then return 1 end if
+    if c == "7" then return 1 end if
+    if c == "8" then return 1 end if
+    if c == "9" then return 1 end if
+    return 0
+end function
+
+-- Helper: Check if character is alpha
+function is_alpha(text c) numeric
+    numeric idx = indexOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", c)
+    if idx >= 0 then
+        return 1
+    end if
+    return 0
+end function
+
+-- Helper: Check if character is alphanumeric
+function is_alnum(text c) numeric
+    if is_digit(c) == 1 then return 1 end if
+    if is_alpha(c) == 1 then return 1 end if
+    return 0
+end function
+
+-- Helper: Check if character is whitespace
+function is_whitespace(text c) numeric
+    if c == " " then return 1 end if
+    if c == "\n" then return 1 end if
+    if c == "\r" then return 1 end if
+    if c == "\t" then return 1 end if
+    return 0
+end function
+
+-- Skip whitespace and comments
+function skip_whitespace() numeric
+    while g_pos < g_source_len do
+        text c = current_char()
+        
+        if is_whitespace(c) == 1 then
+            if c == "\n" then
+                g_line = g_line + 1
+            end if
+            advance()
+        else
+            if c == "-" then
+                text next = peek_char()
+                if next == "-" then
+                    while g_pos < g_source_len do
+                        text ch = current_char()
+                        advance()
+                        if ch == "\n" then
+                            g_line = g_line + 1
+                            exit while
+                        end if
+                    end while
+                else
+                    exit while
+                end if
+            else
+                exit while
+            end if
+        end if
+    end while
+    return 0
+end function
+
+-- Read number token
+function read_number() text
+    numeric start = g_pos
+    numeric has_dot = 0
+    
+    while g_pos < g_source_len do
+        text c = current_char()
+        
+        if is_digit(c) == 1 then
+            advance()
+        else
+            if c == "." then
+                if has_dot == 1 then
+                    exit while
+                end if
+                has_dot = 1
+                advance()
+            else
+                exit while
+            end if
+        end if
+    end while
+    
+    numeric len = g_pos - start
+    return substring(g_source, start, len)
+end function
+
+-- Read identifier or keyword
+function read_identifier() text
+    numeric start = g_pos
+    
+    while g_pos < g_source_len do
+        text c = current_char()
+        if is_alnum(c) == 1 then
+            advance()
+        else
+            exit while
+        end if
+    end while
+    
+    numeric len = g_pos - start
+    return substring(g_source, start, len)
+end function
+
+-- Get next token (main lexer function)
+function lexer_next_token() numeric
+    skip_whitespace()
+    
+    if g_pos >= g_source_len then
+        g_token_type = 41
+        g_token_value = ""
+        g_token_line = g_line
+        return 41
+    end if
+    
+    text c = current_char()
+    g_token_line = g_line
+    
+    if is_digit(c) == 1 then
+        g_token_value = read_number()
+        g_token_type = 5
+        return 5
+    end if
+    
+    if is_alpha(c) == 1 then
+        text ident = read_identifier()
+        g_token_value = ident
+        
+        if ident == "numeric" then
+            g_token_type = 0
+            return 0
+        end if
+        if ident == "text" then
+            g_token_type = 1
+            return 1
+        end if
+        if ident == "function" then
+            g_token_type = 31
+            return 31
+        end if
+        if ident == "return" then
+            g_token_type = 32
+            return 32
+        end if
+        if ident == "if" then
+            g_token_type = 22
+            return 22
+        end if
+        if ident == "then" then
+            g_token_type = 23
+            return 23
+        end if
+        if ident == "end" then
+            g_token_type = 25
+            return 25
+        end if
+        
+        g_token_type = 3
+        return 3
+    end if
+    
+    if c == "=" then
+        advance()
+        g_token_type = 4
+        g_token_value = "="
+        return 4
+    end if
+    
+    if c == "(" then
+        advance()
+        g_token_type = 34
+        g_token_value = "("
+        return 34
+    end if
+    
+    if c == ")" then
+        advance()
+        g_token_type = 35
+        g_token_value = ")"
+        return 35
+    end if
+    
+    advance()
+    g_token_type = 42
+    g_token_value = c
+    return 42
+end function
+
+-- Test main function (MINIMAL - melpc may not support print in functions!)
+function main() numeric
+    text source = "numeric x = 42"
+    numeric test = lexer_init(source)
+    
+    numeric tok1 = lexer_next_token()
+    numeric tok2 = lexer_next_token()
+    numeric tok3 = lexer_next_token()
+    numeric tok4 = lexer_next_token()
+    numeric tok5 = lexer_next_token()
+    
+    return 0
+end function

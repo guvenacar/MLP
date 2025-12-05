@@ -1,9 +1,0 @@
-function test() then
-    sleep_ms(100)
-    return 0
-end
-
-function main() then
-    test()
-    return 0
-end

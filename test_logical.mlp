@@ -1,0 +1,15 @@
+--- Test logical operators ---
+
+boolean a = true
+boolean b = false
+boolean c = true
+
+boolean and_result = a && c
+boolean or_result = a || b
+boolean not_result = not b
+boolean not_false = not false
+
+print ( and_result )
+print ( or_result )
+print ( not_result )
+print ( not_false )

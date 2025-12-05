@@ -1,0 +1,71 @@
+// Test file for Lexer module
+// Tests tokenization of MELP source code
+
+// Test 1: Basic identifiers and keywords
+fn test_identifiers() {
+    // Input: "let x = 42"
+    // Expected tokens: KEYWORD_LET, IDENTIFIER(x), EQUAL, NUMBER(42)
+    print("Test 1: Identifiers and keywords")
+}
+
+// Test 2: Numbers (integers and floats)
+fn test_numbers() {
+    // Input: "123 456.789 0x1A 0b1010"
+    // Expected: NUMBER(123), NUMBER(456.789), NUMBER(26), NUMBER(10)
+    print("Test 2: Numbers")
+}
+
+// Test 3: Strings
+fn test_strings() {
+    // Input: "\"hello\" \"world\\n\""
+    // Expected: STRING(hello), STRING(world\n)
+    print("Test 3: Strings")
+}
+
+// Test 4: Operators
+fn test_operators() {
+    // Input: "+ - * / % == != < > <= >= && ||"
+    // Expected: PLUS, MINUS, STAR, SLASH, PERCENT, EQ_EQ, NOT_EQ, LT, GT, LT_EQ, GT_EQ, AND_AND, OR_OR
+    print("Test 4: Operators")
+}
+
+// Test 5: Delimiters
+fn test_delimiters() {
+    // Input: "( ) { } [ ] , ; :"
+    // Expected: LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET, COMMA, SEMICOLON, COLON
+    print("Test 5: Delimiters")
+}
+
+// Test 6: Comments
+fn test_comments() {
+    // Input: "// single line\n/* multi line */"
+    // Expected: Skip comments, no tokens
+    print("Test 6: Comments")
+}
+
+// Test 7: Error handling (invalid characters)
+fn test_errors() {
+    // Input: "@#$"
+    // Expected: ERROR tokens with position info
+    print("Test 7: Error handling")
+}
+
+// Test 8: Position tracking
+fn test_positions() {
+    // Verify line and column numbers are correct
+    print("Test 8: Position tracking")
+}
+
+// Main test runner
+fn main() {
+    print("=== Lexer Module Tests ===")
+    test_identifiers()
+    test_numbers()
+    test_strings()
+    test_operators()
+    test_delimiters()
+    test_comments()
+    test_errors()
+    test_positions()
+    print("=== All tests completed ===")
+}

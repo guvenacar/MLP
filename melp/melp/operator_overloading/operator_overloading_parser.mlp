@@ -1,0 +1,25 @@
+-- Operator Overloading Parser Modülü
+-- Parse işlemleri sabitleri
+
+-- Operator overload parse
+numeric PARSE_OP_KEYWORD = 0        -- operator keyword
+numeric PARSE_OP_SYMBOL = 1         -- +, -, *, etc.
+numeric PARSE_OP_LPAREN = 2         -- (
+numeric PARSE_OP_PARAMS = 3
+numeric PARSE_OP_RPAREN = 4         -- )
+numeric PARSE_OP_ARROW = 5          -- ->
+numeric PARSE_OP_RETURN_TYPE = 6
+numeric PARSE_OP_BODY = 7
+
+-- Custom operator parse
+numeric PARSE_CUSTOM_KEYWORD = 0    -- operator keyword
+numeric PARSE_CUSTOM_SYMBOL = 1     -- Custom symbol (@@, **, etc.)
+numeric PARSE_CUSTOM_PREC = 2       -- precedence keyword
+numeric PARSE_CUSTOM_PREC_VAL = 3   -- Precedence value
+numeric PARSE_CUSTOM_ASSOC = 4      -- left/right associativity
+numeric PARSE_CUSTOM_BODY = 5
+
+-- Operator symbol parse
+numeric PARSE_SYM_UNARY = 0
+numeric PARSE_SYM_BINARY = 1
+numeric PARSE_SYM_SPECIAL = 2       -- [], (), etc.

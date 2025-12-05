@@ -1,5 +1,0 @@
-function test(arr[])
-    print(42)
-end
-
-test(0)

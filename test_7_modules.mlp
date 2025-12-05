@@ -1,0 +1,23 @@
+--- Test all 7 working modules together ---
+
+--- Variables ---
+numeric a = 100
+numeric b = 50  
+
+--- Arithmetic ---
+numeric sum = a + b
+
+--- Comparison ---
+boolean greater = ( a > b )
+
+--- Logical ---
+boolean result = greater && true
+
+--- Control flow: if ---
+if a > b then
+    numeric x = 1
+end if
+
+--- Print ---
+print ( "Test complete!" )
+print ( "All 7 modules working" )

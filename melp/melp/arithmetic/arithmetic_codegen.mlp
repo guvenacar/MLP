@@ -1,0 +1,11 @@
+-- ARITHMETIC CODEGEN MODULE - MELP Version
+-- Generates x86-64 assembly for arithmetic expressions
+
+-- Codegen result codes
+numeric CODEGEN_SUCCESS = 0
+numeric CODEGEN_ERROR = 1
+
+-- Register allocation
+numeric REG_R8 = 0
+numeric REG_R9 = 1
+numeric REG_R10 = 2

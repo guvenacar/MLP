@@ -1,6 +1,0 @@
-function ana() then
-    print "Testing get_env()..."
-    print get_env("HOME")
-    print "Done!"
-    return 0
-end

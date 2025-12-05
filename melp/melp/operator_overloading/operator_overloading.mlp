@@ -1,0 +1,51 @@
+-- Operator Overloading Modülü - Operatör Yüklemesi
+-- Custom operators, dispatch, type-specific implementations
+
+-- Operator tipleri
+numeric OP_ADD = 0
+numeric OP_SUB = 1
+numeric OP_MUL = 2
+numeric OP_DIV = 3
+numeric OP_MOD = 4
+numeric OP_EQ = 5
+numeric OP_NE = 6
+numeric OP_LT = 7
+numeric OP_LE = 8
+numeric OP_GT = 9
+numeric OP_GE = 10
+numeric OP_INDEX = 11            -- []
+numeric OP_CALL = 12             -- ()
+numeric OP_ASSIGN = 13           -- =
+numeric OP_UNARY_MINUS = 14      -- -x
+numeric OP_UNARY_PLUS = 15       -- +x
+numeric OP_NOT = 16              -- !
+numeric OP_BIT_AND = 17          -- &
+numeric OP_BIT_OR = 18           -- |
+numeric OP_BIT_XOR = 19          -- ^
+numeric OP_BIT_NOT = 20          -- ~
+numeric OP_LSHIFT = 21           -- <<
+numeric OP_RSHIFT = 22           -- >>
+numeric OP_INCR = 23             -- ++
+numeric OP_DECR = 24             -- --
+
+-- Operator kategorileri
+numeric CAT_ARITHMETIC = 0
+numeric CAT_COMPARISON = 1
+numeric CAT_LOGICAL = 2
+numeric CAT_BITWISE = 3
+numeric CAT_SPECIAL = 4          -- [], (), etc.
+
+-- Dispatch stratejisi
+numeric DISPATCH_STATIC = 0      -- Compile-time
+numeric DISPATCH_DYNAMIC = 1     -- Runtime
+
+-- Overload tipi
+numeric OVERLOAD_MEMBER = 0      -- Type member
+numeric OVERLOAD_FREE = 1        -- Free function
+
+-- Custom operator precedence (1-20)
+numeric PREC_LOWEST = 1
+numeric PREC_LOW = 5
+numeric PREC_MEDIUM = 10
+numeric PREC_HIGH = 15
+numeric PREC_HIGHEST = 20

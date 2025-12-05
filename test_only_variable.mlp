@@ -1,0 +1,4 @@
+numeric x = 42
+numeric y = 100
+text name = "MLP"
+boolean flag = true

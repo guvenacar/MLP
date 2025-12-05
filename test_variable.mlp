@@ -1,0 +1,7 @@
+---
+Variable test
+---
+
+numeric x = 42
+text name = "Ali"
+print("Hello from variable test")

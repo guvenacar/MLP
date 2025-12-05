@@ -1,0 +1,87 @@
+// MINIMAL VARIABLE LANGUAGE (MVL) COMPILER
+// Written in MVL itself - SELF-HOSTING!
+// Compiles MVL programs to x86-64 assembly
+
+// Token types (as integers)
+// 0=EOF, 1=LET, 2=IDENTIFIER, 3=NUMBER, 4=EQUALS, 5=SEMICOLON
+// 6=PLUS, 7=MINUS, 8=STAR, 9=SLASH, 10=LPAREN, 11=RPAREN
+
+fn is_digit(c) {
+    // Check if c is between '0' (48) and '9' (57)
+    if (c < 48) { return 0; }
+    if (c > 57) { return 0; }
+    return 1;
+}
+
+fn is_alpha(c) {
+    // Check if c is A-Z (65-90) or a-z (97-122)
+    if (c >= 65) {
+        if (c <= 90) { return 1; }  // A-Z
+    }
+    if (c >= 97) {
+        if (c <= 122) { return 1; }  // a-z
+    }
+    return 0;
+}
+
+fn is_space(c) {
+    if (c == 32) { return 1; }  // space
+    if (c == 9) { return 1; }   // tab
+    if (c == 10) { return 1; }  // newline
+    if (c == 13) { return 1; }  // carriage return
+    return 0;
+}
+
+// Simple lexer: returns next token type
+// Input: character code
+// Output: token type (0-11)
+fn get_token(c) {
+    // Check for EOF
+    if (c == 0) {
+        return 0;  // EOF
+    }
+    
+    // Check for digits (NUMBER token)
+    if (is_digit(c)) {
+        return 3;  // NUMBER
+    }
+    
+    // Check for letters (IDENTIFIER or LET keyword)
+    if (is_alpha(c)) {
+        return 2;  // IDENTIFIER for now
+    }
+    
+    // Check for operators
+    if (c == 61) { return 4; }   // '=' = 61 -> EQUALS
+    if (c == 59) { return 5; }   // ';' = 59 -> SEMICOLON
+    if (c == 43) { return 6; }   // '+' = 43 -> PLUS
+    if (c == 45) { return 7; }   // '-' = 45 -> MINUS
+    if (c == 42) { return 8; }   // '*' = 42 -> STAR
+    if (c == 47) { return 9; }   // '/' = 47 -> SLASH
+    if (c == 40) { return 10; }  // '(' = 40 -> LPAREN
+    if (c == 41) { return 11; }  // ')' = 41 -> RPAREN
+    
+    return 0;  // Unknown token = EOF
+}
+
+fn compile_mvl() {
+    // Test lexer with different characters
+    let token1 = 0;
+    let token2 = 0;
+    let token3 = 0;
+    
+    token1 = get_token(65);  // 'A' -> should be IDENTIFIER (2)
+    token2 = get_token(53);  // '5' -> should be NUMBER (3)
+    token3 = get_token(43);  // '+' -> should be PLUS (6)
+    
+    print_int(token1);
+    print_int(token2);
+    print_int(token3);
+    
+    return 0;
+}
+
+fn main() {
+    let result = compile_mvl();
+    return result;
+}

@@ -1,0 +1,481 @@
+// lexer_compiler.mlp - Stage 4 Self-Hosting
+// MELP Lexer Compiler written in MELP
+// This file will be compiled by codegen_compiler.c to create a MELP lexer compiler
+// Maximum ~600 lines to maintain modularity
+
+// ============================================
+// TOKEN TYPES
+// ============================================
+
+const TOKEN_EOF = 0
+const TOKEN_ERROR = 1
+
+// Literals
+const TOKEN_IDENTIFIER = 10
+const TOKEN_NUMBER = 11
+const TOKEN_STRING = 12
+
+// Keywords
+const TOKEN_FN = 20
+const TOKEN_LET = 21
+const TOKEN_CONST = 22
+const TOKEN_IF = 23
+const TOKEN_ELSE = 24
+const TOKEN_WHILE = 25
+const TOKEN_FOR = 26
+const TOKEN_RETURN = 27
+const TOKEN_BREAK = 28
+const TOKEN_CONTINUE = 29
+const TOKEN_STRUCT = 30
+const TOKEN_ENUM = 31
+const TOKEN_IMPORT = 32
+const TOKEN_EXPORT = 33
+const TOKEN_DEFER = 34
+const TOKEN_MATCH = 35
+const TOKEN_TRUE = 36
+const TOKEN_FALSE = 37
+const TOKEN_NULL = 38
+
+// Operators
+const TOKEN_PLUS = 50
+const TOKEN_MINUS = 51
+const TOKEN_STAR = 52
+const TOKEN_SLASH = 53
+const TOKEN_PERCENT = 54
+const TOKEN_EQUAL = 55
+const TOKEN_EQ_EQ = 56
+const TOKEN_NOT_EQ = 57
+const TOKEN_LT = 58
+const TOKEN_GT = 59
+const TOKEN_LT_EQ = 60
+const TOKEN_GT_EQ = 61
+const TOKEN_AND_AND = 62
+const TOKEN_OR_OR = 63
+const TOKEN_NOT = 64
+const TOKEN_AMP = 65
+const TOKEN_PIPE = 66
+
+// Delimiters
+const TOKEN_LPAREN = 80
+const TOKEN_RPAREN = 81
+const TOKEN_LBRACE = 82
+const TOKEN_RBRACE = 83
+const TOKEN_LBRACKET = 84
+const TOKEN_RBRACKET = 85
+const TOKEN_COMMA = 86
+const TOKEN_SEMICOLON = 87
+const TOKEN_COLON = 88
+const TOKEN_AT = 89
+const TOKEN_DOT = 72
+
+// ============================================
+// TOKEN STRUCTURE
+// ============================================
+
+struct Token {
+    token_type: i32
+    lexeme: string
+    line: i32
+    column: i32
+    value: i64
+}
+
+// ============================================
+// LEXER STATE
+// ============================================
+
+struct Lexer {
+    source: string
+    length: i32
+    position: i32
+    line: i32
+    column: i32
+    current_char: char
+}
+
+// ============================================
+// KEYWORD TABLE
+// ============================================
+
+fn keyword_type(word: string) -> i32 {
+    // TODO: Implement keyword detection
+    // For now, return IDENTIFIER for everything
+    // String comparison not yet supported in simple_codegen
+    return TOKEN_IDENTIFIER
+}
+
+// ============================================
+// LEXER INITIALIZATION
+// ============================================
+
+fn lexer_init(source: string) -> Lexer {
+    let lex: Lexer
+    lex.source = source
+    lex.length = string_length(source)
+    lex.position = 0
+    lex.line = 1
+    lex.column = 1
+    
+    if lex.length > 0 {
+        lex.current_char = string_char_at(source, 0)
+    } else {
+        lex.current_char = '\0'
+    }
+    
+    return lex
+}
+
+// ============================================
+// LEXER HELPERS
+// ============================================
+
+fn lexer_advance(lex: &Lexer) {
+    if lex.position < lex.length {
+        if lex.current_char == '\n' {
+            lex.line = lex.line + 1
+            lex.column = 1
+        } else {
+            lex.column = lex.column + 1
+        }
+        
+        lex.position = lex.position + 1
+        
+        if lex.position < lex.length {
+            lex.current_char = string_char_at(lex.source, lex.position)
+        } else {
+            lex.current_char = '\0'
+        }
+    }
+}
+
+fn lexer_peek(lex: &Lexer, offset: i32) -> char {
+    let pos = lex.position + offset
+    if pos < lex.length {
+        return string_char_at(lex.source, pos)
+    }
+    return '\0'
+}
+
+fn is_whitespace(c: char) -> bool {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r'
+}
+
+fn is_digit(c: char) -> bool {
+    return c >= '0' && c <= '9'
+}
+
+fn is_alpha(c: char) -> bool {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+fn is_alnum(c: char) -> bool {
+    return is_alpha(c) || is_digit(c)
+}
+
+// ============================================
+// SKIP WHITESPACE AND COMMENTS
+// ============================================
+
+fn lexer_skip_whitespace(lex: &Lexer) {
+    while is_whitespace(lex.current_char) {
+        lexer_advance(lex)
+    }
+}
+
+fn lexer_skip_line_comment(lex: &Lexer) {
+    // Skip //
+    lexer_advance(lex)
+    lexer_advance(lex)
+    
+    while lex.current_char != '\n' && lex.current_char != '\0' {
+        lexer_advance(lex)
+    }
+}
+
+fn lexer_skip_block_comment(lex: &Lexer) {
+    // Skip /*
+    lexer_advance(lex)
+    lexer_advance(lex)
+    
+    while lex.current_char != '\0' {
+        if lex.current_char == '*' && lexer_peek(lex, 1) == '/' {
+            lexer_advance(lex)  // Skip *
+            lexer_advance(lex)  // Skip /
+            return
+        }
+        lexer_advance(lex)
+    }
+}
+
+// ============================================
+// TOKEN CREATION
+// ============================================
+
+fn make_token(token_type: i32, lexeme: string, line: i32, column: i32) -> Token {
+    let tok: Token
+    tok.token_type = token_type
+    tok.lexeme = lexeme
+    tok.line = line
+    tok.column = column
+    tok.value = 0
+    return tok
+}
+
+fn make_number_token(lexeme: string, line: i32, column: i32, value: i64) -> Token {
+    let tok: Token
+    tok.token_type = TOKEN_NUMBER
+    tok.lexeme = lexeme
+    tok.line = line
+    tok.column = column
+    tok.value = value
+    return tok
+}
+
+// ============================================
+// TOKENIZATION - NUMBERS
+// ============================================
+
+fn lexer_read_number(lex: &Lexer) -> Token {
+    let start_line = lex.line
+    let start_col = lex.column
+    let start_pos = lex.position
+    let value: i64 = 0
+    
+    while is_digit(lex.current_char) {
+        let digit = lex.current_char - '0'
+        value = value * 10 + digit
+        lexer_advance(lex)
+    }
+    
+    let length = lex.position - start_pos
+    let lexeme = string_substring(lex.source, start_pos, length)
+    
+    return make_number_token(lexeme, start_line, start_col, value)
+}
+
+// ============================================
+// TOKENIZATION - IDENTIFIERS AND KEYWORDS
+// ============================================
+
+fn lexer_read_identifier(lex: &Lexer) -> Token {
+    let start_line = lex.line
+    let start_col = lex.column
+    let start_pos = lex.position
+    
+    while is_alnum(lex.current_char) {
+        lexer_advance(lex)
+    }
+    
+    let length = lex.position - start_pos
+    let lexeme = string_substring(lex.source, start_pos, length)
+    
+    // Check if it's a keyword
+    let token_type = keyword_type(lexeme)
+    
+    return make_token(token_type, lexeme, start_line, start_col)
+}
+
+// ============================================
+// TOKENIZATION - STRINGS
+// ============================================
+
+fn lexer_read_string(lex: &Lexer) -> Token {
+    let start_line = lex.line
+    let start_col = lex.column
+    
+    lexer_advance(lex)  // Skip opening "
+    
+    let start_pos = lex.position
+    
+    while lex.current_char != '"' && lex.current_char != '\0' {
+        if lex.current_char == '\\' {
+            lexer_advance(lex)  // Skip escape char
+        }
+        lexer_advance(lex)
+    }
+    
+    let length = lex.position - start_pos
+    let lexeme = string_substring(lex.source, start_pos, length)
+    
+    if lex.current_char == '"' {
+        lexer_advance(lex)  // Skip closing "
+    }
+    
+    return make_token(TOKEN_STRING, lexeme, start_line, start_col)
+}
+
+// ============================================
+// MAIN TOKENIZATION FUNCTION
+// ============================================
+
+fn lexer_next_token(lex: &Lexer) -> Token {
+    lexer_skip_whitespace(lex)
+    
+    // Handle comments
+    if lex.current_char == '/' && lexer_peek(lex, 1) == '/' {
+        lexer_skip_line_comment(lex)
+        return lexer_next_token(lex)
+    }
+    
+    if lex.current_char == '/' && lexer_peek(lex, 1) == '*' {
+        lexer_skip_block_comment(lex)
+        return lexer_next_token(lex)
+    }
+    
+    let line = lex.line
+    let col = lex.column
+    let c = lex.current_char
+    
+    // EOF
+    if c == '\0' {
+        return make_token(TOKEN_EOF, "EOF", line, col)
+    }
+    
+    // Numbers
+    if is_digit(c) {
+        return lexer_read_number(lex)
+    }
+    
+    // Identifiers and keywords
+    if is_alpha(c) {
+        return lexer_read_identifier(lex)
+    }
+    
+    // Strings
+    if c == '"' {
+        return lexer_read_string(lex)
+    }
+    
+    // Two-character operators
+    if c == '=' && lexer_peek(lex, 1) == '=' {
+        lexer_advance(lex)
+        lexer_advance(lex)
+        return make_token(TOKEN_EQ_EQ, "==", line, col)
+    }
+    
+    if c == '!' && lexer_peek(lex, 1) == '=' {
+        lexer_advance(lex)
+        lexer_advance(lex)
+        return make_token(TOKEN_NOT_EQ, "!=", line, col)
+    }
+    
+    if c == '<' && lexer_peek(lex, 1) == '=' {
+        lexer_advance(lex)
+        lexer_advance(lex)
+        return make_token(TOKEN_LT_EQ, "<=", line, col)
+    }
+    
+    if c == '>' && lexer_peek(lex, 1) == '=' {
+        lexer_advance(lex)
+        lexer_advance(lex)
+        return make_token(TOKEN_GT_EQ, ">=", line, col)
+    }
+    
+    if c == '&' && lexer_peek(lex, 1) == '&' {
+        lexer_advance(lex)
+        lexer_advance(lex)
+        return make_token(TOKEN_AND_AND, "&&", line, col)
+    }
+    
+    if c == '|' && lexer_peek(lex, 1) == '|' {
+        lexer_advance(lex)
+        lexer_advance(lex)
+        return make_token(TOKEN_OR_OR, "||", line, col)
+    }
+    
+    // Single-character tokens
+    lexer_advance(lex)
+    
+    if c == '+' { return make_token(TOKEN_PLUS, "+", line, col) }
+    if c == '-' { return make_token(TOKEN_MINUS, "-", line, col) }
+    if c == '*' { return make_token(TOKEN_STAR, "*", line, col) }
+    if c == '/' { return make_token(TOKEN_SLASH, "/", line, col) }
+    if c == '%' { return make_token(TOKEN_PERCENT, "%", line, col) }
+    if c == '=' { return make_token(TOKEN_EQUAL, "=", line, col) }
+    if c == '<' { return make_token(TOKEN_LT, "<", line, col) }
+    if c == '>' { return make_token(TOKEN_GT, ">", line, col) }
+    if c == '!' { return make_token(TOKEN_NOT, "!", line, col) }
+    if c == '&' { return make_token(TOKEN_AMP, "&", line, col) }
+    if c == '|' { return make_token(TOKEN_PIPE, "|", line, col) }
+    if c == '(' { return make_token(TOKEN_LPAREN, "(", line, col) }
+    if c == ')' { return make_token(TOKEN_RPAREN, ")", line, col) }
+    if c == '{' { return make_token(TOKEN_LBRACE, "{", line, col) }
+    if c == '}' { return make_token(TOKEN_RBRACE, "}", line, col) }
+    if c == '[' { return make_token(TOKEN_LBRACKET, "[", line, col) }
+    if c == ']' { return make_token(TOKEN_RBRACKET, "]", line, col) }
+    if c == ',' { return make_token(TOKEN_COMMA, ",", line, col) }
+    if c == ';' { return make_token(TOKEN_SEMICOLON, ";", line, col) }
+    if c == ':' { return make_token(TOKEN_COLON, ":", line, col) }
+    if c == '@' { return make_token(TOKEN_AT, "@", line, col) }
+    if c == '.' { return make_token(TOKEN_DOT, ".", line, col) }
+    
+    return make_token(TOKEN_ERROR, "Unknown character", line, col)
+}
+
+// ============================================
+// OUTPUT FUNCTIONS
+// ============================================
+
+fn write_token_header() {
+    print("=== MELP Lexer Token Output ===")
+    print("")
+}
+
+fn write_token(index: i32, tok: Token) {
+    // Format: [0] Type=20, Lexeme="fn", Line=1, Col=1
+    print("[")
+    print_int(index)
+    print("] Type=")
+    print_int(tok.token_type)
+    print(", Lexeme=\"")
+    print(tok.lexeme)
+    print("\", Line=")
+    print_int(tok.line)
+    print(", Col=")
+    print_int(tok.column)
+    
+    if tok.token_type == TOKEN_NUMBER {
+        print(", Value=")
+        print_int(tok.value)
+    }
+    
+    println("")
+}
+
+fn write_token_footer(count: i32) {
+    println("")
+    print("=== Total Tokens: ")
+    print_int(count)
+    println(" ===")
+    println("")
+}
+
+// ============================================
+// MAIN ENTRY POINT
+// ============================================
+
+fn main() {
+    // TODO: Read file from command line arguments
+    // For now, test with a simple string
+    
+    let source = "fn main() { let x = 5; }"
+    let lex = lexer_init(source)
+    
+    write_token_header()
+    
+    let index = 0
+    let tok = lexer_next_token(&lex)
+    
+    while tok.token_type != TOKEN_EOF {
+        write_token(index, tok)
+        index = index + 1
+        tok = lexer_next_token(&lex)
+    }
+    
+    // Write EOF token
+    write_token(index, tok)
+    
+    write_token_footer(index + 1)
+    
+    return 0
+}

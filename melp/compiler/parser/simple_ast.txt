@@ -1,0 +1,11 @@
+=== MELP Parser AST Output ===
+
+[PROGRAM]
+  [FUNC_DECL] name=add
+  [VAR_DECL] name=result
+
+=== Statistics ===
+Functions: 1
+Variables: 1
+Statements: 1
+Total Tokens: 30

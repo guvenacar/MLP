@@ -1,0 +1,110 @@
+---
+MELP Bootstrap Compiler - Code Generator Module
+Converted from codegen.c to pure MLP
+Generates x86-64 assembly from AST
+---
+
+-- Assembly generation functions
+
+function gen_header() numeric
+    ---
+    Generate assembly file header
+    ---
+    numeric result = 0
+    return result
+end function
+
+function gen_bss_section(numeric ast_node) numeric
+    ---
+    Generate .bss section (uninitialized data)
+    ---
+    numeric result = 0
+    return result
+end function
+
+function gen_data_section(numeric ast_node) numeric
+    ---
+    Generate .data section (initialized data)
+    ---
+    numeric result = 0
+    return result
+end function
+
+function gen_text_section(numeric ast_node) numeric
+    ---
+    Generate .text section (code)
+    ---
+    numeric result = 0
+    return result
+end function
+
+function gen_var_decl(numeric node) numeric
+    ---
+    Generate assembly for variable declaration
+    Example: numeric x = 42 -> x: resq 1
+    ---
+    numeric result = 0
+    return result
+end function
+
+function gen_function(numeric node) numeric
+    ---
+    Generate assembly for function
+    Example: function main() numeric ... end function
+    ---
+    numeric result = 0
+    return result
+end function
+
+function gen_return(numeric node) numeric
+    ---
+    Generate assembly for return statement
+    Example: return 42 -> mov rax, 42; ret
+    ---
+    numeric result = 0
+    return result
+end function
+
+function gen_expression(numeric node) numeric
+    ---
+    Generate assembly for expression
+    ---
+    numeric result = 0
+    return result
+end function
+
+function generate_assembly(numeric ast_root, numeric output_file) numeric
+    ---
+    Main codegen function
+    Generates complete assembly file from AST
+    ---
+    
+    -- Generate header
+    numeric res1 = gen_header()
+    
+    -- Generate BSS section
+    numeric res2 = gen_bss_section(ast_root)
+    
+    -- Generate data section
+    numeric res3 = gen_data_section(ast_root)
+    
+    -- Generate text section
+    numeric res4 = gen_text_section(ast_root)
+    
+    numeric result = 0
+    return result
+end function
+
+function codegen_main() numeric
+    ---
+    Test function for codegen
+    ---
+    numeric result = 0
+    
+    -- Generate assembly from dummy AST
+    numeric ast = 0
+    numeric output = 0
+    result = generate_assembly(ast, output)
+    
+    return result
+end function

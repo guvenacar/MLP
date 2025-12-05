@@ -1,3 +1,0 @@
--- Minimal test without lambda
-numeric x = 42
-print "Value: " + str(x)

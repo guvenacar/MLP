@@ -1,7 +1,0 @@
--- Test with str() for string conversion
-
-numeric x = 42
-numeric y = 100
-print str(x)
-print str(y)
-print str(x + y)

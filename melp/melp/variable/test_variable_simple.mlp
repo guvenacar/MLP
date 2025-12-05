@@ -1,0 +1,5 @@
+-- Test variable declarations in MELP Stage 1
+-- Simple variable test
+
+numeric x = 42
+numeric y = 100

@@ -1,0 +1,6 @@
+// Simple test program
+fn add(x: i32, y: i32) -> i32 {
+    return x + y
+}
+
+let result = add(10, 20)

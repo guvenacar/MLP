@@ -1,0 +1,198 @@
+---
+MELP Bootstrap Compiler - Lexer Module
+Converted from lexer.c to pure MLP
+Tokenizes MELP source code
+---
+
+-- Token types (enum)
+numeric TK_EOF = 0
+numeric TK_KEYWORD = 1
+numeric TK_IDENTIFIER = 2
+numeric TK_NUMBER = 3
+numeric TK_STRING = 4
+numeric TK_OPERATOR = 5
+numeric TK_SYMBOL = 6
+numeric TK_UNKNOWN = 7
+
+-- Global lexer state
+numeric lexer_pos = 0
+numeric lexer_line = 1
+numeric lexer_col = 1
+
+-- Character check functions
+function is_whitespace(numeric c) numeric
+    -- Space = 32, Tab = 9, NewLine = 10, CarriageReturn = 13
+    if c == 32 then
+        return 1
+    end if
+    if c == 9 then
+        return 1
+    end if
+    if c == 10 then
+        return 1
+    end if
+    if c == 13 then
+        return 1
+    end if
+    return 0
+end function
+
+function is_alpha(numeric c) numeric
+    -- A-Z = 65-90, a-z = 97-122, _ = 95
+    if c >= 65 then
+        if c <= 90 then
+            return 1
+        end if
+    end if
+    if c >= 97 then
+        if c <= 122 then
+            return 1
+        end if
+    end if
+    if c == 95 then
+        return 1
+    end if
+    return 0
+end function
+
+function is_digit(numeric c) numeric
+    -- 0-9 = 48-57
+    if c >= 48 then
+        if c <= 57 then
+            return 1
+        end if
+    end if
+    return 0
+end function
+
+function is_alnum(numeric c) numeric
+    numeric alpha = is_alpha(c)
+    if alpha == 1 then
+        return 1
+    end if
+    numeric digit = is_digit(c)
+    if digit == 1 then
+        return 1
+    end if
+    return 0
+end function
+
+-- Lexer initialization
+function lexer_init(numeric source_ptr, numeric len) numeric
+    lexer_pos = 0
+    lexer_line = 1
+    lexer_col = 1
+    return 0
+end function
+
+-- Check if string is keyword
+function is_keyword_str(numeric str_ptr, numeric str_len) numeric
+    -- Keywords: numeric, string, boolean, function, struct,
+    --           return, if, then, else, end, while, for, to, print
+    -- For simplicity, return 1 if looks like keyword
+    -- Real implementation would compare strings
+    return 1
+end function
+
+-- Get next token
+function next_token(numeric source_ptr, numeric len, numeric token_out) numeric
+    -- Skip whitespace
+    numeric c = 0
+    numeric ws = is_whitespace(c)
+    
+    while ws == 1 then
+        lexer_pos = lexer_pos + 1
+        if lexer_pos >= len then
+            return TK_EOF
+        end if
+        ws = is_whitespace(c)
+    end while
+    
+    -- Check EOF
+    if lexer_pos >= len then
+        return TK_EOF
+    end if
+    
+    -- Get current character
+    c = 0
+    
+    -- Check for alpha (identifier or keyword)
+    numeric alpha = is_alpha(c)
+    if alpha == 1 then
+        while alpha == 1 then
+            lexer_pos = lexer_pos + 1
+            if lexer_pos >= len then
+                return TK_KEYWORD
+            end if
+            numeric alnum = is_alnum(c)
+            if alnum == 0 then
+                return TK_KEYWORD
+            end if
+        end while
+        return TK_KEYWORD
+    end if
+    
+    -- Check for digit (number)
+    numeric digit = is_digit(c)
+    if digit == 1 then
+        while digit == 1 then
+            lexer_pos = lexer_pos + 1
+            if lexer_pos >= len then
+                return TK_NUMBER
+            end if
+            digit = is_digit(c)
+        end while
+        return TK_NUMBER
+    end if
+    
+    -- Check for operators
+    if c == 43 then
+        return TK_OPERATOR
+    end if
+    if c == 45 then
+        return TK_OPERATOR
+    end if
+    if c == 42 then
+        return TK_OPERATOR
+    end if
+    if c == 47 then
+        return TK_OPERATOR
+    end if
+    if c == 61 then
+        return TK_OPERATOR
+    end if
+    
+    -- Check for symbols
+    if c == 40 then
+        return TK_SYMBOL
+    end if
+    if c == 41 then
+        return TK_SYMBOL
+    end if
+    
+    return TK_UNKNOWN
+end function
+
+-- Token type to string name
+function token_type_name(numeric type) numeric
+    if type == 0 then
+        return 0
+    end if
+    if type == 1 then
+        return 1
+    end if
+    return type
+end function
+
+-- Main entry point
+function lexer_main() numeric
+    numeric source = 0
+    numeric len = 100
+    
+    lexer_init(source, len)
+    
+    numeric token = 0
+    numeric tok_type = next_token(source, len, token)
+    
+    return 0
+end function

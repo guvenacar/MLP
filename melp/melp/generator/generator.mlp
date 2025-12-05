@@ -1,0 +1,28 @@
+-- Generator Modülü - Tembel Değerlendirme
+-- Yield ile state machine tabanlı iterasyon
+
+-- Generator durumları
+numeric GEN_CREATED = 0         -- Oluşturuldu
+numeric GEN_RUNNING = 1         -- Çalışıyor
+numeric GEN_SUSPENDED = 2       -- Durduruldu (yield)
+numeric GEN_FINISHED = 3        -- Tamamlandı
+
+-- Yield tipleri
+numeric YIELD_VALUE = 0         -- Tek değer yield et
+numeric YIELD_FROM = 1          -- Başka generator'dan yield et (yield*)
+
+-- Generator çağrı tipleri
+numeric CALL_NEXT = 0           -- next() - sonraki değer
+numeric CALL_SEND = 1           -- send(value) - değer gönder
+numeric CALL_THROW = 2          -- throw(error) - hata fırlat
+numeric CALL_CLOSE = 3          -- close() - generator'ı kapat
+
+-- Iterator protokolü
+numeric ITER_HAS_NEXT = 0       -- Daha eleman var mı?
+numeric ITER_NEXT = 1           -- Sonraki elemana geç
+numeric ITER_CURRENT = 2        -- Mevcut elemanı al
+
+-- Context boyutları
+numeric CTX_STATE_SIZE = 4      -- State field (int)
+numeric CTX_RESUME_SIZE = 4     -- Resume point (int)
+numeric CTX_VALUE_SIZE = 8      -- Current value (pointer)

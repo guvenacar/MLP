@@ -1,0 +1,14 @@
+-- Test: MLP struct support
+
+struct Token
+    numeric type
+    text value
+    numeric line
+end struct
+
+function test_struct() numeric
+    print("Struct test OK")
+    return 0
+end function
+
+test_struct()

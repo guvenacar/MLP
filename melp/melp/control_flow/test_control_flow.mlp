@@ -1,0 +1,28 @@
+-- Test control flow in MELP Stage 1
+-- if/then/else/end if structures
+
+-- Test 1: if with greater than
+numeric x = 10;
+numeric result = 0;
+
+if x > 5 then
+    numeric result = 100;
+end if
+
+-- Test 2: if/else with less than  
+numeric a = 3;
+numeric b = 0;
+
+if a < 5 then
+    numeric b = 1;
+else
+    numeric b = 2;
+end if
+
+-- Test 3: if with equality
+numeric c = 42;
+numeric d = 0;
+
+if c == 42 then
+    numeric d = 99;
+end if

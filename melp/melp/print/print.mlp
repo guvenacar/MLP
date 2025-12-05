@@ -1,0 +1,3 @@
+numeric PRINT_STRING = 0
+numeric PRINT_NUMBER = 1
+numeric PRINT_VARIABLE = 2

@@ -1,7 +1,0 @@
-// Phase 7.1: Lambda Functions Test
-// Simple lambda with arrow syntax
-
-// Test 1: Simple arrow lambda
-function double = lambda(x) => x * 2
-numeric result = double(5)
-print result  // Should print 10

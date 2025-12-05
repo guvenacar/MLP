@@ -1,0 +1,3 @@
+numeric VAR_DECL = 0
+numeric VAR_ASSIGN = 1
+numeric VAR_ACCESS = 2

@@ -1,0 +1,10 @@
+--- Test While Loop ---
+
+numeric counter = 0
+
+while counter < 5
+    print("Counter is less than 5")
+    counter = counter + 1
+end while
+
+print("Done!")

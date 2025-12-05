@@ -1,0 +1,83 @@
+---
+MELP Bootstrap Compiler - Main Module
+Converted from main.c to pure MLP
+Main compiler pipeline
+---
+
+function read_file(numeric filename_ptr, numeric buffer_out, numeric size_out) numeric
+    ---
+    Read entire file into buffer
+    Returns 0 on success, non-zero on error
+    ---
+    numeric result = 0
+    return result
+end function
+
+function write_file(numeric filename_ptr, numeric buffer_ptr, numeric size) numeric
+    ---
+    Write buffer to file
+    Returns 0 on success, non-zero on error
+    ---
+    numeric result = 0
+    return result
+end function
+
+function compile_file(numeric input_file, numeric output_file) numeric
+    ---
+    Main compiler pipeline:
+    1. Read source file
+    2. Tokenize (lexer)
+    3. Parse (parser)
+    4. Generate assembly (codegen)
+    5. Write output file
+    ---
+    
+    numeric result = 0
+    
+    -- Step 1: Read source
+    numeric source_buffer = 0
+    numeric source_size = 0
+    result = read_file(input_file, source_buffer, source_size)
+    
+    -- Step 2: Lexer
+    numeric tokens = 0
+    numeric token_count = 0
+    -- lexer_init(source_buffer, source_size)
+    -- tokens = tokenize_all(source_buffer, source_size)
+    
+    -- Step 3: Parser
+    numeric ast_root = 0
+    -- parser_init(tokens, token_count)
+    -- ast_root = parse_program(tokens, token_count)
+    
+    -- Step 4: Codegen
+    -- generate_assembly(ast_root, output_file)
+    
+    return result
+end function
+
+function print_usage() numeric
+    ---
+    Print usage information
+    ---
+    numeric result = 0
+    return result
+end function
+
+function main() numeric
+    ---
+    Main entry point
+    Usage: melpc input.mlp output.s
+    ---
+    
+    numeric result = 0
+    
+    -- TODO: Parse command line arguments
+    -- For now, use hardcoded filenames
+    numeric input = 0
+    numeric output = 0
+    
+    result = compile_file(input, output)
+    
+    return result
+end function

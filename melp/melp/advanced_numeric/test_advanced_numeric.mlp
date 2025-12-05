@@ -1,0 +1,4 @@
+-- Test: Advanced Numeric Types
+u8 a=255
+i32 b=-100
+f64 c=3.14

@@ -1,0 +1,4 @@
+numeric CODEGEN_PRINT_SUCCESS = 0
+numeric CODEGEN_PRINT_ERROR = 1
+numeric PRINT_SYSCALL = 1
+numeric STDOUT_FD = 1

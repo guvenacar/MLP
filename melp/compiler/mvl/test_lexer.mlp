@@ -1,0 +1,19 @@
+fn test_is_digit() {
+    let result = 0;
+    result = 65 >= 48 & 65 <= 57;  // 'A' (65) is digit?
+    print_int(result);
+    return 0;
+}
+
+fn test_is_alpha() {
+    let result = 0;
+    result = (65 >= 65 & 65 <= 90) | (65 >= 97 & 65 <= 122);  // 'A' (65) is alpha?
+    print_int(result);
+    return 0;
+}
+
+fn main() {
+    test_is_digit();   // Should print 0 (false)
+    test_is_alpha();   // Should print 1 (true)
+    return 0;
+}

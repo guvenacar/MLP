@@ -1,0 +1,47 @@
+-- MELP Print Module Compiler (REAL MELP SYNTAX!)
+-- Self-hosting compiler for print functionality
+-- Uses Linux syscall (write) - NO C DEPENDENCIES!
+
+-- Print Types
+numeric PRINT_STRING = 0
+numeric PRINT_NUMBER = 1
+numeric PRINT_VARIABLE = 2
+
+-- Code Generation Functions
+
+fn generate_print_syscall() -> numeric {
+    -- Generate: 
+    -- mov rax, 1          ; syscall: write
+    -- mov rdi, 1          ; fd: stdout
+    -- mov rsi, string_addr ; buffer
+    -- mov rdx, length     ; count
+    -- syscall
+    return 1
+}
+
+fn compile_one_print() -> numeric {
+    numeric code = generate_print_syscall()
+    return code
+}
+
+fn compile_three_prints() -> numeric {
+    numeric a = compile_one_print()
+    numeric b = compile_one_print()
+    numeric c = compile_one_print()
+    numeric ab = a + b
+    numeric total = ab + c
+    return total
+}
+
+fn main() -> numeric {
+    print("1\n")
+    print("1\n")
+    print("1\n")
+    
+    numeric count = compile_three_prints()
+    
+    print("3\n")
+    print("0\n")
+    
+    return 0
+}

@@ -1,0 +1,417 @@
+=== MELP Memory Analysis Report ===
+
+GC Mode: Automatic
+Max Scope Depth: 21
+
+=== Allocations (50 total) ===
+[0] keyword_type:
+    Type: STACK
+    Lifetime: line 4
+    Escapes: NO
+    Scope depth: 1
+    GC Hint: stack
+
+[1] lexer_init:
+    Type: STACK
+    Lifetime: line 5
+    Escapes: NO
+    Scope depth: 2
+    GC Hint: stack
+
+[2] lex:
+    Type: STACK
+    Lifetime: line 6
+    Escapes: NO
+    Scope depth: 2
+    GC Hint: stack
+
+[3] lexer_advance:
+    Type: STACK
+    Lifetime: line 7
+    Escapes: NO
+    Scope depth: 3
+    GC Hint: stack
+
+[4] lexer_peek:
+    Type: STACK
+    Lifetime: line 8
+    Escapes: NO
+    Scope depth: 4
+    GC Hint: stack
+
+[5] pos:
+    Type: STACK
+    Lifetime: line 9
+    Escapes: NO
+    Scope depth: 4
+    GC Hint: stack
+
+[6] is_whitespace:
+    Type: STACK
+    Lifetime: line 10
+    Escapes: NO
+    Scope depth: 5
+    GC Hint: stack
+
+[7] is_digit:
+    Type: STACK
+    Lifetime: line 11
+    Escapes: NO
+    Scope depth: 6
+    GC Hint: stack
+
+[8] is_alpha:
+    Type: STACK
+    Lifetime: line 12
+    Escapes: NO
+    Scope depth: 7
+    GC Hint: stack
+
+[9] is_alnum:
+    Type: STACK
+    Lifetime: line 13
+    Escapes: NO
+    Scope depth: 8
+    GC Hint: stack
+
+[10] lexer_skip_whitespace:
+    Type: STACK
+    Lifetime: line 14
+    Escapes: NO
+    Scope depth: 9
+    GC Hint: stack
+
+[11] lexer_skip_line_comment:
+    Type: STACK
+    Lifetime: line 15
+    Escapes: NO
+    Scope depth: 10
+    GC Hint: stack
+
+[12] lexer_skip_block_comment:
+    Type: STACK
+    Lifetime: line 16
+    Escapes: NO
+    Scope depth: 11
+    GC Hint: stack
+
+[13] make_token:
+    Type: STACK
+    Lifetime: line 17
+    Escapes: NO
+    Scope depth: 12
+    GC Hint: stack
+
+[14] tok:
+    Type: STACK
+    Lifetime: line 18
+    Escapes: NO
+    Scope depth: 12
+    GC Hint: stack
+
+[15] make_number_token:
+    Type: STACK
+    Lifetime: line 19
+    Escapes: NO
+    Scope depth: 13
+    GC Hint: stack
+
+[16] tok:
+    Type: STACK
+    Lifetime: line 20
+    Escapes: NO
+    Scope depth: 13
+    GC Hint: stack
+
+[17] lexer_read_number:
+    Type: STACK
+    Lifetime: line 21
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[18] start_line:
+    Type: STACK
+    Lifetime: line 22
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[19] start_col:
+    Type: STACK
+    Lifetime: line 23
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[20] start_pos:
+    Type: STACK
+    Lifetime: line 24
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[21] value:
+    Type: STACK
+    Lifetime: line 25
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[22] digit:
+    Type: STACK
+    Lifetime: line 26
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[23] length:
+    Type: STACK
+    Lifetime: line 27
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[24] lexeme:
+    Type: STACK
+    Lifetime: line 28
+    Escapes: NO
+    Scope depth: 14
+    GC Hint: stack
+
+[25] lexer_read_identifier:
+    Type: STACK
+    Lifetime: line 29
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[26] start_line:
+    Type: STACK
+    Lifetime: line 30
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[27] start_col:
+    Type: STACK
+    Lifetime: line 31
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[28] start_pos:
+    Type: STACK
+    Lifetime: line 32
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[29] length:
+    Type: STACK
+    Lifetime: line 33
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[30] lexeme:
+    Type: STACK
+    Lifetime: line 34
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[31] token_type:
+    Type: STACK
+    Lifetime: line 35
+    Escapes: NO
+    Scope depth: 15
+    GC Hint: stack
+
+[32] lexer_read_string:
+    Type: STACK
+    Lifetime: line 36
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[33] start_line:
+    Type: STACK
+    Lifetime: line 37
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[34] start_col:
+    Type: STACK
+    Lifetime: line 38
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[35] start_pos:
+    Type: STACK
+    Lifetime: line 39
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[36] length:
+    Type: STACK
+    Lifetime: line 40
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[37] lexeme:
+    Type: STACK
+    Lifetime: line 41
+    Escapes: NO
+    Scope depth: 16
+    GC Hint: stack
+
+[38] lexer_next_token:
+    Type: STACK
+    Lifetime: line 42
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[39] line:
+    Type: STACK
+    Lifetime: line 43
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[40] col:
+    Type: STACK
+    Lifetime: line 44
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[41] c:
+    Type: STACK
+    Lifetime: line 45
+    Escapes: NO
+    Scope depth: 17
+    GC Hint: stack
+
+[42] write_token_header:
+    Type: STACK
+    Lifetime: line 46
+    Escapes: NO
+    Scope depth: 18
+    GC Hint: stack
+
+[43] write_token:
+    Type: STACK
+    Lifetime: line 47
+    Escapes: NO
+    Scope depth: 19
+    GC Hint: stack
+
+[44] write_token_footer:
+    Type: STACK
+    Lifetime: line 48
+    Escapes: NO
+    Scope depth: 20
+    GC Hint: stack
+
+[45] main:
+    Type: STACK
+    Lifetime: line 49
+    Escapes: NO
+    Scope depth: 21
+    GC Hint: stack
+
+[46] source:
+    Type: STACK
+    Lifetime: line 50
+    Escapes: NO
+    Scope depth: 21
+    GC Hint: stack
+
+[47] lex:
+    Type: STACK
+    Lifetime: line 51
+    Escapes: NO
+    Scope depth: 21
+    GC Hint: stack
+
+[48] index:
+    Type: STACK
+    Lifetime: line 52
+    Escapes: NO
+    Scope depth: 21
+    GC Hint: stack
+
+[49] tok:
+    Type: STACK
+    Lifetime: line 53
+    Escapes: NO
+    Scope depth: 21
+    GC Hint: stack
+
+=== Statistics ===
+Stack allocations: 50
+Heap allocations (GC): 0
+Escaping variables: 0
+Memory operations: 50
+
+=== Memory Operations ===
+[0] ALLOC: keyword_type at line 4
+[1] ALLOC: lexer_init at line 5
+[2] ALLOC: lex at line 6
+[3] ALLOC: lexer_advance at line 7
+[4] ALLOC: lexer_peek at line 8
+[5] ALLOC: pos at line 9
+[6] ALLOC: is_whitespace at line 10
+[7] ALLOC: is_digit at line 11
+[8] ALLOC: is_alpha at line 12
+[9] ALLOC: is_alnum at line 13
+[10] ALLOC: lexer_skip_whitespace at line 14
+[11] ALLOC: lexer_skip_line_comment at line 15
+[12] ALLOC: lexer_skip_block_comment at line 16
+[13] ALLOC: make_token at line 17
+[14] ALLOC: tok at line 18
+[15] ALLOC: make_number_token at line 19
+[16] ALLOC: tok at line 20
+[17] ALLOC: lexer_read_number at line 21
+[18] ALLOC: start_line at line 22
+[19] ALLOC: start_col at line 23
+[20] ALLOC: start_pos at line 24
+[21] ALLOC: value at line 25
+[22] ALLOC: digit at line 26
+[23] ALLOC: length at line 27
+[24] ALLOC: lexeme at line 28
+[25] ALLOC: lexer_read_identifier at line 29
+[26] ALLOC: start_line at line 30
+[27] ALLOC: start_col at line 31
+[28] ALLOC: start_pos at line 32
+[29] ALLOC: length at line 33
+[30] ALLOC: lexeme at line 34
+[31] ALLOC: token_type at line 35
+[32] ALLOC: lexer_read_string at line 36
+[33] ALLOC: start_line at line 37
+[34] ALLOC: start_col at line 38
+[35] ALLOC: start_pos at line 39
+[36] ALLOC: length at line 40
+[37] ALLOC: lexeme at line 41
+[38] ALLOC: lexer_next_token at line 42
+[39] ALLOC: line at line 43
+[40] ALLOC: col at line 44
+[41] ALLOC: c at line 45
+[42] ALLOC: write_token_header at line 46
+[43] ALLOC: write_token at line 47
+[44] ALLOC: write_token_footer at line 48
+[45] ALLOC: main at line 49
+[46] ALLOC: source at line 50
+[47] ALLOC: lex at line 51
+[48] ALLOC: index at line 52
+[49] ALLOC: tok at line 53
+
+=== GC Integration Hints ===
+Replace malloc() with gc_alloc() for 0 heap allocations
+Stack variables require no GC management

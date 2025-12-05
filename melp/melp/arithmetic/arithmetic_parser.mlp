@@ -1,0 +1,32 @@
+-- ARITHMETIC PARSER MODULE - MELP Version
+-- Parses arithmetic expressions with operator precedence
+
+-- Parse result codes
+numeric PARSE_SUCCESS = 0
+numeric PARSE_ERROR = 1
+
+-- Expression types
+numeric EXPR_PRIMARY = 0
+numeric EXPR_BINARY = 1
+
+
+// Parse assignment: varname = expression
+fn arithmetic_parse_assignment() {
+    // Simplified: Returns 1 for success
+    // Full implementation would:
+    // 1. Parse variable name (IDENTIFIER)
+    // 2. Expect '=' token
+    // 3. Parse expression
+    // 4. Return variable name and expression
+    return 1;
+}
+
+fn arithmetic_parser_test() {
+    let expr_result = arithmetic_parse_expression();
+    let assign_result = arithmetic_parse_assignment();
+    
+    print_int(expr_result);    // Should print 1
+    print_int(assign_result);  // Should print 1
+    
+    return 0;
+}

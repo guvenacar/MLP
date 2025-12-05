@@ -1,0 +1,3 @@
+numeric PRINT_STMT = 20
+numeric PRINT_EXPR = 21
+numeric PRINT_NEWLINE = 22

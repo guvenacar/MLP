@@ -1,0 +1,169 @@
+-- ============================================================================
+-- STRING_OPS MODULE - MLP Implementation
+-- ============================================================================
+-- This module handles string operations and string literal management
+-- Self-hosting version (written in MLP, compiles to assembly)
+
+-- String operation type constants
+numeric STR_OP_CONCAT = 0
+numeric STR_OP_LENGTH = 1
+numeric STR_OP_SUBSTR = 2
+numeric STR_OP_SPLIT = 3
+numeric STR_OP_REPLACE = 4
+numeric STR_OP_TRIM = 5
+numeric STR_OP_UPPER = 6
+numeric STR_OP_LOWER = 7
+numeric STR_OP_CONTAINS = 8
+numeric STR_OP_INDEXOF = 9
+numeric STR_OP_COMPARE = 10
+
+-- ============================================================================
+-- STRING LITERAL MANAGEMENT
+-- ============================================================================
+
+-- String literal info structure
+struct StringLiteralInfo
+    text value
+    numeric id
+end struct
+
+-- Global string literal registry
+numeric MAX_STRING_LITERALS = 256
+state StringLiteralInfo[] string_literals
+state numeric string_literal_count = 0
+
+-- Add string literal to registry and return its ID
+function add_string_literal(text value)
+    -- Check if already exists
+    for i = 0 to string_literal_count - 1
+        if str_equal(string_literals[i].value, value) then
+            return string_literals[i].id
+        end if
+    end for
+    
+    -- Add new literal
+    if string_literal_count >= MAX_STRING_LITERALS then
+        return -1
+    end if
+    
+    numeric new_id = string_literal_count
+    string_literals[string_literal_count].value = value
+    string_literals[string_literal_count].id = new_id
+    string_literal_count = string_literal_count + 1
+    
+    return new_id
+end function
+
+-- Output collected string literals to data section
+function output_string_literals(numeric file_handle)
+    for i = 0 to string_literal_count - 1
+        text line = "    str_lit_" + str(string_literals[i].id) + " db \"" + string_literals[i].value + "\", 0"
+        write_line(file_handle, line)
+    end for
+end function
+
+-- ============================================================================
+-- STRING HELPER FUNCTIONS (Assembly code generation)
+-- ============================================================================
+
+-- Generate str_compare helper function
+function generate_str_compare_function(numeric file_handle)
+    write_line(file_handle, "")
+    write_line(file_handle, "; String compare: rdi = str1, rsi = str2, returns 1 if equal, 0 if not")
+    write_line(file_handle, "str_compare:")
+    write_line(file_handle, "    push rcx")
+    write_line(file_handle, "    push rdx")
+    write_line(file_handle, "    xor rcx, rcx")
+    write_line(file_handle, ".compare_loop:")
+    write_line(file_handle, "    mov al, [rdi + rcx]")
+    write_line(file_handle, "    mov dl, [rsi + rcx]")
+    write_line(file_handle, "    cmp al, dl")
+    write_line(file_handle, "    jne .compare_not_equal")
+    write_line(file_handle, "    test al, al")
+    write_line(file_handle, "    jz .compare_equal")
+    write_line(file_handle, "    inc rcx")
+    write_line(file_handle, "    jmp .compare_loop")
+    write_line(file_handle, ".compare_equal:")
+    write_line(file_handle, "    mov rax, 1")
+    write_line(file_handle, "    pop rdx")
+    write_line(file_handle, "    pop rcx")
+    write_line(file_handle, "    ret")
+    write_line(file_handle, ".compare_not_equal:")
+    write_line(file_handle, "    xor rax, rax")
+    write_line(file_handle, "    pop rdx")
+    write_line(file_handle, "    pop rcx")
+    write_line(file_handle, "    ret")
+end function
+
+-- Generate str_indexof helper function
+function generate_str_indexof_function(numeric file_handle)
+    write_line(file_handle, "")
+    write_line(file_handle, "; String indexOf: rdi = haystack, rsi = needle, returns index or -1")
+    write_line(file_handle, "str_indexof:")
+    write_line(file_handle, "    push rbx")
+    write_line(file_handle, "    push rcx")
+    write_line(file_handle, "    push rdx")
+    write_line(file_handle, "    push r8")
+    write_line(file_handle, "    push r9")
+    write_line(file_handle, "    mov r8, rdi")
+    write_line(file_handle, "    mov r9, rsi")
+    write_line(file_handle, "    mov rax, rsi")
+    write_line(file_handle, "    call str_length")
+    write_line(file_handle, "    mov rbx, rax")
+    write_line(file_handle, "    test rbx, rbx")
+    write_line(file_handle, "    jz .indexof_empty_needle")
+    write_line(file_handle, "    xor rcx, rcx")
+    write_line(file_handle, ".indexof_outer:")
+    write_line(file_handle, "    mov al, [r8 + rcx]")
+    write_line(file_handle, "    test al, al")
+    write_line(file_handle, "    jz .indexof_not_found")
+    write_line(file_handle, "    xor rdx, rdx")
+    write_line(file_handle, ".indexof_inner:")
+    write_line(file_handle, "    cmp rdx, rbx")
+    write_line(file_handle, "    je .indexof_found")
+    write_line(file_handle, "    mov rax, rcx")
+    write_line(file_handle, "    add rax, rdx")
+    write_line(file_handle, "    mov al, [r8 + rax]")
+    write_line(file_handle, "    mov r10b, [r9 + rdx]")
+    write_line(file_handle, "    cmp al, r10b")
+    write_line(file_handle, "    jne .indexof_next")
+    write_line(file_handle, "    inc rdx")
+    write_line(file_handle, "    jmp .indexof_inner")
+    write_line(file_handle, ".indexof_next:")
+    write_line(file_handle, "    inc rcx")
+    write_line(file_handle, "    jmp .indexof_outer")
+    write_line(file_handle, ".indexof_found:")
+    write_line(file_handle, "    mov rax, rcx")
+    write_line(file_handle, "    pop r9")
+    write_line(file_handle, "    pop r8")
+    write_line(file_handle, "    pop rdx")
+    write_line(file_handle, "    pop rcx")
+    write_line(file_handle, "    pop rbx")
+    write_line(file_handle, "    ret")
+    write_line(file_handle, ".indexof_not_found:")
+    write_line(file_handle, "    mov rax, -1")
+    write_line(file_handle, "    pop r9")
+    write_line(file_handle, "    pop r8")
+    write_line(file_handle, "    pop rdx")
+    write_line(file_handle, "    pop rcx")
+    write_line(file_handle, "    pop rbx")
+    write_line(file_handle, "    ret")
+    write_line(file_handle, ".indexof_empty_needle:")
+    write_line(file_handle, "    xor rax, rax")
+    write_line(file_handle, "    pop r9")
+    write_line(file_handle, "    pop r8")
+    write_line(file_handle, "    pop rdx")
+    write_line(file_handle, "    pop rcx")
+    write_line(file_handle, "    pop rbx")
+    write_line(file_handle, "    ret")
+end function
+
+-- Generate all string helper functions
+function string_ops_generate_helpers(numeric file_handle)
+    generate_str_length_function(file_handle)
+    generate_str_char_at_function(file_handle)
+    generate_str_concat_function(file_handle)
+    generate_str_substr_function(file_handle)
+    generate_str_compare_function(file_handle)
+    generate_str_indexof_function(file_handle)
+end function

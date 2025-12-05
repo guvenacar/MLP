@@ -1,0 +1,2 @@
+-- Test: Unsafe Blocks
+unsafe raw_ptr=0x1000

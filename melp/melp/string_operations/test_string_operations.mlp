@@ -1,0 +1,3 @@
+-- Test: String Operations
+text s="hello"+" world"
+numeric len=s.length()

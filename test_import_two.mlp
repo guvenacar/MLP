@@ -1,8 +1,0 @@
--- Test two imports
-
-import "compiler_core/token_types.mlp"
-import "compiler_core/ast/ast_nodes.mlp"
-
-function main()
-    print "OK"
-end_function

@@ -1,0 +1,7 @@
+// test_router.mlp - Router modülü için test
+// Test: Basit bir program derleyip assembly üretebiliyor muyuz?
+
+func main() -> i32 {
+    print("Router module compiled");
+    return 0;
+}

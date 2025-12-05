@@ -1,0 +1,2 @@
+-- Test: Smart Pointers
+Unique<numeric> p=make_unique(42)

@@ -1,5 +1,0 @@
-// Test circular imports
-import "examples/circular_a.mlp"
-
-print "A: {a_value}"
-print "B: {b_value}"

@@ -1,0 +1,20 @@
+-- Test comparison operators in MELP Stage 1
+-- All 6 comparison operators: == != < <= > >=
+
+-- Test equal
+boolean is_equal = 10 == 10;
+
+-- Test not equal
+boolean is_not_equal = 10 != 5;
+
+-- Test less than
+boolean is_less = 5 < 10;
+
+-- Test less than or equal
+boolean is_less_equal = 10 <= 10;
+
+-- Test greater than
+boolean is_greater = 20 > 15;
+
+-- Test greater than or equal
+boolean is_greater_equal = 15 >= 15;

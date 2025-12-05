@@ -1,0 +1,345 @@
+// Memory Module for MELP Compiler
+// Handles memory management analysis and GC hints
+// Maximum ~300 lines to stay within AI token limits
+
+// ============================================
+// MEMORY OPERATION TYPES
+// ============================================
+
+const MEM_OP_ALLOC = 0      // malloc, new
+const MEM_OP_FREE = 1       // free, delete
+const MEM_OP_REF = 2        // reference copy
+const MEM_OP_DEREF = 3      // dereference
+const MEM_OP_DEFER = 4      // defer statement
+
+// ============================================
+// ALLOCATION TYPES
+// ============================================
+
+const ALLOC_STACK = 0       // Stack allocation
+const ALLOC_HEAP = 1        // Heap allocation
+const ALLOC_STATIC = 2      // Static allocation
+const ALLOC_UNKNOWN = 3     // Unknown/undecided
+
+// ============================================
+// GC HINTS
+// ============================================
+
+const GC_NONE = 0           // No GC management
+const GC_MANUAL = 1         // Manual memory management
+const GC_AUTO = 2           // Automatic GC
+const GC_REFCOUNT = 3       // Reference counting
+
+// ============================================
+// MEMORY TRACKING STRUCTURES
+// ============================================
+
+struct MemoryAllocation {
+    name: string
+    type: i32              // ALLOC_STACK, ALLOC_HEAP, etc.
+    size: i64
+    lifetime_start: i32    // Line number
+    lifetime_end: i32      // Line number
+    escapes: bool          // Does it escape current scope?
+    ref_count: i32         // Reference count hint
+}
+
+struct MemoryOperation {
+    type: i32              // MEM_OP_ALLOC, MEM_OP_FREE, etc.
+    allocation: string     // Name of allocation
+    line: i32
+    column: i32
+}
+
+struct MemoryContext {
+    allocations: [MemoryAllocation]
+    operations: [MemoryOperation]
+    current_scope_depth: i32
+    gc_mode: i32           // GC_NONE, GC_AUTO, etc.
+}
+
+// ============================================
+// MEMORY CONTEXT FUNCTIONS
+// ============================================
+
+fn memory_context_init() -> MemoryContext {
+    let ctx: MemoryContext
+    ctx.current_scope_depth = 0
+    ctx.gc_mode = GC_MANUAL
+    return ctx
+}
+
+fn memory_enter_scope(ctx: &MemoryContext) {
+    ctx.current_scope_depth = ctx.current_scope_depth + 1
+}
+
+fn memory_exit_scope(ctx: &MemoryContext) {
+    // Mark allocations in this scope as dead
+    ctx.current_scope_depth = ctx.current_scope_depth - 1
+}
+
+// ============================================
+// ALLOCATION TRACKING
+// ============================================
+
+fn memory_track_allocation(ctx: &MemoryContext, name: string, alloc_type: i32, size: i64, line: i32) {
+    let alloc: MemoryAllocation
+    alloc.name = name
+    alloc.type = alloc_type
+    alloc.size = size
+    alloc.lifetime_start = line
+    alloc.lifetime_end = -1  // Unknown yet
+    alloc.escapes = false
+    alloc.ref_count = 1
+    
+    // Add to context (pseudo-code, actual implementation needs array append)
+    // ctx.allocations.append(alloc)
+}
+
+fn memory_track_free(ctx: &MemoryContext, name: string, line: i32) {
+    // Find allocation and mark as freed
+    let i = 0
+    while i < ctx.allocations.length {
+        if ctx.allocations[i].name == name {
+            ctx.allocations[i].lifetime_end = line
+            break
+        }
+        i = i + 1
+    }
+}
+
+fn memory_track_reference(ctx: &MemoryContext, name: string) {
+    // Increment reference count
+    let i = 0
+    while i < ctx.allocations.length {
+        if ctx.allocations[i].name == name {
+            ctx.allocations[i].ref_count = ctx.allocations[i].ref_count + 1
+            break
+        }
+        i = i + 1
+    }
+}
+
+// ============================================
+// LIFETIME ANALYSIS
+// ============================================
+
+fn memory_analyze_lifetime(ctx: &MemoryContext, ast: ASTNode) {
+    // Walk AST and determine variable lifetimes
+    
+    if ast.type == NODE_VAR_DECL {
+        // Variable declared here
+        let name = ast.name
+        memory_track_allocation(ctx, name, ALLOC_STACK, 0, ast.token.line)
+    }
+    
+    if ast.type == NODE_BLOCK {
+        memory_enter_scope(ctx)
+        // Analyze children
+        memory_exit_scope(ctx)
+    }
+    
+    // Recursively analyze children
+    let i = 0
+    while i < ast.children.length {
+        memory_analyze_lifetime(ctx, ast.children[i])
+        i = i + 1
+    }
+}
+
+// ============================================
+// ESCAPE ANALYSIS
+// ============================================
+
+fn memory_check_escape(ctx: &MemoryContext, name: string, ast: ASTNode) -> bool {
+    // Check if variable escapes its scope
+    
+    // Returns address of local variable
+    if ast.type == NODE_UNARY && ast.token.type == TOKEN_AMP {
+        return true
+    }
+    
+    // Assigned to global or outer scope variable
+    if ast.type == NODE_ASSIGN {
+        return true
+    }
+    
+    // Returned from function
+    if ast.type == NODE_RETURN {
+        return true
+    }
+    
+    // Stored in heap structure
+    if ast.type == NODE_MEMBER {
+        return true
+    }
+    
+    return false
+}
+
+fn memory_analyze_escapes(ctx: &MemoryContext, ast: ASTNode) {
+    // Walk AST and mark variables that escape
+    
+    let i = 0
+    while i < ctx.allocations.length {
+        let name = ctx.allocations[i].name
+        if memory_check_escape(ctx, name, ast) {
+            ctx.allocations[i].escapes = true
+        }
+        i = i + 1
+    }
+}
+
+// ============================================
+// ALLOCATION STRATEGY
+// ============================================
+
+fn memory_decide_allocation_type(size: i64, escapes: bool, is_array: bool) -> i32 {
+    // Small non-escaping values -> stack
+    if size < 1024 && !escapes {
+        return ALLOC_STACK
+    }
+    
+    // Large values or escaping values -> heap
+    if size >= 1024 || escapes {
+        return ALLOC_HEAP
+    }
+    
+    // Constants -> static
+    return ALLOC_STATIC
+}
+
+// ============================================
+// DEFER HANDLING
+// ============================================
+
+struct DeferStatement {
+    statement: ASTNode
+    scope_depth: i32
+    line: i32
+}
+
+struct DeferContext {
+    defers: [DeferStatement]
+}
+
+fn defer_context_init() -> DeferContext {
+    let ctx: DeferContext
+    return ctx
+}
+
+fn defer_register(ctx: &DeferContext, stmt: ASTNode, scope_depth: i32, line: i32) {
+    let defer_stmt: DeferStatement
+    defer_stmt.statement = stmt
+    defer_stmt.scope_depth = scope_depth
+    defer_stmt.line = line
+    // ctx.defers.append(defer_stmt)
+}
+
+fn defer_execute_for_scope(ctx: &DeferContext, scope_depth: i32) {
+    // Execute all defer statements for this scope in reverse order
+    let i = ctx.defers.length - 1
+    while i >= 0 {
+        if ctx.defers[i].scope_depth == scope_depth {
+            // Execute defer statement
+            // Remove from list
+        }
+        i = i - 1
+    }
+}
+
+// ============================================
+// GC ANNOTATION PROCESSING
+// ============================================
+
+fn memory_process_gc_annotation(ctx: &MemoryContext, ast: ASTNode) {
+    // Check for @gc annotations
+    
+    if ast.token.type == TOKEN_AT {
+        // Next token should be "gc"
+        // Mark the following declaration as GC-managed
+        ctx.gc_mode = GC_AUTO
+    }
+}
+
+// ============================================
+// REFERENCE COUNTING
+// ============================================
+
+fn memory_generate_refcount_ops(ctx: &MemoryContext, ast: ASTNode) {
+    // Generate reference counting operations
+    
+    if ast.type == NODE_ASSIGN {
+        // Increment ref count for RHS
+        // Decrement ref count for old LHS value
+    }
+    
+    if ast.type == NODE_CALL {
+        // Pass by reference increments ref count
+    }
+}
+
+// ============================================
+// MEMORY LEAK DETECTION
+// ============================================
+
+fn memory_detect_leaks(ctx: &MemoryContext) -> bool {
+    let has_leaks = false
+    
+    let i = 0
+    while i < ctx.allocations.length {
+        let alloc = ctx.allocations[i]
+        
+        // Heap allocation without matching free
+        if alloc.type == ALLOC_HEAP && alloc.lifetime_end == -1 {
+            print("Warning: Potential memory leak for allocation: ")
+            print(alloc.name)
+            has_leaks = true
+        }
+        
+        i = i + 1
+    }
+    
+    return has_leaks
+}
+
+// ============================================
+// MAIN ANALYSIS FUNCTION
+// ============================================
+
+fn memory_analyze(ast: ASTNode) -> MemoryContext {
+    let ctx = memory_context_init()
+    
+    // Phase 1: Track allocations and lifetimes
+    memory_analyze_lifetime(&ctx, ast)
+    
+    // Phase 2: Escape analysis
+    memory_analyze_escapes(&ctx, ast)
+    
+    // Phase 3: Decide allocation strategies
+    let i = 0
+    while i < ctx.allocations.length {
+        let alloc = &ctx.allocations[i]
+        let new_type = memory_decide_allocation_type(alloc.size, alloc.escapes, false)
+        alloc.type = new_type
+        i = i + 1
+    }
+    
+    // Phase 4: Generate reference counting ops if needed
+    if ctx.gc_mode == GC_REFCOUNT {
+        memory_generate_refcount_ops(&ctx, ast)
+    }
+    
+    // Phase 5: Detect potential leaks
+    memory_detect_leaks(&ctx)
+    
+    return ctx
+}
+
+// ============================================
+// MAIN (for testing)
+// ============================================
+
+fn main() {
+    print("Memory module compiled")
+}

@@ -1,9 +1,0 @@
--- lang: en-US
-enum Status
-    OK
-    ERROR
-end enum
-
-struct Result
-    numeric code
-end struct

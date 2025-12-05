@@ -1,0 +1,2 @@
+-- Test: Union Types
+union Value Int(numeric) | Str(text)

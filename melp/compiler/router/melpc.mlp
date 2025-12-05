@@ -1,0 +1,117 @@
+// melpc.mlp - MELP Compiler Router
+// Koordine eder: Lexer -> Parser -> Memory -> Codegen
+
+import "io"
+import "os"
+import "string"
+
+// External module interfaces (simulated for Stage 2)
+struct TokenList {
+    tokens: i32;    // Token count placeholder
+    data: string;   // Token data placeholder
+}
+
+struct ASTNode {
+    node_type: i32; // AST node type
+    children: i32;  // Child count
+    data: string;   // AST data placeholder
+}
+
+struct MemoryInfo {
+    lifetimes: i32;  // Lifetime count
+    escapes: i32;    // Escape count
+    data: string;    // Memory info placeholder
+}
+
+// Lexer: MELP source -> Tokens
+func run_lexer(source_file: string) -> TokenList {
+    print("Running lexer on: ");
+    print(source_file);
+    print("\n");
+    
+    // TODO: Call actual lexer module
+    // For now, placeholder
+    let tokens: TokenList;
+    tokens.tokens = 10;  // Dummy token count
+    tokens.data = "token_data";
+    return tokens;
+}
+
+// Parser: Tokens -> AST
+func run_parser(tokens: TokenList) -> ASTNode {
+    print("Running parser on tokens\n");
+    
+    // TODO: Call actual parser module
+    let ast: ASTNode;
+    ast.node_type = 1;  // Dummy node type
+    ast.children = 5;   // Dummy child count
+    ast.data = "ast_data";
+    return ast;
+}
+
+// Memory: AST -> Memory Analysis
+func run_memory(ast: ASTNode) -> MemoryInfo {
+    print("Running memory analysis\n");
+    
+    // TODO: Call actual memory module
+    let mem: MemoryInfo;
+    mem.lifetimes = 3;
+    mem.escapes = 1;
+    mem.data = "memory_data";
+    return mem;
+}
+
+// Codegen: AST + Memory -> Assembly
+func run_codegen(ast: ASTNode, mem: MemoryInfo, output_file: string) -> i32 {
+    print("Running codegen to: ");
+    print(output_file);
+    print("\n");
+    
+    // TODO: Call actual codegen module
+    // For now, just create placeholder output
+    return 0;  // Success
+}
+
+// Main compiler pipeline
+func compile_file(input_file: string, output_file: string) -> i32 {
+    print("=== MELP Compiler Router ===\n");
+    print("Input: ");
+    print(input_file);
+    print("\n");
+    print("Output: ");
+    print(output_file);
+    print("\n\n");
+    
+    // Step 1: Lexer
+    let tokens = run_lexer(input_file);
+    if tokens.tokens == 0 {
+        print("ERROR: Lexer failed\n");
+        return 1;
+    }
+    
+    // Step 2: Parser
+    let ast = run_parser(tokens);
+    if ast.node_type == 0 {
+        print("ERROR: Parser failed\n");
+        return 1;
+    }
+    
+    // Step 3: Memory
+    let mem = run_memory(ast);
+    
+    // Step 4: Codegen
+    let result = run_codegen(ast, mem, output_file);
+    if result != 0 {
+        print("ERROR: Codegen failed\n");
+        return 1;
+    }
+    
+    print("\n=== Compilation successful ===\n");
+    return 0;
+}
+
+func main() -> i32 {
+    // For testing, compile test_router.mlp
+    let result = compile_file("test_router.mlp", "test_router.s");
+    return result;
+}

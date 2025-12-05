@@ -1,0 +1,6 @@
+numeric a = 10
+numeric b = 20
+numeric sum = 30
+numeric diff = 10
+numeric prod = 200
+numeric quot = 2

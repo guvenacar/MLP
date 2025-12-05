@@ -1,0 +1,19 @@
+---
+Bu bir çok satırlı yorum
+Burada ne yazarsak yazalım
+Hepsi silinecek
+---
+
+numeric x = 42  -- Bu satır içi yorum
+
+-- Bu tek satırlık yorum
+
+text name = "Test"
+
+---
+Bir yorum daha
+Çok satırlı
+---
+
+print("Comments test")
+print("Yorumlar silindi!")

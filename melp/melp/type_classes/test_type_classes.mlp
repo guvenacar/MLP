@@ -1,0 +1,2 @@
+-- Test: Type Classes
+class Eq(T) function eq(a,b)

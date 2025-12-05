@@ -1,9 +1,0 @@
-enum Color
-    RED
-    GREEN  
-    BLUE
-end_enum
-
-function main()
-    print "Test"
-end_function

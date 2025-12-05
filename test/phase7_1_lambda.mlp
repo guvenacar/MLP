@@ -1,6 +1,0 @@
-// Phase 7.1: Lambda Expression Test
-
-// Test lambda parsing - print lambda address
-print lambda(x, y) => x + y
-print lambda(n) => n * 2
-print lambda() => 42

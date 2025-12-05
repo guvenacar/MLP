@@ -1,0 +1,4 @@
+numeric CODEGEN_VAR_SUCCESS = 0
+numeric CODEGEN_VAR_ERROR = 1
+numeric STORAGE_STACK = 0
+numeric STORAGE_BSS = 1

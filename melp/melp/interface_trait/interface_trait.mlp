@@ -1,0 +1,35 @@
+-- Interface/Trait Modülü - Arayüzler ve Özellikler
+-- Trait definitions, implementations, dynamic/static dispatch
+
+-- Dispatch tipi
+numeric DISPATCH_STATIC = 0          -- Compile-time (monomorphization)
+numeric DISPATCH_DYNAMIC = 1         -- Runtime (vtable)
+
+-- Method tipi
+numeric METHOD_REQUIRED = 0          -- Implementation zorunlu
+numeric METHOD_DEFAULT = 1           -- Default impl var
+
+-- Trait bound tipi
+numeric BOUND_SIMPLE = 0             -- T: Trait
+numeric BOUND_MULTIPLE = 1           -- T: Trait1 + Trait2
+numeric BOUND_LIFETIME = 2           -- 'a: 'b (Rust-style)
+
+-- Associated item tipi
+numeric ASSOC_TYPE = 0               -- type Item;
+numeric ASSOC_CONST = 1              -- const VALUE: Type;
+numeric ASSOC_FUNCTION = 2           -- func method();
+
+-- Trait object layout
+numeric OBJ_VTABLE_OFFSET = 0        -- VTable pointer (8 bytes)
+numeric OBJ_DATA_OFFSET = 8          -- Data pointer (8 bytes)
+numeric OBJ_TRAIT_DEF_OFFSET = 16    -- Trait def pointer (8 bytes)
+numeric OBJ_SIZE = 24                -- Total size
+
+-- VTable entry
+numeric VTABLE_METHOD_OFFSET = 0     -- Method pointer
+numeric VTABLE_ENTRY_SIZE = 8        -- 8 bytes per entry
+
+-- Implementation completeness
+numeric IMPL_INCOMPLETE = 0          -- Required methods eksik
+numeric IMPL_COMPLETE = 1            -- Tüm required methods impl
+numeric IMPL_PARTIAL = 2             -- Bazı methods impl

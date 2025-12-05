@@ -1,0 +1,13 @@
+-- ARITHMETIC MODULE - MELP Version
+-- Handles arithmetic operations: +, -, *, /, %, **, &, |, ^
+
+-- Arithmetic operation types
+numeric ARITH_ADD = 0
+numeric ARITH_SUB = 1
+numeric ARITH_MUL = 2
+numeric ARITH_DIV = 3
+numeric ARITH_MOD = 4
+numeric ARITH_POW = 5
+numeric ARITH_AND = 6
+numeric ARITH_OR = 7
+numeric ARITH_XOR = 8

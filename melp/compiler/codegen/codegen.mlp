@@ -1,0 +1,490 @@
+// Codegen Module for MELP Compiler
+// Generates x86-64 assembly from AST
+// Maximum ~500 lines to stay within AI token limits
+
+// ============================================
+// REGISTER DEFINITIONS
+// ============================================
+
+const REG_RAX = 0
+const REG_RBX = 1
+const REG_RCX = 2
+const REG_RDX = 3
+const REG_RSI = 4
+const REG_RDI = 5
+const REG_RBP = 6
+const REG_RSP = 7
+const REG_R8 = 8
+const REG_R9 = 9
+const REG_R10 = 10
+const REG_R11 = 11
+const REG_R12 = 12
+const REG_R13 = 13
+const REG_R14 = 14
+const REG_R15 = 15
+
+// Parameter passing registers (System V ABI)
+const PARAM_REGS = [REG_RDI, REG_RSI, REG_RDX, REG_RCX, REG_R8, REG_R9]
+
+// ============================================
+// CODE GENERATION CONTEXT
+// ============================================
+
+struct CodegenContext {
+    output: string          // Generated assembly
+    label_counter: i32      // For unique labels
+    stack_offset: i32       // Current stack offset
+    current_function: string
+    register_used: [bool]   // Register allocation tracking
+}
+
+// ============================================
+// REGISTER NAMES
+// ============================================
+
+fn codegen_register_name(reg: i32) -> string {
+    if reg == REG_RAX { return "rax" }
+    if reg == REG_RBX { return "rbx" }
+    if reg == REG_RCX { return "rcx" }
+    if reg == REG_RDX { return "rdx" }
+    if reg == REG_RSI { return "rsi" }
+    if reg == REG_RDI { return "rdi" }
+    if reg == REG_RBP { return "rbp" }
+    if reg == REG_RSP { return "rsp" }
+    if reg == REG_R8 { return "r8" }
+    if reg == REG_R9 { return "r9" }
+    if reg == REG_R10 { return "r10" }
+    if reg == REG_R11 { return "r11" }
+    if reg == REG_R12 { return "r12" }
+    if reg == REG_R13 { return "r13" }
+    if reg == REG_R14 { return "r14" }
+    if reg == REG_R15 { return "r15" }
+    return "rax"
+}
+
+// ============================================
+// CONTEXT INITIALIZATION
+// ============================================
+
+fn codegen_init() -> CodegenContext {
+    let ctx: CodegenContext
+    ctx.output = ""
+    ctx.label_counter = 0
+    ctx.stack_offset = 0
+    ctx.current_function = ""
+    return ctx
+}
+
+fn codegen_gen_label(ctx: &CodegenContext) -> string {
+    let label = ".L"
+    // TODO: Append label_counter as string
+    ctx.label_counter = ctx.label_counter + 1
+    return label
+}
+
+// ============================================
+// OUTPUT HELPERS
+// ============================================
+
+fn codegen_emit(ctx: &CodegenContext, code: string) {
+    ctx.output = ctx.output + code + "\n"
+}
+
+fn codegen_emit_label(ctx: &CodegenContext, label: string) {
+    ctx.output = ctx.output + label + ":\n"
+}
+
+fn codegen_emit_comment(ctx: &CodegenContext, comment: string) {
+    ctx.output = ctx.output + "    # " + comment + "\n"
+}
+
+// ============================================
+// REGISTER ALLOCATION
+// ============================================
+
+fn codegen_alloc_register(ctx: &CodegenContext) -> i32 {
+    // Find free register
+    let i = 0
+    while i < 16 {
+        if !ctx.register_used[i] {
+            ctx.register_used[i] = true
+            return i
+        }
+        i = i + 1
+    }
+    // No free register, need to spill
+    return REG_RAX
+}
+
+fn codegen_free_register(ctx: &CodegenContext, reg: i32) {
+    ctx.register_used[reg] = false
+}
+
+// ============================================
+// FUNCTION PROLOGUE/EPILOGUE
+// ============================================
+
+fn codegen_function_prologue(ctx: &CodegenContext, name: string) {
+    ctx.current_function = name
+    
+    codegen_emit(ctx, ".globl " + name)
+    codegen_emit_label(ctx, name)
+    codegen_emit(ctx, "    pushq %rbp")
+    codegen_emit(ctx, "    movq %rsp, %rbp")
+    
+    // Allocate stack space if needed
+    if ctx.stack_offset > 0 {
+        codegen_emit(ctx, "    subq $" + " , %rsp")  // TODO: add stack_offset
+    }
+}
+
+fn codegen_function_epilogue(ctx: &CodegenContext) {
+    codegen_emit_label(ctx, ctx.current_function + "_epilogue")
+    codegen_emit(ctx, "    movq %rbp, %rsp")
+    codegen_emit(ctx, "    popq %rbp")
+    codegen_emit(ctx, "    ret")
+}
+
+// ============================================
+// EXPRESSION CODEGEN
+// ============================================
+
+fn codegen_literal(ctx: &CodegenContext, node: ASTNode) -> i32 {
+    let reg = codegen_alloc_register(ctx)
+    let reg_name = codegen_register_name(reg)
+    
+    // Load immediate value
+    codegen_emit(ctx, "    movq $" + node.token.lexeme + ", %" + reg_name)
+    
+    return reg
+}
+
+fn codegen_identifier(ctx: &CodegenContext, node: ASTNode) -> i32 {
+    let reg = codegen_alloc_register(ctx)
+    let reg_name = codegen_register_name(reg)
+    
+    // Load from stack or memory
+    // TODO: Look up variable location
+    codegen_emit(ctx, "    movq -8(%rbp), %" + reg_name)
+    
+    return reg
+}
+
+fn codegen_binary_op(ctx: &CodegenContext, node: ASTNode) -> i32 {
+    // Generate code for left operand
+    let left_reg = codegen_expression(ctx, node.children[0])
+    
+    // Generate code for right operand
+    let right_reg = codegen_expression(ctx, node.children[1])
+    
+    let left_name = codegen_register_name(left_reg)
+    let right_name = codegen_register_name(right_reg)
+    
+    // Perform operation
+    let op = node.token.type
+    
+    if op == TOKEN_PLUS {
+        codegen_emit(ctx, "    addq %" + right_name + ", %" + left_name)
+    }
+    else if op == TOKEN_MINUS {
+        codegen_emit(ctx, "    subq %" + right_name + ", %" + left_name)
+    }
+    else if op == TOKEN_STAR {
+        codegen_emit(ctx, "    imulq %" + right_name + ", %" + left_name)
+    }
+    else if op == TOKEN_SLASH {
+        // Division is more complex
+        codegen_emit(ctx, "    movq %" + left_name + ", %rax")
+        codegen_emit(ctx, "    cqo")
+        codegen_emit(ctx, "    idivq %" + right_name)
+        codegen_emit(ctx, "    movq %rax, %" + left_name)
+    }
+    
+    // Comparison operators
+    else if op == TOKEN_EQ_EQ {
+        codegen_emit(ctx, "    cmpq %" + right_name + ", %" + left_name)
+        codegen_emit(ctx, "    sete %al")
+        codegen_emit(ctx, "    movzbq %al, %" + left_name)
+    }
+    else if op == TOKEN_NOT_EQ {
+        codegen_emit(ctx, "    cmpq %" + right_name + ", %" + left_name)
+        codegen_emit(ctx, "    setne %al")
+        codegen_emit(ctx, "    movzbq %al, %" + left_name)
+    }
+    else if op == TOKEN_LT {
+        codegen_emit(ctx, "    cmpq %" + right_name + ", %" + left_name)
+        codegen_emit(ctx, "    setl %al")
+        codegen_emit(ctx, "    movzbq %al, %" + left_name)
+    }
+    else if op == TOKEN_GT {
+        codegen_emit(ctx, "    cmpq %" + right_name + ", %" + left_name)
+        codegen_emit(ctx, "    setg %al")
+        codegen_emit(ctx, "    movzbq %al, %" + left_name)
+    }
+    else if op == TOKEN_LT_EQ {
+        codegen_emit(ctx, "    cmpq %" + right_name + ", %" + left_name)
+        codegen_emit(ctx, "    setle %al")
+        codegen_emit(ctx, "    movzbq %al, %" + left_name)
+    }
+    else if op == TOKEN_GT_EQ {
+        codegen_emit(ctx, "    cmpq %" + right_name + ", %" + left_name)
+        codegen_emit(ctx, "    setge %al")
+        codegen_emit(ctx, "    movzbq %al, %" + left_name)
+    }
+    
+    // Logical operators
+    else if op == TOKEN_AND_AND {
+        codegen_emit(ctx, "    andq %" + right_name + ", %" + left_name)
+    }
+    else if op == TOKEN_OR_OR {
+        codegen_emit(ctx, "    orq %" + right_name + ", %" + left_name)
+    }
+    
+    codegen_free_register(ctx, right_reg)
+    return left_reg
+}
+
+fn codegen_unary_op(ctx: &CodegenContext, node: ASTNode) -> i32 {
+    let operand_reg = codegen_expression(ctx, node.children[0])
+    let reg_name = codegen_register_name(operand_reg)
+    
+    let op = node.token.type
+    
+    if op == TOKEN_MINUS {
+        codegen_emit(ctx, "    negq %" + reg_name)
+    }
+    else if op == TOKEN_NOT {
+        codegen_emit(ctx, "    notq %" + reg_name)
+    }
+    
+    return operand_reg
+}
+
+fn codegen_call(ctx: &CodegenContext, node: ASTNode) -> i32 {
+    let func_name = node.token.lexeme
+    
+    // Generate code for arguments and place in parameter registers
+    let i = 0
+    while i < node.children.length && i < 6 {
+        let arg_reg = codegen_expression(ctx, node.children[i])
+        let param_reg = PARAM_REGS[i]
+        let param_name = codegen_register_name(param_reg)
+        let arg_name = codegen_register_name(arg_reg)
+        
+        codegen_emit(ctx, "    movq %" + arg_name + ", %" + param_name)
+        codegen_free_register(ctx, arg_reg)
+        
+        i = i + 1
+    }
+    
+    // Call function
+    codegen_emit(ctx, "    call " + func_name)
+    
+    // Return value in RAX
+    return REG_RAX
+}
+
+fn codegen_expression(ctx: &CodegenContext, node: ASTNode) -> i32 {
+    if node.type == NODE_LITERAL {
+        return codegen_literal(ctx, node)
+    }
+    if node.type == NODE_IDENTIFIER {
+        return codegen_identifier(ctx, node)
+    }
+    if node.type == NODE_BINARY {
+        return codegen_binary_op(ctx, node)
+    }
+    if node.type == NODE_UNARY {
+        return codegen_unary_op(ctx, node)
+    }
+    if node.type == NODE_CALL {
+        return codegen_call(ctx, node)
+    }
+    
+    return REG_RAX
+}
+
+// ============================================
+// STATEMENT CODEGEN
+// ============================================
+
+fn codegen_var_decl(ctx: &CodegenContext, node: ASTNode) {
+    let var_name = node.token.lexeme
+    
+    // Allocate stack space
+    ctx.stack_offset = ctx.stack_offset + 8
+    
+    // If there's an initializer, evaluate it
+    if node.children.length > 0 {
+        let value_reg = codegen_expression(ctx, node.children[0])
+        let reg_name = codegen_register_name(value_reg)
+        
+        // Store on stack
+        codegen_emit(ctx, "    movq %" + reg_name + ", -" + " (%rbp)")  // TODO: add offset
+        
+        codegen_free_register(ctx, value_reg)
+    }
+}
+
+fn codegen_if_statement(ctx: &CodegenContext, node: ASTNode) {
+    let else_label = codegen_gen_label(ctx)
+    let end_label = codegen_gen_label(ctx)
+    
+    // Evaluate condition
+    let cond_reg = codegen_expression(ctx, node.children[0])
+    let cond_name = codegen_register_name(cond_reg)
+    
+    // Test condition
+    codegen_emit(ctx, "    testq %" + cond_name + ", %" + cond_name)
+    codegen_emit(ctx, "    jz " + else_label)
+    
+    codegen_free_register(ctx, cond_reg)
+    
+    // Then block
+    codegen_statement(ctx, node.children[1])
+    codegen_emit(ctx, "    jmp " + end_label)
+    
+    // Else block
+    codegen_emit_label(ctx, else_label)
+    if node.children.length > 2 {
+        codegen_statement(ctx, node.children[2])
+    }
+    
+    codegen_emit_label(ctx, end_label)
+}
+
+fn codegen_while_statement(ctx: &CodegenContext, node: ASTNode) {
+    let loop_label = codegen_gen_label(ctx)
+    let end_label = codegen_gen_label(ctx)
+    
+    // Loop start
+    codegen_emit_label(ctx, loop_label)
+    
+    // Evaluate condition
+    let cond_reg = codegen_expression(ctx, node.children[0])
+    let cond_name = codegen_register_name(cond_reg)
+    
+    // Test condition
+    codegen_emit(ctx, "    testq %" + cond_name + ", %" + cond_name)
+    codegen_emit(ctx, "    jz " + end_label)
+    
+    codegen_free_register(ctx, cond_reg)
+    
+    // Loop body
+    codegen_statement(ctx, node.children[1])
+    
+    // Jump back to start
+    codegen_emit(ctx, "    jmp " + loop_label)
+    
+    codegen_emit_label(ctx, end_label)
+}
+
+fn codegen_return_statement(ctx: &CodegenContext, node: ASTNode) {
+    // Evaluate return value if present
+    if node.children.length > 0 {
+        let value_reg = codegen_expression(ctx, node.children[0])
+        
+        // Move to RAX (return register)
+        if value_reg != REG_RAX {
+            let reg_name = codegen_register_name(value_reg)
+            codegen_emit(ctx, "    movq %" + reg_name + ", %rax")
+        }
+        
+        codegen_free_register(ctx, value_reg)
+    }
+    
+    // Jump to epilogue
+    codegen_emit(ctx, "    jmp " + ctx.current_function + "_epilogue")
+}
+
+fn codegen_expression_statement(ctx: &CodegenContext, node: ASTNode) {
+    let reg = codegen_expression(ctx, node.children[0])
+    codegen_free_register(ctx, reg)
+}
+
+fn codegen_block(ctx: &CodegenContext, node: ASTNode) {
+    let i = 0
+    while i < node.children.length {
+        codegen_statement(ctx, node.children[i])
+        i = i + 1
+    }
+}
+
+fn codegen_statement(ctx: &CodegenContext, node: ASTNode) {
+    if node.type == NODE_VAR_DECL {
+        codegen_var_decl(ctx, node)
+    }
+    else if node.type == NODE_IF {
+        codegen_if_statement(ctx, node)
+    }
+    else if node.type == NODE_WHILE {
+        codegen_while_statement(ctx, node)
+    }
+    else if node.type == NODE_RETURN {
+        codegen_return_statement(ctx, node)
+    }
+    else if node.type == NODE_BLOCK {
+        codegen_block(ctx, node)
+    }
+    else if node.type == NODE_EXPR_STMT {
+        codegen_expression_statement(ctx, node)
+    }
+}
+
+// ============================================
+// TOP LEVEL DECLARATIONS
+// ============================================
+
+fn codegen_function(ctx: &CodegenContext, node: ASTNode) {
+    let func_name = node.token.lexeme
+    
+    // Reset context for new function
+    ctx.stack_offset = 0
+    let i = 0
+    while i < 16 {
+        ctx.register_used[i] = false
+        i = i + 1
+    }
+    
+    // Generate prologue
+    codegen_function_prologue(ctx, func_name)
+    
+    // Generate function body
+    codegen_statement(ctx, node.children[0])
+    
+    // Generate epilogue
+    codegen_function_epilogue(ctx)
+}
+
+fn codegen_program(ctx: &CodegenContext, ast: ASTNode) {
+    // Assembly header
+    codegen_emit(ctx, ".section .text")
+    
+    // Generate code for all functions
+    let i = 0
+    while i < ast.children.length {
+        let child = ast.children[i]
+        if child.type == NODE_FUNC_DECL {
+            codegen_function(ctx, child)
+        }
+        i = i + 1
+    }
+}
+
+// ============================================
+// MAIN ENTRY POINT
+// ============================================
+
+fn codegen_generate(ast: ASTNode) -> string {
+    let ctx = codegen_init()
+    codegen_program(&ctx, ast)
+    return ctx.output
+}
+
+// ============================================
+// MAIN (for testing)
+// ============================================
+
+fn main() {
+    print("Codegen module compiled")
+}
