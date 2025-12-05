@@ -1,0 +1,12 @@
+-- Test state management
+
+state {
+  mut sayi counter = 0
+  const sayi MAX = 100
+  static metin name = "app"
+}
+
+get counter
+set counter(10)
+
+yazdir("State management")

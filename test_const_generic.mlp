@@ -1,0 +1,12 @@
+-- Test const generics
+
+const SIZE: sayi = 256
+
+tip Array<T, N: sayi>:
+  T data[N]
+sontip
+
+sayi arr: Array<sayi, 10>
+sayi matrix: Matrix<sayi, 4, 4>
+
+yazdir("Const generics")

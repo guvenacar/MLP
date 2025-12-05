@@ -1,0 +1,21 @@
+-- Test trait system advanced
+
+trait Display {
+  fonk show(self)
+}
+
+trait Clone {
+  fonk clone(self)
+}
+
+impl Display for Nokta {
+  fonk show(self) {
+    yazdir("Point")
+  }
+}
+
+fonk print_value<T: Display>(val: T) {
+  val.show()
+}
+
+yazdir("Trait system")

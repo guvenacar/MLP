@@ -19,9 +19,20 @@ typedef struct IfStatement {
     struct IfStatement *next;
 } IfStatement;
 
+typedef struct Statement {
+    enum {
+        STMT_ASSIGN,      // x = x + 1
+        STMT_PRINT,       // print(x)
+        STMT_INCREMENT    // x = x + 1 (special case)
+    } type;
+    char target[64];      // Variable name
+    char expr[256];       // Expression or value
+    struct Statement *next;
+} Statement;
+
 typedef struct WhileLoop {
     Condition cond;
-    char body[1024];
+    Statement *body_stmts;  // Linked list of statements
     struct WhileLoop *next;
 } WhileLoop;
 
@@ -59,10 +70,10 @@ static void add_if_statement(Condition cond, const char *body, const char *else_
 }
 
 // Add while loop to list
-static void add_while_loop(Condition cond, const char *body) {
+static void add_while_loop(Condition cond, Statement *body_stmts) {
     WhileLoop *new_while = malloc(sizeof(WhileLoop));
     new_while->cond = cond;
-    strcpy(new_while->body, body);
+    new_while->body_stmts = body_stmts;
     new_while->next = while_list;
     while_list = new_while;
     while_count++;
@@ -81,6 +92,168 @@ static void add_for_loop(const char *var, const char *start, const char *end, co
     for_count++;
 }
 
+// Parse statements inside while loop body
+static Statement* parse_while_body(Lexer *lexer) {
+    Statement *head = NULL;
+    Statement *tail = NULL;
+    int expr_parts = 0;
+    
+    Token *token = lexer_next_token(lexer);
+    
+    while (token->type != TOKEN_END && token->type != TOKEN_EOF) {
+        Statement *stmt = NULL;
+        bool token_consumed = false;  // Track if we already got next token
+        
+        // Check for assignment: variable = expression
+        if (token->type == TOKEN_IDENTIFIER) {
+            char var_name[64];
+            strcpy(var_name, token->value);
+            
+            token_free(token);
+            token = lexer_next_token(lexer);
+            
+            if (token->type == TOKEN_ASSIGN) {
+                stmt = malloc(sizeof(Statement));
+                stmt->type = STMT_ASSIGN;
+                strcpy(stmt->target, var_name);
+                stmt->next = NULL;
+                
+                token_free(token);
+                token = lexer_next_token(lexer);
+                
+                // Parse right side expression (variable + number or variable - number)
+                char expr[256] = "";
+                expr_parts = 0;
+                while (token->type != TOKEN_END && token->type != TOKEN_EOF && 
+                       token->type != TOKEN_IDENTIFIER && expr_parts < 3) {
+                    if (token->type == TOKEN_NUMBER) {
+                        strcat(expr, token->value);
+                        strcat(expr, " ");
+                        expr_parts++;
+                    } else if (token->type == TOKEN_PLUS) {
+                        strcat(expr, "+ ");
+                        expr_parts++;
+                    } else if (token->type == TOKEN_MINUS) {
+                        strcat(expr, "- ");
+                        expr_parts++;
+                    } else if (token->type == TOKEN_MULTIPLY) {
+                        strcat(expr, "* ");
+                        expr_parts++;
+                    } else if (token->type == TOKEN_DIVIDE) {
+                        strcat(expr, "/ ");
+                        expr_parts++;
+                    } else {
+                        break;
+                    }
+                    
+                    token_free(token);
+                    token = lexer_next_token(lexer);
+                }
+                
+                // If first token was identifier, add it to expr
+                if (expr_parts == 0 && token->type == TOKEN_IDENTIFIER) {
+                    strcat(expr, token->value);
+                    strcat(expr, " ");
+                    
+                    token_free(token);
+                    token = lexer_next_token(lexer);
+                    
+                    // Continue parsing operator and operand
+                    while (token->type != TOKEN_END && token->type != TOKEN_EOF && 
+                           token->type != TOKEN_IDENTIFIER) {
+                        if (token->type == TOKEN_PLUS) {
+                            strcat(expr, "+ ");
+                        } else if (token->type == TOKEN_MINUS) {
+                            strcat(expr, "- ");
+                        } else if (token->type == TOKEN_MULTIPLY) {
+                            strcat(expr, "* ");
+                        } else if (token->type == TOKEN_DIVIDE) {
+                            strcat(expr, "/ ");
+                        } else if (token->type == TOKEN_NUMBER) {
+                            strcat(expr, token->value);
+                            strcat(expr, " ");
+                            token_free(token);
+                            token = lexer_next_token(lexer);
+                            break;
+                        } else {
+                            break;
+                        }
+                        
+                        token_free(token);
+                        token = lexer_next_token(lexer);
+                    }
+                }
+                
+                strcpy(stmt->expr, expr);
+                
+                // Add to list
+                if (head == NULL) {
+                    head = stmt;
+                    tail = stmt;
+                } else {
+                    tail->next = stmt;
+                    tail = stmt;
+                }
+                
+                token_consumed = true;  // We parsed expression and got next token
+            }
+        }
+        
+        // Check for print statement
+        else if (token->type == TOKEN_PRINT) {
+            stmt = malloc(sizeof(Statement));
+            stmt->type = STMT_PRINT;
+            stmt->next = NULL;
+            
+            token_free(token);
+            token = lexer_next_token(lexer);
+            
+            // Expect LPAREN
+            if (token->type == TOKEN_LPAREN) {
+                token_free(token);
+                token = lexer_next_token(lexer);
+                
+                // Get what to print (string or variable)
+                if (token->type == TOKEN_STRING || token->type == TOKEN_IDENTIFIER) {
+                    strcpy(stmt->expr, token->value);
+                }
+                
+                token_free(token);
+                token = lexer_next_token(lexer);
+                
+                // Expect RPAREN
+                if (token->type == TOKEN_RPAREN) {
+                    token_free(token);
+                    token = lexer_next_token(lexer);
+                }
+            }
+            
+            // Add to list
+            if (head == NULL) {
+                head = stmt;
+                tail = stmt;
+            } else {
+                tail->next = stmt;
+                tail = stmt;
+            }
+            
+            token_consumed = true;  // We already got next token after RPAREN
+        }
+        
+        // Advance to next token only if not already consumed
+        if (!token_consumed) {
+            token_free(token);
+            token = lexer_next_token(lexer);
+        }
+    }
+    
+    // Token is now TOKEN_END or TOKEN_EOF
+    // Free the TOKEN_END token before returning
+    if (token) token_free(token);
+    
+    return head;
+}
+
 // Parse if-then-else statements
 static void control_flow_parse(Lexer *lexer) {
     Token *tokens[20];
@@ -89,6 +262,7 @@ static void control_flow_parse(Lexer *lexer) {
     Token *token = lexer_next_token(lexer);
     
     while (token->type != TOKEN_EOF) {
+        
         // Look for: IF condition THEN ... END IF
         if (token->type == TOKEN_IF) {
             // Parse condition: identifier comparison identifier/number
@@ -160,6 +334,9 @@ static void control_flow_parse(Lexer *lexer) {
                         if (has_else) {
                             printf("    - with else branch\n");
                         }
+                        token_free(token);
+                        token = lexer_next_token(lexer);
+                        continue;  // Continue to next token
                     }
                 }
             }
@@ -191,27 +368,21 @@ static void control_flow_parse(Lexer *lexer) {
             strcpy(cond.right, token->value);
             
             token_free(token);
+            
+            // Parse body statements
+            Statement *body_stmts = parse_while_body(lexer);
+            
+            // parse_while_body consumed TOKEN_END, so next token should be "while" keyword after "end"
             token = lexer_next_token(lexer);
             
-            // Collect body until END
-            char body[1024] = "";
-            
-            while (token->type != TOKEN_END && token->type != TOKEN_EOF) {
-                if (strlen(body) > 0) strcat(body, " ");
-                strcat(body, token->value);
+            // Expect WHILE (after END)
+            if (token->type == TOKEN_WHILE) {
+                add_while_loop(cond, body_stmts);
+                printf("  ✓ While loop: %s %s %s\n", cond.left, cond.op, cond.right);
+                
                 token_free(token);
                 token = lexer_next_token(lexer);
-            }
-            
-            // Expect END WHILE
-            if (token->type == TOKEN_END) {
-                token_free(token);
-                token = lexer_next_token(lexer);
-                // Skip WHILE token after END
-                if (token->type == TOKEN_WHILE) {
-                    add_while_loop(cond, body);
-                    printf("  ✓ While loop: %s %s %s\n", cond.left, cond.op, cond.right);
-                }
+                continue;  // Continue to next token
             }
         }
         
@@ -272,6 +443,9 @@ static void control_flow_parse(Lexer *lexer) {
                         if (token->type == TOKEN_FOR) {
                             add_for_loop(var, start, end, step, body);
                             printf("  ✓ For loop: %s = %s to %s\n", var, start, end);
+                            token_free(token);
+                            token = lexer_next_token(lexer);
+                            continue;  // Continue to next token
                         }
                     }
                 }
@@ -390,8 +564,88 @@ static void control_flow_codegen(FILE *out) {
             fprintf(out, "  jl .while_end_%d\n", label_id);
         }
         
-        // Loop body (placeholder)
-        fprintf(out, "  ; body: %s\n", loop->body);
+        // Generate body statements
+        Statement *stmt = loop->body_stmts;
+        while (stmt != NULL) {
+            if (stmt->type == STMT_ASSIGN) {
+                // Parse expression: var + num or var - num
+                char expr_copy[256];
+                strcpy(expr_copy, stmt->expr);
+                
+                char *token = strtok(expr_copy, " ");
+                char operand1[64] = "";
+                char operator[8] = "";
+                char operand2[64] = "";
+                
+                int part = 0;
+                while (token != NULL) {
+                    if (part == 0) {
+                        strcpy(operand1, token);
+                        part = 1;
+                    } else if (part == 1) {
+                        strcpy(operator, token);
+                        part = 2;
+                    } else if (part == 2) {
+                        strcpy(operand2, token);
+                        break;
+                    }
+                    token = strtok(NULL, " ");
+                }
+                
+                // Generate assembly for: target = operand1 operator operand2
+                fprintf(out, "  ; %s = %s\n", stmt->target, stmt->expr);
+                
+                // Load first operand
+                if (operand1[0] >= '0' && operand1[0] <= '9') {
+                    fprintf(out, "  mov rax, %s\n", operand1);
+                } else {
+                    fprintf(out, "  mov rax, [%s]\n", operand1);
+                }
+                
+                // Perform operation with second operand
+                if (strlen(operator) > 0 && strlen(operand2) > 0) {
+                    if (strcmp(operator, "+") == 0) {
+                        if (operand2[0] >= '0' && operand2[0] <= '9') {
+                            fprintf(out, "  add rax, %s\n", operand2);
+                        } else {
+                            fprintf(out, "  mov rbx, [%s]\n", operand2);
+                            fprintf(out, "  add rax, rbx\n");
+                        }
+                    } else if (strcmp(operator, "-") == 0) {
+                        if (operand2[0] >= '0' && operand2[0] <= '9') {
+                            fprintf(out, "  sub rax, %s\n", operand2);
+                        } else {
+                            fprintf(out, "  mov rbx, [%s]\n", operand2);
+                            fprintf(out, "  sub rax, rbx\n");
+                        }
+                    } else if (strcmp(operator, "*") == 0) {
+                        if (operand2[0] >= '0' && operand2[0] <= '9') {
+                            fprintf(out, "  imul rax, %s\n", operand2);
+                        } else {
+                            fprintf(out, "  mov rbx, [%s]\n", operand2);
+                            fprintf(out, "  imul rax, rbx\n");
+                        }
+                    } else if (strcmp(operator, "/") == 0) {
+                        fprintf(out, "  xor rdx, rdx\n");
+                        if (operand2[0] >= '0' && operand2[0] <= '9') {
+                            fprintf(out, "  mov rbx, %s\n", operand2);
+                        } else {
+                            fprintf(out, "  mov rbx, [%s]\n", operand2);
+                        }
+                        fprintf(out, "  idiv rbx\n");
+                    }
+                }
+                
+                // Store result
+                fprintf(out, "  mov [%s], rax\n", stmt->target);
+                
+            } else if (stmt->type == STMT_PRINT) {
+                fprintf(out, "  ; print(%s)\n", stmt->expr);
+                // Print calls would be handled by print module
+            }
+            
+            stmt = stmt->next;
+        }
         
         // Jump back to start
         fprintf(out, "  jmp .while_start_%d\n", label_id);

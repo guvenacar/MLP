@@ -1,0 +1,10 @@
+-- Test parser core
+
+sayi x = 10
+metin s = "hello"
+
+fonk test() {
+  dön x + 5
+}
+
+yazdir("Parser core")

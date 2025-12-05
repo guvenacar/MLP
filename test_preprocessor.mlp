@@ -1,0 +1,15 @@
+-- Test preprocessor directives
+
+#define PI 3.14
+#define MAX(a,b) ((a)>(b)?(a):(b))
+
+#ifdef DEBUG
+  yazdir("Debug mode")
+#endif
+
+#if 1
+  yazdir("Always true")
+#endif
+
+sayi x = PI
+yazdir(x)

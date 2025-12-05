@@ -1,0 +1,14 @@
+-- Test struct with instances
+
+struct Person
+    text name
+    numeric age
+end struct
+
+Person p
+
+p.name = "Alice"
+p.age = 30
+
+print(p.name)
+print(p.age)

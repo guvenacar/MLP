@@ -1,0 +1,16 @@
+--- Lambda test
+--- Simple arrow lambda
+numeric double = (x) => x * 2
+numeric result = double(5)
+
+--- Closure with captures
+numeric a = 10
+numeric add_a = [a](x) => a + x
+numeric sum = add_a(5)
+
+--- Higher-order function
+map(numbers, (x) => x * 2)
+filter(items, (x) => x > 0)
+reduce(list, (a, b) => a + b, 0)
+
+print "Lambda OK!"

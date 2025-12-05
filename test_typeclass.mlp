@@ -1,0 +1,14 @@
+-- Test type classes
+
+class Functor f where
+  fmap :: (a -> b) -> f a -> f b
+
+instance Functor Maybe where
+  fmap f Nothing = Nothing
+  fmap f (Just x) = Just (f x)
+
+class Monad m where
+  bind :: m a -> (a -> m b) -> m b
+  return :: a -> m a
+
+yazdir("Type classes")

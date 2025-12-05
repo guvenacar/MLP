@@ -1,0 +1,13 @@
+-- Test ownership system
+
+sayi owned = 10
+sayi& borrowed = &owned
+sayi&mut mutable = &mut owned
+
+sayi moved = move(owned)
+
+fonk use_value<'a>(x: &'a sayi) {
+  yazdir(x)
+}
+
+yazdir("Ownership test")

@@ -158,10 +158,137 @@ int main(int argc, char** argv) {
             // If parse failed, parser may have advanced, fall through to skip
         }
 
-        // Struct keyword detection
-        if (tok->type == TOKEN_IDENTIFIER && tok->value && strcmp(tok->value, "struct") == 0) {
+        // Check for struct instance: Identifier Identifier (e.g., Person p)
+        // But NOT if next token is DOT (that's field access) or ASSIGN (that's assignment)
+        if (tok->type == TOKEN_IDENTIFIER) {
+            // Save current position
+            int saved_pos = lexer->pos;
+            int saved_line = lexer->line;
+            
+            // Peek ahead to see if next token is also an identifier
+            Token* next_tok = lexer_next_token(lexer);
+            
+            // Restore lexer position immediately after peek
+            lexer->pos = saved_pos;
+            lexer->line = saved_line;
+            
+            // If next is identifier (and not dot/assign), this is struct instance
+            if (next_tok && next_tok->type == TOKEN_IDENTIFIER) {
+                // This looks like: TypeName instanceName
+                char* struct_type = strdup(tok->value);
+                
+                // Now consume the identifier properly
+                token_free(var_parser->current_token);
+                var_parser->current_token = lexer_next_token(lexer);
+                
+                if (var_parser->current_token && var_parser->current_token->type == TOKEN_IDENTIFIER) {
+                    char* instance_name = strdup(var_parser->current_token->value);
+                    
+                    printf("      ✓ Found: struct instance '%s' of type '%s'\n", 
+                           instance_name, struct_type);
+                    stats.struct_instances++;
+                    
+                    free(instance_name);
+                    
+                    // Advance past instance name
+                    token_free(var_parser->current_token);
+                    var_parser->current_token = lexer_next_token(lexer);
+                }
+                
+                free(struct_type);
+                token_free(next_tok);
+                continue;
+            }
+            
+            // Not a struct instance
+            if (next_tok) {
+                token_free(next_tok);
+            }
+        }
+
+        // Struct keyword detection - now with proper parsing
+        if (tok->type == TOKEN_STRUCT) {
             stats.struct_defs++;
             printf("      ✓ Found: struct definition\n");
+            
+            // Parse the struct definition
+            // Expected syntax: struct Name ... end struct
+            // Get struct name
+            if (var_parser->current_token) {
+                token_free(var_parser->current_token);
+                var_parser->current_token = lexer_next_token(lexer);
+            }
+            
+            if (!var_parser->current_token || var_parser->current_token->type != TOKEN_IDENTIFIER) {
+                fprintf(stderr, "Error: Expected struct name after 'struct' keyword\n");
+                // Skip to next token and continue
+                if (var_parser->current_token) {
+                    token_free(var_parser->current_token);
+                    var_parser->current_token = lexer_next_token(lexer);
+                }
+                continue;
+            }
+            
+            char* struct_name = strdup(var_parser->current_token->value);
+            printf("        Struct name: %s\n", struct_name);
+            
+            // Advance past struct name
+            token_free(var_parser->current_token);
+            var_parser->current_token = lexer_next_token(lexer);
+            
+            // Parse struct fields until we hit "end"
+            int field_count = 0;
+            while (var_parser->current_token && 
+                   var_parser->current_token->type != TOKEN_EOF) {
+                
+                // Check for "end" keyword
+                if (var_parser->current_token->type == TOKEN_END) {
+                    token_free(var_parser->current_token);
+                    var_parser->current_token = lexer_next_token(lexer);
+                    
+                    // Expect "struct" after "end"
+                    if (var_parser->current_token && 
+                        var_parser->current_token->type == TOKEN_STRUCT) {
+                        printf("        End of struct %s (%d fields)\n", struct_name, field_count);
+                        token_free(var_parser->current_token);
+                        var_parser->current_token = lexer_next_token(lexer);
+                        break;
+                    }
+                }
+                
+                // Try to parse field (type name)
+                if (var_parser->current_token->type == TOKEN_NUMERIC || 
+                    var_parser->current_token->type == TOKEN_TEXT || 
+                    var_parser->current_token->type == TOKEN_BOOLEAN ||
+                    var_parser->current_token->type == TOKEN_IDENTIFIER) {
+                    
+                    char* field_type = strdup(var_parser->current_token->value);
+                    token_free(var_parser->current_token);
+                    var_parser->current_token = lexer_next_token(lexer);
+                    
+                    // Get field name
+                    if (var_parser->current_token && 
+                        var_parser->current_token->type == TOKEN_IDENTIFIER) {
+                        char* field_name = strdup(var_parser->current_token->value);
+                        printf("        Field: %s %s\n", field_type, field_name);
+                        field_count++;
+                        
+                        free(field_name);
+                        token_free(var_parser->current_token);
+                        var_parser->current_token = lexer_next_token(lexer);
+                    }
+                    
+                    free(field_type);
+                    continue;
+                }
+                
+                // Unknown token inside struct, skip it
+                token_free(var_parser->current_token);
+                var_parser->current_token = lexer_next_token(lexer);
+            }
+            
+            free(struct_name);
+            continue;
         }
 
         // Dot operator detection (field access)

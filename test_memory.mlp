@@ -1,0 +1,9 @@
+-- Test memory management
+
+sayi* ptr = malloc(100)
+defer free(ptr)
+
+gc_hint(ptr)
+
+sayi x = 10
+yazdir(x)

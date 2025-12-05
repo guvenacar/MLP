@@ -1,0 +1,17 @@
+--- Generic types test
+--- Generic struct
+struct List<T>
+    T[] items
+    numeric count
+end
+
+--- Generic function
+function map<T, U>(list: List<T>)
+    return List<U>()
+end
+
+--- Type instantiation
+List<numeric> numbers = List<numeric>()
+List<text> strings = List<text>()
+
+print "Generic Types OK!"

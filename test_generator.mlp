@@ -1,0 +1,21 @@
+--- Generator test
+--- Generator definition
+generator range(start, end)
+    for i = start to end
+        yield i
+    end
+end
+
+--- for-in loop usage
+for x in range(1, 10)
+    print x
+end
+
+--- Iterator usage
+gen iter = range(1, 5)
+while iter.hasNext()
+    numeric val = iter.next()
+    print val
+end
+
+print "Generator OK!"

@@ -1,0 +1,12 @@
+--- Exception handling simple test
+try
+    numeric x = 10 / 0
+catch DivisionError e
+    print "Cannot divide by zero"
+catch Error e
+    print "General error"
+finally
+    print "Cleanup"
+end
+
+print "Exception OK!"

@@ -1,0 +1,18 @@
+--- Performance test
+@inline
+@hot
+function fast_function()
+    return 42
+end
+
+@simd
+function vectorized_add(numeric[] a, numeric[] b)
+    return a + b
+end
+
+@cold
+function rare_path()
+    print "rarely called"
+end
+
+print "Performance OK!"

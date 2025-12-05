@@ -1,0 +1,19 @@
+--- Documentation test
+--- Line documentation
+/// This function adds two numbers
+/// Returns the sum
+function add(numeric a, numeric b)
+    return a + b
+end
+
+/** Block documentation
+ * Multiplies two numbers
+ * @param a First number
+ * @param b Second number
+ * @return Product
+ */
+function multiply(numeric a, numeric b)
+    return a * b
+end
+
+print "Documentation OK!"

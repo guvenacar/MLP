@@ -1,0 +1,15 @@
+-- Test module system
+
+import std.math
+import std.io { yazdir, oku }
+export fonk add
+
+module my_module
+
+namespace utils {
+  fonk helper() {
+    yazdir("Helper")
+  }
+}
+
+yazdir("Module test")

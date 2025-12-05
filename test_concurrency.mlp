@@ -1,0 +1,18 @@
+--- Concurrency test
+--- Thread creation
+Thread worker = spawn(worker_function)
+
+--- Mutex for synchronization
+Mutex lock = Mutex.new()
+lock.acquire()
+--- Critical section
+lock.release()
+
+--- Atomic operations
+Atomic<numeric> counter = Atomic.new(0)
+counter.fetch_add(1)
+
+--- Join thread
+worker.join()
+
+print "Concurrency OK!"

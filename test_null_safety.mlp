@@ -1,0 +1,27 @@
+--- Null safety test
+--- Nullable types
+numeric? maybeNum = null
+text? maybeName = "John"
+boolean? maybeFlag = true
+
+--- Null coalescing
+numeric result = maybeNum ?? 0
+text name = maybeName ?? "Unknown"
+
+--- Safe navigation
+text personName = person?.name
+numeric age = user?.profile?.age
+
+--- Null assertion
+numeric value = maybeNum!
+
+--- Null checks
+if maybeNum == null
+    print "is null"
+end
+
+if maybeName != null
+    print "has value"
+end
+
+print "Null Safety OK!"

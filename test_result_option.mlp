@@ -1,0 +1,30 @@
+--- Result/Option types test
+--- Result type (Ok/Err)
+Result<numeric, text> result = Ok(42)
+Result<text, text> error = Err("failed")
+
+--- Option type (Some/None)
+Option<text> some_value = Some("hello")
+Option<numeric> none_value = None
+
+--- Unwrap operations
+numeric val = result.unwrap()
+text msg = some_value.expect("should have value")
+
+--- Pattern matching with Result
+match result
+    case Ok(value)
+        print value
+    case Err(error)
+        print error
+end
+
+--- Pattern matching with Option
+match some_value
+    case Some(v)
+        print v
+    case None
+        print "no value"
+end
+
+print "Result/Option OK!"

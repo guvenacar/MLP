@@ -1,0 +1,29 @@
+--- Switch/Match test
+numeric x = 5
+
+--- Switch statement
+switch x
+    case 1
+        print "one"
+    case 2
+        print "two"
+    case 5
+        print "five"
+    default
+        print "other"
+end
+
+--- Match expression
+text color = "blue"
+match color
+    case "red"
+        print "RED"
+    case "blue"
+        print "BLUE"
+    case "green"
+        print "GREEN"
+    default
+        print "unknown"
+end
+
+print "Switch OK!"

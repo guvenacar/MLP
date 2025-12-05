@@ -1,0 +1,13 @@
+-- Test reflection and type introspection
+
+tip Nokta:
+  sayi x
+  sayi y
+sontip
+
+sayi a = 10
+metin b = typeof(a)
+metin c = nameof(Nokta)
+
+yazdir(b)
+yazdir(c)

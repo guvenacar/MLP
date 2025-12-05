@@ -1,0 +1,15 @@
+--- Regex pattern test
+--- Pattern definition
+Regex email_pattern = /[a-z]+@[a-z]+\.[a-z]+/
+Regex digit_pattern = /[0-9]+/
+
+--- Match operation
+boolean matches = text.match(email_pattern)
+
+--- Replace operation
+text result = text.replace(digit_pattern, "X")
+
+--- Find all
+text[] found = text.find_all(email_pattern)
+
+print "Regex OK!"

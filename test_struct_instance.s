@@ -1,9 +1,9 @@
 ; Struct Module Test - Generated Assembly
-; Source: /home/pardus/projeler/MLP/MLP/melp/melp/struct/test_struct.mlp
+; Source: test_struct_instance.mlp
 ; P1 Data Structures - Module #11
-; Variables: 1
-; Struct definitions: 0
-; Field accesses: 0
+; Variables: 0
+; Struct definitions: 1
+; Field accesses: 4
 
 section .data
     ; Struct module data
@@ -22,7 +22,7 @@ _start:
     ; Program start - P1 Struct Module
     push rbp
     mov rbp, rsp
-    sub rsp, 40  ; Stack for variables + structs
+    sub rsp, 32  ; Stack for variables + structs
 
     ; Print struct module message
     mov rax, 1
@@ -45,5 +45,4 @@ _start:
     syscall
 
 section .bss
-    x: resq 1
     ; Struct instances would be allocated here

@@ -1,0 +1,16 @@
+-- Test operator overloading
+
+tip Nokta:
+  sayi x
+  sayi y
+  
+  operator+(other: Nokta) {
+    dön Nokta { x + other.x, y + other.y }
+  }
+  
+  operator==(other: Nokta) {
+    dön x == other.x ve y == other.y
+  }
+sontip
+
+yazdir("Operator overloading")

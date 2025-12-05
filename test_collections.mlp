@@ -1,0 +1,16 @@
+--- Collections test
+--- Tuple (immutable, stack)
+tuple coords = <10, 20, 30>
+numeric x = coords<0>
+numeric y = coords<1>
+
+--- List (mutable, heap)
+list items = (1, 2, 3, 4, 5)
+numeric first = items(0)
+items(1) = 99
+
+--- Mixed types
+tuple mixed = <"hello", 42, true>
+text greeting = mixed<0>
+
+print "Collections OK!"

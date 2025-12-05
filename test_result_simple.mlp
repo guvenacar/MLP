@@ -1,0 +1,16 @@
+--- Result/Option simple test
+Result<numeric> divide(numeric a, numeric b)
+    if b == 0
+        return Error("Division by zero")
+    end
+    return Ok(a / b)
+end
+
+Option<text> find_user(numeric id)
+    if id == 1
+        return Some("Alice")
+    end
+    return None
+end
+
+print "Result/Option OK!"

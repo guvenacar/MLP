@@ -1,0 +1,11 @@
+-- Test linear types
+
+linear sayi file = open_file()
+use_once(file)
+
+affine sayi optional = some_value()
+
+linear sayi data = acquire()
+move(data)
+
+yazdir("Linear types")

@@ -1,0 +1,8 @@
+-- Test CLI I/O
+
+text name = input("Enter your name: ")
+print("Hello, " + name)
+
+-- Test command line args
+numeric argc = args_count()
+print(argc)

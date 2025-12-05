@@ -1,0 +1,15 @@
+--- Smart pointers test
+--- Rc: Reference counted
+Rc<Node> node_ptr = Rc.new(node_data)
+Rc<Node> clone_ptr = rc_clone(node_ptr)
+
+--- Arc: Atomic reference counted
+Arc<Data> shared_data = Arc.new(data)
+
+--- Box: Heap allocated
+Box<numeric> boxed = Box.new(42)
+
+--- Weak: Weak reference
+Weak<Node> weak_ref = rc_downgrade(node_ptr)
+
+print "Smart Pointers OK!"

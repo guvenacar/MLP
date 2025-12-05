@@ -1,0 +1,15 @@
+-- Test dependent types
+
+tip Vec<n: sayi>:
+  sayi data[n]
+  sayi length = n
+sontip
+
+tip Matrix<rows: sayi, cols: sayi>:
+  sayi data[rows][cols]
+sontip
+
+sayi vec: Vec<5>
+sayi mat: Matrix<3, 4>
+
+yazdir("Dependent types")

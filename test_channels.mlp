@@ -1,0 +1,16 @@
+--- Channels test
+--- Create channel
+Channel<numeric> ch = channel(10)
+
+--- Send data
+ch.send(42)
+ch.send(99)
+
+--- Receive data
+numeric val1 = ch.receive()
+numeric val2 = ch.receive()
+
+--- Close channel
+ch.close()
+
+print "Channels OK!"

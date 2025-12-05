@@ -1,0 +1,14 @@
+-- Test struct parsing
+
+struct Person
+    text name
+    numeric age
+    boolean active
+end struct
+
+struct Address
+    text street
+    text city
+end struct
+
+numeric x = 10

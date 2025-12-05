@@ -1,0 +1,20 @@
+-- Test union types
+
+enum Result {
+  Ok(sayi),
+  Err(metin)
+}
+
+enum Option {
+  Some(sayi),
+  None
+}
+
+sayi result = Result::Ok(42)
+
+match result {
+  Ok(x) => yazdir(x),
+  Err(e) => yazdir(e)
+}
+
+yazdir("Union types")

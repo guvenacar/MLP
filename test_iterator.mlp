@@ -1,0 +1,17 @@
+--- Iterator system test
+--- Array iterator
+numeric[] numbers = [1, 2, 3, 4, 5]
+iterator iter = numbers.iter()
+
+--- Iterator operations
+iter.map(double)
+iter.filter(is_even)
+iter.collect()
+
+--- Range iterator
+iterator range_iter = 0..10
+
+--- Reduce operation
+numeric sum = range_iter.reduce(add)
+
+print "Iterator OK!"

@@ -1,0 +1,18 @@
+--- Unsafe blocks test
+--- Unsafe block
+unsafe
+    numeric* raw_ptr = cast<numeric*>(address)
+    numeric value = *raw_ptr
+end
+
+--- Unsafe function
+unsafe function dangerous_op()
+    --- Raw pointer operations
+end
+
+--- Type transmutation
+unsafe
+    numeric x = transmute<numeric>(bytes)
+end
+
+print "Unsafe OK!"

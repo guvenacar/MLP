@@ -1,0 +1,15 @@
+--- Pointer test
+numeric x = 42
+numeric* ptr = &x
+numeric y = *ptr
+
+--- Pointer arithmetic
+ptr = ptr + 1
+ptr = ptr - 1
+
+--- Null check
+if ptr == null
+    print "Null pointer"
+end
+
+print "Pointer OK!"

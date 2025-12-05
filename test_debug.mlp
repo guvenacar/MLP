@@ -1,0 +1,17 @@
+--- Debug features test
+--- Assertions
+assert(1 == 1)
+assert(x > 0, "x must be positive")
+
+--- Debug prints
+debug("value:", x)
+trace("entering function")
+
+--- Logging
+log.info("info message")
+log.error("error message")
+
+--- Breakpoint
+breakpoint()
+
+print "Debug OK!"

@@ -1,0 +1,11 @@
+-- Test result type
+
+Result<sayi, metin> result = Ok(42)
+Result<sayi, metin> error = Err("Failed")
+
+match result {
+  Ok(x) => yazdir(x),
+  Err(e) => yazdir(e)
+}
+
+yazdir("Result type")

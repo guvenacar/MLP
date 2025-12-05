@@ -1,0 +1,9 @@
+-- Test codegen context
+
+fonk simple() {
+  sayi x = 5
+  sayi y = 10
+  dön x + y
+}
+
+yazdir("Codegen context")

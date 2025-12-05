@@ -1,0 +1,10 @@
+-- Test file I/O operations
+
+-- Open file
+File f = fopen("test.txt", "w")
+
+-- Write to file
+fwrite(f, "Hello World")
+
+-- Close file
+fclose(f)

@@ -1,0 +1,19 @@
+--- Test framework test
+@test
+function test_addition()
+    assert(1 + 1 == 2)
+    assert(5 - 3 == 2)
+end
+
+@test
+@should_panic
+function test_division_by_zero()
+    numeric x = 10 / 0
+end
+
+@bench
+function bench_fibonacci()
+    fibonacci(20)
+end
+
+print "Test Framework OK!"

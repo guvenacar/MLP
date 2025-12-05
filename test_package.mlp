@@ -1,0 +1,8 @@
+-- Test package management
+
+mod utils
+use std::io
+pub fn test()
+crate::module
+
+yazdir("Package management")

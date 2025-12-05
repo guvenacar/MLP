@@ -1,0 +1,7 @@
+-- Test expression
+
+sayi a = 5 + 3
+sayi b = a * 2
+sayi c = (a + b) / 2
+
+yazdir(c)

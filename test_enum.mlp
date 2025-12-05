@@ -1,0 +1,11 @@
+-- Test enum
+
+enum Direction
+    North
+    South
+    East
+    West
+end enum
+
+Direction current = Direction.North
+print(current)

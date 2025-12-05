@@ -1,0 +1,11 @@
+-- Test statement
+
+sayi x = 10
+
+eğer x > 5 ise
+  yazdir("Büyük")
+değilse
+  yazdir("Küçük")
+soneğer
+
+yazdir("Statement")

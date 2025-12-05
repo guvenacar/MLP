@@ -1,0 +1,8 @@
+-- Test program
+
+fonk main() {
+  yazdir("Program başladı")
+  sayi x = 42
+  yazdir(x)
+  dön 0
+}

@@ -1,0 +1,10 @@
+-- Test string operations
+
+text name = "Mehmet"
+text greeting = concat("Merhaba ", name)
+numeric len = length(name)
+text result = substring(name, 0, 3)
+
+print(greeting)
+print(len)
+print(result)

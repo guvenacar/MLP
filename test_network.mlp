@@ -1,0 +1,16 @@
+--- Network I/O test
+--- TCP Socket
+TcpSocket tcp = TcpSocket.connect("127.0.0.1:8080")
+tcp.send("Hello")
+text response = tcp.receive()
+tcp.close()
+
+--- UDP Socket
+UdpSocket udp = UdpSocket.bind("0.0.0.0:9000")
+udp.send_to("data", "127.0.0.1:9001")
+
+--- HTTP Client
+HttpClient http = HttpClient.new()
+HttpResponse resp = http.get("http://example.com")
+
+print "Network I/O OK!"

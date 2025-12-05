@@ -1,0 +1,19 @@
+-- Test macro system
+
+macro_rules! say_hello {
+    () => { yazdir("Hello") }
+}
+
+#[derive(Debug, Clone)]
+tip Nokta:
+  sayi x
+  sayi y
+sontip
+
+#[test]
+fonk test_func() {
+  yazdir("Test")
+}
+
+say_hello!()
+yazdir(__LINE__)

@@ -1,0 +1,35 @@
+--- Exception handling test
+--- Try-catch block
+try
+    numeric x = divide(10, 0)
+    print x
+catch DivisionByZero e
+    print "Cannot divide by zero"
+catch Exception e
+    print "General error"
+finally
+    print "Cleanup"
+end
+
+--- Throw statement
+function risky(numeric n)
+    if n < 0
+        throw NegativeNumberError("n must be positive")
+    end
+    return n * 2
+end
+
+--- Custom exception
+exception InvalidInputError
+    text message
+    numeric code
+end
+
+--- Try without finally
+try
+    risky(-5)
+catch InvalidInputError e
+    print e.message
+end
+
+print "Exception Handling OK!"

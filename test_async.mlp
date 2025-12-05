@@ -1,0 +1,13 @@
+--- Async/await test
+async function fetch_data()
+    await delay(1000)
+    return "data"
+end
+
+async function main()
+    Promise<text> result = fetch_data()
+    text data = await result
+    print data
+end
+
+print "Async OK!"

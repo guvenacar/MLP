@@ -1,0 +1,15 @@
+--- FFI test
+--- Extern C functions
+extern "C"
+    function c_malloc(size: numeric) -> pointer
+    function c_free(ptr: pointer)
+    function printf(format: text)
+end
+
+--- Unsafe pointer operations
+unsafe
+    pointer ptr = c_malloc(100)
+    c_free(ptr)
+end
+
+print "FFI OK!"

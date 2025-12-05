@@ -1,0 +1,12 @@
+--- Pattern matching test
+numeric value = 42
+
+match value
+    1 => print "one"
+    2 => print "two"
+    42 => print "forty-two"
+    x when x > 100 => print "large"
+    _ => print "other"
+end
+
+print "Pattern Matching OK!"

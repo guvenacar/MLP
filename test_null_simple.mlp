@@ -1,0 +1,4 @@
+--- Simple null safety test
+numeric? x = null
+numeric y = x ?? 42
+print "Null Safety OK!"
