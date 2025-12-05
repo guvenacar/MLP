@@ -1,28 +1,85 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-typedef enum { TK_EOF, TK_KW, TK_ID, TK_NUM, TK_OP, TK_SYM } TkType;
-typedef struct { TkType type; char val[256]; } Tok;
-static const char *SRC; static int POS;
-static void skip_ws() { while(SRC[POS] && isspace(SRC[POS])) POS++; }
-static Tok next_tok() {
-    Tok t = {TK_EOF, ""}; skip_ws(); if(!SRC[POS]) return t;
-    if(isalpha(SRC[POS])) { int i=0; while(isalnum(SRC[POS])) t.val[i++]=SRC[POS++]; t.val[i]=0; t.type=TK_ID; if(!strcmp(t.val,"let")||!strcmp(t.val,"int")) t.type=TK_KW; }
-    else if(isdigit(SRC[POS])) { int i=0; while(isdigit(SRC[POS])) t.val[i++]=SRC[POS++]; t.val[i]=0; t.type=TK_NUM; }
-    else if(strchr("+-*/%", SRC[POS])) { t.val[0]=SRC[POS++]; t.val[1]=0; t.type=TK_OP; }
-    else { t.val[0]=SRC[POS++]; t.val[1]=0; t.type=TK_SYM; }
-    return t;
-}
+#include "../../lexer.h"
+#include "variable_parser.h"
+#include "variable_codegen.h"
+
 int main(int argc, char **argv) {
-    if(argc<3) return 1;
-    printf("🔧 Variable Module - #1 P0\n===================\nInput: %s\n\n", argv[1]);
-    FILE *f=fopen(argv[1],"r"); fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
-    char *src=malloc(sz+1); fread(src,1,sz,f); src[sz]=0; fclose(f);
-    SRC=src; POS=0; int nop=0;
-    Tok t=next_tok(); while(t.type!=TK_EOF) { if(t.type==TK_OP) { printf("  ✓ Op: %s\n", t.val); nop++; } t=next_tok(); }
-    printf("  ✓ Ops found: %d\n", nop);
-    FILE *out=fopen(argv[2],"w");
-    fprintf(out,"section .data\n  msg: db 'Variable OK!',10,0\nsection .text\n  global _start\n_start:\n  mov rax,1\n  mov rdi,1\n  lea rsi,[msg]\n  mov rdx,15\n  syscall\n  mov rax,60\n  xor rdi,rdi\n  syscall\n");
-    fclose(out); free(src); printf("\n✅ Complete!\n"); return 0;
+    if(argc < 3) {
+        fprintf(stderr, "Usage: %s <input.mlp> <output.s>\n", argv[0]);
+        return 1;
+    }
+    
+    printf("🔧 Variable Module - Parser & Codegen\n");
+    printf("======================================\n");
+    printf("Input:  %s\n", argv[1]);
+    printf("Output: %s\n\n", argv[2]);
+    
+    // Read source file
+    FILE *f = fopen(argv[1], "r");
+    if (!f) {
+        fprintf(stderr, "Error: Cannot open %s\n", argv[1]);
+        return 1;
+    }
+    
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    
+    char *src = malloc(sz + 1);
+    fread(src, 1, sz, f);
+    src[sz] = 0;
+    fclose(f);
+    
+    // Create lexer
+    Lexer* lexer = lexer_create(src);
+    
+    // Create parser
+    VariableParser* parser = variable_parser_create(lexer);
+    
+    // Open output file
+    FILE *out = fopen(argv[2], "w");
+    if (!out) {
+        fprintf(stderr, "Error: Cannot create %s\n", argv[2]);
+        free(src);
+        variable_parser_free(parser);
+        lexer_free(lexer);
+        return 1;
+    }
+    
+    // Create codegen
+    VariableCodegen* codegen = variable_codegen_create(out);
+    
+    // Parse and generate code for all variable declarations
+    int decl_count = 0;
+    VariableDeclaration* decl;
+    
+    fprintf(out, "; MLP Variable Module - Generated Assembly\n");
+    fprintf(out, "; Target: x86-64 Linux\n\n");
+    
+    while ((decl = variable_parse_declaration(parser)) != NULL) {
+        printf("  ✓ Parsed variable: %s\n", decl->name);
+        
+        // Generate code
+        variable_codegen_declaration(codegen, decl);
+        
+        // Free declaration
+        if (decl->name) free(decl->name);
+        if (decl->value) free(decl->value);
+        free(decl);
+        
+        decl_count++;
+    }
+    
+    printf("\n✅ Generated %d variable declarations\n", decl_count);
+    
+    // Cleanup
+    variable_codegen_free(codegen);
+    variable_parser_free(parser);
+    lexer_free(lexer);
+    free(src);
+    fclose(out);
+    
+    return 0;
 }

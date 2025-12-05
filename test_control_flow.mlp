@@ -1,0 +1,20 @@
+--- Test Control Flow ---
+
+numeric x = 10
+numeric y = 5
+
+if x > y then
+    print("x is greater")
+end if
+
+if x == 10 then
+    print("x is ten")
+else
+    print("x is not ten")
+end if
+
+if y < 3 then
+    print("y is small")
+else
+    print("y is not small")
+end if

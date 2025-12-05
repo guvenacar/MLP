@@ -1,0 +1,11 @@
+--- Test increment and decrement ---
+
+numeric x = 10
+numeric y = 20
+
+x++
+++y
+x--
+--y
+
+print ( "Test complete" )

@@ -1,0 +1,12 @@
+---
+Basit özellik testi
+---
+
+print("MLP Derleyici Test")
+print("===================")
+print("")
+print("1. Print modülü çalışıyor!")
+print("2. Çoklu satır çalışıyor!")
+print("3. Türkçe karakterler: ğüşıöçĞÜŞİÖÇ")
+print("")
+print("Sonraki adım: Variable ve Arithmetic")

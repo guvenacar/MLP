@@ -547,8 +547,39 @@ fi
 # Stage 64: Combine and Build
 echo "[64/64] Linking..."
 
-# Create main assembly file
-cat > "$TEMP_DIR/main.s" << 'EOF'
+# Merge assembly files from modules
+echo ""
+echo "🔗 Merging module outputs..."
+
+# Priority: Use print module if available, otherwise use variable
+if [ -f "$TEMP_DIR/print.s" ]; then
+    echo "   Using print module output"
+    cp "$TEMP_DIR/print.s" "$TEMP_DIR/main.s"
+    
+    # If variable declarations exist, prepend them
+    if [ -f "$TEMP_DIR/variables.s" ]; then
+        echo "   Adding variable declarations"
+        # Create temporary file with variables first
+        cat "$TEMP_DIR/variables.s" > "$TEMP_DIR/temp_main.s"
+        # Append print output
+        cat "$TEMP_DIR/print.s" >> "$TEMP_DIR/temp_main.s"
+        mv "$TEMP_DIR/temp_main.s" "$TEMP_DIR/main.s"
+    fi
+elif [ -f "$TEMP_DIR/variables.s" ]; then
+    echo "   Using variable module output"
+    cp "$TEMP_DIR/variables.s" "$TEMP_DIR/main.s"
+    # Add exit syscall
+    echo "" >> "$TEMP_DIR/main.s"
+    echo "section .text" >> "$TEMP_DIR/main.s"
+    echo "    global _start" >> "$TEMP_DIR/main.s"
+    echo "_start:" >> "$TEMP_DIR/main.s"
+    echo "    mov rax, 60" >> "$TEMP_DIR/main.s"
+    echo "    xor rdi, rdi" >> "$TEMP_DIR/main.s"
+    echo "    syscall" >> "$TEMP_DIR/main.s"
+else
+    # Fallback: create minimal program
+    echo "   No module output found, creating minimal program"
+    cat > "$TEMP_DIR/main.s" << 'EOF'
 section .data
     msg: db "MLP Program Running", 10, 0
     msg_len: equ $ - msg
@@ -569,6 +600,7 @@ _start:
     xor rdi, rdi
     syscall
 EOF
+fi
 
 # Assemble
 nasm -f elf64 "$TEMP_DIR/main.s" -o "$TEMP_DIR/main.o" 2>/dev/null || {

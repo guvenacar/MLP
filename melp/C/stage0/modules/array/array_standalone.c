@@ -233,7 +233,37 @@ int main(int argc, char** argv) {
     fprintf(output, "section .data\n");
     fprintf(output, "    ; Array module data\n");
     fprintf(output, "    msg_array: db \"Array Module OK!\", 10, 0\n");
-    fprintf(output, "    msg_len: equ $ - msg_array\n\n");
+    fprintf(output, "    msg_len: equ $ - msg_array\n");
+    
+    // Generate string constants for array string elements
+    int str_idx = 0;
+    for (int i = 0; i < decl_count; i++) {
+        if (declarations[i]->is_array && declarations[i]->value && declarations[i]->value[0] == '[') {
+            // Check if this array contains strings
+            char* ptr = declarations[i]->value + 1;
+            while (*ptr && *ptr != ']') {
+                while (*ptr == ' ' || *ptr == ',') ptr++;
+                if (*ptr == '"') {
+                    // Found string element
+                    char str_value[256];
+                    int str_len = 0;
+                    ptr++;  // Skip opening "
+                    while (*ptr && *ptr != '"' && str_len < 255) {
+                        str_value[str_len++] = *ptr++;
+                    }
+                    str_value[str_len] = '\0';
+                    if (*ptr == '"') ptr++;
+                    
+                    fprintf(output, "    arr_str_%d: db \"%s\", 0\n", str_idx, str_value);
+                    str_idx++;
+                } else {
+                    // Skip non-string elements
+                    while (*ptr && *ptr != ',' && *ptr != ']') ptr++;
+                }
+            }
+        }
+    }
+    fprintf(output, "\n");
 
     fprintf(output, "section .text\n");
     fprintf(output, "global _start\n\n");
@@ -260,7 +290,66 @@ int main(int argc, char** argv) {
     fprintf(output, "    mov rdx, msg_len\n");
     fprintf(output, "    syscall\n\n");
 
-    // Array operations placeholder
+    // Array initialization code
+    fprintf(output, "    ; Array initialization\n");
+    int str_count = 0;
+    for (int i = 0; i < decl_count; i++) {
+        if (declarations[i]->is_array && declarations[i]->value && declarations[i]->value[0] == '[') {
+            fprintf(output, "    ; Initialize array: %s = %s\n", 
+                    declarations[i]->name, declarations[i]->value);
+            fprintf(output, "    lea rbx, [%s]  ; Array base address\n", declarations[i]->name);
+            
+            // Parse array literal: [10, 20, 30] or ["Ali", "Veli"]
+            char* value_copy = strdup(declarations[i]->value);
+            char* ptr = value_copy + 1;  // Skip '['
+            int index = 0;
+            
+            while (*ptr && *ptr != ']') {
+                // Skip whitespace and commas
+                while (*ptr == ' ' || *ptr == ',') ptr++;
+                if (*ptr == ']') break;
+                
+                if (*ptr == '"') {
+                    // String element
+                    char str_value[256];
+                    int str_len = 0;
+                    ptr++;  // Skip opening "
+                    while (*ptr && *ptr != '"' && str_len < 255) {
+                        str_value[str_len++] = *ptr++;
+                    }
+                    str_value[str_len] = '\0';
+                    if (*ptr == '"') ptr++;
+                    
+                    // Add string to .data section (will be added after main code)
+                    fprintf(output, "    ; Array[%d] = \"%s\" (stored at arr_str_%d)\n", 
+                            index, str_value, str_count);
+                    fprintf(output, "    lea rax, [arr_str_%d]\n", str_count);
+                    fprintf(output, "    mov [rbx + %d], rax\n", index * 8);
+                    str_count++;
+                } else {
+                    // Numeric element
+                    char num_str[64];
+                    int num_len = 0;
+                    while (*ptr && *ptr != ',' && *ptr != ']' && *ptr != ' ' && num_len < 63) {
+                        num_str[num_len++] = *ptr++;
+                    }
+                    num_str[num_len] = '\0';
+                    
+                    if (num_len > 0) {
+                        fprintf(output, "    mov qword [rbx + %d], %s  ; Array[%d] = %s\n", 
+                                index * 8, num_str, index, num_str);
+                    }
+                }
+                
+                index++;
+            }
+            
+            free(value_copy);
+            fprintf(output, "    ; Array %s: %d elements initialized\n\n", 
+                    declarations[i]->name, index);
+        }
+    }
+    
     fprintf(output, "    ; Array operations:\n");
     fprintf(output, "    ; - Literal: [1, 2, 3] -> allocate, fill\n");
     fprintf(output, "    ; - Index: arr[i] -> base + i * element_size\n");

@@ -1,0 +1,9 @@
+-- Simple While Loop Test
+
+numeric counter = 0
+
+while counter < 5
+    counter = counter + 1
+end while
+
+print("Final counter value")

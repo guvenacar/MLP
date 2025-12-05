@@ -1,0 +1,7 @@
+--- Test For Loop ---
+
+for i = 0 to 5
+    print("Iteration")
+end for
+
+print("Done!")

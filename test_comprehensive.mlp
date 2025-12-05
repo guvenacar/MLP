@@ -1,0 +1,23 @@
+---
+Kapsamlı test
+Birden fazla modül
+---
+
+numeric age = 25
+numeric price = 19
+text username = "admin"
+text message = "Hello World"
+boolean active = true
+boolean verified = false
+
+print("=== MLP Compiler Test ===")
+print("")
+print("Variables defined:")
+print("  - age (numeric)")
+print("  - price (numeric)")
+print("  - username (text)")  
+print("  - message (text)")
+print("  - active (boolean)")
+print("  - verified (boolean)")
+print("")
+print("Status: All modules working!")

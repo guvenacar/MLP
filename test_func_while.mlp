@@ -1,0 +1,17 @@
+-- Test Function with While Loop
+
+function count_to_five() numeric
+    numeric counter = 0
+    
+    while counter < 5
+        counter = counter + 1
+    end while
+    
+    return counter
+end function
+
+function main() numeric
+    numeric result = count_to_five()
+    print(result)
+    return 0
+end function

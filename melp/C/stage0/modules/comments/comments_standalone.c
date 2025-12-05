@@ -1,28 +1,121 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-typedef enum { TK_EOF, TK_KW, TK_ID, TK_NUM, TK_OP, TK_SYM } TkType;
-typedef struct { TkType type; char val[256]; } Tok;
-static const char *SRC; static int POS;
-static void skip_ws() { while(SRC[POS] && isspace(SRC[POS])) POS++; }
-static Tok next_tok() {
-    Tok t = {TK_EOF, ""}; skip_ws(); if(!SRC[POS]) return t;
-    if(isalpha(SRC[POS])) { int i=0; while(isalnum(SRC[POS])) t.val[i++]=SRC[POS++]; t.val[i]=0; t.type=TK_ID; if(!strcmp(t.val,"let")||!strcmp(t.val,"int")) t.type=TK_KW; }
-    else if(isdigit(SRC[POS])) { int i=0; while(isdigit(SRC[POS])) t.val[i++]=SRC[POS++]; t.val[i]=0; t.type=TK_NUM; }
-    else if(strchr("+-*/%", SRC[POS])) { t.val[0]=SRC[POS++]; t.val[1]=0; t.type=TK_OP; }
-    else { t.val[0]=SRC[POS++]; t.val[1]=0; t.type=TK_SYM; }
-    return t;
+
+// Remove comments from MLP source code
+// Handles:
+// - Single-line comments: -- text
+// - Multi-line comments: --- text ---
+char* remove_comments(const char* source) {
+    size_t len = strlen(source);
+    char* result = malloc(len + 1);
+    size_t write_pos = 0;
+    size_t read_pos = 0;
+    
+    int single_line_removed = 0;
+    int multi_line_removed = 0;
+    
+    while (read_pos < len) {
+        // Check for multi-line comment: ---
+        if (read_pos + 2 < len && 
+            source[read_pos] == '-' && 
+            source[read_pos + 1] == '-' && 
+            source[read_pos + 2] == '-') {
+            
+            // Find the closing ---
+            read_pos += 3;  // Skip opening ---
+            
+            // Find closing ---
+            while (read_pos + 2 < len) {
+                if (source[read_pos] == '-' && 
+                    source[read_pos + 1] == '-' && 
+                    source[read_pos + 2] == '-') {
+                    read_pos += 3;  // Skip closing ---
+                    multi_line_removed++;
+                    break;
+                }
+                read_pos++;
+            }
+            continue;
+        }
+        
+        // Check for single-line comment: --
+        if (read_pos + 1 < len && 
+            source[read_pos] == '-' && 
+            source[read_pos + 1] == '-') {
+            
+            // Skip until end of line
+            while (read_pos < len && source[read_pos] != '\n') {
+                read_pos++;
+            }
+            single_line_removed++;
+            // Keep the newline
+            if (read_pos < len && source[read_pos] == '\n') {
+                result[write_pos++] = '\n';
+                read_pos++;
+            }
+            continue;
+        }
+        
+        // Regular character - copy it
+        result[write_pos++] = source[read_pos++];
+    }
+    
+    result[write_pos] = '\0';
+    
+    printf("  ✓ Single-line comments removed: %d\n", single_line_removed);
+    printf("  ✓ Multi-line comments removed: %d\n", multi_line_removed);
+    
+    return result;
 }
+
 int main(int argc, char **argv) {
-    if(argc<3) return 1;
-    printf("🔧 Comments Module - #1 P0\n===================\nInput: %s\n\n", argv[1]);
-    FILE *f=fopen(argv[1],"r"); fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
-    char *src=malloc(sz+1); fread(src,1,sz,f); src[sz]=0; fclose(f);
-    SRC=src; POS=0; int nop=0;
-    Tok t=next_tok(); while(t.type!=TK_EOF) { if(t.type==TK_OP) { printf("  ✓ Op: %s\n", t.val); nop++; } t=next_tok(); }
-    printf("  ✓ Ops found: %d\n", nop);
-    FILE *out=fopen(argv[2],"w");
-    fprintf(out,"section .data\n  msg: db 'Comments OK!',10,0\nsection .text\n  global _start\n_start:\n  mov rax,1\n  mov rdi,1\n  lea rsi,[msg]\n  mov rdx,15\n  syscall\n  mov rax,60\n  xor rdi,rdi\n  syscall\n");
-    fclose(out); free(src); printf("\n✅ Complete!\n"); return 0;
+    if(argc < 3) {
+        fprintf(stderr, "Usage: %s <input.mlp> <output.mlp>\n", argv[0]);
+        return 1;
+    }
+    
+    printf("🔧 Comments Module - Comment Remover\n");
+    printf("======================================\n");
+    printf("Input:  %s\n", argv[1]);
+    printf("Output: %s\n\n", argv[2]);
+    
+    // Read source file
+    FILE *f = fopen(argv[1], "r");
+    if (!f) {
+        fprintf(stderr, "Error: Cannot open %s\n", argv[1]);
+        return 1;
+    }
+    
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    
+    char *src = malloc(sz + 1);
+    fread(src, 1, sz, f);
+    src[sz] = 0;
+    fclose(f);
+    
+    // Remove comments
+    char* cleaned = remove_comments(src);
+    
+    // Write cleaned code
+    FILE *out = fopen(argv[2], "w");
+    if (!out) {
+        fprintf(stderr, "Error: Cannot create %s\n", argv[2]);
+        free(src);
+        free(cleaned);
+        return 1;
+    }
+    
+    fprintf(out, "%s", cleaned);
+    fclose(out);
+    
+    printf("\n✅ Comments removed successfully!\n");
+    printf("   Cleaned code: %s\n", argv[2]);
+    
+    free(src);
+    free(cleaned);
+    
+    return 0;
 }

@@ -1,0 +1,17 @@
+-- Array + Functions Integration Test
+-- Test arrays with function parameters and return
+
+function sum_array(numeric[] arr, numeric size) numeric
+    numeric total = 0
+    numeric i = 0
+    -- TODO: Loop through array and sum
+    -- For now just return test value
+    return 42
+end function
+
+function main() numeric
+    numeric[] numbers = [10, 20, 30, 40, 50]
+    numeric result = sum_array(numbers, 5)
+    print(result)
+    return 0
+end function

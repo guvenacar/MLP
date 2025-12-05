@@ -1,0 +1,19 @@
+--- Test comparison operators ---
+
+numeric a = 10
+numeric b = 20
+numeric c = 10
+
+boolean equal = ( a == c )
+boolean not_equal = ( a != b )
+boolean less = ( a < b )
+boolean greater = ( b > a )
+boolean less_eq = ( a <= c )
+boolean greater_eq = ( b >= a )
+
+print ( equal )
+print ( not_equal )
+print ( less )
+print ( greater )
+print ( less_eq )
+print ( greater_eq )

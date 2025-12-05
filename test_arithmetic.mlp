@@ -1,0 +1,17 @@
+--- Test Arithmetic Module ---
+
+numeric a = 10
+numeric b = 5
+numeric c = a + b
+numeric d = a - b
+numeric e = a * b
+numeric f = a / b
+numeric g = a % b
+
+print("a = 10")
+print("b = 5")
+print("c = a + b")
+print("d = a - b")
+print("e = a * b")
+print("f = a / b")
+print("g = a % b")

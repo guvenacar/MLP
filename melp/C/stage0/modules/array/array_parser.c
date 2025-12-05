@@ -1,5 +1,7 @@
 #include "array_parser.h"
 #include "../arithmetic/arithmetic_parser.h"
+#include "../expression/expression.h"
+#include "../expression/expression_parser.h"
 #include <stdlib.h>
 #include <stdio.h>
 

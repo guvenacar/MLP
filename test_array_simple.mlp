@@ -1,0 +1,6 @@
+-- Array Module Test
+-- Test array declarations and basic operations
+
+numeric[] numbers = [10, 20, 30]
+text[] names = ["Ali", "Veli", "Ayşe"]
+numeric size = 5

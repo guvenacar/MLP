@@ -146,6 +146,62 @@ VariableDeclaration* variable_parse_declaration(VariableParser* parser) {
     } else if (parser->current_token->type == TOKEN_FALSE) {
         decl->value = strdup("false");
         advance(parser);
+    } else if (parser->current_token->type == TOKEN_LBRACKET) {
+        // Array literal: [1, 2, 3]
+        // For now, store the literal string representation
+        // Full parsing happens in array module
+        char array_literal[1024] = "[";
+        int pos = 1;
+        
+        advance(parser);  // consume '['
+        
+        while (parser->current_token && 
+               parser->current_token->type != TOKEN_RBRACKET &&
+               parser->current_token->type != TOKEN_EOF) {
+            
+            // Append current token value
+            if (parser->current_token->type == TOKEN_NUMBER ||
+                parser->current_token->type == TOKEN_STRING ||
+                parser->current_token->type == TOKEN_IDENTIFIER) {
+                int len = strlen(parser->current_token->value);
+                if (pos + len + 5 < 1024) {
+                    if (parser->current_token->type == TOKEN_STRING) {
+                        array_literal[pos++] = '"';
+                    }
+                    strcpy(array_literal + pos, parser->current_token->value);
+                    pos += len;
+                    if (parser->current_token->type == TOKEN_STRING) {
+                        array_literal[pos++] = '"';
+                    }
+                }
+            }
+            
+            advance(parser);
+            
+            // Check for comma
+            if (parser->current_token && parser->current_token->type == TOKEN_COMMA) {
+                if (pos + 2 < 1024) {
+                    array_literal[pos++] = ',';
+                    array_literal[pos++] = ' ';
+                }
+                advance(parser);  // consume ','
+            }
+        }
+        
+        if (parser->current_token && parser->current_token->type == TOKEN_RBRACKET) {
+            if (pos + 2 < 1024) {
+                array_literal[pos++] = ']';
+                array_literal[pos] = '\0';
+            }
+            advance(parser);  // consume ']'
+            
+            decl->value = strdup(array_literal);
+        } else {
+            fprintf(stderr, "Error: Expected ']' in array literal\n");
+            free(decl->name);
+            free(decl);
+            return NULL;
+        }
     } else {
         fprintf(stderr, "Error: Expected value after '='\n");
         free(decl->name);

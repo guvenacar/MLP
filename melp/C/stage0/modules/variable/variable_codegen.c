@@ -91,13 +91,76 @@ void variable_codegen_declaration(VariableCodegen* codegen, VariableDeclaration*
         
         if (decl->array_size > 0) {
             // Fixed-size array
-            int element_size = (decl->base_type == VAR_NUMERIC) ? 8 : 8;  // 8 bytes per element
             fprintf(f, "    var_%s: resq %d  ; Array of %d elements\n", 
                     decl->name, decl->array_size, decl->array_size);
         } else {
             // Dynamic array (just a pointer)
             fprintf(f, "    var_%s: resq 1  ; Pointer to dynamic array\n", decl->name);
         }
+        
+        // Array initialization code
+        if (decl->value && decl->value[0] == '[') {
+            fprintf(f, "\nsection .text\n");
+            codegen->data_section_active = 0;
+            codegen->bss_section_active = 0;
+            
+            fprintf(f, "    ; Initialize array: %s\n", decl->name);
+            fprintf(f, "    lea rbx, [var_%s]  ; Array base address\n", decl->name);
+            
+            // Parse array literal: [10, 20, 30]
+            char* value_copy = strdup(decl->value);
+            char* ptr = value_copy + 1;  // Skip '['
+            int index = 0;
+            
+            while (*ptr && *ptr != ']') {
+                // Skip whitespace
+                while (*ptr == ' ' || *ptr == ',') ptr++;
+                if (*ptr == ']') break;
+                
+                // Parse number or string
+                if (*ptr == '"') {
+                    // String element - store pointer
+                    char str_value[256];
+                    int str_len = 0;
+                    ptr++;  // Skip opening "
+                    while (*ptr && *ptr != '"' && str_len < 255) {
+                        str_value[str_len++] = *ptr++;
+                    }
+                    str_value[str_len] = '\0';
+                    if (*ptr == '"') ptr++;
+                    
+                    // Create string constant and store pointer
+                    fprintf(f, "    ; Array[%d] = \"%s\"\n", index, str_value);
+                    variable_codegen_data_section(codegen);
+                    fprintf(f, "    arr_%s_str_%d: db \"%s\", 0\n", 
+                            decl->name, index, str_value);
+                    fprintf(f, "\nsection .text\n");
+                    codegen->data_section_active = 0;
+                    codegen->bss_section_active = 0;
+                    fprintf(f, "    lea rax, [arr_%s_str_%d]\n", decl->name, index);
+                    fprintf(f, "    mov [rbx + %d], rax\n", index * 8);
+                } else {
+                    // Numeric element
+                    char num_str[64];
+                    int num_len = 0;
+                    while (*ptr && *ptr != ',' && *ptr != ']' && *ptr != ' ' && num_len < 63) {
+                        num_str[num_len++] = *ptr++;
+                    }
+                    num_str[num_len] = '\0';
+                    
+                    if (num_len > 0) {
+                        fprintf(f, "    mov qword [rbx + %d], %s  ; Array[%d] = %s\n", 
+                                index * 8, num_str, index, num_str);
+                    }
+                }
+                
+                index++;
+            }
+            
+            free(value_copy);
+            fprintf(f, "    ; Array %s: %d elements initialized\n", decl->name, index);
+        }
+        
         return;
     }
     
