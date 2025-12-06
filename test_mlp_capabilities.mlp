@@ -1,0 +1,45 @@
+-- MLP Basit Test Programı
+-- Mevcut özelliklerle yazılabilecek bir örnek
+
+--- Değişken tanımlama
+numeric sayi = 42
+text mesaj = "Merhaba MLP!"
+boolean durum = true
+
+--- Print
+print(mesaj)
+print(sayi)
+
+--- Aritmetik
+numeric toplam = sayi + 8
+numeric carpim = sayi * 2
+print(toplam)
+print(carpim)
+
+--- Karşılaştırma
+boolean sonuc = (toplam == 50)
+print(sonuc)
+
+--- Mantıksal işlemler
+boolean ve_sonuc = sonuc && durum
+boolean veya_sonuc = sonuc || not durum
+print(ve_sonuc)
+
+--- Kontrol akışı
+if toplam > 40 then
+    print("Toplam 40'tan büyük")
+else
+    print("Toplam 40'tan küçük veya eşit")
+end if
+
+--- Döngü
+numeric sayac = 0
+while sayac < 3
+    print(sayac)
+    sayac = sayac + 1
+end while
+
+--- For döngüsü
+for i = 1 to 5
+    print(i)
+end for

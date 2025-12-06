@@ -45,4 +45,6 @@ void arithmetic_infer_tto_type(ArithmeticExpr* expr);
 // Propagate types through binary operations
 TTOTypeInfo arithmetic_propagate_binary_types(TTOTypeInfo* left, TTOTypeInfo* right, ArithmeticOp op);
 
+// Note: tto_infer_numeric_type() is defined in codegen_context.h
+
 #endif

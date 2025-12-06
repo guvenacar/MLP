@@ -1,6 +1,10 @@
 #include "arithmetic.h"
 #include "../codegen_context/codegen_context.h"
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 
 // Free arithmetic expression
 void arithmetic_expr_free(ArithmeticExpr* expr) {
@@ -23,6 +27,8 @@ void arithmetic_expr_free(ArithmeticExpr* expr) {
 // ============================================================================
 // Phase 2.3: TTO Type Propagation Implementation
 // ============================================================================
+
+// Note: tto_infer_numeric_type() is implemented in codegen_context.c
 
 // Propagate types through binary operations
 TTOTypeInfo arithmetic_propagate_binary_types(TTOTypeInfo* left, TTOTypeInfo* right, ArithmeticOp op) {

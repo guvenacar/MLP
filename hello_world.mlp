@@ -1,0 +1,6 @@
+// MLP Hello World Program
+// Test for 26-module compiler
+
+yazdir("Merhaba Dünya!")
+yazdir("MLP 26-modül sistemi çalışıyor!")
+yazdir("Hello World from MLP!")

@@ -1,0 +1,11 @@
+// MLP Test - 26 Module System
+// Testing basic features
+
+yazdir("Merhaba MLP 26 Modül!")
+
+sayi x = 42
+sayi y = 58
+sayi toplam = x + y
+
+yazdir("Toplam:")
+yazdir(toplam)

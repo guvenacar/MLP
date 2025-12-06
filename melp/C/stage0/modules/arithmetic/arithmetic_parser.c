@@ -66,6 +66,18 @@ ArithmeticExpr* arithmetic_parse_primary(ArithmeticParser* parser) {
         expr->is_literal = 0;
         expr->value = strdup(parser->current_token->value);
         expr->is_float = 0;
+        
+        // Phase 2.3: TTO info for variables (unknown at parse time)
+        // We assume INT64 initially, will be refined at runtime
+        TTOTypeInfo* tto = malloc(sizeof(TTOTypeInfo));
+        tto->type = INTERNAL_TYPE_INT64;
+        tto->is_constant = false;  // Variables can change
+        tto->needs_promotion = true;  // May need overflow check
+        tto->mem_location = MEM_REGISTER;
+        expr->tto_info = tto;
+        expr->tto_analyzed = true;
+        expr->needs_overflow_check = true;
+        
         advance(parser);
         return expr;
     }

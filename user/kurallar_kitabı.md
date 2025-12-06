@@ -74,6 +74,7 @@ her bir bileşene özel modüler yapıyı benimsemektedir. Modüller melp/bootst
 - **Dosya Uzantısı:** `.mlp` (tüm MLP/MELP dosyaları için standart)
 - **Bootstrap Compiler:** C ile yazıldı, x86-64 assembly üretiyor
 - **Milestone:** Variables, conditionals, loops, arithmetic, I/O çalışıyor
+- **NOT:** Dokümantasyonda `string` keyword kullanılır (lexer/parser tutarlılığı için)
 
 ### Dosya Yapısı
 ```
@@ -184,16 +185,18 @@ x86-64 Assembly (NASM)
 
 MLP'de kullanıcıya sadece **2 temel tip** sunulur:
 - `numeric` - Tüm sayılar (tam sayı, ondalık, büyük sayılar)
-- `text` - Tüm metinler (kısa, uzun, sabit)
+- `string` - Tüm metinler (kısa, uzun, sabit)
 
 **Ancak arka planda**, compiler otomatik olarak en verimli dahili temsili seçer. Kullanıcı bunu bilmez ve bilmesine gerek yoktur.
 
 ### 📊 Neden Bu Yaklaşım?
 
 **Gözlem 1:** Diğer dillerde BigDecimal aslında string-tabanlıdır  
-**Gözlem 2:** MLP'de sadece numeric ve text var → aslında tek tip: "veri"  
+**Gözlem 2:** MLP'de sadece numeric ve string var → aslında tek tip: "veri"  
 **Gözlem 3:** "Ali" ile 10.000 sayfalık kitap aynı bellek stratejisini kullanmamalı  
 **Gözlem 4:** Kullanıcı pragmatik katmanı görmüyor → arka plan optimizasyonu mümkün
+
+**NOT:** Dokümantasyonda "string" yerine "string" kullanılır (lexer/parser için tutarlılık).
 
 ### 🔄 MLP Derleme Zinciri ve TTO'nun Yeri
 
@@ -239,13 +242,13 @@ x86-64 Binary                     Kullanıcı Çalıştırır
 | `numeric y = 3.14` | ~15 digit hassasiyet | double | xmm register | ⚡ Hızlı |
 | `numeric z = 10^100` | Sınırsız | BigDecimal | heap | 🐢 Yavaş ama güvenli |
 
-#### Text İçin:
+#### String İçin:
 
-| Kullanıcı Yazar | Uzunluk | Dahili Temsil | Nerede? | Performans |
+| Kullanıcı Yazar | Uzunluk | Dahali Temsil | Nerede? | Performans |
 |-----------------|---------|---------------|---------|------------|
-| `text s = "Ali"` | ≤23 byte | SSO (inline) | stack | ⚡ En hızlı |
-| `text t = "Uzun metin..."` | >23 byte | heap pointer | heap | 🔄 Normal |
-| `text c = "Sabit"` | Sabit | .rodata | readonly | ⚡ Paylaşımlı |
+| `string s = "Ali"` | ≤23 byte | SSO (inline) | stack | ⚡ En hızlı |
+| `string t = "Uzun metin..."` | >23 byte | heap pointer | heap | 🔄 Normal |
+| `string c = "Sabit"` | Sabit | .rodata | readonly | ⚡ Paylaşımlı |
 
 **SSO = Small String Optimization:** Kısa stringler heap allocation olmadan doğrudan stack'te saklanır.
 
@@ -260,7 +263,7 @@ function analyze_numeric(value):
     else:
         return BIGDECIMAL     -- Heap'te tutulacak
 
-function analyze_text(value):
+function analyze_string(value):
     if is_constant(value):
         return RODATA_STRING  -- .rodata section'da
     else if length(value) ≤ 23:
@@ -292,7 +295,7 @@ x = x + 1                       -- OVERFLOW!
 - [ ] BigDecimal fallback (büyük/hassas sayılar)
 - [ ] Overflow detection ve auto-promote
 
-**Text:**
+**String:**
 - [ ] SSO implementasyonu (≤23 byte inline)
 - [ ] Heap string (>23 byte)
 - [ ] Constant string → .rodata
@@ -347,8 +350,8 @@ numeric küçük = 42
 numeric ondalık = 3.14159
 numeric devasa = 10 ^ 1000
 
-text kısa = "Ali"
-text uzun = read_file("kitap.txt")
+string kısa = "Ali"
+string uzun = read_file("kitap.txt")
 ```
 
 **Compiler arka planda:**
@@ -375,7 +378,7 @@ mov [rbp-56], rax      ; heap pointer
 
 ### ✅ Avantajlar
 
-1. **Kullanıcı basitliği:** Sadece `numeric` ve `text` - başka tip yok
+1. **Kullanıcı basitliği:** Sadece `numeric` ve `string` - başka tip yok
 2. **Otomatik performans:** Küçük değerler hızlı, büyükler güvenli
 3. **Bellek verimliliği:** Gereksiz heap allocation yok
 4. **Backward compatible:** Mevcut MLP kodu değişmeden çalışır
@@ -516,7 +519,7 @@ end if
 
 -- Nullable type annotation
 numeric? maybeNum = null
-text? maybeStr = null
+string? maybeStr = null
 ```
 
 **Not:** 
@@ -614,7 +617,7 @@ end match
 ```mlp
 -- State değişken tanımlama
 state numeric counter = 100
-state text message = "Hello"
+state string message = "Hello"
 shared state numeric global_counter = 1000
 
 -- State değişken okuma ve yazdırma
@@ -647,7 +650,7 @@ print(sum)  -- 10 yazdırır (1+2+3+4)
 
 **Desteklenen Tipler:**
 - `state numeric name = value` - Sayısal state
-- `state text name = "value"` - Metin state
+- `state string name = "value"` - Metin state
 
 **Notlar:**
 - State değişkenler .bss section'da saklanır
@@ -660,7 +663,7 @@ print(sum)  -- 10 yazdırır (1+2+3+4)
 
 ### BigDecimal-Based Type System
 - **numeric:** Tüm sayılar (int/float ayrımı YOK), BigDecimal tabanlı
-- **text/string:** UTF-8 string
+- **string:** UTF-8 string (text keyword yerine string kullanılır)
 - **boolean:** true/false
 
 ### Koleksiyon Tipleri (Array, List, Tuple)
@@ -1270,7 +1273,7 @@ Tüm 3 compiler fazı MLP'de yazıldı ve test edildi:
 **Features:**
 - Whitespace skipping (space, tab)
 - Number literals (integers)
-- Identifiers and keywords (numeric, text, print, func, return)
+- Identifiers and keywords (numeric, string, print, func, return)
 - Basic operators (=, +, -, *, /, (, ), ,)
 - EOF token
 
@@ -1581,10 +1584,10 @@ Eklenen fonksiyonlar (`runtime/runtime.c` satır 450-502):
 
 #### Tespit Edilen MLP Syntax Kısıtlamaları
 
-**1. Global text/array değişkenler ÇALIŞMIYOR**
+**1. Global string/array değişkenler ÇALIŞMIYOR**
 ```mlp
-text source_code = ""    -- ❌ Codegen error: Undefined variable
-numeric[] tokens         -- ❌ Codegen error
+string source_code = ""    -- ❌ Codegen error: Undefined variable
+numeric[] tokens           -- ❌ Codegen error
 ```
 **Workaround:** Tümünü fonksiyon içinde tanımla (local scope)
 
@@ -1626,14 +1629,14 @@ end while
 **Strateji:** Tüm state local, inline logic, exit yerine position manipulation
 
 ```mlp
-func tokenize(text source_code)
+func tokenize(string source_code)
     numeric source_len = str_length(source_code)
     numeric pos = 0
     numeric line = 1
     
     -- Local arrays for tokens
     numeric[] token_types = malloc(1000)
-    text[] token_values = malloc(1000)
+    string[] token_values = malloc(1000)
     numeric token_count = 0
     
     -- Main loop - while ile
@@ -1641,7 +1644,7 @@ func tokenize(text source_code)
         -- Whitespace skip (inline)
         numeric ws_done = 0
         while pos < source_len
-            text c = charAt(source_code, pos)
+            string c = charAt(source_code, pos)
             if c == " " then
                 pos = pos + 1
             else if c == "\t" then
@@ -1661,7 +1664,7 @@ func tokenize(text source_code)
         end if
         
         -- Token extraction
-        text ch = charAt(source_code, pos)
+        string ch = charAt(source_code, pos)
         
         if ch == "=" then
             token_types[token_count] = TOKEN_ASSIGN
@@ -1682,7 +1685,7 @@ func tokenize(text source_code)
                 pos = pos - 999
             end if
             
-            text num_str = substring(source_code, start, pos - start)
+            string num_str = substring(source_code, start, pos - start)
             token_types[token_count] = TOKEN_NUMBER
             token_values[token_count] = num_str
             token_count = token_count + 1
@@ -1700,14 +1703,14 @@ end func
 
 **Helper Functions:**
 ```mlp
-func is_digit(text c)
+func is_digit(string c)
     if c == "0" then return 1 end if
     if c == "1" then return 1 end if
     -- ... 2-9
     return 0
 end func
 
-func is_alpha(text c)
+func is_alpha(string c)
     numeric idx = indexOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", c)
     if idx >= 0 then return 1 end if
     return 0
@@ -1729,7 +1732,7 @@ end func
   ```mlp
   numeric[] node_types     -- STMT_DECLARATION, EXPR_BINARY...
   numeric[] node_data1     -- Type, operator, etc.
-  text[] node_strings      -- Var names, values
+  string[] node_strings    -- Var names, values
   ```
 - İlk hedef: `numeric x = 42\nprint(x)` parse et
 
@@ -1748,7 +1751,7 @@ end func
 
 | Sorun | Workaround |
 |-------|-----------|
-| Global text variables | Hepsini local yap |
+| Global string variables | Hepsini local yap |
 | Exit/break unclear | Position manipulation + flags |
 | All functions need return | `return 1` ekle |
 | While erken çıkış | Flag variables kullan |
@@ -1756,7 +1759,7 @@ end func
 ### 🔧 Bootstrap Compiler Durumu
 
 **Executable:** `melp/melp-bootstrap`  
-**Son Update:** 29 Kasım 2025 - Text parameter support eklendi
+**Son Update:** 29 Kasım 2025 - String parameter support eklendi
 
 **Rebuild komutu:**
 ```bash
@@ -1777,7 +1780,7 @@ ld -o program program.o runtime/runtime.o -lc \
 ### �� MLP Dili Cheat Sheet
 
 **Tipler:**
-- `numeric`, `text`, `numeric*`, `numeric[]`, `struct`
+- `numeric`, `string`, `numeric*`, `numeric[]`, `struct`
 
 **Built-in Functions:**
 - `print()`, `malloc()`, `read_file()`, `write_file()`, `append_file()`

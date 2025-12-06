@@ -1,10 +1,12 @@
 #include "arithmetic_codegen.h"
+#include "../runtime_tto/runtime_tto.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // Register counter for temporary values
 static int reg_counter = 0;
+static int overflow_label_counter = 0;
 
 // Generate assembly for loading a value into register
 static void generate_load(FILE* output, const char* value, int reg_num, int is_float) {
@@ -86,16 +88,72 @@ static void generate_expr_code(FILE* output, ArithmeticExpr* expr, int target_re
                 break;
         }
     } else {
-        // Integer operations
+        // Integer operations with overflow detection
+        int overflow_label = overflow_label_counter++;
+        
         switch (expr->op) {
             case ARITH_ADD:
                 fprintf(output, "    add r%d, r%d\n", left_reg + 8, right_reg + 8);
+                // Check overflow flag
+                fprintf(output, "    jo .overflow_detected_%d\n", overflow_label);
+                fprintf(output, "    jmp .no_overflow_%d\n", overflow_label);
+                fprintf(output, ".overflow_detected_%d:\n", overflow_label);
+                fprintf(output, "    ; Overflow detected - promote to BigDecimal\n");
+                fprintf(output, "    push rdi\n");
+                fprintf(output, "    push rsi\n");
+                fprintf(output, "    mov rdi, r%d\n", left_reg + 8);
+                fprintf(output, "    call tto_bigdec_from_int64\n");
+                fprintf(output, "    mov rdi, rax  ; First BigDecimal\n");
+                fprintf(output, "    mov rsi, r%d\n", right_reg + 8);
+                fprintf(output, "    call tto_bigdec_from_int64\n");
+                fprintf(output, "    mov rsi, rax  ; Second BigDecimal\n");
+                fprintf(output, "    call tto_bigdec_add\n");
+                fprintf(output, "    pop rsi\n");
+                fprintf(output, "    pop rdi\n");
+                fprintf(output, "    mov r%d, rax  ; BigDecimal pointer in result register\n", left_reg + 8);
+                fprintf(output, ".no_overflow_%d:\n", overflow_label);
                 break;
             case ARITH_SUB:
                 fprintf(output, "    sub r%d, r%d\n", left_reg + 8, right_reg + 8);
+                // Check overflow flag
+                fprintf(output, "    jo .overflow_detected_%d\n", overflow_label);
+                fprintf(output, "    jmp .no_overflow_%d\n", overflow_label);
+                fprintf(output, ".overflow_detected_%d:\n", overflow_label);
+                fprintf(output, "    ; Overflow detected - promote to BigDecimal\n");
+                fprintf(output, "    push rdi\n");
+                fprintf(output, "    push rsi\n");
+                fprintf(output, "    mov rdi, r%d\n", left_reg + 8);
+                fprintf(output, "    call tto_bigdec_from_int64\n");
+                fprintf(output, "    mov rdi, rax\n");
+                fprintf(output, "    mov rsi, r%d\n", right_reg + 8);
+                fprintf(output, "    call tto_bigdec_from_int64\n");
+                fprintf(output, "    mov rsi, rax\n");
+                fprintf(output, "    call tto_bigdec_sub\n");
+                fprintf(output, "    pop rsi\n");
+                fprintf(output, "    pop rdi\n");
+                fprintf(output, "    mov r%d, rax\n", left_reg + 8);
+                fprintf(output, ".no_overflow_%d:\n", overflow_label);
                 break;
             case ARITH_MUL:
                 fprintf(output, "    imul r%d, r%d\n", left_reg + 8, right_reg + 8);
+                // Check overflow flag
+                fprintf(output, "    jo .overflow_detected_%d\n", overflow_label);
+                fprintf(output, "    jmp .no_overflow_%d\n", overflow_label);
+                fprintf(output, ".overflow_detected_%d:\n", overflow_label);
+                fprintf(output, "    ; Overflow detected - promote to BigDecimal\n");
+                fprintf(output, "    push rdi\n");
+                fprintf(output, "    push rsi\n");
+                fprintf(output, "    mov rdi, r%d\n", left_reg + 8);
+                fprintf(output, "    call tto_bigdec_from_int64\n");
+                fprintf(output, "    mov rdi, rax\n");
+                fprintf(output, "    mov rsi, r%d\n", right_reg + 8);
+                fprintf(output, "    call tto_bigdec_from_int64\n");
+                fprintf(output, "    mov rsi, rax\n");
+                fprintf(output, "    call tto_bigdec_mul\n");
+                fprintf(output, "    pop rsi\n");
+                fprintf(output, "    pop rdi\n");
+                fprintf(output, "    mov r%d, rax\n", left_reg + 8);
+                fprintf(output, ".no_overflow_%d:\n", overflow_label);
                 break;
             case ARITH_DIV:
                 // Division requires rax/rdx setup

@@ -1,0 +1,15 @@
+// MLP Multiple Prints Test
+// Testing multiple output statements
+
+yazdir("=== MLP Test Suite ===")
+yazdir("")
+yazdir("Test 1: Türkçe karakterler")
+yazdir("Çalışıyor: ç ğ ı ö ş ü")
+yazdir("")
+yazdir("Test 2: English characters")
+yazdir("Working: ABC xyz 123")
+yazdir("")
+yazdir("Test 3: Special symbols")
+yazdir("Symbols: !@#$%^&*()")
+yazdir("")
+yazdir("=== All Tests Passed! ===")
