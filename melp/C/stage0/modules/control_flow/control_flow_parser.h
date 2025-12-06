@@ -13,6 +13,7 @@ ControlFlowParser* control_flow_parser_create(Lexer* lexer);
 void control_flow_parser_free(ControlFlowParser* parser);
 
 IfStatement* control_flow_parse_if(ControlFlowParser* parser);
+IfStatement* control_flow_parse_if_expr(ControlFlowParser* parser);
 WhileStatement* control_flow_parse_while(ControlFlowParser* parser);
 ForStatement* control_flow_parse_for(ControlFlowParser* parser);
 

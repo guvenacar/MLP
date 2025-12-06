@@ -8,6 +8,13 @@ static int label_counter = 0;
 void control_flow_generate_if(FILE* output, IfStatement* stmt) {
     if (!output || !stmt) return;
     
+    // TIER 1: Handle expression-based if
+    if (stmt->type == CTRL_IF_EXPR) {
+        fprintf(output, "\n    ; TIER 1: Expression-based if (result = if cond then val1 else val2)\n");
+        fprintf(output, "    ; TODO: Implement expression-based if codegen\n");
+        return;
+    }
+    
     int label_else = label_counter++;
     int label_end = label_counter++;
     
@@ -63,5 +70,12 @@ void control_flow_generate_for(FILE* output, ForStatement* stmt) {
     if (!output || !stmt) return;
     
     fprintf(output, "\n    ; For loop\n");
+    
+    // TIER 1: Handle labeled loops
+    if (stmt->label) {
+        fprintf(output, "    ; TIER 1: Loop label '%s'\n", stmt->label);
+        fprintf(output, ".loop_label_%s:\n", stmt->label);
+    }
+    
     fprintf(output, "    ; Iterator: %s\n", stmt->iterator ? stmt->iterator : "none");
 }

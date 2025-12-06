@@ -9,7 +9,9 @@ typedef enum {
     STRING_OP_INDEXOF,     // indexOf(string, substring)
     STRING_OP_CHARAT,      // charAt(string, index)
     STRING_OP_UPPER,       // toUpper(string)
-    STRING_OP_LOWER        // toLower(string)
+    STRING_OP_LOWER,       // toLower(string)
+    STRING_OP_INTERPOLATE, // "Hello ${name}!"  ← TIER 1
+    STRING_OP_MULTILINE    // """multi\nline"""  ← TIER 1
 } StringOperationType;
 
 typedef struct {

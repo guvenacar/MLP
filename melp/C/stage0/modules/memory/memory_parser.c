@@ -1,5 +1,6 @@
 #include "memory_parser.h"
 #include "../arithmetic/arithmetic_parser.h"
+#include "../expression/expression_parser.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -229,7 +230,15 @@ MemoryCopy* parse_memory_copy(Lexer* lexer) {
         return NULL;
     }
     
-    MemoryCopy* copy = memory_create_copy(dest, src, size);
+    // TODO: Convert Expression to string - temporarily using placeholder
+    // In a real implementation, we'd extract variable names from expressions
+    MemoryCopy* copy = memory_create_copy("dest_placeholder", "src_placeholder", 0);
+    
+    // Clean up expressions (they're parsed but not used yet)
+    expression_free(dest);
+    expression_free(src);
+    expression_free(size);
+    
     return copy;
 }
 
@@ -276,7 +285,13 @@ MemoryZero* parse_memory_zero(Lexer* lexer) {
         return NULL;
     }
     
-    MemoryZero* zero = memory_create_zero(var, size);
+    // TODO: Convert Expression to string - temporarily using placeholder
+    MemoryZero* zero = memory_create_zero("var_placeholder", 0);
+    
+    // Clean up expressions
+    expression_free(var);
+    expression_free(size);
+    
     return zero;
 }
 
@@ -323,6 +338,12 @@ MemoryRealloc* parse_memory_realloc(Lexer* lexer) {
         return NULL;
     }
     
-    MemoryRealloc* realloc_op = memory_create_realloc(var, 0, new_size);
+    // TODO: Convert Expression to string - temporarily using placeholder
+    MemoryRealloc* realloc_op = memory_create_realloc("var_placeholder", 0, 0);
+    
+    // Clean up expressions
+    expression_free(var);
+    expression_free(new_size);
+    
     return realloc_op;
 }

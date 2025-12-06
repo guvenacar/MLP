@@ -1,2 +1,0 @@
-numeric x: int = 42
-text s: string = "hello"

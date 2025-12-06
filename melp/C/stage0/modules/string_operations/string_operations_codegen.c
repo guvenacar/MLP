@@ -97,5 +97,11 @@ void string_op_generate_code(FILE* output, StringOperation* op) {
         case STRING_OP_LOWER:
             fprintf(output, "    # String toLower - TODO\n");
             break;
+        case STRING_OP_INTERPOLATE:
+            fprintf(output, "    # TIER 1: String interpolation - TODO\n");
+            break;
+        case STRING_OP_MULTILINE:
+            fprintf(output, "    # TIER 1: Multi-line string - TODO\n");
+            break;
     }
 }

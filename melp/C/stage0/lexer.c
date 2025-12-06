@@ -268,6 +268,11 @@ Token* lexer_next_token(Lexer* lexer) {
         return make_token(TOKEN_COMMA, ",", lexer->line);
     }
     
+    if (c == ':') {
+        lexer->pos++;
+        return make_token(TOKEN_COLON, ":", lexer->line);
+    }
+    
     if (c == ';') {
         lexer->pos++;
         return make_token(TOKEN_SEMICOLON, ";", lexer->line);
@@ -286,6 +291,24 @@ Token* lexer_next_token(Lexer* lexer) {
     if (c == '.') {
         lexer->pos++;
         return make_token(TOKEN_DOT, ".", lexer->line);
+    }
+    
+    // Line continuation character
+    if (c == '_' || c == '\\') {
+        lexer->pos++;
+        // Check if next character is newline
+        if (lexer->source[lexer->pos] == '\n') {
+            lexer->pos++;
+            lexer->line++;
+            // Skip continuation, return next token
+            return lexer_next_token(lexer);
+        }
+        // If not followed by newline, treat _ as identifier start
+        if (c == '_') {
+            lexer->pos--;  // Back up
+            return read_identifier(lexer);
+        }
+        return make_token(TOKEN_CONTINUATION, c == '_' ? "_" : "\\", lexer->line);
     }
     
     if (isdigit(c)) {

@@ -1,4 +1,5 @@
 #include "lambda_codegen.h"
+#include <string.h>
 
 // Lambda için kod üret
 void codegen_lambda(FILE* out, Lambda* lambda) {

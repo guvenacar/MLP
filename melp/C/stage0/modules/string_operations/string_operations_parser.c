@@ -92,3 +92,44 @@ StringOperation* parse_string_function(Lexer* lexer, const char* func_name) {
     
     return op;
 }
+
+// TIER 1: Parse string interpolation: "Hello ${name}!"
+StringOperation* parse_string_interpolation(Lexer* lexer, const char* template_str) {
+    StringOperation* op = string_op_create(STRING_OP_INTERPOLATE);
+    
+    // Count interpolation expressions
+    int expr_count = 0;
+    const char* p = template_str;
+    while ((p = strstr(p, "${")) != NULL) {
+        expr_count++;
+        p += 2;
+    }
+    
+    // Store template for later processing
+    op->operand1 = (void*)template_str;
+    
+    return op;
+}
+
+// TIER 1: Parse multi-line string: """text"""
+StringOperation* parse_multiline_string(Lexer* lexer) {
+    StringOperation* op = string_op_create(STRING_OP_MULTILINE);
+    
+    // Expect opening """
+    Token* tok = lexer_next_token(lexer);
+    if (tok->type != TOKEN_STRING) {
+        fprintf(stderr, "Error: Expected string after \"\"\"\n");
+        token_free(tok);
+        string_op_free(op);
+        return NULL;
+    }
+    
+    // Collect multi-line content
+    char* content = strdup(tok->value);
+    token_free(tok);
+    
+    // Expect closing """ (simplified - assumes single token)
+    op->operand1 = content;
+    
+    return op;
+}

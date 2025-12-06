@@ -1,0 +1,14 @@
+// Tier 1 Features Test - Expression-based if
+numeric x = 10
+numeric y = 20
+
+// Expression-based if (returns value)
+numeric max = if x > y then x else y
+print max
+
+// Traditional if statement (still supported)
+if x < y then
+    print "x is smaller"
+else
+    print "x is bigger"
+end if

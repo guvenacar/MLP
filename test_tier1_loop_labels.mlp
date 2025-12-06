@@ -1,0 +1,14 @@
+// Tier 1 Features Test - Loop Labels
+numeric counter = 0
+
+// Labeled loop for breaking/continuing from nested loops
+outer: for i in 1 to 5
+    for j in 1 to 5
+        if i * j > 10 then
+            break outer
+        end if
+        counter = counter + 1
+    end for
+end for
+
+print counter

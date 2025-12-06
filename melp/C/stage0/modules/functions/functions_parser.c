@@ -78,6 +78,8 @@ FunctionDeclaration* parse_function_declaration(Lexer* lexer) {
         // Optional type annotation: : numeric
         tok = lexer_next_token(lexer);
         FunctionParamType param_type = FUNC_PARAM_NUMERIC;  // Default
+        void* default_value = NULL;
+        int has_default = 0;
         
         if (tok->type == TOKEN_ASSIGN) {  // Using : but lexer might see =
             token_free(tok);
@@ -87,7 +89,23 @@ FunctionDeclaration* parse_function_declaration(Lexer* lexer) {
             tok = lexer_next_token(lexer);
         }
         
+        // Check for default value: = expr
+        if (tok->type == TOKEN_ASSIGN) {
+            token_free(tok);
+            tok = lexer_next_token(lexer);
+            has_default = 1;
+            // Parse default value (simplified - just skip expression)
+            while (tok->type != TOKEN_COMMA && tok->type != TOKEN_RPAREN && tok->type != TOKEN_EOF) {
+                token_free(tok);
+                tok = lexer_next_token(lexer);
+            }
+        }
+        
         function_add_param(func, param_name, param_type);
+        // Set default value flag on last added parameter
+        if (has_default && func->param_count > 0) {
+            func->params[func->param_count - 1].has_default = 1;
+        }
         free(param_name);
         
         // Additional parameters
@@ -107,6 +125,7 @@ FunctionDeclaration* parse_function_declaration(Lexer* lexer) {
             
             tok = lexer_next_token(lexer);
             param_type = FUNC_PARAM_NUMERIC;  // Default
+            int has_default = 0;
             
             if (tok->type == TOKEN_ASSIGN) {
                 token_free(tok);
@@ -116,7 +135,22 @@ FunctionDeclaration* parse_function_declaration(Lexer* lexer) {
                 tok = lexer_next_token(lexer);
             }
             
+            // Check for default value
+            if (tok->type == TOKEN_ASSIGN) {
+                token_free(tok);
+                tok = lexer_next_token(lexer);
+                has_default = 1;
+                // Skip default value expression
+                while (tok->type != TOKEN_COMMA && tok->type != TOKEN_RPAREN && tok->type != TOKEN_EOF) {
+                    token_free(tok);
+                    tok = lexer_next_token(lexer);
+                }
+            }
+            
             function_add_param(func, param_name, param_type);
+            if (has_default && func->param_count > 0) {
+                func->params[func->param_count - 1].has_default = 1;
+            }
             free(param_name);
         }
     }

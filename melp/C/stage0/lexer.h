@@ -54,8 +54,10 @@ typedef enum {
     TOKEN_LBRACKET,        // [
     TOKEN_RBRACKET,        // ]
     TOKEN_COMMA,           // ,
+    TOKEN_COLON,           // :
     TOKEN_SEMICOLON,       // ;
     TOKEN_DOT,             // .
+    TOKEN_CONTINUATION,    // _ or \ (line continuation)
     TOKEN_EOF,
     TOKEN_ERROR
 } TokenType;

@@ -1,0 +1,15 @@
+// Tier 1 Features Test - String Interpolation
+numeric age = 25
+text name = "Ali"
+
+// String interpolation with ${}
+text greeting = "Merhaba, ${name}! Yaşınız ${age}"
+print greeting
+
+// Multi-line string with """
+text poem = """
+Bu bir şiir
+Birden fazla satırda
+Çok güzel
+"""
+print poem

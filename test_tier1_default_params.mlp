@@ -1,0 +1,12 @@
+// Tier 1 Features Test - Default Parameters
+def greet(name: text, greeting: text = "Merhaba") -> text
+    return greeting + ", " + name
+end
+
+// Call with both arguments
+text msg1 = greet("Ali", "Selam")
+print msg1
+
+// Call with default parameter
+text msg2 = greet("Ayşe")
+print msg2

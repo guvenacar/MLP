@@ -1,0 +1,67 @@
+-- TTO (Transparent Type Optimization) Test
+
+-- Test 1: Int64 optimization (small integer)
+numeric x = 3
+print "x = "
+print x
+-- Expected: x stored in register (rax), not heap
+
+-- Test 2: Double optimization (decimal number)
+numeric y = 3.14159
+print "y = "
+print y
+-- Expected: y stored in XMM register, not heap
+
+-- Test 3: BigDecimal (huge number)
+numeric big = 12345678901234567890
+print "big = "
+print big
+-- Expected: big stored in heap (BigDecimal structure)
+
+-- Test 4: SSO string (short string ≤23 bytes)
+text name = "Alice"
+print "name = "
+print name
+-- Expected: name stored inline on stack (SSO)
+
+-- Test 5: Heap string (long string >23 bytes)
+text long_text = "This is a very long string that exceeds 23 bytes"
+print "long_text = "
+print long_text
+-- Expected: long_text pointer on stack, data on heap
+
+-- Test 6: Constant string (literal)
+print "Hello, World!"
+-- Expected: string in .rodata section
+
+-- Test 7: Arithmetic with int64
+numeric a = 10
+numeric b = 20
+numeric c = a + b
+print "c = "
+print c
+-- Expected: All operations in registers
+
+-- Test 8: Overflow detection (future)
+-- numeric max = 9223372036854775807
+-- numeric overflow = max + 1
+-- Expected: Overflow detected, promoted to BigDecimal
+
+-- Test 9: Mixed operations
+numeric int_val = 42
+numeric float_val = 3.14
+numeric result = int_val + float_val
+print "result = "
+print result
+-- Expected: int_val promoted to double, operation in XMM
+
+-- Test 10: Multiple variables
+numeric v1 = 1
+numeric v2 = 2
+numeric v3 = 3
+numeric v4 = 4
+numeric v5 = 5
+print "Sum = "
+numeric sum = v1 + v2 + v3 + v4 + v5
+print sum
+-- Expected: All values in registers or stack (no heap)

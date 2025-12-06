@@ -6,11 +6,14 @@ typedef enum {
     CTRL_IF,
     CTRL_IF_ELSE,
     CTRL_WHILE,
-    CTRL_FOR
+    CTRL_FOR,
+    CTRL_IF_EXPR,      // TIER 1: let x = if cond then a else b
+    CTRL_LOOP_LABELED  // TIER 1: 'outer: for ... break 'outer
 } ControlFlowType;
 
 // If statement structure
 typedef struct IfStatement {
+    ControlFlowType type;      // TIER 1: Type of if statement (CTRL_IF, CTRL_IF_ELSE, CTRL_IF_EXPR)
     void* condition;           // Comparison or logical expression
     int has_else;
 } IfStatement;
@@ -25,6 +28,7 @@ typedef struct ForStatement {
     char* iterator;
     void* start;
     void* end;
+    char* label;  // TIER 1: 'outer, 'inner for labeled loops
 } ForStatement;
 
 // Free functions

@@ -1,0 +1,29 @@
+-- Line continuation test
+
+-- Test 1: Explicit continuation with _
+numeric x = 10 + _
+            20 + _
+            30
+
+print x  -- Should be 60
+
+-- Test 2: Auto continuation (operator at end)
+numeric y = 100 +
+            200 +
+            300
+
+print y  -- Should be 600
+
+-- Test 3: If statement with continuation
+if x > 5 and _
+   y > 100 then
+    print "Both conditions true"
+end if
+
+-- Test 4: Long expression
+numeric result = (x * 2) + _
+                 (y / 2) + _
+                 (x + y)
+
+print result
+

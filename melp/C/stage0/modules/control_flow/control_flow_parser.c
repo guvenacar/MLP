@@ -25,6 +25,24 @@ void control_flow_parser_free(ControlFlowParser* parser) {
     free(parser);
 }
 
+// Parse expression-based if (Tier 1 feature)
+IfStatement* control_flow_parse_if_expr(ControlFlowParser* parser) {
+    // Parse: result = if condition then value1 else value2
+    ComparisonParser* cmp = comparison_parser_create(parser->lexer);
+    
+    IfStatement* stmt = malloc(sizeof(IfStatement));
+    stmt->condition = comparison_parse_expression(cmp);
+    stmt->has_else = 1;  // Expression-based if requires else
+    stmt->type = CTRL_IF_EXPR;
+    
+    if (parser->current_token) token_free(parser->current_token);
+    parser->current_token = cmp->current_token;
+    cmp->current_token = NULL;
+    comparison_parser_free(cmp);
+    
+    return stmt;
+}
+
 // Parse if statement
 IfStatement* control_flow_parse_if(ControlFlowParser* parser) {
     if (!parser || !parser->current_token || parser->current_token->type != TOKEN_IF) {
@@ -127,6 +145,24 @@ ForStatement* control_flow_parse_for(ControlFlowParser* parser) {
     stmt->iterator = NULL;
     stmt->start = NULL;
     stmt->end = NULL;
+    stmt->label = NULL;  // Initialize label
+    
+    // Check for label: outer: for i in ...
+    if (parser->current_token && parser->current_token->type == TOKEN_IDENTIFIER) {
+        Token* peek = lexer_next_token(parser->lexer);
+        if (peek && peek->type == TOKEN_COLON) {
+            // This is a label
+            stmt->label = strdup(parser->current_token->value);
+            advance(parser);  // Consume label
+            advance(parser);  // Consume colon
+            
+            // Now expect 'for' keyword again
+            if (parser->current_token && parser->current_token->type == TOKEN_FOR) {
+                advance(parser);
+            }
+        }
+        if (peek) token_free(peek);
+    }
     
     // Get iterator
     if (parser->current_token && parser->current_token->type == TOKEN_IDENTIFIER) {

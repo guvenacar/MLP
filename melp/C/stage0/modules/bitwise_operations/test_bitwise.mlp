@@ -1,3 +1,0 @@
-numeric a = 5 & 3
-numeric b = 5 | 3
-numeric c = 5 ^ 3

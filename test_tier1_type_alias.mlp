@@ -1,0 +1,13 @@
+// Tier 1 Features Test - Type Aliases
+type Distance = numeric
+type Name = text
+
+// Use type aliases
+Distance d = 100.5
+Name n = "Mehmet"
+
+print d
+print n
+
+// Struct alias (future enhancement)
+// type Point = struct { x: numeric, y: numeric }

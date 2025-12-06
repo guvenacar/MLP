@@ -12,6 +12,8 @@ typedef enum {
 typedef struct FunctionParam {
     char* name;
     FunctionParamType type;
+    void* default_value;  // TIER 1: Default parameter value
+    int has_default;      // TIER 1: Whether param has default
     struct FunctionParam* next;
 } FunctionParam;
 

@@ -1,0 +1,27 @@
+// Test Type Inference
+
+// Integer inference
+let x = 42
+
+// Float inference
+let y = 3.14
+
+// String inference
+let name = "MLP"
+
+// Boolean inference
+let flag = true
+
+// Array inference
+let numbers = [1, 2, 3, 4, 5]
+
+// Array of strings
+let words = ["hello", "world"]
+
+// Expression inference
+let sum = x + 10
+
+// Parenthesized expression
+let result = (x * 2)
+
+print("Type inference test completed!")

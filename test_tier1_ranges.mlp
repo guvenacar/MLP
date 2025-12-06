@@ -1,0 +1,14 @@
+// Tier 1 Features Test - Ranges and Slices
+// Range syntax: 1..10
+numeric[] numbers = 1..10
+print numbers
+
+// Slice syntax: arr[start..end]
+numeric[] slice1 = numbers[2..5]
+print slice1
+
+// Open-ended slices
+numeric[] slice2 = numbers[..3]    // First 3 elements
+numeric[] slice3 = numbers[5..]    // From index 5 to end
+print slice2
+print slice3

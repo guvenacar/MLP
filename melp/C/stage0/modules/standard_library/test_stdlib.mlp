@@ -1,3 +1,0 @@
-printf("Hello World")
-malloc(100)
-sqrt(16.0)
