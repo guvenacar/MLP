@@ -1,0 +1,41 @@
+-- TTO Phase 2: Comprehensive Test Suite
+-- Testing Variable Parser + Expression Parser TTO Integration
+
+-- Test 1: Simple numeric literals
+numeric small_int = 42
+numeric large_int = 9999999999999999999999999
+numeric float_val = 3.14159
+
+-- Test 2: String literals (various sizes)
+text short_str = "Hi"
+text medium_str = "Hello World MLP"
+text long_str = "This is a very long string that definitely exceeds twenty-three bytes"
+
+-- Test 3: Arithmetic operations (type propagation)
+numeric sum_int = 5 + 10
+numeric product_float = 2.5 * 4.0
+numeric mixed_op = 100 + 3.14
+numeric division = 100 / 3
+
+-- Test 4: Complex expressions
+numeric complex1 = 10 + 20 * 3
+numeric complex2 = (5 + 3) * (10 - 2)
+numeric complex3 = 2 ** 8
+
+-- Test 5: Edge cases
+numeric overflow_candidate = 9223372036854775807
+numeric tiny = 1
+numeric huge = 999999999999999999999999999999999999999999
+
+-- Expected TTO Results:
+-- small_int: INT64 (register)
+-- large_int: BIGDECIMAL (heap)
+-- float_val: DOUBLE (XMM register)
+-- short_str: RODATA_STRING (.rodata)
+-- long_str: RODATA_STRING (.rodata)
+-- sum_int: INT64 (5+10 both INT64)
+-- product_float: DOUBLE (2.5 and 4.0 both DOUBLE)
+-- mixed_op: DOUBLE (INT64 + DOUBLE → DOUBLE)
+-- division: DOUBLE (INT64 / INT64 → DOUBLE)
+-- complex1: INT64 (10, 20, 3 all INT64)
+-- overflow_candidate: INT64 (fits in INT64 max)
