@@ -61,6 +61,48 @@ int main(int argc, char **argv) {
     while ((decl = variable_parse_declaration(parser)) != NULL) {
         printf("  ✓ Parsed variable: %s\n", decl->name);
         
+        // Phase 2.5: Display TTO analysis
+        if (decl->tto_analyzed && decl->tto_info) {
+            printf("    [TTO] Type: ");
+            switch (decl->tto_info->type) {
+                case INTERNAL_TYPE_INT64:
+                    printf("INT64 (register/stack, 8 bytes)\n");
+                    break;
+                case INTERNAL_TYPE_DOUBLE:
+                    printf("DOUBLE (XMM register, 8 bytes)\n");
+                    break;
+                case INTERNAL_TYPE_BIGDECIMAL:
+                    printf("BIGDECIMAL (heap allocated)\n");
+                    break;
+                case INTERNAL_TYPE_SSO_STRING:
+                    printf("SSO_STRING (inline, ≤23 bytes)\n");
+                    break;
+                case INTERNAL_TYPE_HEAP_STRING:
+                    printf("HEAP_STRING (heap allocated)\n");
+                    break;
+                case INTERNAL_TYPE_RODATA_STRING:
+                    printf("RODATA_STRING (.rodata section)\n");
+                    break;
+                default:
+                    printf("UNKNOWN\n");
+            }
+            
+            printf("    [TTO] Memory: ");
+            switch (decl->tto_info->mem_location) {
+                case MEM_REGISTER: printf("REGISTER\n"); break;
+                case MEM_STACK: printf("STACK\n"); break;
+                case MEM_HEAP: printf("HEAP\n"); break;
+                case MEM_RODATA: printf("RODATA\n"); break;
+            }
+            
+            if (decl->tto_info->is_constant) {
+                printf("    [TTO] Constant: YES\n");
+            }
+            if (decl->needs_overflow_check) {
+                printf("    [TTO] Overflow check: ENABLED\n");
+            }
+        }
+        
         // Generate code
         variable_codegen_declaration(codegen, decl);
         

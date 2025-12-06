@@ -1,4 +1,5 @@
 #include "variable_parser.h"
+#include "../codegen_context/codegen_context.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -97,6 +98,11 @@ VariableDeclaration* variable_parse_declaration(VariableParser* parser) {
     decl->storage = STORAGE_BSS;
     decl->has_decimal_point = 0;
     
+    // Phase 2: Initialize TTO fields
+    decl->tto_info = NULL;
+    decl->tto_analyzed = false;
+    decl->needs_overflow_check = false;
+    
     advance(parser);  // consume identifier
     
     // Expect '='
@@ -113,30 +119,45 @@ VariableDeclaration* variable_parse_declaration(VariableParser* parser) {
     if (parser->current_token->type == TOKEN_NUMBER) {
         decl->value = strdup(parser->current_token->value);
         
-        // Detect decimal point for TTO
-        if (strchr(decl->value, '.') != NULL) {
-            decl->has_decimal_point = 1;
+        // Phase 2: TTO analysis for numeric literals
+        TTOTypeInfo* tto = malloc(sizeof(TTOTypeInfo));
+        *tto = tto_infer_numeric_type(decl->value);
+        decl->tto_info = tto;
+        decl->tto_analyzed = true;
+        
+        // Update internal type based on TTO (backward compatibility)
+        if (tto->type == INTERNAL_TYPE_INT64) {
+            decl->internal_num_type = INTERNAL_INT64;
+            decl->has_decimal_point = 0;
+        } else if (tto->type == INTERNAL_TYPE_DOUBLE) {
             decl->internal_num_type = INTERNAL_DOUBLE;
-        } else {
-            // Check if value fits in INT64
-            long long val = atoll(decl->value);
-            if (val >= -2147483648LL && val <= 2147483647LL) {
-                decl->internal_num_type = INTERNAL_INT64;
-            } else {
-                decl->internal_num_type = INTERNAL_BIGDECIMAL;
-            }
+            decl->has_decimal_point = 1;
+        } else if (tto->type == INTERNAL_TYPE_BIGDECIMAL) {
+            decl->internal_num_type = INTERNAL_BIGDECIMAL;
+        }
+        
+        // Check if overflow detection needed (for INT64)
+        if (tto->type == INTERNAL_TYPE_INT64) {
+            decl->needs_overflow_check = true;  // Enable runtime checks
         }
         
         advance(parser);
     } else if (parser->current_token->type == TOKEN_STRING) {
         decl->value = strdup(parser->current_token->value);
         
-        // TTO: Detect string storage type
-        int len = strlen(decl->value);
-        if (len <= 23) {
+        // Phase 2: TTO analysis for string literals
+        TTOTypeInfo* tto = malloc(sizeof(TTOTypeInfo));
+        *tto = tto_infer_string_type(decl->value, true);  // true = is constant
+        decl->tto_info = tto;
+        decl->tto_analyzed = true;
+        
+        // Update internal type based on TTO (backward compatibility)
+        if (tto->type == INTERNAL_TYPE_SSO_STRING) {
             decl->internal_str_type = INTERNAL_SSO;
-        } else {
+        } else if (tto->type == INTERNAL_TYPE_HEAP_STRING) {
             decl->internal_str_type = INTERNAL_HEAP;
+        } else if (tto->type == INTERNAL_TYPE_RODATA_STRING) {
+            decl->internal_str_type = INTERNAL_RODATA;
         }
         
         advance(parser);
@@ -227,6 +248,11 @@ VariableAssignment* variable_parse_assignment(VariableParser* parser) {
     assign->name = strdup(parser->current_token->value);
     assign->value_expr = NULL;
     
+    // Phase 2: Initialize TTO fields
+    assign->tto_info = NULL;
+    assign->tto_analyzed = false;
+    assign->needs_type_promotion = false;
+    
     advance(parser);  // consume identifier
     
     // Expect '='
@@ -259,6 +285,9 @@ void variable_declaration_free(VariableDeclaration* decl) {
     if (decl->value) free(decl->value);
     // init_expr would be freed here if used
     
+    // Phase 2: Free TTO info
+    if (decl->tto_info) free(decl->tto_info);
+    
     free(decl);
 }
 
@@ -268,6 +297,9 @@ void variable_assignment_free(VariableAssignment* assign) {
     
     if (assign->name) free(assign->name);
     // value_expr would be freed here if used
+    
+    // Phase 2: Free TTO info
+    if (assign->tto_info) free(assign->tto_info);
     
     free(assign);
 }

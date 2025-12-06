@@ -3,55 +3,42 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include "tto_types.h"  // TTO type definitions (must come before parser.h)
 #include "../../codegen.h"
 #include "../../parser.h"
 
 // ============================================================================
-// TTO (Transparent Type Optimization) Definitions
+// Forward Declarations & Constants
 // ============================================================================
 
-// Internal representation types for TTO
-typedef enum {
-    INTERNAL_TYPE_UNKNOWN = 0,
-    
-    // Numeric types (user sees: numeric)
-    INTERNAL_TYPE_INT64,        // -2^63 to 2^63-1 (8 bytes, register/stack)
-    INTERNAL_TYPE_DOUBLE,       // IEEE 754 double (8 bytes, XMM register)
-    INTERNAL_TYPE_BIGDECIMAL,   // Unlimited precision (heap allocated)
-    
-    // Text types (user sees: text)
-    INTERNAL_TYPE_SSO_STRING,   // Small String Optimization (≤23 bytes, stack)
-    INTERNAL_TYPE_HEAP_STRING,  // Heap allocated string (>23 bytes)
-    INTERNAL_TYPE_RODATA_STRING,// Constant string in .rodata section
-    
-    // Other types
-    INTERNAL_TYPE_BOOLEAN,
-    INTERNAL_TYPE_ARRAY,
-    INTERNAL_TYPE_STRUCT,
-    INTERNAL_TYPE_FUNCTION
-} InternalType;
+#define MAX_LOOP_DEPTH 32
+#define MAX_GLOBAL_VARS 1024
 
-// TTO analysis result
+// Loop context for break/continue
 typedef struct {
-    InternalType type;          // Inferred internal type
-    bool is_constant;           // Can be computed at compile time?
-    bool needs_promotion;       // May need runtime promotion?
-    
-    // For numeric types
-    union {
-        int64_t int_value;      // For INT64
-        double double_value;    // For DOUBLE
-        char* string_value;     // For STRING types
-    } const_value;
-    
-    // Memory location hint
-    enum {
-        MEM_REGISTER,           // CPU register (rax, xmm0, etc.)
-        MEM_STACK,              // Stack frame
-        MEM_HEAP,               // Heap allocated
-        MEM_RODATA              // Read-only data section
-    } mem_location;
-} TTOTypeInfo;
+    int exit_label;
+    int continue_label;
+} LoopContext;
+
+// Variable info (legacy)
+typedef struct {
+    char* name;
+    int type;  // 0=numeric, 1=text, 2=boolean
+} VarInfo;
+
+// Function context (forward declaration)
+typedef struct FunctionContext {
+    char* name;
+    int stack_size;
+    int param_count;
+    void** params;  // Array of parameter structs (opaque pointer)
+} FunctionContext;
+
+// ============================================================================
+// TTO (Transparent Type Optimization) Definitions
+// ============================================================================
+// Note: TTOTypeInfo and InternalType are defined in tto_types.h
 
 // Variable info with TTO
 typedef struct {

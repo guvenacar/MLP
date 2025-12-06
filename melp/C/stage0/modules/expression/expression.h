@@ -1,6 +1,9 @@
 #ifndef EXPRESSION_H
 #define EXPRESSION_H
 
+#include <stdbool.h>
+#include "../codegen_context/tto_types.h"
+
 // Expression types
 typedef enum {
     EXPR_NUMBER,
@@ -37,6 +40,11 @@ typedef struct Expression {
             int arg_count;
         } call;
     } data;
+    
+    // ========== Phase 2: TTO Integration ==========
+    TTOTypeInfo* tto_info;               // Full TTO analysis result (heap allocated)
+    bool tto_analyzed;                   // Has TTO analysis been performed?
+    bool needs_overflow_check;           // Runtime overflow detection needed?
 } Expression;
 
 // Expression management
