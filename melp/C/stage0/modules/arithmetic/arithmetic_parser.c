@@ -1,4 +1,5 @@
 #include "arithmetic_parser.h"
+#include "../codegen_context/codegen_context.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -38,11 +39,24 @@ ArithmeticExpr* arithmetic_parse_primary(ArithmeticParser* parser) {
     expr->right = NULL;
     expr->value = NULL;
     
+    // Phase 2.3: Initialize TTO fields
+    expr->tto_info = NULL;
+    expr->tto_analyzed = false;
+    expr->needs_overflow_check = false;
+    
     // Number literal
     if (parser->current_token->type == TOKEN_NUMBER) {
         expr->is_literal = 1;
         expr->value = strdup(parser->current_token->value);
         expr->is_float = (strchr(expr->value, '.') != NULL);
+        
+        // Phase 2.3: TTO analysis for numeric literal
+        TTOTypeInfo* tto = malloc(sizeof(TTOTypeInfo));
+        *tto = tto_infer_numeric_type(expr->value);
+        expr->tto_info = tto;
+        expr->tto_analyzed = true;
+        expr->needs_overflow_check = (tto->type == INTERNAL_TYPE_INT64);
+        
         advance(parser);
         return expr;
     }
@@ -99,6 +113,20 @@ ArithmeticExpr* arithmetic_parse_power(ArithmeticParser* parser) {
         binary->value = NULL;
         binary->is_float = 0;
         
+        // Phase 2.3: TTO type propagation for binary operation
+        binary->tto_info = NULL;
+        binary->tto_analyzed = false;
+        binary->needs_overflow_check = false;
+        
+        // If both operands have TTO info, propagate types
+        if (left->tto_analyzed && right->tto_analyzed && left->tto_info && right->tto_info) {
+            TTOTypeInfo* propagated = malloc(sizeof(TTOTypeInfo));
+            *propagated = arithmetic_propagate_binary_types(left->tto_info, right->tto_info, ARITH_POW);
+            binary->tto_info = propagated;
+            binary->tto_analyzed = true;
+            binary->needs_overflow_check = (propagated->type == INTERNAL_TYPE_INT64);
+        }
+        
         left = binary;
     }
     
@@ -140,6 +168,19 @@ ArithmeticExpr* arithmetic_parse_term(ArithmeticParser* parser) {
         binary->value = NULL;
         binary->is_float = 0;
         
+        // Phase 2.3: TTO type propagation
+        binary->tto_info = NULL;
+        binary->tto_analyzed = false;
+        binary->needs_overflow_check = false;
+        
+        if (left->tto_analyzed && right->tto_analyzed && left->tto_info && right->tto_info) {
+            TTOTypeInfo* propagated = malloc(sizeof(TTOTypeInfo));
+            *propagated = arithmetic_propagate_binary_types(left->tto_info, right->tto_info, op);
+            binary->tto_info = propagated;
+            binary->tto_analyzed = true;
+            binary->needs_overflow_check = (propagated->type == INTERNAL_TYPE_INT64);
+        }
+        
         left = binary;
     }
     
@@ -178,6 +219,19 @@ ArithmeticExpr* arithmetic_parse_factor(ArithmeticParser* parser) {
         binary->is_literal = 0;
         binary->value = NULL;
         binary->is_float = 0;
+        
+        // Phase 2.3: TTO type propagation
+        binary->tto_info = NULL;
+        binary->tto_analyzed = false;
+        binary->needs_overflow_check = false;
+        
+        if (left->tto_analyzed && right->tto_analyzed && left->tto_info && right->tto_info) {
+            TTOTypeInfo* propagated = malloc(sizeof(TTOTypeInfo));
+            *propagated = arithmetic_propagate_binary_types(left->tto_info, right->tto_info, op);
+            binary->tto_info = propagated;
+            binary->tto_analyzed = true;
+            binary->needs_overflow_check = (propagated->type == INTERNAL_TYPE_INT64);
+        }
         
         left = binary;
     }
@@ -219,6 +273,19 @@ ArithmeticExpr* arithmetic_parse_bitwise(ArithmeticParser* parser) {
         binary->is_literal = 0;
         binary->value = NULL;
         binary->is_float = 0;
+        
+        // Phase 2.3: TTO type propagation
+        binary->tto_info = NULL;
+        binary->tto_analyzed = false;
+        binary->needs_overflow_check = false;
+        
+        if (left->tto_analyzed && right->tto_analyzed && left->tto_info && right->tto_info) {
+            TTOTypeInfo* propagated = malloc(sizeof(TTOTypeInfo));
+            *propagated = arithmetic_propagate_binary_types(left->tto_info, right->tto_info, op);
+            binary->tto_info = propagated;
+            binary->tto_analyzed = true;
+            binary->needs_overflow_check = (propagated->type == INTERNAL_TYPE_INT64);
+        }
         
         left = binary;
     }
