@@ -1,0 +1,143 @@
+#include "arithmetic_codegen.h"
+#include "../../codegen.h"
+#include <string.h>
+
+// Code generation for arithmetic expressions
+// Stage 1: Generate x86-64 assembly for arithmetic operations
+
+void codegen_expression(FILE* f, Expression* expr) {
+    if (!expr || !f) return;
+    
+    if (expr->type == EXPR_NUMBER) {
+        // Load immediate number into rax
+        fprintf(f, "    mov rax, %ld\n", expr->data.number_value);
+    } else if (expr->type == EXPR_VARIABLE) {
+        // Check if this is a function parameter
+        int param_offset = get_param_stack_offset(expr->data.var_name);
+        if (param_offset > 0) {
+            // Load from stack frame (parameter)
+            fprintf(f, "    mov rax, [rbp-%d]\n", param_offset);
+        } else if (current_function_ctx && is_local_variable(expr->data.var_name)) {
+            // Load from stack frame (local variable)
+            int local_offset = get_or_add_local_offset(expr->data.var_name);
+            fprintf(f, "    mov rax, [rbp-%d]\n", local_offset);
+        } else {
+            // Load from global variable
+            fprintf(f, "    mov rax, [var_%s]\n", expr->data.var_name);
+        }
+    } else if (expr->type == EXPR_STRING) {
+        // String literal in expression context
+        // Register the literal and get its ID
+        int lit_id = add_string_literal(expr->data.string_value);
+        fprintf(f, "    ; string literal: \"%s\"\n", expr->data.string_value);
+        fprintf(f, "    mov rax, str_lit_%d\n", lit_id);
+    } else if (expr->type == EXPR_CALL) {
+        // Check for built-in string functions
+        const char* func_name = expr->data.call.func_name;
+        
+        if (strcmp(func_name, "length") == 0 && expr->data.call.arg_count == 1) {
+            // Built-in: length(string) - returns string length
+            fprintf(f, "    ; length(str)\n");
+            codegen_expression(f, expr->data.call.args[0]);
+            fprintf(f, "    call str_length\n");
+        } else if (strcmp(func_name, "char_at") == 0 && expr->data.call.arg_count == 2) {
+            // Built-in: char_at(string, index) - returns char code at index
+            fprintf(f, "    ; char_at(str, idx)\n");
+            codegen_expression(f, expr->data.call.args[0]);
+            fprintf(f, "    push rax\n");
+            codegen_expression(f, expr->data.call.args[1]);
+            fprintf(f, "    mov rsi, rax\n");  // index in rsi
+            fprintf(f, "    pop rdi\n");       // string pointer in rdi
+            fprintf(f, "    call str_char_at\n");
+        } else if (strcmp(func_name, "concat") == 0 && expr->data.call.arg_count == 2) {
+            // Built-in: concat(str1, str2) - returns new concatenated string
+            fprintf(f, "    ; concat(str1, str2)\n");
+            codegen_expression(f, expr->data.call.args[0]);
+            fprintf(f, "    push rax\n");      // Save str1
+            codegen_expression(f, expr->data.call.args[1]);
+            fprintf(f, "    mov rsi, rax\n");  // str2 in rsi
+            fprintf(f, "    pop rdi\n");       // str1 in rdi
+            fprintf(f, "    call str_concat\n");
+        } else if (strcmp(func_name, "substr") == 0 && expr->data.call.arg_count == 3) {
+            // Built-in: substr(str, start, length) - returns substring
+            fprintf(f, "    ; substr(str, start, len)\n");
+            codegen_expression(f, expr->data.call.args[0]);
+            fprintf(f, "    push rax\n");      // Save str
+            codegen_expression(f, expr->data.call.args[1]);
+            fprintf(f, "    push rax\n");      // Save start
+            codegen_expression(f, expr->data.call.args[2]);
+            fprintf(f, "    mov rdx, rax\n");  // length in rdx
+            fprintf(f, "    pop rsi\n");       // start in rsi
+            fprintf(f, "    pop rdi\n");       // str in rdi
+            fprintf(f, "    call str_substr\n");
+        } else if (strcmp(func_name, "str_equal") == 0 && expr->data.call.arg_count == 2) {
+            // Built-in: str_equal(str1, str2) - returns 1 if equal, 0 if not
+            fprintf(f, "    ; str_equal(str1, str2)\n");
+            codegen_expression(f, expr->data.call.args[0]);
+            fprintf(f, "    push rax\n");      // Save str1
+            codegen_expression(f, expr->data.call.args[1]);
+            fprintf(f, "    mov rsi, rax\n");  // str2 in rsi
+            fprintf(f, "    pop rdi\n");       // str1 in rdi
+            fprintf(f, "    call str_compare\n");
+        } else if (strcmp(func_name, "indexOf") == 0 && expr->data.call.arg_count == 2) {
+            // Built-in: indexOf(haystack, needle) - returns index or -1
+            fprintf(f, "    ; indexOf(haystack, needle)\n");
+            codegen_expression(f, expr->data.call.args[0]);
+            fprintf(f, "    push rax\n");      // Save haystack
+            codegen_expression(f, expr->data.call.args[1]);
+            fprintf(f, "    mov rsi, rax\n");  // needle in rsi
+            fprintf(f, "    pop rdi\n");       // haystack in rdi
+            fprintf(f, "    call str_indexof\n");
+        } else {
+            // User-defined function call
+            fprintf(f, "    ; call %s(...)\n", func_name);
+            
+            // System V AMD64 ABI: rdi, rsi, rdx, rcx, r8, r9
+            const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+            
+            // Evaluate arguments and push to stack (in reverse order)
+            for (int i = 0; i < expr->data.call.arg_count && i < 6; i++) {
+                codegen_expression(f, expr->data.call.args[i]);
+                fprintf(f, "    push rax\n");
+            }
+            
+            // Pop into registers in correct order
+            for (int i = expr->data.call.arg_count - 1; i >= 0 && i < 6; i--) {
+                fprintf(f, "    pop %s\n", arg_regs[i]);
+            }
+            
+            // Call the function (result will be in rax)
+            fprintf(f, "    call %s\n", func_name);
+            // Result is now in rax
+        }
+    } else if (expr->type == EXPR_BINARY_OP) {
+        // Evaluate left side -> rax
+        codegen_expression(f, expr->data.binary.left);
+        // Push rax to stack
+        fprintf(f, "    push rax\n");
+        // Evaluate right side -> rax
+        codegen_expression(f, expr->data.binary.right);
+        // Pop left side to rbx
+        fprintf(f, "    pop rbx\n");
+        
+        // Perform operation: rbx op rax -> rax
+        switch (expr->data.binary.op) {
+            case BIN_OP_ADD:
+                fprintf(f, "    add rax, rbx\n");
+                break;
+            case BIN_OP_SUB:
+                fprintf(f, "    sub rbx, rax\n");
+                fprintf(f, "    mov rax, rbx\n");
+                break;
+            case BIN_OP_MUL:
+                fprintf(f, "    imul rax, rbx\n");
+                break;
+            case BIN_OP_DIV:
+                fprintf(f, "    mov rcx, rax\n");
+                fprintf(f, "    mov rax, rbx\n");
+                fprintf(f, "    cqo\n");
+                fprintf(f, "    idiv rcx\n");
+                break;
+        }
+    }
+}

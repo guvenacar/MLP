@@ -1,0 +1,18 @@
+#ifndef CONTROL_FLOW_CODEGEN_H
+#define CONTROL_FLOW_CODEGEN_H
+
+#include "control_flow.h"
+#include "../comparison/comparison.h"
+#include <stdio.h>
+
+// Code generation for control flow statements
+void codegen_if_statement(FILE* f, IfStatement* if_stmt, int* label_counter);
+void codegen_while_statement(FILE* f, WhileStatement* while_stmt, int* label_counter);
+void codegen_for_statement(FILE* f, ForStatement* for_stmt, int* label_counter);
+void codegen_assignment_statement(FILE* f, AssignmentStmt* assign);
+void codegen_declaration_statement(FILE* f, DeclarationStmt* decl);
+
+// Main entry point for statement codegen
+void codegen_control_flow_statement(FILE* f, Statement* stmt, int* label_counter);
+
+#endif

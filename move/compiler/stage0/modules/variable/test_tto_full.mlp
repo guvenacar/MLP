@@ -1,0 +1,5 @@
+numeric small = 5
+numeric large = 999999999999999999999
+numeric float_num = 2.71828
+text short_str = "Hi"
+text long_str = "This is a very long string that exceeds 23 bytes limit"

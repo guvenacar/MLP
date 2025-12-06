@@ -1,0 +1,418 @@
+#include "control_flow_codegen.h"
+#include "../arithmetic/arithmetic_codegen.h"
+#include "../comparison/comparison_codegen.h"
+#include "../logical/logical_parser.h"
+#include "../../codegen.h"
+#include <stdio.h>
+#include <string.h>
+
+// Forward declaration for recursive statement codegen
+static void codegen_statement_internal(FILE* f, Statement* stmt, int* label_counter);
+
+// Forward declarations for condition codegen
+static void codegen_condition_jump_if_false(FILE* f, Expression* cond, int false_label, int* label_counter);
+static void codegen_condition_jump_if_true(FILE* f, Expression* cond, int true_label, int* label_counter);
+
+// Generate code for comparison, sets flags
+static void codegen_comparison_internal(FILE* f, ComparisonExpr* cmp) {
+    if (!cmp) return;
+    
+    // Evaluate left operand
+    codegen_expression(f, cmp->left);
+    fprintf(f, "    push rax\n");
+    
+    // Evaluate right operand
+    codegen_expression(f, cmp->right);
+    fprintf(f, "    mov rbx, rax\n");
+    fprintf(f, "    pop rax\n");
+    
+    // Compare
+    fprintf(f, "    cmp rax, rbx\n");
+}
+
+// Helper: generate jump if comparison is false
+static void codegen_comparison_jump_if_false(FILE* f, ComparisonExpr* cmp, int false_label) {
+    codegen_comparison_internal(f, cmp);
+    
+    switch (cmp->op) {
+        case CMP_EQUAL:
+            fprintf(f, "    jne .L%d\n", false_label);
+            break;
+        case CMP_NOT_EQUAL:
+            fprintf(f, "    je .L%d\n", false_label);
+            break;
+        case CMP_LESS:
+            fprintf(f, "    jge .L%d\n", false_label);
+            break;
+        case CMP_GREATER:
+            fprintf(f, "    jle .L%d\n", false_label);
+            break;
+        case CMP_LESS_EQUAL:
+            fprintf(f, "    jg .L%d\n", false_label);
+            break;
+        case CMP_GREATER_EQUAL:
+            fprintf(f, "    jl .L%d\n", false_label);
+            break;
+    }
+}
+
+// Generate condition code that jumps to false_label if condition is false
+static void codegen_condition_jump_if_false(FILE* f, Expression* cond, int false_label, int* label_counter) {
+    if (!cond) return;
+    
+    // Check if it's a logical expression (AND/OR)
+    if (cond->type == EXPR_LOGICAL) {
+        LogicalExpr* log = (LogicalExpr*)cond;
+        
+        if (log->op == LOG_AND) {
+            // AND: if left is false, skip to false_label
+            //      if right is false, skip to false_label
+            codegen_condition_jump_if_false(f, log->left, false_label, label_counter);
+            codegen_condition_jump_if_false(f, log->right, false_label, label_counter);
+        } else if (log->op == LOG_OR) {
+            // OR: if left is true, go to body
+            //     else check right, if false go to false_label
+            int check_right = (*label_counter)++;
+            
+            // Jump to check_right if left is false (inverse logic)
+            // We need to check if left is TRUE to skip right check
+            // So we invert: if left is false, check right; if left is true, go to body
+            
+            // Generate: if left is true, skip to a temp label after right check
+            // This is tricky - let's use a simpler approach:
+            // For OR: evaluate left, if true jump to body_start
+            //         evaluate right, if false jump to false_label
+            
+            int body_start = (*label_counter)++;
+            
+            // Check left - if true, jump to body
+            codegen_condition_jump_if_true(f, log->left, body_start, label_counter);
+            // Left was false, check right
+            codegen_condition_jump_if_false(f, log->right, false_label, label_counter);
+            // Right was true, fall through to body_start
+            fprintf(f, ".L%d:\n", body_start);
+        }
+    } else if (cond->type == EXPR_COMPARISON) {
+        // Simple comparison
+        codegen_comparison_jump_if_false(f, (ComparisonExpr*)cond, false_label);
+    } else {
+        // Simple expression, treat non-zero as true
+        codegen_expression(f, cond);
+        fprintf(f, "    test rax, rax\n");
+        fprintf(f, "    jz .L%d\n", false_label);
+    }
+}
+
+// Generate condition code that jumps to true_label if condition is true
+static void codegen_condition_jump_if_true(FILE* f, Expression* cond, int true_label, int* label_counter) {
+    if (!cond) return;
+    
+    if (cond->type == EXPR_LOGICAL) {
+        LogicalExpr* log = (LogicalExpr*)cond;
+        
+        if (log->op == LOG_OR) {
+            // OR: if left is true, jump to true_label
+            codegen_condition_jump_if_true(f, log->left, true_label, label_counter);
+            codegen_condition_jump_if_true(f, log->right, true_label, label_counter);
+        } else if (log->op == LOG_AND) {
+            // AND: both must be true
+            int check_right = (*label_counter)++;
+            int skip = (*label_counter)++;
+            
+            // if left is false, don't jump to true
+            codegen_condition_jump_if_false(f, log->left, skip, label_counter);
+            // left is true, check right
+            codegen_condition_jump_if_true(f, log->right, true_label, label_counter);
+            fprintf(f, ".L%d:\n", skip);
+        }
+    } else if (cond->type == EXPR_COMPARISON) {
+        ComparisonExpr* cmp = (ComparisonExpr*)cond;
+        codegen_comparison_internal(f, cmp);
+        
+        // Jump if condition is TRUE
+        switch (cmp->op) {
+            case CMP_EQUAL:
+                fprintf(f, "    je .L%d\n", true_label);
+                break;
+            case CMP_NOT_EQUAL:
+                fprintf(f, "    jne .L%d\n", true_label);
+                break;
+            case CMP_LESS:
+                fprintf(f, "    jl .L%d\n", true_label);
+                break;
+            case CMP_GREATER:
+                fprintf(f, "    jg .L%d\n", true_label);
+                break;
+            case CMP_LESS_EQUAL:
+                fprintf(f, "    jle .L%d\n", true_label);
+                break;
+            case CMP_GREATER_EQUAL:
+                fprintf(f, "    jge .L%d\n", true_label);
+                break;
+        }
+    } else {
+        codegen_expression(f, cond);
+        fprintf(f, "    test rax, rax\n");
+        fprintf(f, "    jnz .L%d\n", true_label);
+    }
+}
+
+// Generate code for if statement
+void codegen_if_statement(FILE* f, IfStatement* if_stmt, int* label_counter) {
+    int else_label = (*label_counter)++;
+    int end_label = (*label_counter)++;
+    
+    fprintf(f, "    ; if statement\n");
+    
+    // Use the new condition codegen that supports AND/OR
+    int skip_label = if_stmt->else_body ? else_label : end_label;
+    codegen_condition_jump_if_false(f, if_stmt->condition, skip_label, label_counter);
+    
+    // Then block
+    for (int i = 0; i < if_stmt->then_count; i++) {
+        codegen_statement_internal(f, if_stmt->then_body[i], label_counter);
+    }
+    
+    if (if_stmt->else_body) {
+        fprintf(f, "    jmp .L%d\n", end_label);
+        fprintf(f, ".L%d:\n", else_label);
+        
+        // Else block
+        for (int i = 0; i < if_stmt->else_count; i++) {
+            codegen_statement_internal(f, if_stmt->else_body[i], label_counter);
+        }
+    }
+    
+    fprintf(f, ".L%d:\n", end_label);
+}
+
+// Generate code for while statement
+void codegen_while_statement(FILE* f, WhileStatement* while_stmt, int* label_counter) {
+    int start_label = (*label_counter)++;
+    int end_label = (*label_counter)++;
+    
+    // Push loop context for exit/continue support
+    if (loop_depth < MAX_LOOP_DEPTH) {
+        loop_stack[loop_depth].loop_id = start_label;
+        loop_stack[loop_depth].continue_label = start_label;
+        loop_stack[loop_depth].exit_label = end_label;
+        loop_depth++;
+    }
+    
+    fprintf(f, "    ; while loop\n");
+    fprintf(f, ".loop_start_%d:\n", start_label);
+    
+    // Use the new condition codegen that supports AND/OR
+    codegen_condition_jump_if_false(f, while_stmt->condition, end_label, label_counter);
+    
+    // Body
+    for (int i = 0; i < while_stmt->body_count; i++) {
+        codegen_statement_internal(f, while_stmt->body[i], label_counter);
+    }
+    
+    fprintf(f, "    jmp .loop_start_%d\n", start_label);
+    fprintf(f, ".loop_end_%d:\n", end_label);
+    
+    // Pop loop context
+    if (loop_depth > 0) {
+        loop_depth--;
+    }
+}
+
+// Generate code for for statement
+void codegen_for_statement(FILE* f, ForStatement* for_stmt, int* label_counter) {
+    int start_label = (*label_counter)++;
+    int end_label = (*label_counter)++;
+    
+    // Push loop context for exit/continue support
+    if (loop_depth < MAX_LOOP_DEPTH) {
+        loop_stack[loop_depth].loop_id = start_label;
+        loop_stack[loop_depth].continue_label = start_label;
+        loop_stack[loop_depth].exit_label = end_label;
+        loop_depth++;
+    }
+    
+    fprintf(f, "    ; for loop\n");
+    
+    // Initialize loop variable
+    codegen_expression(f, for_stmt->start);
+    fprintf(f, "    mov [var_%s], rax\n", for_stmt->variable);
+    
+    fprintf(f, ".loop_start_%d:\n", start_label);
+    
+    // Check condition: variable <= end
+    fprintf(f, "    mov rax, [var_%s]\n", for_stmt->variable);
+    fprintf(f, "    push rax\n");
+    codegen_expression(f, for_stmt->end);
+    fprintf(f, "    mov rbx, rax\n");
+    fprintf(f, "    pop rax\n");
+    fprintf(f, "    cmp rax, rbx\n");
+    fprintf(f, "    jg .loop_end_%d\n", end_label);
+    
+    // Body
+    for (int i = 0; i < for_stmt->body_count; i++) {
+        codegen_statement_internal(f, for_stmt->body[i], label_counter);
+    }
+    
+    // Increment loop variable
+    fprintf(f, "    mov rax, [var_%s]\n", for_stmt->variable);
+    fprintf(f, "    inc rax\n");
+    fprintf(f, "    mov [var_%s], rax\n", for_stmt->variable);
+    
+    fprintf(f, "    jmp .loop_start_%d\n", start_label);
+    fprintf(f, ".loop_end_%d:\n", end_label);
+    
+    // Pop loop context
+    if (loop_depth > 0) {
+        loop_depth--;
+    }
+}
+
+// Generate code for assignment
+void codegen_assignment_statement(FILE* f, AssignmentStmt* assign) {
+    fprintf(f, "    ; assignment: %s = expr\n", assign->name);
+    codegen_expression(f, assign->value);
+    
+    // Check if this is a local variable (param or local)
+    int param_offset = get_param_stack_offset(assign->name);
+    if (param_offset > 0) {
+        fprintf(f, "    mov [rbp-%d], rax\n", param_offset);
+    } else if (is_local_variable(assign->name)) {
+        int local_offset = get_or_add_local_offset(assign->name);
+        fprintf(f, "    mov [rbp-%d], rax\n", local_offset);
+    } else {
+        fprintf(f, "    mov [var_%s], rax\n", assign->name);
+    }
+}
+
+// Generate code for declaration in body
+void codegen_declaration_statement(FILE* f, DeclarationStmt* decl) {
+    fprintf(f, "    ; local decl: %s\n", decl->name);
+    codegen_expression(f, decl->value);
+    
+    // If inside a function, use stack-based local
+    if (current_function_ctx) {
+        int offset = get_or_add_local_offset(decl->name);
+        fprintf(f, "    mov [rbp-%d], rax\n", offset);
+    } else {
+        fprintf(f, "    mov [var_%s], rax\n", decl->name);
+    }
+}
+
+// Internal statement codegen for recursive calls
+static void codegen_statement_internal(FILE* f, Statement* stmt, int* label_counter) {
+    if (!stmt) return;
+    
+    switch (stmt->type) {
+        case STMT_IF:
+            codegen_if_statement(f, &stmt->data.if_stmt, label_counter);
+            break;
+        case STMT_WHILE:
+            codegen_while_statement(f, &stmt->data.while_stmt, label_counter);
+            break;
+        case STMT_FOR:
+            codegen_for_statement(f, &stmt->data.for_stmt, label_counter);
+            break;
+        case STMT_EXIT:
+            // Exit is handled by codegen_statement in main codegen.c
+            fprintf(f, "    ; exit statement (from control_flow)\n");
+            codegen_statement(f, stmt);
+            break;
+        case STMT_CONTINUE:
+            // Continue is handled by codegen_statement in main codegen.c
+            fprintf(f, "    ; continue statement (from control_flow)\n");
+            codegen_statement(f, stmt);
+            break;
+        case STMT_ASSIGNMENT:
+            codegen_assignment_statement(f, &stmt->data.assign_stmt);
+            break;
+        case STMT_DECLARATION:
+            codegen_declaration_statement(f, &stmt->data.decl_stmt);
+            break;
+        case STMT_PRINT:
+            // Print statement
+            {
+                Expression* expr = stmt->data.print_stmt.value;
+                if (expr && expr->type == EXPR_STRING) {
+                    // String literal - use pre-collected string table
+                    int str_id = print_string_counter++;
+                    fprintf(f, "    ; print string literal\n");
+                    fprintf(f, "    mov rax, 1          ; sys_write\n");
+                    fprintf(f, "    mov rdi, 1          ; stdout\n");
+                    fprintf(f, "    mov rsi, print_str_%d\n", str_id);
+                    fprintf(f, "    mov rdx, print_str_%d_len\n", str_id);
+                    fprintf(f, "    syscall\n");
+                } else if (expr && expr->type == EXPR_VARIABLE) {
+                    // Check variable type
+                    VarType var_type = get_var_type(expr->data.var_name);
+                    if (var_type == VAR_STRING) {
+                        // String variable
+                        fprintf(f, "    ; print string variable\n");
+                        codegen_expression(f, expr);
+                        fprintf(f, "    call print_string\n");
+                    } else {
+                        // Numeric variable
+                        fprintf(f, "    ; print numeric variable\n");
+                        codegen_expression(f, expr);
+                        fprintf(f, "    call print_int\n");
+                    }
+                } else if (expr && expr->type == EXPR_CALL) {
+                    // Function call - check if it's a string-returning built-in
+                    const char* func_name = expr->data.call.func_name;
+                    if (strcmp(func_name, "concat") == 0 || 
+                        strcmp(func_name, "substr") == 0) {
+                        // String-returning function
+                        fprintf(f, "    ; print string function result\n");
+                        codegen_expression(f, expr);
+                        fprintf(f, "    call print_string\n");
+                    } else {
+                        // Numeric function
+                        fprintf(f, "    ; print function result\n");
+                        codegen_expression(f, expr);
+                        fprintf(f, "    call print_int\n");
+                    }
+                } else if (expr) {
+                    // Numeric expression
+                    fprintf(f, "    ; print expression\n");
+                    codegen_expression(f, expr);
+                    fprintf(f, "    call print_int\n");
+                }
+            }
+            break;
+        case STMT_RETURN:
+            // Return statement - evaluate expression and return from function
+            fprintf(f, "    ; return\n");
+            if (stmt->data.return_stmt.value) {
+                codegen_expression(f, stmt->data.return_stmt.value);
+            } else {
+                fprintf(f, "    xor rax, rax\n");
+            }
+            fprintf(f, "    mov rsp, rbp\n");
+            fprintf(f, "    pop rbp\n");
+            fprintf(f, "    ret\n");
+            break;
+        case STMT_CALL:
+            // Function call statement
+            fprintf(f, "    ; call %s\n", stmt->data.call_stmt.name);
+            {
+                const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+                for (int i = 0; i < stmt->data.call_stmt.arg_count && i < 6; i++) {
+                    codegen_expression(f, stmt->data.call_stmt.args[i]);
+                    fprintf(f, "    push rax\n");
+                }
+                for (int i = stmt->data.call_stmt.arg_count - 1; i >= 0 && i < 6; i--) {
+                    fprintf(f, "    pop %s\n", arg_regs[i]);
+                }
+                fprintf(f, "    call %s\n", stmt->data.call_stmt.name);
+            }
+            break;
+        case STMT_FUNCTION:
+            // Functions generated separately
+            break;
+    }
+}
+
+// Public statement codegen
+void codegen_control_flow_statement(FILE* f, Statement* stmt, int* label_counter) {
+    codegen_statement_internal(f, stmt, label_counter);
+}
