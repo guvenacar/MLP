@@ -1,9 +1,9 @@
 # 🧠 ÜST AKIL (ÜA) - TODO: STAGE0 PMLP SYNTAX
 
-**Tarih:** 25 Aralık 2025  
+**Tarih:** 26 Aralık 2025  
 **TODO:** STAGE0_PMLP - Stage0-C Compiler PMLP Syntax Desteği  
 **Durum:** 🟢 Göreve Hazır  
-**Üst Akıl:** STAGE0_UA_01
+**Üst Akıl:** STAGE0_UA_02
 
 ---
 
@@ -20,11 +20,98 @@ Normal YZ'ler (STAGE0_YZ_01, STAGE0_YZ_02, ...) sana bağlı çalışan işçi A
 
 ---
 
+## 📚 MELP MİMARİSİ VE FELSEFESİ (MUTLAKA BİL!)
+
+### MELP Nedir?
+
+**MELP (Multi-Lingual Programming)** - Türkçe, İngilizce ve diğer dillerde kod yazılabilen çok dilli programlama dili.
+
+**3 Stage Mimarisi:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Stage 0: C Compiler (Bootstrap)                    │
+│  • mlp_compiler.c (10,303 satır)                   │
+│  • C ile yazılmış                                    │
+│  • Assembly üretir (.s dosyaları)                   │
+│  • Şu an buradayız! ← TODO_STAGE0_PMLP              │
+└─────────────────────────────────────────────────────┘
+           ↓ (compile)
+┌─────────────────────────────────────────────────────┐
+│  Stage 1: MELP ile yazılmış compiler               │
+│  • .mlp dosyaları                                    │
+│  • Self-hosting: MELP kendini compile eder          │
+└─────────────────────────────────────────────────────┘
+           ↓ (compile)
+┌─────────────────────────────────────────────────────┐
+│  Stage 2+: Production compiler                      │
+│  • Optimizasyonlar                                   │
+│  • LLVM backend (planlı)                            │
+└─────────────────────────────────────────────────────┘
+```
+
+**Şu anki görevin:** Stage 0 compiler'a **PMLP syntax** desteği eklemek.
+
+### PMLP vs Eski Syntax
+
+**Eski MELP Syntax:**
+```melp
+function add(a, b)         // Virgül parametre ayırıcı
+    return a + b
+end_if                      // Boşluklu end
+```
+
+**Yeni PMLP Syntax:**
+```pmpl
+function add(a; b)         // Noktalı virgül ayırıcı
+    return a + b
+end_if                      // Alt çizgili end (zaten vardı)
+```
+
+**Fark:** Virgül (`,`) → Sadece ondalık ayırıcı (`3,14`)  
+**Yeni:** Noktalı virgül (`;`) → Parametre/eleman ayırıcı
+
+### MELP Felsefesi
+
+**1. Pragmatik Minimalizm**
+- Sadece gereken özellikler
+- Her özellik %100 çalışmalı
+- "Pseudo kod" yasak, her şey real
+
+**2. Aşamalı İnşa (Incremental)**
+- Küçük adımlar (Phase 1, 2, 3...)
+- Her adım test edilir
+- Geriye uyumlu (backward compatible)
+
+**3. Çok Dilli (Multi-Lingual)**
+- Türkçe: `eğer`, `yaz`, `döngü`
+- İngilizce: `if`, `print`, `while`
+- Karışık: İkisi birlikte kullanılabilir
+
+**4. Self-Hosting Hedefi**
+- MELP kendini compile etmeli
+- Stage 1'de MELP ile yazılmış compiler
+- Bootstrap: C → MELP → MELP
+
+### Neden Stage 0 Önemli?
+
+**Stage 0 = Bootstrap Compiler**
+- Dilin ilk implementasyonu (C ile)
+- Stage 1'i compile edecek
+- Kararlı ve güvenilir olmalı
+
+**Senin TODO'nun:** Stage 0'a PMLP syntax eklemek
+- Exit/Continue tokenları ✅ (Phase 1 - YZ_01 tamamladı)
+- Semicolon separator ✅ (Phase 2 - YZ_02 tamamladı)
+- Migration & Testing ⏳ (Phase 3 - bekliyor)
+
+---
+
 ## 🚫 ÜST AKIL YASAKLARI
 
 ### ❌ KESİNLİKLE YAPAMAZSIN:
 
-**1. KOD YAZAMAZ**
+**1. KOD YAZAMAZSIN**
 ```
 ❌ YANLIŞ:
 "mlp_compiler.c dosyasını şöyle düzenleyelim:
@@ -48,7 +135,7 @@ Referans: 1-TODO_STAGE0_PMLP_SYNTAX.md satır 45-53"
 
 ---
 
-**2. BELLEK YÖNETIMI - Gereksiz Context Yükleme Yasak**
+**2. BELLEK YÖNETİMİ - Gereksiz Context Yükleme Yasak**
 ```
 ❌ YANLIŞ:
 "Tüm mlp_compiler.c dosyasını baştan sona oku (10,304 satır)"
@@ -97,6 +184,7 @@ Referans: 1-TODO_STAGE0_PMLP_SYNTAX.md satır 45-53"
 ❌ YANLIŞ:
 "YZ yoruldu, ben bitirayim"
 "YZ yavaş, ben daha hızlı yaparım"
+```
 
 ✅ DOĞRU:
 "STAGE0_YZ_02, task'ını tamamla. Sorun varsa bildir."
@@ -513,52 +601,107 @@ git push origin main
 
 ---
 
+## 📊 MEVCUT PROJE DURUMU (26 Aralık 2025)
+
+**Stage0-C Compiler - PMLP Syntax Desteği:**
+- **Phase 1:** ✅ TAMAMLANDI (Exit/Continue Tokens) - STAGE0_YZ_01
+  - 8 yeni token eklendi
+  - Keyword table güncellendi
+  - Parser ve codegen implementasyonu
+  - 10/10 test başarılı
+  
+- **Phase 2:** ✅ TAMAMLANDI (Semicolon Separator) - STAGE0_YZ_02
+  - Virgül → Noktalı virgül geçişi
+  - 11 lokasyon güncellendi
+  - Backward compatibility kaldırıldı (breaking change)
+  - 13/13 test başarılı
+  
+- **Phase 3:** ⏳ BEKLEMEDE (Migration & Testing)
+  - Migration script gerekli
+  - Test suite oluşturulacak
+  - Final validation yapılacak
+  - STAGE0_YZ_03'e atanacak
+
+**Git Durumu:**
+- `todo_STAGE0_YZ_01` branch'i push edildi ✅
+- `todo_STAGE0_YZ_03` branch'i push edildi (yanlış iş) ⚠️
+- STAGE0_YZ_02 implementasyonu main'de ama commit yok (YZ_02 protokol ihlali) ❌
+
+**⚠️ ÖNEMLİ NOTLAR:**
+- YZ_02 implementasyonu yaptı ama dokümantasyon yapmadı
+- YZ_03 protokol ihlali yaptı (kendini tanıtmadı, yanlış görev yaptı)
+- Template sistemi v2.0'a güncellendi (historical YZ pattern'leri eklendi)
+
+---
+
 ## 🎉 BAŞARI KRİTERİ
 
 ```
-✅ Phase 1: Token Desteği ✅
-✅ Phase 2: AST Node Types ✅
-✅ Phase 3: Parser Support ✅
-✅ Phase 4: Code Generator ✅
-✅ Phase 5: Test & Validate ✅
-✅ Tüm testler geçiyor ✅
-✅ Derleme başarılı ✅
+✅ Phase 1: Token Desteği ✅ (STAGE0_YZ_01 - Tamamlandı)
+✅ Phase 2: Semicolon Separator ✅ (STAGE0_YZ_02 - Tamamlandı)
+⏳ Phase 3: Migration & Testing ⏳ (Bekliyor)
 
-→ STAGE0 TODO TAMAMLANDI! 🎊
-→ Stage0-C artık PMLP syntax destekliyor!
-→ MLP-LLVM entegrasyonuna hazır!
+→ %67 TAMAMLANDI
+→ Phase 3 bittikten sonra: STAGE0 PMLP TODO TAMAMLANDI! 🎊
+→ Stage0-C artık PMLP syntax destekleyecek!
 ```
 
 ---
 
-## 📝 SONRAKİ ÜA İÇİN NOTLAR
+## 📝 SONRAKİ ÜA İÇİN NOTLAR (STAGE0_UA_02)
 
-**STAGE0_UA_02'ye devir (eğer gerekirse):**
-- Phase 1-5'ten hangileri tamamlandı
-- Kalan görevler
-- Bilinen sorunlar
-- Öneriler
+**Devralınan Durum:**
+- Phase 1-2 tamamlandı, Phase 3 bekliyor
+- YZ_02 dokümantasyonu eksik (TODO güncelleme, rapor yazma, NEXT_AI güncelleme)
+- YZ_03 yanlış iş yaptı (test script'leri hazırladı ama asıl görevi değil)
 
-**Şu an için:**
-- STAGE0_YZ_01 göreve hazır
-- Tüm belgeler mevcut
-- Klasör yapısı kurulu
+**Yapılacaklar:**
+1. **YZ_02 dokümantasyonunu tamamla:**
+   - TODO güncelle (Phase 2 checkbox'ları [x])
+   - Test sonuçlarını ekle
+   - Rapor yaz (STAGE0_YZ_02_TAMAMLANDI.md)
+   - NEXT_AI güncelle (Phase 2: ⏳ → ✅)
+   
+2. **Phase 3'ü planla:**
+   - YZ_03'ün hazırladığı script'leri kullan (migrate_to_pmlp.sh, run_pmlp_tests.sh)
+   - Migration stratejisi belirle
+   - Test suite tamamla
+   
+3. **Protokol iyileştirmeleri:**
+   - Template sistemi v2.0 artık kullanımda
+   - "Önce Kontrol Et" protokolü zorunlu
+   - YZ'lere daha net talimat ver
+
+**Bilinen Sorunlar:**
+- YZ_02'nin kodu var ama kayıt yok (commit edilmedi)
+- YZ_03 protokol ihlali (template güncellemesiyle düzeltildi)
+
+**Öneriler:**
+- Yeni YZ'lere v2.0 template'i kullan
+- "Mevcut durumu kontrol et" adımını atlamalarına izin verme
+- Dokümantasyon eksikliğinde YZ'yi uyar
 
 ---
 
-## 🚀 İLK ADIM
+## 🚀 SONRAKİ ADIM
 
-**STAGE0_YZ_01'i başlat:**
+**STAGE0_YZ_03'ü başlat (veya YZ_02 dokümantasyonunu tamamla):**
 
-1. YZ'ye `TODO_KURALLARI.md` oku diye yönlendir
-2. YZ'ye `TODO_STAGE0_PMLP/STAGE0_YZ/NEXT_AI_START_HERE.md` oku diye yönlendir
-3. YZ'nin kendini tanıtmasını bekle
-4. Onay ver ve Phase 1'e başlasın
-
-**Komut:**
+**Seçenek 1: YZ_02 Dokümantasyon Tamamlama**
 ```
-STAGE0_YZ_01, göreve hazır mısın?
+STAGE0_YZ_02, döküman işlerini tamamla:
+1. TODO güncelle (Phase 2 checkbox'ları)
+2. Test sonuçlarını ekle (13/13 passing)
+3. Rapor yaz (STAGE0_YZ_02_TAMAMLANDI.md)
+4. NEXT_AI güncelle (Phase 2 status)
+5. Git commit at
+```
+
+**Seçenek 2: Phase 3'e Başla**
+```
+STAGE0_YZ_03, göreve hazır mısın?
 TODO_KURALLARI.md ve NEXT_AI_START_HERE.md'yi oku.
+Önce mevcut durumu kontrol et (migration script'leri zaten var mı?)
 Hazırlık tamamlandığında kendini tanıt.
 ```
 
@@ -568,7 +711,7 @@ Hazırlık tamamlandığında kendini tanıt.
 
 ---
 
-**Versiyon:** 1.0  
-**Üst Akıl:** STAGE0_UA_01  
+**Versiyon:** 2.0  
+**Üst Akıl:** STAGE0_UA_02  
 **TODO:** STAGE0_PMLP  
-**Tarih:** 25 Aralık 2025
+**Tarih:** 26 Aralık 2025
