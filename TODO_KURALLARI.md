@@ -191,6 +191,11 @@ TODO_{TODO_TAM}/docs/pmlp_sozdizimi.md belgesinden öğrendiğim kurallar:
 ✅ Çelişki yaşarsam Üst Akıl/Kullanıcıya SORACAĞIM
 ✅ İnisiyatifle mimari/felsefi karar ALMAYACAĞIM
 ✅ Git workflow, raporlama ve döküman güncelleme protokolünü eksiksiz takip edeceğim
+🚨 ANA DİZİNDE (ROOT) HİÇBİR DOSYA OLUŞTURMAYACAĞIM
+   - Test dosyaları: `/tmp/` veya `tests/pmlp/` içinde
+   - Geçici dosyalar: `/tmp/` içinde
+   - Belgeler: TODO klasörü içinde
+   - **Root kirlenmeyecek!**
 
 **⚠️ GÖREV BİTİŞ PROTOKOLÜ (MUTLAKA YAPACAĞIM):**
 ✅ Ana TODO'da görevli olduğum bölümü tamamlandı olarak işaretleyeceğim: `1-TODO_{TODO_TAM}.md` dosyasında SADECE benim Phase/Task checkbox'larımı işaretleyeceğim
@@ -198,6 +203,14 @@ TODO_{TODO_TAM}/docs/pmlp_sozdizimi.md belgesinden öğrendiğim kurallar:
 ✅ NEXT_AI'ı güncelleyeceğim: Phase durumunu (⏳ → ✅) ve sonraki YZ bilgisini yazacağım
 ✅ Rapor yazacağım: `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/{TODO_KISA}_YZ_0X_TAMAMLANDI.md` oluşturacağım (yapılan testler, sonuçlar, istatistikler)
 ✅ Git push yapacağım: Branch'imi push edeceğim (merge yapmayacağım)
+🔍 ROOT TEMİZLİĞİNİ TEYİT EDECEĞİM:
+   ```bash
+   # Ana dizinde oluşturduğum dosya var mı kontrol et
+   ls -1 *.mlp *.asm test_* 2>/dev/null || echo "✅ Root temiz!"
+   ```
+   - Ana dizinde test dosyası oluşturmadığımı teyit edeceğim
+   - Geçici dosyaları `/tmp/`'de bıraktığımı teyit edeceğim
+   - Root kirliliğim yoksa raporumda belirteceğim: "✅ Root temizliği teyit edildi"
 
 📜 PROJE PRENSİPLERİ (İhlal Etmeyeceğim):
 1. x86-64 - Backend assembly
@@ -619,7 +632,7 @@ Nasıl ilerlemeliyim?
   - ✅ İzin verilen: `1-TODO_{TODO_TAM}.md` (Ana TODO - checkbox'ları işaretle)
   - ✅ İzin verilen: `TODO_{TODO_TAM}/{TODO_KISA}_YZ/NEXT_AI_START_HERE.md` (YZ belgesi - checkbox'ları işaretle)
   - ✅ İzin verilen: `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/{TODO_KISA}_YZ_0X_TAMAMLANDI.md` (Rapor - oluştur)
-  - ❌ YASAK: `/NEXT_AI_START_HERE.md` (Root belge - Üst Akıl günceller)
+  - ✅ İzin verilen: `/NEXT_AI_START_HERE.md` (Root belge - YZ göreve başlarken ve bitirirken günceller)
   - ❌ YASAK: `TODO_KURALLARI.md` (Kurallar - Kullanıcı/Mastermind günceller)
   - ❌ YASAK: `TODO_{TODO_TAM}/docs/*` (Teknik belgeler - Kullanıcı/Mastermind günceller)
   - ❌ YASAK: Diğer TODO'ların belgeleri
@@ -659,9 +672,9 @@ Her görev bittiğinde **mutlaka** şu adımları izle:
 
 3. 📝 **Rapor oluştur** - `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/{TODO_KISA}_YZ_XX_TAMAMLANDI.md` dosyası yaz
 
-4. 🔀 **Push et** - Branch'ini push et (merge yapma!)
+4. � **Root NEXT_AI güncelle** - `/NEXT_AI_START_HERE.md` dosyasını güncelle (Son Session, Tarih, Status)
 
-**⚠️ ÖNEMLİ:** Root `/NEXT_AI_START_HERE.md` dosyasını GÜNCELLEME! Onu Üst Akıl günceller.
+5. 🔀 **Push et** - Branch'ini push et (merge yapma!)
 
 ---
 
@@ -770,11 +783,37 @@ Yarım kalan:
    - Ekleme yapma
 
 6. **Dosya Oluşturma Kısıtlamaları**
-   - ❌ Ana dizinde test dosyası veya belge oluşturamazsın
-   - ❌ Mevcut belgeleri değiştiremezsin
-   - ✅ Test dosyaları: `tests/` veya `TODO_{TODO_TAM}/tests/` içinde
-   - ✅ Belgeler: `TODO_{TODO_TAM}/docs/` veya `TODO_{TODO_TAM}/{TODO_KISA}_YZ/` içinde
-   - ⚠️ İstisna: Kullanıcıdan açık izin alırsan ana dizinde dosya oluşturabilirsin
+   
+   **🚨 MUTLAKA UYULACAK KURALLAR:**
+   
+   - ❌ **ANA DİZİNDE (ROOT) ASLA DOSYA OLUŞTURMA!**
+     - Test dosyası (`test_*.mlp`) → Root'a konulamaz
+     - Geçici dosya (`temp_*.mlp`, `*.asm`) → Root'a konulamaz
+     - Belge (`.md`) → Root'a konulamaz
+     - **Kural ihlali = Görev durdurulur!**
+   
+   - ✅ **Test dosyaları SADECE şuralarda:**
+     - `tests/` → Genel testler
+     - `tests/pmlp/` → PMLP syntax testleri
+     - `tests/unit/` → Birim testler
+     - `tests/integration/` → Entegrasyon testleri
+     - `TODO_{TODO_TAM}/tests/` → TODO spesifik testler
+     - `/tmp/` → Geçici testler (otomatik temizlenir)
+   
+   - ✅ **Belgeler SADECE şuralarda:**
+     - `TODO_{TODO_TAM}/docs/` → TODO teknik belgeleri
+     - `TODO_{TODO_TAM}/{TODO_KISA}_YZ/` → YZ raporları
+     - `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/` → Tamamlanan görev raporları
+   
+   - ✅ **Geçici dosyalar için:**
+     - `/tmp/` klasörünü kullan (ör: `/tmp/test.mlp`, `/tmp/test.asm`)
+     - Otomatik temizlenir, root kirlenmez
+   
+   - ❌ **Mevcut belgeleri değiştiremezsin**
+     - İzin verilen belgeler: TODO ve YZ belgeleri (yukarıda belirtilen)
+     - Yasak belgeler: Root belgeler, diğer TODO'lar, teknik belgeler
+   
+   - ⚠️ **İstisna (Nadir):** Kullanıcıdan açık izin alırsan root'a dosya oluşturabilirsin
 
 ### Proje Spesifik Yasaklar
 
