@@ -1,0 +1,24 @@
+-- PMLP Phase 2 Test: Semicolon Separator
+-- Tests function parameters, array literals, list literals with semicolon
+
+function calc(numeric x; numeric y; numeric z) as numeric
+    -- Test array literal with semicolon and trailing semicolon
+    numeric[] arr = [1; 2; 3;]
+    
+    -- Test list literal with semicolon and trailing semicolon
+    list data = (4; 5; 6;)
+    
+    -- Calculate result
+    numeric result = x + y + z
+    
+    return result
+end_function
+
+function main() as numeric
+    -- Test function call with semicolon separator
+    numeric val = calc(10; 20; 30)
+    
+    return val
+end_function
+
+main()

@@ -1,0 +1,82 @@
+-- PMLP Full Syntax Test
+-- Combines Phase 1 (exit/continue) and Phase 2 (semicolons)
+
+function test_loops_with_exit(numeric limit) as numeric
+    numeric result = 0
+    
+    -- Test 1: exit_while with semicolon parameters
+    numeric i = 0
+    while i < 100
+        i = i + 1
+        if i > limit then
+            exit_while
+        end_if
+        result = result + i
+    end_while
+    
+    -- Test 2: exit_for with array
+    numeric[] values = [5; 10; 15; 20; 25;]
+    for j = 0 to 4
+        result = result + values[j]
+        if result > 100 then
+            exit_for
+        end_if
+    end_for
+    
+    return result
+end_function
+
+function test_continue_variants(numeric skip) as numeric
+    numeric count = 0
+    
+    -- Test continue_while
+    numeric k = 0
+    while k < 10
+        k = k + 1
+        if k == skip then
+            continue_while
+        end_if
+        count = count + 1
+    end_while
+    
+    -- Test continue_for with list
+    list items = (1; 2; 3; 4; 5;)
+    for m = 0 to 4
+        if m == skip then
+            continue_for
+        end_if
+        count = count + 1
+    end_for
+    
+    return count
+end_function
+
+function calculate(numeric a; numeric b; numeric c) as numeric
+    -- Decimal number with comma
+    numeric factor = 1,5
+    
+    -- String with comma preserved
+    string msg = "Hesaplama: a, b, c toplamı"
+    
+    return (a + b + c) * factor
+end_function
+
+function main() as numeric
+    -- Test all features together
+    numeric result1 = test_loops_with_exit(10)
+    numeric result2 = test_continue_variants(5)
+    numeric result3 = calculate(10; 20; 30)
+    
+    -- Array with semicolons
+    numeric[] results = [result1; result2; result3;]
+    
+    -- Sum array
+    numeric total = 0
+    for i = 0 to 2
+        total = total + results[i]
+    end_for
+    
+    return total
+end_function
+
+main()

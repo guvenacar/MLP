@@ -1,0 +1,44 @@
+-- PMLP Phase 2 Advanced Test: Complex semicolon usage
+-- Tests nested calls, string literals with commas, decimal numbers
+
+function process_data(numeric val1; string msg; numeric val2) as numeric
+    -- String with comma should be preserved
+    println("Hesaplama: " + msg + ", sonuç bekleniyor...")
+    
+    -- Decimal number with comma (Turkish format)
+    numeric pi = 3,14159
+    numeric factor = val1 * pi
+    
+    return factor + val2
+end_function
+
+function array_operations(numeric[] numbers; string[] names) as numeric
+    -- Array with decimals containing commas
+    numeric[] decimals = [1,5; 2,7; 3,9;]
+    
+    -- Calculate sum
+    numeric sum = 0
+    for i = 0 to 2
+        sum = sum + decimals[i]
+    end_for
+    
+    return sum
+end_function
+
+function main() as numeric
+    -- Test nested function calls with semicolons
+    numeric result = process_data(100; "test, veri"; 50)
+    
+    -- Test array parameters with semicolons
+    numeric[] nums = [10; 20; 30;]
+    string[] strs = ["Ali"; "Veli"; "Ahmet, Mehmet";]
+    
+    numeric arr_result = array_operations(nums; strs)
+    
+    -- List with mixed types and strings containing commas
+    list mixed = (42; "Merhaba, dünya"; 3,14; true;)
+    
+    return result + arr_result
+end_function
+
+main()
