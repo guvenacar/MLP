@@ -1,0 +1,12 @@
+function test_generic_exit_simple()
+    numeric x = 0
+    while x < 50
+        x = x + 1
+        if x > 20 then
+            exit
+        end_if
+    end_while
+    return x
+end_function
+
+test_generic_exit_simple()

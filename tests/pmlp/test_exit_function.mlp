@@ -1,0 +1,10 @@
+function test_exit_function_simple()
+    numeric x = 5
+    if x > 3 then
+        exit_function
+    end_if
+    x = x + 10
+    return x
+end_function
+
+test_exit_function_simple()

@@ -1,0 +1,62 @@
+-- PMLP Phase 1 Comprehensive Test
+-- Test all exit/continue variants
+
+function test_all_variants()
+    numeric result = 0
+    
+    -- Test 1: exit_while
+    numeric i = 0
+    while i < 100
+        i = i + 1
+        if i > 10 then
+            exit_while
+        end_if
+    end_while
+    result = result + i
+    
+    -- Test 2: exit_for
+    numeric sum = 0
+    for j = 1 to 100
+        sum = sum + j
+        if sum > 50 then
+            exit_for
+        end_if
+    end_for
+    result = result + sum
+    
+    -- Test 3: continue_while
+    numeric k = 0
+    numeric count = 0
+    while k < 10
+        k = k + 1
+        if k > 5 then
+            continue_while
+        end_if
+        count = count + 1
+    end_while
+    result = result + count
+    
+    -- Test 4: continue_for
+    numeric total = 0
+    for m = 1 to 10
+        if m > 5 then
+            continue_for
+        end_if
+        total = total + 1
+    end_for
+    result = result + total
+    
+    -- Test 5: generic exit
+    numeric n = 0
+    while n < 100
+        n = n + 1
+        if n > 15 then
+            exit
+        end_if
+    end_while
+    result = result + n
+    
+    return result
+end_function
+
+test_all_variants()

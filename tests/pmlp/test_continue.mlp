@@ -1,0 +1,16 @@
+-- PMLP Phase 1 Test: Continue variants
+
+function test_continue_while()
+    numeric i = 0
+    numeric sum = 0
+    while i < 10
+        i = i + 1
+        if i > 5 then
+            continue_while
+        end_if
+        sum = sum + i
+    end_while
+    return sum
+end_function
+
+test_continue_while()

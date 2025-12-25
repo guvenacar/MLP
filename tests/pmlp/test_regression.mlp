@@ -1,0 +1,20 @@
+-- Regression test: Eski syntax hala çalışıyor mu?
+
+function old_style_test()
+    numeric x = 5
+    if x > 3 then
+        x = x + 1
+    end_if
+    
+    while x < 20
+        x = x + 1
+    end_while
+    
+    for i = 1 to 10
+        x = x + 1
+    end_for
+    
+    return x
+end_function
+
+old_style_test()

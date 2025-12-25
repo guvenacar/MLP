@@ -1,0 +1,12 @@
+function test_continue_for_simple()
+    numeric sum = 0
+    for i = 1 to 20
+        if i > 10 then
+            continue_for
+        end_if
+        sum = sum + i
+    end_for
+    return sum
+end_function
+
+test_continue_for_simple()

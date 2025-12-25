@@ -1,0 +1,12 @@
+function test_exit_for_simple()
+    numeric sum = 0
+    for i = 1 to 100
+        sum = sum + i
+        if sum > 50 then
+            exit_for
+        end_if
+    end_for
+    return sum
+end_function
+
+test_exit_for_simple()

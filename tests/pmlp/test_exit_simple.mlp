@@ -1,0 +1,12 @@
+function test_simple()
+    numeric x = 5
+    while x < 100
+        if x > 10 then
+            exit_while
+        end_if
+        x = x + 1
+    end_while
+    return x
+end_function
+
+test_simple()

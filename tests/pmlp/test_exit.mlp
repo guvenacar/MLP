@@ -1,0 +1,14 @@
+-- PMLP Phase 1 Test: Exit variants
+
+function test_exit_while()
+    numeric i = 0
+    while i < 100
+        i = i + 1
+        if i > 10 then
+            exit_while
+        end_if
+    end_while
+    return i
+end_function
+
+test_exit_while()
