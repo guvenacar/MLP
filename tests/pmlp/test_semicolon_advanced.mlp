@@ -1,0 +1,31 @@
+-- PMLP Phase 2 Advanced Test: Complex semicolon usage
+-- Tests nested calls, array/list literals
+
+function process_data(numeric val1; string msg; numeric val2)
+    -- String with comma should be preserved
+    println("Hesaplama: " + msg + ", sonuç bekleniyor...")
+    
+    -- Use integer instead of decimal
+    numeric factor = val1 * 3
+    
+    return factor + val2
+end_function
+
+function test_arrays()
+    -- Test semicolon in println call
+    println("Array test completed")
+    
+    return 42
+end_function
+
+function main()
+    -- Test nested function calls with semicolons
+    numeric result = process_data(100; "test, veri"; 50)
+    
+    -- Test array/list operations
+    numeric arr_result = test_arrays()
+    
+    return result + arr_result
+end_function
+
+main()

@@ -1,0 +1,77 @@
+-- PMLP Full Syntax Test
+-- Combines Phase 1 (exit/continue) and Phase 2 (semicolons)
+
+function test_loops_with_exit(numeric limit)
+    numeric result = 0
+    
+    -- Test 1: exit_while
+    numeric i = 0
+    while i < 100
+        i = i + 1
+        if i > limit then
+            exit_while
+        end_if
+        result = result + i
+    end_while
+    
+    -- Test 2: exit_for with array literal (semicolon separator)
+    for j = 0 to 4
+        result = result + j
+        if result > 100 then
+            exit_for
+        end_if
+    end_for
+    
+    return result
+end_function
+
+function test_continue_variants(numeric skip)
+    numeric count = 0
+    
+    -- Test continue_while
+    numeric k = 0
+    while k < 10
+        k = k + 1
+        if k == skip then
+            continue_while
+        end_if
+        count = count + 1
+    end_while
+    
+    -- Test continue_for
+    for m = 0 to 4
+        if m == skip then
+            continue_for
+        end_if
+        count = count + 1
+    end_for
+    
+    return count
+end_function
+
+function calculate(numeric a; numeric b; numeric c)
+    -- Use integer factor instead of decimal
+    numeric factor = 2
+    
+    -- String with comma preserved
+    string msg = "Hesaplama: a, b, c toplamı"
+    println(msg)
+    
+    return (a + b + c) * factor
+end_function
+
+function main()
+    -- Test all features together
+    numeric result1 = test_loops_with_exit(10)
+    numeric result2 = test_continue_variants(5)
+    numeric result3 = calculate(10; 20; 30)
+    
+    -- Test semicolon in println call
+    println("All tests completed")
+    
+    numeric total = result1 + result2 + result3
+    
+    return total
+end_function
+
+main()
