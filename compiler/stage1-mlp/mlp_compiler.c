@@ -2994,8 +2994,8 @@ ASTNode* birincil() {
                 
                 consume(TOKEN_IDENTIFIER);
                 
-                if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                    consume(current_token->type);
+                if (current_token->type == TOKEN_SEMICOLON) {
+                    consume(TOKEN_SEMICOLON);
                 }
             } while (current_token->type == TOKEN_IDENTIFIER);
         }
@@ -3034,19 +3034,19 @@ ASTNode* birincil() {
         }
         
         // Try to parse as list literal
-        // If first element followed by comma, it's a list literal
+        // If first element followed by semicolon, it's a list literal
         ASTNode* first = ifade();
         
-        if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-            // It's a list literal: (expr, ...) or (expr; ...)
+        if (current_token->type == TOKEN_SEMICOLON) {
+            // It's a list literal: (expr; ...)
             int capacity = 10;
             ASTNode** elemanlar = (ASTNode**)malloc(sizeof(ASTNode*) * capacity);
             elemanlar[0] = first;
             int count = 1;
             
-            while (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                consume(current_token->type);
-                if (current_token->type == TOKEN_RIGHT_PAREN) break; // Trailing comma/semicolon
+            while (current_token->type == TOKEN_SEMICOLON) {
+                consume(TOKEN_SEMICOLON);
+                if (current_token->type == TOKEN_RIGHT_PAREN) break; // Trailing semicolon
                 
                 if (count >= capacity) {
                     capacity *= 2;
@@ -3083,9 +3083,9 @@ ASTNode* birincil() {
         
         elemanlar[count++] = ifade();
         
-        while (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-            consume(current_token->type);
-            if (current_token->type == TOKEN_RIGHT_BRACKET) break; // Trailing comma/semicolon
+        while (current_token->type == TOKEN_SEMICOLON) {
+            consume(TOKEN_SEMICOLON);
+            if (current_token->type == TOKEN_RIGHT_BRACKET) break; // Trailing semicolon
             
             if (count >= capacity) {
                 capacity *= 2;
@@ -3219,12 +3219,12 @@ ASTNode* birincil() {
         if (current_token->type != TOKEN_RIGHT_PAREN) {
             arg1 = ifade();
 
-            if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                consume(current_token->type);
+            if (current_token->type == TOKEN_SEMICOLON) {
+                consume(TOKEN_SEMICOLON);
                 arg2 = ifade();
 
-                if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                    consume(current_token->type);
+                if (current_token->type == TOKEN_SEMICOLON) {
+                    consume(TOKEN_SEMICOLON);
                     arg3 = ifade();
                 }
             }
@@ -3264,8 +3264,8 @@ ASTNode* birincil() {
                 do {
                     arguman_listesi[a_sayisi] = ifade();
                     a_sayisi++;
-                } while ((current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) && 
-                         (consume(current_token->type), 1));
+                } while (current_token->type == TOKEN_SEMICOLON && 
+                         (consume(TOKEN_SEMICOLON), 1));
             }
             consume(TOKEN_RIGHT_PAREN);
             ASTNode* call_node = createAST_IslecCagirma(&ad_token_kopya, arguman_listesi, a_sayisi);
@@ -3346,12 +3346,12 @@ ASTNode* birincil() {
                     const char* var_type = get_parse_var_type(ad_token_kopya.value);
                     
                     if (var_type && strcmp(var_type, "HashMap") == 0) {
-                        // map.set(key, value)
+                        // map.set(key; value)
                         ASTNode* key = ifade();
-                        if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                            consume(current_token->type);
+                        if (current_token->type == TOKEN_SEMICOLON) {
+                            consume(TOKEN_SEMICOLON);
                         } else {
-                            parseError("Comma or semicolon expected", ", or ;");
+                            parseError("Semicolon expected", ";");
                         }
                         ASTNode* value = ifade();
                         consume(TOKEN_RIGHT_PAREN);
@@ -3361,12 +3361,12 @@ ASTNode* birincil() {
                         free(field_or_method.value);
                         return set_node;
                     } else {
-                        // list.set(index, value)
+                        // list.set(index; value)
                         ASTNode* indeks = ifade();
-                        if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                            consume(current_token->type);
+                        if (current_token->type == TOKEN_SEMICOLON) {
+                            consume(TOKEN_SEMICOLON);
                         } else {
-                            parseError("Comma or semicolon expected", ", or ;");
+                            parseError("Semicolon expected", ";");
                         }
                         ASTNode* value = ifade();
                         consume(TOKEN_RIGHT_PAREN);
@@ -3402,12 +3402,12 @@ ASTNode* birincil() {
                     }
                 }
                 else if (strcmp(field_or_method.value, "insert") == 0) {
-                    // list.insert(index, value)
+                    // list.insert(index; value)
                     ASTNode* indeks = ifade();
-                    if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                        consume(current_token->type);
+                    if (current_token->type == TOKEN_SEMICOLON) {
+                        consume(TOKEN_SEMICOLON);
                     } else {
-                        parseError("Comma or semicolon expected", ", or ;");
+                        parseError("Semicolon expected", ";");
                     }
                     ASTNode* value = ifade();
                     consume(TOKEN_RIGHT_PAREN);
@@ -4669,15 +4669,15 @@ ASTNode* for_komutu() {
             // First argument (can be end if only 1 arg, or start if 2+ args)
             ASTNode* first_arg = ifade();
             
-            if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                // Two or more arguments: range(start, end, [step])
-                consume(current_token->type);
+            if (current_token->type == TOKEN_SEMICOLON) {
+                // Two or more arguments: range(start; end; [step])
+                consume(TOKEN_SEMICOLON);
                 start_expr = first_arg;
                 end_expr = ifade();
                 
-                if (current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) {
-                    // Three arguments: range(start, end, step)
-                    consume(current_token->type);
+                if (current_token->type == TOKEN_SEMICOLON) {
+                    // Three arguments: range(start; end; step)
+                    consume(TOKEN_SEMICOLON);
                     step_expr = ifade();
                 }
             } else {
@@ -4882,8 +4882,8 @@ ASTNode* islec_tanimlama() {
             }
             
             p_sayisi++;
-        } while ((current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) && 
-                 (consume(current_token->type), 1));
+        } while (current_token->type == TOKEN_SEMICOLON && 
+                 (consume(TOKEN_SEMICOLON), 1));
     }
     consume(TOKEN_RIGHT_PAREN);
 
@@ -4946,8 +4946,8 @@ ASTNode* async_function_tanimlama() {
             param_token->value = strdup(current_token->value);
             parametre_listesi[p_sayisi++] = param_token;
             consume(TOKEN_IDENTIFIER);
-        } while ((current_token->type == TOKEN_COMMA || current_token->type == TOKEN_SEMICOLON) && 
-                 (consume(current_token->type), 1));
+        } while (current_token->type == TOKEN_SEMICOLON && 
+                 (consume(TOKEN_SEMICOLON), 1));
     }
     consume(TOKEN_RIGHT_PAREN);
 
