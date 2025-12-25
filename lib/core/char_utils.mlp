@@ -1,0 +1,96 @@
+-- Character Utility Module
+-- Pure MLP - Backend Independent
+-- Can work in both mlp-original and MLP-LLVM
+
+-- Check if character is a digit (0-9)
+function is_digit(string ch) returns numeric
+    numeric code = char_code_at(ch, 0)
+    if code >= 48 then  -- '0'
+        if code <= 57 then  -- '9'
+            return 1
+        end
+    end
+    return 0
+end
+
+-- Check if character is lowercase letter (a-z)
+function is_lower(string ch) returns numeric
+    numeric code = char_code_at(ch, 0)
+    if code >= 97 then  -- 'a'
+        if code <= 122 then  -- 'z'
+            return 1
+        end
+    end
+    return 0
+end
+
+-- Check if character is uppercase letter (A-Z)
+function is_upper(string ch) returns numeric
+    numeric code = char_code_at(ch, 0)
+    if code >= 65 then  -- 'A'
+        if code <= 90 then  -- 'Z'
+            return 1
+        end
+    end
+    return 0
+end
+
+-- Check if character is letter (a-z or A-Z)
+function is_alpha(string ch) returns numeric
+    if is_lower(ch) then
+        return 1
+    end
+    if is_upper(ch) then
+        return 1
+    end
+    return 0
+end
+
+-- Check if character is alphanumeric
+function is_alphanumeric(string ch) returns numeric
+    if is_alpha(ch) then
+        return 1
+    end
+    if is_digit(ch) then
+        return 1
+    end
+    return 0
+end
+
+-- Check if character is whitespace
+function is_whitespace(string ch) returns numeric
+    numeric code = char_code_at(ch, 0)
+    if code == 32 then return 1 end  -- space
+    if code == 9 then return 1 end   -- tab
+    if code == 10 then return 1 end  -- newline
+    if code == 13 then return 1 end  -- carriage return
+    return 0
+end
+
+-- Test program
+print("=== Char Utils Test ===")
+print("")
+
+print("Testing is_digit:")
+print("is_digit('5'): " + str(is_digit("5")))
+print("is_digit('a'): " + str(is_digit("a")))
+print("")
+
+print("Testing is_alpha:")
+print("is_alpha('a'): " + str(is_alpha("a")))
+print("is_alpha('Z'): " + str(is_alpha("Z")))
+print("is_alpha('5'): " + str(is_alpha("5")))
+print("")
+
+print("Testing is_alphanumeric:")
+print("is_alphanumeric('a'): " + str(is_alphanumeric("a")))
+print("is_alphanumeric('5'): " + str(is_alphanumeric("5")))
+print("is_alphanumeric(' '): " + str(is_alphanumeric(" ")))
+print("")
+
+print("Testing is_whitespace:")
+print("is_whitespace(' '): " + str(is_whitespace(" ")))
+print("is_whitespace('a'): " + str(is_whitespace("a")))
+print("")
+
+print("All tests completed!")

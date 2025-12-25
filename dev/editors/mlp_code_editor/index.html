@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLP Code Editor</title>
+    
+    <!-- Shared Styles -->
+    <link rel="stylesheet" href="../../shared/themes/variables.css">
+    <link rel="stylesheet" href="../../shared/styles/main.css">
+
+    <style>
+        :root {
+            --activity-bar-bg: #333333;
+            --side-bar-bg: #252526;
+            --editor-bg: #1e1e1e;
+            --status-bar-bg: #007acc;
+            --tab-active-bg: #1e1e1e;
+            --tab-inactive-bg: #2d2d30;
+            --item-hover: #2a2d2e;
+            --item-active: #37373d;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--editor-bg);
+            color: #cccccc;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+        }
+        
+        /* Layout Structure */
+        .main-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Activity Bar (Far Left) */
+        .activity-bar {
+            width: 48px;
+            background-color: var(--activity-bar-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
+        }
+        .activity-item {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 24px;
+            border-left: 2px solid transparent;
+        }
+        .activity-item:hover {
+            opacity: 1;
+        }
+        .activity-item.active {
+            opacity: 1;
+            border-left-color: white;
+        }
+
+        /* Side Bar (Explorer) */
+        .side-bar {
+            width: 250px;
+            background-color: var(--side-bar-bg);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #000000;
+        }
+        .sidebar-title {
+            height: 35px;
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #bbbbbb;
+        }
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .section-header {
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            background-color: #383838;
+        }
+        .section-header:hover {
+            background-color: #3f3f46;
+        }
+        .arrow {
+            margin: 0 5px;
+            font-size: 10px;
+            transform: rotate(90deg);
+            display: inline-block;
+        }
+        .file-item {
+            padding: 3px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .file-item:hover {
+            background-color: var(--item-hover);
+        }
+        .file-item.selected {
+            background-color: var(--item-active);
+        }
+
+        /* Editor Area */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--editor-bg);
+        }
+        
+        /* Tabs */
+        .tabs-container {
+            height: 35px;
+            background-color: var(--bg-secondary);
+            display: flex;
+            overflow-x: auto;
+            background-color: var(--tab-inactive-bg);
+        }
+        .tab {
+            height: 100%;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--tab-inactive-bg);
+            color: #969696;
+            cursor: pointer;
+            border-right: 1px solid #252526;
+            min-width: 120px;
+        }
+        .tab.active {
+            background-color: var(--tab-active-bg);
+            color: white;
+            border-top: 1px solid var(--accent-color);
+        }
+        .tab-close {
+            margin-left: auto;
+            font-size: 14px;
+            border-radius: 3px;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tab-close:hover {
+            background-color: #444;
+        }
+
+        /* Monaco Container */
+        #editor-container {
+            flex: 1;
+            position: relative;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 22px;
+            background-color: var(--status-bar-bg);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        .status-item:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        /* Menu Bar (Custom) */
+        .title-bar {
+            height: 30px;
+            background-color: #3c3c3c;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 13px;
+            color: #cccccc;
+        }
+        .menu-item {
+            padding: 0 8px;
+            cursor: pointer;
+        }
+        .menu-item:hover {
+            background-color: #505050;
+            border-radius: 3px;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Title / Menu Bar -->
+    <div class="title-bar">
+        <div style="margin-right: 10px; font-weight: bold;">MLP Editor</div>
+        <div class="menu-item">File</div>
+        <div class="menu-item">Edit</div>
+        <div class="menu-item">Selection</div>
+        <div class="menu-item">View</div>
+        <div class="menu-item">Go</div>
+        <div class="menu-item">Run</div>
+        <div class="menu-item">Help</div>
+    </div>
+
+    <div class="main-body">
+        <!-- Activity Bar -->
+        <div class="activity-bar">
+            <div class="activity-item active" title="Explorer">📄</div>
+            <div class="activity-item" title="Search">🔍</div>
+            <div class="activity-item" title="Source Control">🌳</div>
+            <div class="activity-item" title="Run & Debug">🐞</div>
+            <div class="activity-item" title="Extensions">🧩</div>
+            <div style="flex: 1;"></div>
+            <div class="activity-item" title="Accounts">👤</div>
+            <div class="activity-item" title="Manage">⚙️</div>
+        </div>
+
+        <!-- Side Bar -->
+        <div class="side-bar">
+            <div class="sidebar-title">EXPLORER</div>
+            <div class="sidebar-content">
+                <div class="section-header">
+                    <span class="arrow">▼</span>
+                    <span>MLP PROJECT</span>
+                </div>
+                <div style="padding-left: 0px;">
+                    <div class="file-item selected">
+                        <span>📄</span> main.mlp
+                    </div>
+                    <div class="file-item">
+                        <span>📄</span> utils.mlp
+                    </div>
+                    <div class="file-item">
+                        <span>⚙️</span> config.json
+                    </div>
+                    <div class="file-item">
+                        <span>📝</span> README.md
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor Area -->
+        <div class="editor-area">
+            <div class="tabs-container">
+                <div class="tab active">
+                    <span>📄</span>
+                    <span>main.mlp</span>
+                    <span class="tab-close">×</span>
+                </div>
+                <div class="tab">
+                    <span>📄</span>
+                    <span>utils.mlp</span>
+                    <span class="tab-close">×</span>
+                </div>
+            </div>
+            <div id="editor-container"></div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div style="display: flex;">
+            <div class="status-item"><span>🔀</span> main*</div>
+            <div class="status-item"><span>ⓧ</span> 0</div>
+            <div class="status-item"><span>⚠</span> 0</div>
+        </div>
+        <div style="display: flex;">
+            <div class="status-item">Ln 1, Col 1</div>
+            <div class="status-item">UTF-8</div>
+            <div class="status-item">MLP</div>
+            <div class="status-item">Prettier</div>
+            <div class="status-item">🔔</div>
+        </div>
+    </div>
+
+    <!-- Monaco Loader -->
+    <script>
+        const path = require('path');
+        const amdLoader = require('./node_modules/monaco-editor/min/vs/loader.js');
+        const amdRequire = amdLoader.require;
+        const amdDefine = amdLoader.define;
+
+        function uriFromPath(_path) {
+            var pathName = path.resolve(_path).replace(/\\/g, '/');
+            if (pathName.length > 0 && pathName.charAt(0) !== '/') {
+                pathName = '/' + pathName;
+            }
+            return encodeURI('file://' + pathName);
+        }
+
+        amdRequire.config({
+            baseUrl: uriFromPath(path.join(__dirname, 'node_modules/monaco-editor/min'))
+        });
+
+        // workaround monaco-css not understanding the environment
+        self.module = undefined;
+
+        amdRequire(['vs/editor/editor.main'], function() {
+            const editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: [
+                    '// MLP Code Example',
+                    'Function Main()',
+                    '    Print("Hello World")',
+                    'EndFunction'
+                ].join('\\n'),
+                language: 'javascript', // TODO: Custom MLP language definition
+                theme: 'vs-dark',
+                automaticLayout: true,
+                fontFamily: 'Consolas, "Courier New", monospace',
+                fontSize: 14,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                renderLineHighlight: 'all',
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+# 🤖 GÖREVLİ YZ - BURADAN BAŞLA
+
+**Son Güncelleme:** 25 Aralık 2025  
+**TODO:** {TODO_KISA}_PMLP - Stage0-C Compiler PMLP Syntax Desteği  
+**Durum:** 🟢 İlk YZ Atanmayı Bekliyor
+
+---
+
+## 🎯 SEN KİMSİN?
+
+Sen bir **Görevli YZ** (Yapay Zeka) - Bu TODO'daki belirli bir görevi tamamlamakla sorumlusun.
+
+**Senin YZ numaranı Üst Akıl belirler.** (Örn: {TODO_KISA}_YZ_01)
+
+---
+
+## 📋 İLK OKUMALAR (ZORUNLU!)
+
+**Sırayla oku:**
+
+1. 📖 [`TODO_KURALLARI.md`](../../TODO_KURALLARI.md)
+   - Tüm YZ'lerin uyması gereken GENEL kurallar
+   - Kendini tanıtma protokolü
+   - Git workflow
+   - Yasaklar ve yapılacaklar
+
+2. 📖 [`1-TODO_{TODO_KISA}_PMLP_SYNTAX.md`](../../1-TODO_{TODO_KISA}_PMLP_SYNTAX.md)
+   - Bu TODO'nun detaylı görev listesi
+   - Phase'ler ve Task'lar
+   - Senin görevin burada tanımlı
+
+3. 📖 [`TODO_{TODO_KISA}_PMLP/docs/pmlp_sozdizimi.md`](../docs/pmlp_sozdizimi.md)
+   - PMLP syntax referansı (1138 satır)
+   - **TÜMÜNÜ OKUMA!** Sadece görevinle ilgili bölümü oku
+   - Index'i kullan
+
+4. 📖 [`TODO_{TODO_KISA}_PMLP/docs/syntax_migration_guide.md`](../docs/syntax_migration_guide.md)
+   - Eski→Yeni syntax dönüşüm kılavuzu
+   - Pratik örnekler ve scriptler
+
+---
+
+## 🚀 MEVCUT GÖREV
+
+**Üst Akıl'den öğren:** [`TODO_{TODO_KISA}_PMLP/{TODO_KISA}_UA/Ust_Akıl_buradan_basla.md`](../{TODO_KISA}_UA/Ust_Akıl_buradan_basla.md)
+
+### 📍 ŞU AN HANGİ PHASE'TEYİZ?
+
+```
+⏳ Phase 1: Token Desteği - BEKLEMEDE
+   └─> YZ atanmadı
+
+⏸️ Phase 2: AST Node Types - BEKLEMEDE
+⏸️ Phase 3: Parser Support - BEKLEMEDE
+⏸️ Phase 4: Code Generator - BEKLEMEDE
+⏸️ Phase 5: Test & Validate - BEKLEMEDE
+```
+
+---
+
+## 🤖 İLK YZ ({TODO_KISA}_YZ_01) İÇİN GÖREV
+
+### Phase 1: Token Desteği (1-2 saat)
+
+**Dosya:** `compiler/stage1-mlp/mlp_compiler.c`
+
+#### Task 1.1: Token Enum'a Ekle (15dk)
+**Lokasyon:** ~line 120-220
+
+**Eklenecekler:**
+```c
+// Döngü kontrol komutları
+TOKEN_EXIT,              // exit - genel çıkış
+TOKEN_CONTINUE,          // continue - genel devam
+TOKEN_EXIT_FOR,          // exit_for - for'dan çık
+TOKEN_EXIT_WHILE,        // exit_while - while'dan çık
+TOKEN_EXIT_IF,           // exit_if - if'ten çık
+TOKEN_EXIT_FUNCTION,     // exit_function - fonksiyondan çık
+TOKEN_EXIT_SWITCH,       // exit_switch - switch'ten çık
+TOKEN_CONTINUE_FOR,      // continue_for - for'a devam
+TOKEN_CONTINUE_WHILE,    // continue_while - while'a devam
+```
+
+#### Task 1.2: Keyword Table'a Ekle (15dk)
+**Lokasyon:** `Keyword keywords[]` array (~line 1350-1450)
+
+**Eklenecekler:**
+```c
+{"exit",           TOKEN_EXIT},
+{"continue",       TOKEN_CONTINUE},
+{"exit_for",       TOKEN_EXIT_FOR},
+{"exit_while",     TOKEN_EXIT_WHILE},
+{"exit_if",        TOKEN_EXIT_IF},
+{"exit_function",  TOKEN_EXIT_FUNCTION},
+{"exit_switch",    TOKEN_EXIT_SWITCH},
+{"continue_for",   TOKEN_CONTINUE_FOR},
+{"continue_while", TOKEN_CONTINUE_WHILE},
+```
+
+#### Task 1.3: Lexer Test (30dk)
+**Test dosyası oluştur:** `tests/pmlp/test_exit_lexer.mlp`
+
+```mlp
+function test_exit() as numeric
+    while true
+        if x > 10 then
+            exit
+        end_if
+    end_while
+    return 0
+end_function
+```
+
+**Test komutu:**
+```bash
+./mlpc tests/pmlp/test_exit_lexer.mlp test_exit.asm
+```
+
+---
+
+## 📝 GÖREV BİTİNCE YAPILACAKLAR
+
+### 1. Rapor Yaz
+
+**Dosya:** `TODO_{TODO_KISA}_PMLP/{TODO_KISA}_YZ/completed/{TODO_KISA}_YZ_01_TAMAMLANDI.md`
+
+**Template:** [`YZ_RAPOR_TEMPLATE.md`](YZ_RAPOR_TEMPLATE.md)
+
+### 2. Bu Dosyayı Güncelle
+
+Bir sonraki YZ için bu dosyayı güncelle:
+- Tamamlanan görevleri işaretle ✅
+- Sonraki YZ'nin görevini yaz
+- Sorunlar veya notlar varsa belirt
+
+### 3. Git Commit ve Push
+
+```bash
+git add .
+git commit -m "{TODO_KISA}_YZ_01: Token enum ve keyword table - exit/continue eklendi"
+git push origin todo_{TODO_KISA}_PMLP_YZ_01
+```
+
+**NOT:** Merge yapma! Üst Akıl merge'i yönetir.
+
+---
+
+## 🚨 SORUN YAŞARSAN?
+
+### Test Başarısız
+1. Hatayı analiz et
+2. Düzelt, tekrar test et
+3. 3. denemede başarısızsa → Üst Akıl'e sor
+
+### Belirsizlik Var
+```
+❓ Syntax kuralı net değil
+❓ Dosya bulunamıyor
+❓ Çelişkili bilgi var
+
+→ Üst Akıl'e SOR! (TODO_{TODO_KISA}_PMLP/{TODO_KISA}_UA/ klasörüne yaz)
+```
+
+### Context Doldu
+```
+⚠️ Token limitine yaklaştım
+⚠️ Görevi tamamlayamıyorum
+
+→ Yarım kalan kodu commit et
+→ Rapor yaz (yarım kaldı olarak işaretle)
+→ Bu dosyayı güncelle (sonraki YZ nereden devam edecek?)
+```
+
+---
+
+## ✅ TAAHHÜTLER (Onay Ver!)
+
+Görevime başlamadan önce şunları taahhüt ediyorum:
+
+- ✅ TODO_KURALLARI.md'yi okudum ve uyacağım
+- ✅ Sadece bana verilen görevi yapacağım
+- ✅ Kod yazmadan önce belgeleri okuyacağım
+- ✅ Her değişikliği test edeceğim
+- ✅ Git workflow'a uyacağım (merge yapmayacağım)
+- ✅ Pseudo/stub kod yazmayacağım
+- ✅ Stable koda dokunmayacağım
+- ✅ Görevi bitince rapor yazacağım
+
+---
+
+## 🚀 HAZIRSENİZ BAŞLAYIN!
+
+**Adımlar:**
+
+1. TODO_KURALLARI.md'yi oku
+2. Kendini Üst Akıl'e tanıt (format TODO_KURALLARI.md'de)
+3. Onay al
+4. Görevine başla
+5. Test et
+6. Commit et
+7. Rapor yaz
+8. Bu dosyayı güncelle
+
+**İyi çalışmalar! 🎯**
+
+---
+
+**SON YZ:** Henüz YZ atanmadı  
+**SONRAKİ YZ:** {TODO_KISA}_YZ_01 (Phase 1 - Token Desteği)

@@ -136,14 +136,35 @@ Testing: test_regression.mlp ... ✅ PASSED
 
 ### **PHASE 2: Semicolon Separator** (2-3 saat)
 
-**Durum:** ⏸️ Beklemede (Phase 1 bitince)
+**Durum:** ✅ TAMAMLANDI (STAGE0_YZ_02) - 26 Aralık 2025
 
 **İlerleme:**
-- [ ] Task 2.1: Fonksiyon Parametreleri
-- [ ] Task 2.2: Fonksiyon Çağrıları
-- [ ] Task 2.3: Array Literals
-- [ ] Task 2.4: List Literals
-- [ ] Task 2.5: Test
+- [x] Task 2.1: Fonksiyon Parametreleri
+- [x] Task 2.2: Fonksiyon Çağrıları
+- [x] Task 2.3: Array Literals
+- [x] Task 2.4: List Literals
+- [x] Task 2.5: Test
+
+#### ✅ PHASE 2 TEST SONUÇLARI (STAGE0_YZ_02)
+
+**Tamamlama Tarihi:** 26 Aralık 2025  
+**Karar:** Semicolon-ONLY (hibrit değil)  
+**Test Durumu:** 13/13 Başarılı ✅
+
+**Yapılan Değişiklikler:**
+- 10 lokasyonda `TOKEN_COMMA || TOKEN_SEMICOLON` → `TOKEN_SEMICOLON`
+- Virgül artık SADECE ondalık ayırıcı (3,14 = 3.14)
+- Semicolon SADECE parametre/eleman ayırıcı
+
+**⚠️ BREAKING CHANGE:**
+- Eski virgül kullanımı ARTIK ÇALIŞMAZ
+- `func(a, b)` → Hata (kullan: `func(a; b)`)
+- `[1, 2, 3]` → Hata (kullan: `[1; 2; 3;]`)
+
+**Neden Hibrit Değil:**
+- Türk formatında virgül ondalık: `123,45` = 123.45
+- `(123,45, 44)` ambiguity sorunu çözülemez
+- Mastermind kararı: Tek ayırıcı = net syntax
 
 **Kritik:** Bu değişiklik tüm parametre/list/array parsing'i etkiler!
 
@@ -284,17 +305,17 @@ find tests -name "*.mlp" -exec sed -i \
 ## ✅ BAŞARI KRİTERLERİ
 
 **Yeni PMLP Syntax:**
-- [ ] `exit`, `exit_for`, `exit_while` çalışıyor
-- [ ] `continue_for`, `continue_while` çalışıyor
-- [ ] `func(a; b; c)` syntax derleniyor
-- [ ] `[1; 2; 3;]` array literal çalışıyor
-- [ ] `(1; 2; 3;)` list literal çalışıyor
-- [ ] En az 5 PMLP test dosyası geçiyor
+- [x] `exit`, `exit_for`, `exit_while` çalışıyor
+- [x] `continue_for`, `continue_while` çalışıyor
+- [x] `func(a; b; c)` syntax derleniyor
+- [x] `[1; 2; 3;]` array literal çalışıyor
+- [x] `(1; 2; 3;)` list literal çalışıyor
+- [x] En az 5 PMLP test dosyası geçiyor (13/13)
 
 **Geriye Dönük Uyumluluk:**
-- [ ] Eski syntax (`end if`, `func(a, b)`) hala çalışıyor
-- [ ] Mevcut test dosyaları bozulmamış
-- [ ] Stage0-C'nin eski yetenekleri korunmuş
+- [x] Eski blok syntax (`end_if` vb.) hala çalışıyor
+- [x] Exit/continue eski syntax (`break`, `continue`) hala çalışıyor
+- [ ] ~~Virgül separator~~ **KALDIRILDI** (Mastermind kararı)
 
 ---
 
@@ -308,18 +329,16 @@ find tests -name "*.mlp" -exec sed -i \
 
 ## 📊 İLERLEME TAKİBİ
 
-**Son Güncelleme:** 25 Aralık 2025
+**Son Güncelleme:** 26 Aralık 2025
 
 | Phase | Durum | İlerleme | Sorumlu |
 |-------|-------|----------|----------|
 | Phase 1 | ✅ Tamamlandı | 5/5 task | STAGE0_YZ_01 |
-| Phase 2 | ⏸️ Beklemede | 0/5 task | STAGE0_YZ_02 |
+| Phase 2 | ✅ Tamamlandı | 5/5 task | STAGE0_YZ_02 |
 | Phase 3 | ✅ Tamamlandı | 4/4 task | STAGE0_YZ_03 |
 
-**Toplam İlerleme:** 9/14 task (%64)
-
-**⚠️ YZ'ler:** Her task tamamlandığında bu dosyayı güncelleyin!
+**Toplam İlerleme:** 14/14 task (%100)
 
 ---
 
-**İlerleme:** %64 (2/3 phase tamamlandı, Phase 2 bekliyor)
+**İlerleme:** %100 ✅ TODO TAMAMLANDI

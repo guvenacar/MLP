@@ -1,0 +1,12 @@
+-- Simple lexer test (C compiler compatible)
+
+print "=== MLP Lexer Test ==="
+print ""
+
+string input = "numeric x = 42"
+print "Input: "
+print input
+print ""
+
+print "Lexer v2.0 ready!"
+print "Test complete!"

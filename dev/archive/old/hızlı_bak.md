@@ -1,0 +1,1 @@
+./mlpc merhaba_dunya.mlp -o merhaba && ./merhaba

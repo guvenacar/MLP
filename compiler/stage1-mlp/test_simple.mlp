@@ -1,0 +1,16 @@
+-- MLP Test Program
+-- Simple test to verify compiler pipeline
+
+function main()
+    print "Hello from MLP!"
+    
+    numeric x = 42
+    numeric y = 10
+    numeric sum = x + y
+    
+    print sum
+    
+    return 0
+end_function
+
+main()

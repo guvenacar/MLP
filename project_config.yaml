@@ -1,0 +1,147 @@
+# PROJECT CONFIGURATION
+# Bu dosya proje spesifik ayarları içerir
+# Template sistemi bu dosyayı okur
+
+project:
+  name: "mlp-original"
+  full_name: "MLP (Multi Language Programming) Compiler"
+  description: "Bootstrap compiler projesi - Stage0 C, Stage1 MLP hedefi"
+  repository: "guvenacar/mlp"
+  
+# MİMARİ PRENSİPLER
+# Bu prensipler Mastermind tarafından korunur
+principles:
+  - name: "MODULAR"
+    description: "Core libs modüler (lib/core, lib/json)"
+    critical: true
+    
+  - name: "LLVM"
+    description: "Backend hedefi (şu an GCC, LLVM'e geçiş)"
+    critical: true
+    
+  - name: "STO"
+    description: "Smart Type Optimization (BigDecimal → int64/double)"
+    critical: true
+    details: "Kullanıcı sadece 'numeric' görür, compiler optimize eder"
+    
+  - name: "STATELESS"
+    description: "Fonksiyonlar pure, global state yok"
+    critical: true
+    details: "Her fonksiyon aynı input → aynı output"
+    
+  - name: "STRUCT+FUNC"
+    description: "OOP yok, struct + functions pattern"
+    critical: true
+    details: "Veri (struct) + İşlem (function) ayrımı"
+
+# TEKNOLOJİ YIĞINI
+tech_stack:
+  languages:
+    - "C (Stage0 compiler)"
+    - "MLP (Stage1 hedef)"
+    - "Assembly (x86-64)"
+    - "LLVM IR (gelecek)"
+  
+  tools:
+    - "GCC (şu anki backend)"
+    - "NASM (assembler)"
+    - "Git (versiyon kontrol)"
+  
+  runtime:
+    - "runtime.c (monolithic)"
+    - "BigDecimal (numeric tip)"
+
+# PROJE SPESIFIK KOMUTLAR
+commands:
+  build: "./mlpc program.mlp program.asm"
+  assemble: "nasm -f elf64 program.asm -o program.o"
+  link: "gcc program.o runtime/runtime.o -o program -lm"
+  run: "./program"
+  test: "diff <(./program) expected_output.txt"
+
+# TEST STRATEJİSİ
+testing:
+  coverage_target: 80
+  coverage_minimum: 70
+  coverage_critical: 100
+  
+  test_levels:
+    - "Birim Test"
+    - "Entegrasyon Test"
+    - "Regresyon Test"
+    - "Manuel Test"
+  
+  test_locations:
+    - "tests/unit/"
+    - "tests/integration/"
+    - "tests/pmlp/"
+    - "TODO_{TODO_TAM}/tests/"
+
+# SYNTAX SİSTEMİ (Bu proje için)
+syntax:
+  current: "PMLP (Pragmatic MLP)"
+  legacy: "Eski syntax (kurallar_kitabı_v1.md)"
+  
+  key_differences:
+    - "Blok sonu: end if → end_if"
+    - "Parametre: , → ;"
+    - "Trailing semicolon: zorunlu"
+    - "Ondalık sayı: 3,14 (Türk formatı)"
+
+# ÖZEL YASAKLAR (Bu proje için)
+project_specific_restrictions:
+  - name: "Runtime Değiştirme"
+    description: "runtime.c dosyasına dokunma"
+    reason: "Stable ve test edilmiş"
+    
+  - name: "String/Sayı Virgülleri"
+    description: "String literal ve ondalık sayılardaki virgüllere dokunma"
+    reason: "\"Ali, Veli\" ve 3,14 korunmalı"
+    
+  - name: "Assembly Değiştirme"
+    description: "Compiler çıktısı assembly'e manuel müdahale yasak"
+    reason: "Compiler sorumluluğu"
+
+# REFERANS BELGELER
+documentation:
+  general:
+    - "TODO_KURALLARI.md"
+    - "STRATEGY_OVERVIEW.md"
+    - "NEXT_AI_START_HERE.md"
+  
+  architecture:
+    - "docs/ARCHITECTURE_AND_MEMORY_STRATEGY.md"
+    - "docs/HYBRID_BACKEND_ARCHITECTURE.md"
+    - "docs/LANGUAGE_EVOLUTION_GUIDE.md"
+  
+  syntax:
+    - "TODO_STAGE0_PMLP/docs/pmlp_sozdizimi.md"
+    - "TODO_STAGE0_PMLP/docs/syntax_migration_guide.md"
+    - "TODO_STAGE0_PMLP/docs/STO_PRINCIPLES.md"
+
+# TODO LİSTESİ (Mevcut)
+todos:
+  - id: "TODO_STAGE0_PMLP"
+    short: "STAGE0"
+    full: "STAGE0_PMLP"
+    file: "1-TODO_STAGE0_PMLP_SYNTAX.md"
+    status: "active"
+    description: "Stage0-C compiler'a PMLP syntax desteği"
+    
+  - id: "TODO_RUNTIME_INT"
+    short: "RUNTIME"
+    full: "RUNTIME_INT"
+    file: "2-TODO_RUNTIME_INTEGRATION.md"
+    status: "planned"
+    description: "MLP-LLVM runtime.c entegrasyonu"
+    
+  - id: "TODO_BACKEND_LLVM"
+    short: "BACKEND"
+    full: "BACKEND_LLVM"
+    file: "3-TODO_GCC_TO_LLVM_BACKEND.md"
+    status: "planned"
+    description: "GCC → LLVM backend geçişi"
+
+# VERSİYON
+version: "1.0.0"
+last_updated: "2025-12-25"

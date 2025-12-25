@@ -1,0 +1,260 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Function Registry Module
+-- -----------------------------------------------------------------------------
+-- Merkezi fonksiyon imza deposu ve ön-tarama (pre-scan) altyapısı.
+-- Parser fonksiyon tanımlarını görünce kayıt eder, sonra code generator
+-- çağrılarda bu kayıtlara bakarak default parametre değerlerini uygular.
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/ast/ast_nodes.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Parametre bilgileri
+-- -----------------------------------------------------------------------------
+
+struct ParameterInfo then
+    String name
+    Numeric default_value_node_id
+    Numeric is_array
+end_struct
+
+function parameter_info_create(name, default_value_node_id, is_array)
+    ParameterInfo param
+    param.name = name
+    param.default_value_node_id = default_value_node_id
+    param.is_array = is_array
+    return param
+end_function
+
+function parameter_info_has_default(param)
+    if param.default_value_node_id >= 0 then
+        return 1
+    end_if
+    return 0
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Fonksiyon imzaları
+-- -----------------------------------------------------------------------------
+
+struct FunctionSignature then
+    String name
+    Numeric param_count
+    list parameters
+end_struct
+
+function function_signature_create(name)
+    FunctionSignature sig
+    sig.name = name
+    sig.param_count = 0
+    sig.parameters = list()
+    return sig
+end_function
+
+function function_signature_add_parameter(sig, param_info)
+    mlp_list_add(sig.parameters, param_info)
+    sig.param_count = sig.param_count + 1
+    return sig
+end_function
+
+function function_signature_get_parameter(sig, index)
+    if index < 0 then
+        panic("function_signature_get_parameter: negative index")
+    end_if
+
+    if index >= sig.param_count then
+        panic("function_signature_get_parameter: index out of range")
+    end_if
+
+    return mlp_list_get(sig.parameters, index)
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Fonksiyon registri (HashMap tabanlı)
+-- -----------------------------------------------------------------------------
+
+struct FunctionRegistry then
+    HashMap signatures
+end_struct
+
+function function_registry_create()
+    FunctionRegistry registry
+    registry.signatures = map()
+    return registry
+end_function
+
+function function_registry_register(registry, signature)
+    if hashmap_has(registry.signatures, signature.name) == 1 then
+        print "WARNING: Function '"
+        print signature.name
+        print "' already registered, skipping duplicate"
+        return registry
+    end_if
+
+    hashmap_set(registry.signatures, signature.name, signature)
+    return registry
+end_function
+
+function function_registry_lookup(registry, function_name)
+    if hashmap_has(registry.signatures, function_name) == 0 then
+        return null
+    end_if
+
+    return hashmap_get(registry.signatures, function_name)
+end_function
+
+function function_registry_has(registry, function_name)
+    return hashmap_has(registry.signatures, function_name)
+end_function
+
+function function_registry_size(registry)
+    return hashmap_size(registry.signatures)
+end_function
+
+function function_registry_clear(registry)
+    hashmap_clear(registry.signatures)
+    return registry
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Pre-scan altyapısı: AST'yi tarayıp fonksiyon imzalarını kaydet
+-- -----------------------------------------------------------------------------
+
+function register_function_from_ast(registry, arena, func_data)
+    FunctionSignature sig
+    sig = function_signature_create(func_data.name)
+
+    Numeric param_count = 0
+    param_count = mlp_list_length(func_data.parameters)
+    Numeric i = 0
+    while i < param_count
+        ASTFunctionParameter ast_param
+        ast_param = mlp_list_get(func_data.parameters, i)
+        
+        ParameterInfo param_info
+        param_info = parameter_info_create(
+            ast_param.name,
+            ast_param.default_value_id,
+            ast_param.is_array
+        )
+        
+        sig = function_signature_add_parameter(sig, param_info)
+        i = i + 1
+    end_while
+
+    registry = function_registry_register(registry, sig)
+    return registry
+end_function
+
+function pre_scan_functions(registry, arena, root_block_data)
+    -- TODO: Get statement_ids from root_block_data
+    list statement_ids = list()
+    Numeric stmt_count = 0
+    stmt_count = mlp_list_length(statement_ids)
+    Numeric i = 0
+    
+    while i < stmt_count
+        Numeric stmt_id = 0
+        stmt_id = mlp_list_get(statement_ids, i)
+        ASTNode stmt_node
+        stmt_node = ast_arena_get(arena, stmt_id)
+        
+        if stmt_node.type == AST_FUNCTION_DECLARATION then
+            ASTNode full_node
+            full_node = ast_arena_get(arena, stmt_node.id)
+            registry = register_function_from_ast(registry, arena, full_node)
+        end_if
+        
+        i = i + 1
+    end_while
+    
+    return registry
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Default parametre değerlerini çağrı noktasında uygulama yardımcıları
+-- -----------------------------------------------------------------------------
+
+function apply_default_parameters(registry, arena, call_data)
+    FunctionSignature sig
+    sig = function_registry_lookup(registry, call_data.target_name)
+    
+    if sig == null then
+        return call_data
+    end_if
+
+    Numeric provided_count = 0
+    provided_count = mlp_list_length(call_data.argument_ids)
+    Numeric required_count = sig.param_count
+    
+    if provided_count >= required_count then
+        return call_data
+    end_if
+
+    Numeric i = provided_count
+    while i < required_count
+        ParameterInfo param
+        param = function_signature_get_parameter(sig, i)
+        
+        if parameter_info_has_default(param) == 1 then
+            mlp_list_add(call_data.argument_ids, param.default_value_node_id)
+        else
+            print "ERROR: Missing required parameter '"
+            print param.name
+            print "' for function '"
+            print call_data.target_name
+            print "'"
+            panic("apply_default_parameters: missing required parameter")
+        end_if
+        
+        i = i + 1
+    end_while
+    
+    return call_data
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Debug yardımcıları
+-- -----------------------------------------------------------------------------
+
+function function_registry_dump(registry)
+    print "=== Function Registry Dump ==="
+    print "Total functions: "
+    print function_registry_size(registry)
+    print ""
+    
+end_function
+
+function function_signature_dump(sig)
+    print "Function: "
+    print sig.name
+    print "("
+    
+    Numeric i = 0
+    while i < sig.param_count
+        ParameterInfo param
+        param = function_signature_get_parameter(sig, i)
+        
+        if i > 0 then
+            print ", "
+        end_if
+        
+        print param.name
+        
+        if parameter_info_has_default(param) == 1 then
+            print " = <default>"
+        end_if
+        
+        if param.is_array == 1 then
+            print "[]"
+        end_if
+        
+        i = i + 1
+    end_while
+    
+    print ")"
+    print ""
+end_function

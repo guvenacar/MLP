@@ -1,7 +1,0 @@
--- lang: tr-TR
-SAYISAL a = 25;
-SAYISAL b = 17;
-
-YAZDIR "MLP Self-Hosted Test"
-YAZDIR "a + b ="
-YAZDIR a + b

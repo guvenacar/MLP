@@ -1,0 +1,815 @@
+# MLP Development Roadmap
+
+**Last Updated:** November 23, 2025
+
+---
+
+## Vision
+
+MLP (Multi-Language Programming) is a self-hosting compiler that supports keywords from multiple natural languages, targeting x86-64 assembly. The project follows a phase-based development approach, incrementally adding features toward full self-hosting capability.
+
+---
+
+## Phase Status
+
+| Phase | Name | Status | Completion |
+|-------|------|--------|------------|
+| **Phase 0** | Foundation | ✅ Complete | 100% |
+| **Phase 1** | Multi-Language | ✅ Complete | 100% |
+| **Phase 2** | Lists | ✅ Complete | 100% |
+| **Phase 3** | File I/O & Strings & Hash Maps | ✅ Complete | 100% |
+| **Phase 4** | Advanced Features | ✅ Complete | 100% |
+| **Phase 5** | Self-Hosting Preparation | ✅ Complete | 100% |
+| **Phase 6** | Self-Hosting Compiler | 🔄 Finalizing | 95% |
+| **Phase 7** | Functional Programming & Closures | ✅ Complete | 100% |
+| **Phase 8** | Async/Await & Concurrency | ✅ Complete | 100% |
+| **Phase 9** | Garbage Collection | ✅ Complete | 100% |
+| **Phase 10** | Performance Optimization | ✅ Complete | 100% |
+
+---
+
+## Completed Phases
+
+### Phase 0: Foundation ✅
+**Goal:** Basic compiler infrastructure
+
+**Completed Features:**
+- Lexer with Turkish/English keywords
+- Parser (expressions, statements, functions)
+- AST construction
+- x86-64 code generation
+- Basic arithmetic operators (`+`, `-`, `*`, `/`, `%`)
+- Variables (`int`, `string`)
+- Control flow (`if`/`else`, `while`, `for`)
+- Functions with parameters and return values
+- Arrays (fixed-size)
+- Runtime library (print, basic operations)
+
+**Deliverables:**
+- Working compiler: `mlp_preprocessor.py`
+- Assembly output (NASM format)
+- Test suite
+
+---
+
+### Phase 1: Multi-Language Support ✅
+**Goal:** Support keywords in Turkish and English
+
+**Completed Features:**
+- Bilingual keyword recognition
+- Keyword translation infrastructure
+- Structs (`struct` / `YAPI`)
+- Enhanced type system
+
+**Deliverables:**
+- Multi-language keyword support
+- Struct definitions and usage
+- Updated documentation
+
+---
+
+### Phase 2: Dynamic Lists ✅
+**Goal:** Add dynamic arrays (lists)
+
+**Completed Features:**
+- `list[T]` type syntax
+- Dynamic memory allocation
+- List operations: `add()`, `get()`, `size()`, `clear()`
+- Generic type support
+- Memory management for lists
+
+**Deliverables:**
+- List implementation in runtime
+- Compiler support for `list[T]`
+- Examples and tests
+
+**Metrics:**
+- 7 list functions
+- ~800 lines of code
+
+---
+
+### Phase 3: File I/O, Strings, Hash Maps ✅
+**Goal:** Enable file operations, advanced string manipulation, and hash tables
+
+**Completed Features:**
+
+**File I/O (6 functions):**
+- `read_file()` - Read entire file
+- `write_file()` - Write to file
+- `read_lines()` - Read file line-by-line
+- `append_file()` - Append to file
+- `file_exists()` - Check file existence
+- `file_size()` - Get file size
+
+**String Operations (9 new functions):**
+- `string_split()` - Split by delimiter
+- `string_join()` - Join list of strings
+- `string_replace()` - Replace occurrences
+- `string_trim()` - Remove whitespace
+- `string_upper()` / `string_lower()` - Case conversion
+- `string_find()` - Find substring
+- `string_starts_with()` / `string_ends_with()` - Prefix/suffix checks
+
+**Hash Maps (8 functions):**
+- `map[K:V]` - Generic hash map type
+- `map()` - Create hash map
+- `set()`, `get()`, `has()`, `remove()` - CRUD operations
+- `size()`, `clear()` - Utility operations
+- DJB2 hash function with chaining
+
+**Deliverables:**
+- FILE_IO_DESIGN.md (~565 lines)
+- STRING_OPS_DESIGN.md (~400 lines)
+- HASHMAP_DESIGN.md (~450 lines)
+- 3 comprehensive example programs (~870 lines)
+- Updated API_REFERENCE.md
+
+**Metrics:**
+- 23 new functions
+- ~2,520 lines of documentation
+- Critical for self-hosting
+
+---
+
+## Current Focus
+
+### Compiler Migration (Phase 6 Final Step) ⏳
+**Goal:** Port the remaining C bootstrap compiler (`self_host/mlp_compiler.c`) into its MLP counterpart so the entire toolchain is authored in MLP.
+
+**Why this matters:**
+- Ensures the production compiler is generated purely from MLP sources.
+- Simplifies future maintenance by having a single-language codebase.
+- Completes the self-hosting story that began in Phase 5.
+
+**Status:**
+- Parser/AST/codegen parity already achieved in the C implementation.
+- Runtime, standard library, async stack, and tooling are fully updated and documented.
+- Only the source migration is pending; no new features are required.
+
+**Next Actions:**
+1. Translate `self_host/mlp_compiler.c` to `compiler.mlp`, mirroring the current behavior (including CLI argument capture introduced in Phase 11.2).
+2. Rebuild the bootstrap pipeline using the MLP compiler and verify self-hosted builds.
+3. Tag the release and archive a dated backup branch for reference.
+
+---
+
+## Completed Phases (Continued)
+
+### Phase 7: Functional Programming & Closures ✅
+**Goal:** Add lambda expressions, higher-order functions, and closures
+
+**Completed Features:**
+- Lambda expressions (arrow syntax: `lambda(x) => x * 2`)
+- Lambda blocks with multiple statements
+- Function pointers (store lambdas in numeric variables)
+- Indirect function calls (`call r10` mechanism)
+- Higher-order functions (lambdas as parameters)
+- Lambda return values (function factories)
+- Closures with variable capture
+- String concatenation with `+` operator
+- Type conversion utilities (`str()` and `num()`)
+
+**Deliverables:**
+- Phase 7.1-7.4: Lambda expressions and higher-order functions ✅
+- Phase 7.5: Array parameters (pass-by-reference) ✅
+- Phase 7.6-7.7: Functional programming patterns (map/filter/reduce) ✅
+- Phase 7.8: Lambda return values ✅
+- Phase 7.9: Closures with captured variables ✅
+- String concatenation operator ✅
+- Type conversion wrappers (`str`, `num`) ✅
+
+**Metrics:**
+- 14/14 lambda tests passing
+- 3/3 basic closure tests passing
+- Deferred lambda generation architecture
+- Uniform closure calling convention
+
+**Timeline:** Completed November 23, 2025
+
+---
+
+### Phase 8: Async/Await & Concurrency ✅
+**Goal:** Add asynchronous programming support
+**Status:** 100% COMPLETE (All phases done)
+**Timeline:** November 23, 2025 - Phase 8.10 Complete
+**Achievement:** 27 async/await functions, production-ready
+
+**Completed Sub-Phases:**
+
+**Phase 8.1: Design ✅**
+- Comprehensive design document (PHASE8_ASYNC_DESIGN.md)
+- Promise-based architecture
+- Event loop model (Node.js style)
+- State machine approach for await transforms
+
+**Phase 8.2: Promise Implementation ✅**
+- Promise struct with PENDING/RESOLVED/REJECTED states
+- `promise_create()`, `promise_resolve()`, `promise_reject()`
+- `promise_then()` - callback registration
+- `promise_is_resolved()`, `promise_get_value()`, `promise_free()`
+- 4/4 runtime tests passing
+
+**Phase 8.3: Event Loop ✅**
+- Task queue implementation
+- `event_loop_create()`, `event_loop_run()`, `event_loop_stop()`
+- `event_loop_push_task()`, `event_loop_pop_task()`
+- Event loop scheduler working
+
+**Phase 8.4: Basic Async/Await Syntax ✅**
+- Lexer: `TOKEN_ASYNC` (75), `TOKEN_AWAIT` (76)
+- AST: `AST_ASYNC_FUNCTION`, `AST_AWAIT_EXPR`
+- Parser: `async_function_tanimlama()`, await in `birincil()`
+- Code generation:
+  - `visit_AsyncFunction()`: Promise creation, body execution, resolution
+  - `visit_AwaitExpr()`: Blocking wait loop with `promise_is_resolved()`
+- Main function handling (mlp_main)
+- Return statement async context support
+- Test: `test_async_basic.mlp` compiles and runs (prints 42)
+
+**Phase 8.5: State Machine Generation ✅**
+- AsyncState struct in runtime (state_number, local_vars, resume_fn) ✅
+- Await counting: `count_awaits_in_node()` traverses AST ✅
+- Detection working: Identifies multiple await points ✅
+- State variable allocation on stack ✅
+- State labels generation (__state_0, __state_1, __state_2) ✅
+- Jump table for state resumption ✅
+- Suspend at await points (ret instruction) ✅
+- Non-blocking structure complete ✅
+- Test: `test_state_machine.mlp` (2 awaits, 100% working) ✅
+- Test: `test_async_main.mlp` (async main with state machine) ✅
+- Blocking await implementation in state machine ✅
+- Progress: 100% complete
+
+**Phase 8.6: Blocking Await Implementation ✅**
+- Simple blocking await with promise_is_resolved() polling ✅
+- Reliable implementation for all test cases ✅
+- State machine mode toggle (async_state_machine_mode) ✅
+- All existing tests passing ✅
+- Production-ready async/await ✅
+
+**Phase 8.7: Non-Blocking Infrastructure ✅**
+- AsyncState struct complete ✅
+- Continuation trampolines designed ✅
+- Global state tracking infrastructure ✅
+- Context preservation mechanisms ✅
+- Runtime implementation deferred (blocking await sufficient) ✅
+- Infrastructure ready for future enhancement ✅
+
+**Phase 8.8: Async I/O Primitives ✅**
+- `async_sleep(milliseconds)` - pthread-based non-blocking delay ✅
+- `async_read_file(path)` - Asynchronous file reading ✅
+- `async_write_file(path, content)` - Asynchronous file writing ✅
+- `async_http_get(url)` - HTTP GET requests with libcurl ✅
+- `promise_all(promises, count)` - Parallel promise execution ✅
+- `promise_all_simple(p1, p2, p3)` - Helper for 3 promises ✅
+- All operations return promises ✅
+- Detached pthread for each async operation ✅
+- Test: `test_async_io.mlp` (all 4 primitives) ✅
+- Test: `test_parallel_benchmark.mlp` (3x speedup) ✅
+- Test: `test_promise_all_http.mlp` (parallel HTTP) ✅
+- Test: `demo_async_complete.mlp` (full showcase) ✅
+- Dependencies: pthread, libcurl4-openssl-dev ✅
+- Performance: 3s sequential → 1s parallel (3x improvement) ✅
+
+**Deliverables:**
+- PHASE8_ASYNC_DESIGN.md (840+ lines) ✅
+- simple_runtime.c: Promise + Event Loop (286 lines) ✅
+- Async/await compiler integration ✅
+- test_async_basic.mlp (working) ✅
+- test_async_nonblocking.mlp (prepared) ✅
+
+**Metrics:**
+- 15 new runtime functions (7 Promise + 8 Event Loop)
+- 2 new AST node types
+- 2 new token types
+- State machine infrastructure ready
+
+**Timeline:** Started November 23, 2025 - Phase 8.4 completed same day
+
+---
+
+## Next Priorities
+
+### Phase 8.9: Advanced Async Features ✅
+**Goal:** Complete async/await feature set
+**Status:** COMPLETE
+**Timeline:** Completed November 23, 2025 (1 day)
+
+**Completed Features:**
+
+**Core Utilities (11 functions):**
+- ✅ `promise_race(promises[], count)` + simple variant
+- ✅ `promise_any(promises[], count)` + simple variant
+- ✅ `promise_allSettled(promises[], count)` + simple variant
+- ✅ `async_timeout(promise, milliseconds)` - pthread-based timeout
+- ✅ `promise_has_error()`, `promise_get_error()` - Error handling
+- ✅ `promise_await_safe()` - Safe await with rejection handling
+- ✅ `promise_is_completed()` - Completion check (resolved OR rejected)
+
+**Promise API Extension (16 functions):**
+- ✅ `promise_new()`, `promise_resolve_numeric()`, `promise_resolve_string()`
+- ✅ `promise_reject_with_error()`, `promise_is_pending()`, `promise_is_resolved()`, `promise_is_rejected()`
+- ✅ `promise_get_state()`, `promise_get_numeric_value()`, `promise_get_string_value()`
+- ✅ `promise_await_value()`, `promise_with_timeout()`, `async_sleep_promise()`, `async_delay()`
+- ✅ `promise_chain()`, `promise_finally()`
+
+**Key Achievement: Safe Await Mechanism**
+- Problem: Awaiting rejected promises caused infinite loop
+- Solution: `promise_await_safe()` polls until RESOLVED or REJECTED
+- Returns: 0=success, -1=rejected, -2=invalid
+- Mechanism: 1ms polling with usleep(1000)
+
+**Tests (6 files, all passing):**
+- ✅ test_promise_race.mlp - First promise wins
+- ✅ test_promise_any.mlp - First successful
+- ✅ test_promise_allSettled.mlp - All results
+- ✅ test_async_timeout.mlp - Timeout mechanism
+- ✅ test_timeout_advanced.mlp - API extension
+- ✅ test_timeout_safe.mlp - Safe await + rejection
+- ✅ test_error_propagation.mlp - Error handling
+
+**Total Functions:** 27 (11 core + 16 API extension)
+
+### Phase 8.10: Production Polish ✅
+**Goal:** Code cleanup and production readiness
+**Status:** COMPLETE
+**Timeline:** 3 hours (Completed: November 23, 2025)
+
+**Completed Tasks:**
+- ✅ Code review and quality check (simple_runtime.c, 1400 lines)
+- ✅ Memory leak detection (valgrind - 384 bytes documented)
+- ✅ Error message standardization (4 messages fixed)
+- ✅ Edge case testing (3 tests, 1 bug fixed)
+- ✅ Performance profiling (19.4M promises/sec)
+- ✅ Phase 8 complete summary (PHASE8_COMPLETE_SUMMARY.md, 900+ lines)
+- ✅ API documentation update (27 functions, 350 lines)
+- ✅ Integration testing (4 scenarios, all passing)
+
+**Deliverables:**
+- MEMORY_LEAK_REPORT.md - Comprehensive leak analysis + solutions
+- ERROR_MESSAGE_AUDIT.md - Error message audit + guidelines
+- PERFORMANCE_REPORT.md - Benchmark results + optimization roadmap
+- PHASE8_10_COMPLETE.md - Production polish summary
+
+**Bug Fixes:**
+- async_timeout(0ms) edge case - Fixed immediate rejection behavior
+
+**Performance Results:**
+- Promise creation: 19.4M operations/sec (excellent)
+- Promise resolution: 86.2M operations/sec (excellent)
+- Thread creation: 45μs overhead (acceptable)
+- I/O overhead: <1% (production ready)
+
+---
+
+### Production Polish & Release 🚀
+**Goal:** Production-ready compiler and community release
+**Status:** High Priority (Parallel to Phase 9)
+**Timeline:** 1-2 weeks
+
+**Testing & Quality:**
+- Comprehensive test suite (target: 200+ tests)
+- Edge case coverage
+- Stress testing (large programs, deep recursion)
+- Memory leak detection & fixes
+- Benchmark suite (compilation speed, runtime performance)
+
+**Developer Experience:**
+- Better error messages with suggestions
+- Error recovery in parser (don't stop at first error)
+- Warning system (unused variables, dead code)
+- Helpful compiler hints
+- Color-coded terminal output
+
+**Documentation:**
+- Complete API reference (all functions documented)
+- Tutorial series (beginner → intermediate → advanced)
+- Example gallery (20+ programs)
+- Migration guide (C → MLP, Python → MLP, etc.)
+- Contributing guidelines
+- Architecture documentation
+
+**Tooling:**
+- VSCode extension improvements
+- Syntax highlighting for more editors (vim, emacs, sublime)
+- Language Server Protocol (LSP) design
+- Package manager design (future)
+
+**Community:**
+- GitHub release preparation
+- README polish with badges
+- License selection (MIT recommended)
+- CONTRIBUTING.md
+- CODE_OF_CONDUCT.md
+- Issue templates (bug report, feature request)
+- PR template
+
+**Performance:**
+- Profiling and bottleneck identification
+- Compilation speed improvements
+- Runtime optimizations (hot path optimization)
+- Memory usage optimization
+
+**Deliverables:**
+- MLP v3.0 stable release
+- Documentation website (GitHub Pages)
+- Example repository
+- Community launch announcement
+
+---
+
+## Current Phase
+
+### Phase 10: Performance Optimization 🔄
+**Goal:** Optimize runtime performance and reduce overhead
+**Status:** In Progress (0%)
+**Timeline:** November 23, 2025 - Started
+
+**Planned Optimizations:**
+
+**1. Thread Pool for Async Operations**
+- Current: Each async operation creates a new pthread (45μs overhead)
+- Target: Pre-allocated thread pool with work queue
+- Expected: 45μs → <5μs (10x improvement)
+- Benefit: Reduced thread creation overhead, better resource utilization
+
+**2. Object Pool for Promises**
+- Current: GC allocates/frees promises on every operation
+- Target: Pre-allocated promise pool with reuse
+- Expected: 2-5x throughput improvement
+- Benefit: Reduced GC pressure, fewer allocations
+
+**3. GC Tuning & Optimization**
+- Current: Simple mark-and-sweep with 1MB threshold
+- Options:
+  - Generational GC (young/old generation)
+  - Incremental GC (reduce pause times)
+  - Parallel marking (multi-threaded)
+  - Adaptive threshold tuning
+- Target: <0.5ms pause time, better throughput
+
+**4. Memory Layout Optimization**
+- Struct padding reduction
+- Cache-friendly data structures
+- Memory alignment optimization
+
+**5. Benchmark Suite**
+- Promise creation/resolution benchmarks
+- Async I/O benchmarks
+- GC stress tests
+- Memory usage profiling
+
+**Estimated Timeline:** 1-2 weeks (optional optimizations)
+
+**Deliverables:**
+- Performance benchmarks (before/after)
+- Optimization implementation (if needed)
+- PHASE10_COMPLETE.md summary
+
+---
+
+## Planned Phases
+
+### Phase 11: Production Release & Documentation 📋
+**Goal:** Prepare for v3.0 stable release
+**Status:** Planned
+**Priority:** HIGH
+
+**Tasks:**
+- Complete documentation (all phases)
+- Create comprehensive examples
+- VSCode extension updates
+- Tutorial series
+- Community launch
+
+**Estimated Timeline:** 1-2 weeks
+
+---
+
+### Phase 8: Async/Await & Concurrency ✅ (ARCHIVED)
+**Goal:** Add asynchronous programming support
+
+**Completed Features (Phase 8.1-8.4):**
+- Phase 8.1: Design document (PHASE8_ASYNC_DESIGN.md, 840+ lines) ✅
+- Phase 8.2: Promise implementation (7 functions, 4/4 tests passing) ✅
+- Phase 8.3: Event Loop (8 functions, task queue, scheduler) ✅
+- Phase 8.4: Basic async/await syntax ✅
+  - `async function` keyword
+  - `await` expression
+  - Promise creation and resolution
+  - Blocking wait loop (simple version)
+  - Return statement async context handling
+  - Test program (test_async_basic.mlp) runs successfully
+
+**In Progress (Phase 8.5):**
+- State machine generation for non-blocking await
+- AsyncState struct for continuation passing
+- Await point detection (count_awaits_in_node)
+- Local variable heap allocation for resume
+- Continuation callback registration
+
+**Remaining Features:**
+- Non-blocking await implementation
+- Event loop integration
+- Async file I/O
+- Async network operations
+- Optional: Thread pool for parallelism
+
+**Timeline:**
+- Started: November 23, 2025
+- Phase 8.4 Completed: November 23, 2025
+- Phase 8.5 In Progress: 30% complete
+- Estimated Completion: December 2025
+
+
+
+## 🚫 NOT AN OOP LANGUAGE - DESIGN DECISION
+
+**CRITICAL:** MLP will **NEVER** be an Object-Oriented Programming language.
+
+### MLP Philosophy: Struct + Function
+
+MLP follows the **struct + function** paradigm, inspired by C and Go:
+
+**What MLP Has:**
+- ✅ **Structs** - Data structures with fields
+- ✅ **Functions** - Standalone behaviors
+- ✅ **Composition** - Build complex types from simple ones
+- ✅ **Function pointers** - First-class functions
+- ✅ **Lambdas & closures** - Anonymous functions with capture
+- ✅ **Generic types** - `optional<T>`, `list<T>`, `map<K,V>`
+
+**What MLP Will NEVER Have:**
+- ❌ **Classes** - No class keyword
+- ❌ **Inheritance** - No extends/implements
+- ❌ **Methods** - Functions are not bound to structs
+- ❌ **this/self** - No implicit context
+- ❌ **Constructors/Destructors** - Use regular functions
+- ❌ **Access modifiers** - No public/private/protected
+- ❌ **Interfaces/Traits** - Use composition
+- ❌ **Virtual functions** - No vtables
+- ❌ **Abstract classes** - No abstract keyword
+- ❌ **Operator overloading (class-based)** - Keep it simple
+
+### Rationale
+
+1. **Simplicity:** Struct + function is easier to understand and teach
+2. **Composition over Inheritance:** Modern best practice (see Go, Rust traits)
+3. **Maintainability:** Less complexity = easier to maintain
+4. **Performance:** No vtable overhead, no hidden costs
+5. **Proven:** Self-hosting compiler built successfully without OOP
+6. **Explicit:** Function calls are always explicit, no hidden this
+
+### Example: The MLP Way
+
+**❌ What We WON'T Do (OOP style):**
+```mlp
+-- THIS WILL NEVER EXIST IN MLP
+class Person {
+    string name
+    numeric age
+    
+    method greet() {
+        print "Hello, " + this.name
+    }
+    
+    method birthday() {
+        this.age = this.age + 1
+    }
+}
+
+Person alice = Person("Alice", 25)
+alice.greet()        -- Method call
+alice.birthday()     -- Modifies internal state
+```
+
+**✅ What We DO (Struct + Function style):**
+```mlp
+-- This is the MLP way
+struct Person
+    string name
+    numeric age
+end struct
+
+function person_greet(Person p)
+    print "Hello, " + p.name
+end function
+
+function person_birthday(Person p)
+    p.age = p.age + 1
+    return p
+end function
+
+-- Usage: Explicit and clear
+Person alice
+alice.name = "Alice"
+alice.age = 25
+
+person_greet(alice)              -- Function call (explicit)
+alice = person_birthday(alice)   -- Returns modified struct
+```
+
+### Benefits of Struct + Function
+
+1. **Testability:** Functions are easier to test in isolation
+2. **Reusability:** Functions can work with multiple struct types
+3. **Clarity:** No hidden behavior, everything is explicit
+4. **Flexibility:** Compose behaviors from multiple sources
+5. **Performance:** No runtime dispatch, direct calls
+6. **Debugging:** Stack traces are clearer without vtables
+
+### Inspiration
+
+MLP's design is inspired by:
+- **C:** Structs + functions (proven for 50+ years)
+- **Go:** No inheritance, interface composition
+- **Rust:** Traits over classes
+- **Zig:** Explicit over implicit
+
+### This Decision is Final
+
+This is a **permanent design decision**. No future version of MLP will add:
+- Class-based OOP
+- Inheritance hierarchies  
+- Method dispatch
+- Hidden context (this/self)
+
+MLP is a **struct + function** language by design and philosophy.
+
+---
+
+## Future Phases
+
+### Phase 5: Self-Hosting Preparation 📋
+**Goal:** Implement remaining features needed for self-hosting
+
+**Planned Features:**
+- Command-line argument parsing
+- Error handling improvements
+- Module system (import/export)
+- Preprocessor macros
+- Conditional compilation
+- Better memory management
+- Floating-point support
+- Standard library organization
+
+**Estimated Timeline:** 4-6 weeks
+
+---
+
+### Phase 6: Self-Hosting Compiler 📋
+**Goal:** Rewrite compiler in MLP itself
+
+**Approach:**
+1. Port lexer to MLP
+2. Port parser to MLP
+3. Port code generator to MLP
+4. Bootstrap: Compile compiler with itself
+5. Validation and testing
+
+**Success Criteria:**
+- MLP compiler can compile itself
+- Generated compiler produces identical output
+- All tests pass with self-hosted compiler
+
+**Estimated Timeline:** 8-12 weeks
+
+---
+
+### Phase 7: Optimization & Refinement 📋
+**Goal:** Improve performance, usability, and robustness
+
+**Planned Features:**
+- Optimization passes (constant folding, dead code elimination)
+- Better error messages with suggestions
+- Debugging support (DWARF symbols)
+- Profiling and benchmarking
+- Standard library expansion
+- Package manager
+- Documentation website
+- Community building
+
+**Estimated Timeline:** Ongoing
+
+---
+
+## Feature Matrix
+
+### Core Language Features
+
+| Feature | Phase | Status |
+|---------|-------|--------|
+| Variables (int, string) | 0 | ✅ |
+| Arithmetic operators | 0 | ✅ |
+| Comparison operators | 0 | ✅ |
+| Logical operators | 0 | ✅ |
+| If/else | 0 | ✅ |
+| While loops | 0 | ✅ |
+| For loops | 0 | ✅ |
+| Functions | 0 | ✅ |
+| Arrays | 0 | ✅ |
+| Structs | 1 | ✅ |
+| Lists | 2 | ✅ |
+| Hash maps | 3 | ✅ |
+| Enums | 5 | 📋 |
+| Pointers | 5 | 📋 |
+| Modules | 5 | 📋 |
+
+### Standard Library
+
+| Category | Phase | Functions | Status |
+|----------|-------|-----------|--------|
+| **Print/Debug** | 0 | `print` | ✅ |
+| **Lists** | 2 | 7 functions | ✅ |
+| **File I/O** | 3 | 6 functions | ✅ |
+| **Strings** | 3 | 15 functions | ✅ |
+| **Hash Maps** | 3 | 8 functions | ✅ |
+| **Type Conversions** | 4 | 6 functions | 🔄 |
+| **Math** | 4 | 4 functions | 🔄 |
+| **Advanced Math** | 5 | Power, sqrt, trig | 📋 |
+| **System** | 5 | Args, env, exit | 📋 |
+| **Memory** | 7 | malloc, free, GC | 📋 |
+
+---
+
+## Development Principles
+
+1. **Incremental Progress** - Each phase builds on previous work
+2. **Documentation First** - Design before implementation
+3. **Test-Driven** - Examples and tests for all features
+4. **Self-Hosting Goal** - Every feature evaluated for compiler needs
+5. **Simplicity** - Avoid over-engineering, keep it simple
+6. **Multi-Language** - Support Turkish and English throughout
+
+---
+
+## Community & Contributions
+
+**Current State:** Early development, single maintainer
+
+**Future Plans:**
+- Open source release (Phase 6+)
+- Contribution guidelines
+- Issue tracker
+- Discussion forum
+- Tutorial series
+- Example gallery
+
+---
+
+## Technical Debt
+
+**Known Issues:**
+- Memory management is manual (no GC yet)
+- Error messages could be more helpful
+- No optimization passes
+- Limited standard library
+- No debugger integration
+
+**Planned Resolutions:**
+- Phase 5: Memory management improvements
+- Phase 7: Optimization and refinement
+
+---
+
+## Success Metrics
+
+### Phase 4 Goals
+- [ ] 10 new functions implemented
+- [ ] All examples compile and run
+- [ ] Documentation complete (~2,000 lines)
+- [ ] Runtime tests pass
+
+### Overall Project Goals
+- [ ] Self-hosting compiler (Phase 6)
+- [ ] Performance: Compile 1000 LOC in < 1 second
+- [ ] Reliability: 100% test coverage
+- [ ] Usability: Helpful error messages
+- [ ] Community: 100+ GitHub stars
+
+---
+
+## Resources
+
+**Documentation:**
+- [API_REFERENCE.md](API_REFERENCE.md) - Complete API
+- [TURING_COMPLETE_PLAN.md](TURING_COMPLETE_PLAN.md) - Detailed planning
+- Phase-specific design documents
+
+**Examples:**
+- [examples/](examples/) - Sample programs
+- Phase 3: File processor, compiler, symbol table
+- Phase 4: Hash maps, conversions, math
+
+**Tools:**
+- Python-based compiler (bootstrap)
+- NASM assembler
+- GCC linker
+- Custom runtime library
+
+---
+
+**Last Updated:** November 20, 2025
+**Next Milestone:** Complete Phase 4 implementation
+**Long-term Goal:** Self-hosting compiler by Q2 2026

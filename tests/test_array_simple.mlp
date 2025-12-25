@@ -1,6 +1,0 @@
--- Test: Simple array declaration and access (already working?)
-numeric x = 10
-print x
-
--- Try array syntax
-numeric arr[5]

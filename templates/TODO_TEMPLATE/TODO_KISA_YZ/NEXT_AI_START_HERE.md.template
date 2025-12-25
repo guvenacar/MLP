@@ -1,0 +1,218 @@
+# 🚀 {TODO_TAM} - START HERE!
+
+**Son Session:** İlk YZ henüz atanmadı  
+**Tarih:** {CURRENT_DATE}  
+**Agent:** GitHub Copilot (Claude Sonnet 4.5)  
+**Status:** ⏳ Başlangıç
+
+---
+
+## 🤖 YZ HIZLI BAŞLANGIÇ (İLK OKUYACAĞIN!)
+
+**Yeni YZ geldiğinde yapılacaklar (5 dakika):**
+
+1. **Bu dosyayı oku** → Mevcut durum nedir?
+2. **TODO dosyalarını oku:**
+   - [`TODO_KURALLARI.md`](../../TODO_KURALLARI.md) → Genel YZ kuralları
+   - [`{TODO_BELGE}`](../../{TODO_BELGE}) → Detaylı görev listesi
+3. **Son raporları oku:**
+   - `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/{TODO_KISA}_YZ_0X_TAMAMLANDI.md` → Önceki YZ ne yaptı?
+4. **Referans dokümanlara bak:**
+   - `TODO_{TODO_TAM}/docs/` → (Sadece ilgili bölüm!)
+
+**Session bittiğinde yapılacaklar (15 dakika):**
+
+1. **YZ raporu yaz** → `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/{TODO_KISA}_YZ_0X_TAMAMLANDI.md` (görev, değişiklikler, testler, sonuçlar)
+2. **TODO dosyalarını güncelle:**
+   - `{TODO_BELGE}` → Tamamlananı [x] işaretle, test sonuçlarını ekle
+3. **Bu dosyayı güncelle** → Status, "Son Session" bilgisi
+4. **Git commit & push** → Değişiklikleri kendi dalına commit et ve push et
+5. **KULLANICIYA SOR** → "Görev tamamlandı. Sırada ne yapmak istersin?"
+
+**🔧 Git Workflow:**
+```bash
+# 1. Yeni dal oluştur (görev adı + YZ numarası)
+# Format: task-description_{TODO_KISA}_YZ_XX
+git checkout -b task-description_{TODO_KISA}_YZ_XX
+
+# 2. Değişiklikleri ekle
+git add {MAIN_FILES} TODO_{TODO_TAM}/{TODO_KISA}_YZ/*.md {TODO_BELGE} NEXT_AI_START_HERE.md
+
+# 3. Commit et (detaylı mesajla)
+git commit -m "{TODO_KISA}_YZ_XX: Task Description
+
+✅ Completed Tasks:
+- Task 1
+- Task 2
+
+📊 Test Results:
+- Tests: X/X passing
+
+Status: Complete"
+
+# 4. Push et (merge YAPMA!)
+git push origin task-description_{TODO_KISA}_YZ_XX
+```
+
+**⚠️ ÖNEMLİ:** Session bittiğinde mutlaka TODO.md + NEXT_AI_START_HERE.md + YZ raporu + GIT COMMIT yapılmalı!
+
+---
+
+## 🔍 İLK ÖNCE: MEVCUT DURUMU KONTROL ET!
+
+**⚠️ GÖREVE BAŞLAMADAN ÖNCE MUTLAKA YAP:**
+
+### Adım 1: Kod İncele
+
+```bash
+# Görevinle ilgili kodun zaten yapılıp yapılmadığını kontrol et
+grep -rn "TODO_İLE_İLGİLİ_KEYWORD" {MAIN_CODE_PATH}
+```
+
+### Adım 2: Mevcut Durumu Tespit Et
+
+**Eğer ilgili kod zaten varsa:**
+- ✅ "ZATEN YAPILMIŞ!" de
+- 🧪 Test et, çalışıyor mu kontrol et
+- 📝 Sadece dokümantasyon işlerini yap:
+  - TODO güncelleme
+  - Test sonuçları ekleme
+  - Rapor yazma
+  - Commit atma
+
+**Eğer kod yoksa:**
+- 🔨 O zaman implementasyon yap
+- Her task sonunda test et
+- Çalışmazsa düzelt (3 deneme hakkın var)
+
+### Adım 3: Test Et
+
+```bash
+# Basit bir test yaz ve çalıştır
+{TEST_COMMAND}
+```
+
+**Çalışıyorsa:** Sadece dokümantasyon yap, koda dokunma!  
+**Çalışmıyorsa:** Implementasyon yapman gerekiyor.
+
+---
+
+## 📊 PROJE DURUMU
+
+**{TODO_TAM}:**
+- **Phase 1:** ⏳ BEKLEMEDE - İlk YZ atanmadı
+- **Phase 2:** ⏸️ Durduruldu (Phase 1 bitene kadar)
+- **Phase 3:** ⏸️ Durduruldu (Phase 2 bitene kadar)
+
+**⚠️ YZ Directory Structure:**
+- `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/` - Tamamlanan YZ raporları
+- `TODO_{TODO_TAM}/docs/` - Dokümantasyon
+- `{MAIN_CODE_PATH}` - Ana kod
+
+---
+
+## 🎯 PHASE 1: {PHASE1_NAME} (ŞİMDİ!)
+
+**Görev:** {TODO_KISA}_YZ_01  
+**Süre:** {PHASE1_TIME}  
+**Durum:** ⏳ Başlamadı
+
+**Ne yapılacak:**
+
+### Task 1.1: {TASK1_NAME} ({TASK1_TIME})
+- {TASK1_DESC_1}
+- {TASK1_DESC_2}
+- {TASK1_DESC_3}
+
+### Task 1.2: {TASK2_NAME} ({TASK2_TIME})
+- {TASK2_DESC_1}
+- {TASK2_DESC_2}
+- {TASK2_DESC_3}
+
+### Task 1.3: {TASK3_NAME} ({TASK3_TIME})
+- {TASK3_DESC_1}
+- {TASK3_DESC_2}
+- {TASK3_DESC_3}
+
+**Başarı Kriterleri:**
+- ✅ {CRITERIA_1}
+- ✅ {CRITERIA_2}
+- ✅ {CRITERIA_3}
+
+---
+
+## 📁 DOSYA ORGANIZASYONU KURALI - ÖNEMLİ!
+
+**Test Dosyaları:**
+- ❌ **ANA DİZİNE TEST DOSYASI BIRAKMA!** (test.mlp, test_*.mlp vb.)
+- ✅ Tüm test dosyaları `tests/` klasörüne konulmalı
+- ✅ Bu TODO testleri: `tests/{TODO_KISA}/`
+
+**Geçici Dosyalar:**
+- ✅ `.s`, `.o`, binary dosyalar → `build/temp/` klasörüne
+- ✅ Çalışma notları → `build/temp/notes_*.md`
+
+**Her YZ Session Sonunda:** Ana dizini temizle, test dosyalarını `tests/` altına taşı!
+
+---
+
+## 🎤 GÖREVE BAŞLAMADAN ÖNCE: ONAY VER (ZORUNLU!)
+
+**Yukarıdaki dökümanları okuduktan VE mevcut durumu kontrol ettikten sonra, göreve başlamadan ÖNCE şu formatla onay ver:**
+
+```markdown
+🤖 {TODO_KISA}_YZ_0X GÖREVE HAZIRIM
+
+**Phase:** Phase X - [Kısa görev adı]
+**Süre:** [Tahmini süre]
+**Ana Dosya:** [Hangi dosyada çalışacaksın]
+**Mevcut Durum:** [Kontrol sonucu: "Yeni implementasyon" veya "Zaten yapılmış, sadece dokümantasyon"]
+
+---
+
+## 💪 TAAHHÜTLER (SÖZ VERİYORUM):
+
+- ✅ Önce mevcut durumu kontrol ettim
+- ✅ Pseudo/stub/hack yazmayacağım - Her şey gerçek, çalışır kod
+- ✅ Her task sonunda test yapacağım
+- ✅ %100 çalışır kod üreteceğim
+- ✅ Test başarısız olursa düzeltip tekrar deneyeceğim (3 deneme)
+- ✅ Git workflow'a harfiyen uyacağım
+- ✅ Merge yapmayacağım
+
+**⚠️ GÖREV BİTİŞİNDE MUTLAKA YAPACAĞIM:**
+- ✅ Ana TODO'da görevli olduğum bölümü [x] işaretleyeceğim
+- ✅ Ana TODO'da test sonuçlarını ekleyeceğim
+- ✅ NEXT_AI'ı güncelleyeceğim (Phase status + Son Session)
+- ✅ Rapor yazacağım ({TODO_KISA}_YZ_0X_TAMAMLANDI.md)
+- ✅ Git commit + push yapacağım
+
+---
+
+## 🚀 ONAY BEKLİYORUM
+
+Üst Akıl, onay verirsen göreve başlıyorum.
+```
+
+**⚠️ ÖNEMLİ:** Bu onay formatını kullanmadan göreve başlama! Üst Akıl'ın onayını bekle.
+
+---
+
+## 📚 ÖNEMLİ DÖKÜMANLAR
+
+**Mutlaka oku:**
+1. [`TODO_KURALLARI.md`](../../TODO_KURALLARI.md) - Genel YZ kuralları
+2. [`{TODO_BELGE}`](../../{TODO_BELGE}) - Detaylı task listesi
+3. `TODO_{TODO_TAM}/docs/` - İlgili dokümantasyon (sadece ilgili bölüm)
+
+**Referans:**
+- `{MAIN_CODE_PATH}` - Ana kod
+- `TODO_{TODO_TAM}/{TODO_KISA}_YZ/completed/{TODO_KISA}_YZ_0X_TAMAMLANDI.md` - Önceki raporlar
+
+---
+
+## 🚦 BAŞLA!
+
+**{TODO_KISA}_YZ_01:** Yukarıdaki dökümanları oku, **mevcut durumu kontrol et**, onay formatını kullan, sonra görevlere başla!
+
+**Soru varsa:** Üst Akıl'a sor, tahmin etme!

@@ -1,0 +1,342 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- MLP Compiler Main Pipeline
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisini MLP'ye taşıyan ana derleyici.
+-- Lexer → Parser → Code Generator → Assembly output
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+import "compiler_core/lexer.mlp"
+import "compiler_core/parser.mlp"
+import "compiler_core/codegen.mlp"
+import "compiler_core/scope_manager.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Compiler options
+-- -----------------------------------------------------------------------------
+
+struct CompilerOptions then
+    String input_file
+    String output_file
+    Numeric verbose
+    Numeric debug_tokens
+    Numeric debug_ast
+    Numeric debug_scope
+    Numeric optimize
+end_struct
+
+function compiler_options_default()
+    CompilerOptions opts
+    opts.input_file = "input.mlp"
+    opts.output_file = "output.asm"
+    opts.verbose = 0
+    opts.debug_tokens = 0
+    opts.debug_ast = 0
+    opts.debug_scope = 0
+    opts.optimize = 0
+    return opts
+end_function
+
+-- -----------------------------------------------------------------------------
+-- File I/O helpers
+-- -----------------------------------------------------------------------------
+
+function read_file(filepath)
+    String content = ""
+    
+    -- TODO: Implement actual file reading
+    -- For now, return empty string
+    
+    return content
+end_function
+
+function write_file(filepath, content)
+    -- TODO: Implement actual file writing
+    
+    print "Writing to file: "
+    print filepath
+    
+    return 1
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Compilation pipeline
+-- -----------------------------------------------------------------------------
+
+struct CompilationResult then
+    Numeric success
+    String output_asm
+    String error_message
+    Numeric token_count
+    Numeric ast_node_count
+end_struct
+
+function compile(source_code, options)
+    CompilationResult result
+    result.success = 0
+    result.output_asm = ""
+    result.error_message = ""
+    result.token_count = 0
+    result.ast_node_count = 0
+    
+    if options.verbose == 1 then
+        print "=== MLP Compiler Pipeline ==="
+        print "Input length: "
+        print source_code.length()
+        print " characters"
+        print ""
+    end_if
+    
+    -- Phase 1: Lexical analysis
+    if options.verbose == 1 then
+        print "[1/3] Lexing..."
+    end_if
+    
+    TokenStream token_stream
+    token_stream = tokenize(source_code)
+    result.token_count = token_stream_count(token_stream)
+    
+    if options.debug_tokens == 1 then
+        print "Tokens generated: "
+        print result.token_count
+        token_stream_dump(token_stream)
+    end_if
+    
+    -- Phase 2: Parsing
+    if options.verbose == 1 then
+        print "[2/3] Parsing..."
+    end_if
+    
+    ASTArena arena
+    arena = parse(source_code)
+    result.ast_node_count = ast_arena_size(arena)
+    
+    if options.debug_ast == 1 then
+        print "AST nodes created: "
+        print result.ast_node_count
+        ast_arena_dump(arena)
+    end_if
+    
+    -- Phase 3: Code generation
+    if options.verbose == 1 then
+        print "[3/3] Generating assembly..."
+    end_if
+    
+    String assembly = ""
+    assembly = generate_code(arena)
+    result.output_asm = assembly
+    
+    if options.verbose == 1 then
+        print "Assembly generated: "
+        print assembly.length()
+        print " characters"
+        print ""
+    end_if
+    
+    result.success = 1
+    
+    return result
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Main compiler entry point
+-- -----------------------------------------------------------------------------
+
+function compile_file(input_path, output_path, verbose)
+    CompilerOptions options
+    options = compiler_options_default()
+    options.input_file = input_path
+    options.output_file = output_path
+    options.verbose = verbose
+    
+    print "Compiling: "
+    print input_path
+    print " → "
+    print output_path
+    print ""
+    
+    -- Read source file
+    String source_code = ""
+    source_code = read_file(input_path)
+    
+    if source_code.length() == 0 then
+        print "Error: Could not read file or file is empty"
+        return 0
+    end_if
+    
+    -- Compile
+    CompilationResult result
+    result = compile(source_code, options)
+    
+    if result.success == 0 then
+        print "Compilation failed: "
+        print result.error_message
+        return 0
+    end_if
+    
+    -- Write output
+    Numeric write_success = 0
+    write_success = write_file(output_path, result.output_asm)
+    
+    if write_success == 0 then
+        print "Error: Could not write output file"
+        return 0
+    end_if
+    
+    print "Compilation successful!"
+    print "Tokens: "
+    print result.token_count
+    print ", AST nodes: "
+    print result.ast_node_count
+    print ""
+    
+    return 1
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Interactive REPL mode
+-- -----------------------------------------------------------------------------
+
+function repl_mode()
+    print "=== MLP Compiler REPL ==="
+    print "Type 'exit' to quit"
+    print ""
+    
+    CompilerOptions options
+    options = compiler_options_default()
+    options.verbose = 0
+    options.debug_ast = 0
+    
+    while 1 == 1
+        print "mlp> "
+        
+        -- TODO: Read line from stdin
+        String input = ""
+        
+        if input == "exit" then
+            break
+        end_if
+        
+        if input == "" then
+            continue
+        end_if
+        
+        -- Compile and show result
+        CompilationResult result
+        result = compile(input, options)
+        
+        if result.success == 1 then
+            print "Assembly output:"
+            print result.output_asm
+        else
+            print "Error: "
+            print result.error_message
+        end_if
+        
+        print ""
+    end
+    
+    print "Goodbye!"
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Command line argument parsing
+-- -----------------------------------------------------------------------------
+
+function parse_args(args)
+    CompilerOptions options
+    options = compiler_options_default()
+    
+    Numeric i = 0
+    while i < mlp_list_length(args)
+        String arg = ""
+        arg = mlp_list_get(args, i)
+        
+        if arg == "-v" then
+            options.verbose = 1
+        else if arg == "--verbose" then
+            options.verbose = 1
+        else if arg == "--debug-tokens" then
+            options.debug_tokens = 1
+        else if arg == "--debug-ast" then
+            options.debug_ast = 1
+        else if arg == "--debug-scope" then
+            options.debug_scope = 1
+        else if arg == "-O" then
+            options.optimize = 1
+        else if arg == "-o" then
+            i = i + 1
+            if i < mlp_list_length(args) then
+                options.output_file = mlp_list_get(args, i)
+            end_if
+        else
+            options.input_file = arg
+        end_if
+        
+        i = i + 1
+    end
+    
+    return options
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Main function
+-- -----------------------------------------------------------------------------
+
+function main(args)
+    if mlp_list_length(args) == 0 then
+        print "Usage: mlp_compiler [options] <input.mlp>"
+        print ""
+        print "Options:"
+        print "  -v, --verbose       Enable verbose output"
+        print "  -o <file>           Specify output file"
+        print "  --debug-tokens      Show token stream"
+        print "  --debug-ast         Show AST structure"
+        print "  --debug-scope       Show scope information"
+        print "  -O                  Enable optimizations"
+        print ""
+        print "  --repl              Start interactive REPL mode"
+        print ""
+        return 1
+    end_if
+    
+    -- Check for REPL mode
+    String first_arg = ""
+    first_arg = mlp_list_get(args, 0)
+    if first_arg == "--repl" then
+        repl_mode()
+        return 0
+    end_if
+    
+    -- Parse arguments
+    CompilerOptions options
+    options = parse_args(args)
+    
+    -- Compile file
+    Numeric success = 0
+    success = compile_file(options.input_file, options.output_file, options.verbose)
+    
+    if success == 1 then
+        return 0
+    else
+        return 1
+    end_if
+end_function
+
+-- -----------------------------------------------------------------------------
+-- Bootstrap entry point (when compiled with C compiler)
+-- -----------------------------------------------------------------------------
+
+print "MLP Self-Hosting Compiler v0.1"
+print "Initializing..."
+print ""
+
+-- For now, just compile a test file
+Numeric exit_code = compile_file("test.mlp", "test.asm", 1)
+
+print "Exit code: "
+print exit_code

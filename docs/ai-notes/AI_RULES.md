@@ -1,0 +1,1167 @@
+# 🤖 AI Asistanları İçin MLP Projesi Kılavuzu
+
+**Son Güncelleme:** 23 Kasım 2025
+**Durum:** 🚀 Production Ready v3.0 + Phase 7.9 Complete (Closures & Lambda) ✅
+**Hedef:** Multi-Language Programming Language - Kod yazmanın dil engeli yok!
+
+---
+
+## 🔴🔴🔴 ZORUNLU İLK ADIM: BELGE OKUMA KURALI 🔴🔴🔴
+
+**⚠️ HERHANGİ BİR GÖREV YAPMADAN ÖNCE MUTLAKA AŞAĞIDA BELGELERE BAKMANIZ GEREKİR!**
+
+### 📚 Zorunlu Okuma Listesi (SIRALAMA ÖNEMLİ!)
+
+Herhangi bir kod değişikliği, özellik ekleme, bug fix veya dokümantasyon güncellemesi yapmadan önce **MUTLAKA ŞU SIRAYLA** bu belgeleri okuyun:
+
+```bash
+# 1. AI_RULES.md (Bu dosya - Türkçe kurallar)
+cat /home/pardus/projeler/tyd-lang/MLP/AI_RULES.md
+
+# 2. AI_GUIDELINES.md (İngilizce teknik kurallar)
+cat /home/pardus/projeler/tyd-lang/MLP/AI_GUIDELINES.md
+
+# 3. TODO.md (Tamamlanan ve bekleyen özellikler)
+cat /home/pardus/projeler/tyd-lang/MLP/TODO.md
+
+# 4. ROADMAP.md (Proje yol haritası ve phase durumu)
+cat /home/pardus/projeler/tyd-lang/MLP/ROADMAP.md
+
+# 5. SPECS.md (Dil spesifikasyonu - KİLİTLİ BELGE)
+cat /home/pardus/projeler/tyd-lang/MLP/SPECS.md
+```
+
+### ⚠️ NEDEN BU BELGELER OKUNMALIDIR?
+
+1. **AI_RULES.md** → Türkçe kurallar, self-hosting prensibi, veri tipleri kritik bilgileri
+2. **AI_GUIDELINES.md** → İngilizce teknik kurallar, BigDecimal sistemi, phase dokümantasyonu
+3. **TODO.md** → Hangi özellikler tamamlandı, hangileri eksik? (TEKRAR YAPMAMAK İÇİN!)
+4. **ROADMAP.md** → Hangi phase'deyiz? Öncelikler neler? Planlı özellikler neler?
+5. **SPECS.md** → Dil syntax'ı, kuralları, mimari detayları (KUTSAL KİTAP!)
+
+### 🚫 BU BELGELERİ OKUMADAN KOD YAZARSANIZ:
+
+- ❌ Zaten tamamlanmış özellikleri tekrar implement edersiniz
+- ❌ Yanlış veri tipleri kullanırsınız (int/float yerine numeric!)
+- ❌ SPECS.md'deki kurallara aykırı kod yazarsınız
+- ❌ Self-hosting prensibini ihlal edersiniz
+- ❌ Belgelerin güncellenmesini unutursunuz
+- ❌ Proje felsefesine aykırı değişiklikler yaparsınız
+- ❌ Kullanıcının zamanını ve token'larını boşa harcar sınız
+
+### ✅ GÖREV TAMAMLANDIĞINDA:
+
+Herhangi bir özellik implementasyonu veya bug fix sonrasında **MUTLAKA** şu belgeleri güncelleyin:
+
+1. **TODO.md** → Tamamlanan özellikleri ✅ işaretle, yeni eksikler ekle
+2. **ROADMAP.md** → Phase durumunu güncelle, timeline'ı revize et
+3. **SPECS.md** → Yeni syntax eklediyseniz (kullanıcı onayıyla!)
+4. **AI_RULES.md** → Yeni kritik kurallar eklediyseniz
+5. **AI_GUIDELINES.md** → Yeni teknik detaylar eklediyseniz
+
+### 📋 BELGE OKUMA CHECKLİSTİ
+
+Her görev öncesi bu checklist'i tamamlayın:
+
+```markdown
+- [ ] AI_RULES.md okudum (Türkçe kurallar, self-hosting, veri tipleri)
+- [ ] AI_GUIDELINES.md okudum (BigDecimal, phase docs, teknik kurallar)
+- [ ] TODO.md okudum (Tamamlanan özellikler listesi - TEKRAR YAPMAM!)
+- [ ] ROADMAP.md okudum (Şu anki phase, öncelikler, timeline)
+- [ ] SPECS.md okudum (Dil syntax'ı, kurallar, mimari)
+- [ ] Yapacağım özellik TODO.md'de YOK (kontrol ettim)
+- [ ] Yapacağım değişiklik SPECS.md'ye UYGUN
+- [ ] Self-hosting prensibine UYGUN (MLP dilinde yazacağım)
+- [ ] Kullanıcıdan ONAY aldım (gerekirse)
+```
+
+**BU CHECKLİSTİ TAMAMLAMADAN HİÇBİR KOD YAZMAYA BAŞLAMAYIN!**
+
+---
+
+## 🔴 KRİTİK KURAL: SELF-HOSTING İLKESİ
+
+**BUNDAN SONRA TÜM YENİ ÖZELLIKLER VE RUNTIME KODU MLP DİLİNDE YAZILACAKTIR!**
+
+### Zorunlu Gereksinimler
+
+1. **✅ YAPILMASI GEREKENLER:**
+   - Yeni runtime fonksiyonları → **MLP dilinde yaz**
+   - Utility functions → **MLP dilinde yaz**
+   - Test kodları → **MLP dilinde yaz**
+   - Built-in library extensions → **MLP dilinde yaz**
+   - TODO.md'deki eksikler → **MLP dilinde tamamlanacak**
+   - Tüm çözümler ve implementasyonlar → **MLP dilinde üretilecek**
+
+2. **❌ YAPILMAMASI GEREKENLER:**
+   - Python kodu yazma (preprocessor hariç)
+   - C kodu yazma (sadece compiler core'da değişiklik için izin gerekli)
+   - Bash scripts (sadece build automation için)
+   - TODO.md'deki özellikleri C/Python'da implement etmek
+
+3. **🎯 İSTİSNALAR (Sadece izinle):**
+   - Compiler core (lexer/parser/generator) - C dilinde
+   - Preprocessor (dil çevirici) - Python'da
+   - Build system - Bash/Makefile
+
+### Neden Self-Hosting?
+
+- **MLP ARTIK TAM SELF-HOSTING'TİR!** ✅ (22 Kasım 2024'te tamamlandı)
+- Kendi derleyicisi MLP dilinde yazılmıştır (`self_host/mlpc.mlp`)
+- Lexer, Parser, Generator - hepsi MLP dilinde
+- Yeni özellikler MLP'de yazılarak dil test edilir
+- Dogfooding: Kendi dilimizi kullanarak geliştiririz
+- Community için örnek kod sağlar
+- TODO.md'deki tüm eksikler MLP'de tamamlanarak dilin gücü kanıtlanır
+
+### 🏗️ Hibrit Mimari (İki Derleme Yolu)
+
+MLP, iki farklı derleme yolu sunar:
+
+1. **MLP → Assembly (Direkt)** 
+   - `self_host/generator.mlp` kullanılarak
+   - MLP kaynak kodu → x86-64 Assembly
+   - Daha hızlı derleme
+   
+2. **MLP → C → Assembly (Varsayılan)** ⭐
+   - `c_compiler/mlpc` (C derleyici) kullanılarak
+   - MLP kaynak kodu → C kodu → Assembly
+   - Daha optimize edilmiş kod
+   - Production kullanımı için önerilen yol
+
+**Her iki yol da tamamen çalışır durumda!**
+
+---
+
+## ⚠️ BAŞLAMADAN ÖNCE ZORUNLU OKUMALAR
+
+### 1. 🔒 SPECS.md - TEK GERÇEK KAYNAK
+
+```bash
+/home/pardus/projeler/tyd-lang/MLP/SPECS.md
+```
+
+**BU DOSYA KİLİTLİDİR!** Hiçbir AI/geliştirici bu dosyayı kullanıcının onayı olmadan değiştiremez.
+
+**İçeriği:**
+- Dil spesifikasyonu (syntax, semantics)
+- Veri tipleri (SAYISAL, SÖZEL, ZITLIK, HİÇLİK)
+- Operatörler ve kontrol yapıları
+- Noktalı virgül kuralları
+- Çok dilli destek mimarisi
+
+### ⚠️ KRİTİK MİMARİ KURALLARI - MUTLAK UYULACAK!
+
+**🔴 KURAL #1: 3-STAGE PREPROCESSOR PIPELINE (ASLA İHLAL ETMEYİN!)**
+
+```
+Kaynak Kod (.mlp - Herhangi syntax + Türkçe/Rusça/Hintçe)
+    Örnek: if (x > 0) { YAZDIR "Merhaba" }  (C-style + Türkçe)
+    ↓
+┌─────────────────────────────────────────────────────┐
+│ STAGE 1: SYNTAX NORMALIZATION                       │
+│ (stage0/syntax_preprocessor.py + syntax.json)       │
+└─────────────────────────────────────────────────────┘
+    ├─→ syntax.json'dan syntax mapping'leri oku
+    ├─→ C-style { } → MLP base syntax (then/end)
+    ├─→ Python-style : indent → MLP base (then/end)
+    ├─→ Keywords AYNEN KORU (herhangi dil)
+    ├─→ Strings ve comments KORU
+    └─→ Çıktı: Normalized MLP (.mlp)
+    ↓
+Normalized MLP (.mlp - MLP syntax + Türkçe/Rusça/Hintçe)
+    Örnek: if x > 0 then YAZDIR "Merhaba" end if
+    ↓
+┌─────────────────────────────────────────────────────┐
+│ STAGE 2: LANGUAGE TRANSLATION                       │
+│ (runtime/mlp_preprocessor.c + diller.json)          │
+└─────────────────────────────────────────────────────┘
+❌ LEXER ASLA TÜRKÇE GÖRMEZ!
+    ├─→ diller.json'dan keyword mapping'leri oku
+    ├─→ Türkçe/Rusça/Hintçe keywords → English keywords
+    ├─→ String içerikleri KORU (çevirme!)
+    ├─→ UTF-8 karakterleri AYNEN KORU
+    └─→ Çıktı: English IR (.mlp)
+    ↓
+English IR (.mlp)
+    ├─→ Keywords: print, if, while, end, numeric, string
+    ├─→ Strings: "Merhaba" (UTF-8 korunmuş)
+    └─→ Comments: Korunmuş
+    ↓
+┌─────────────────────────────────────────────────────┐
+│ STAGE 3: COMPILATION                                │
+│ (self_host/mlp_compiler.c)                          │
+└─────────────────────────────────────────────────────┘
+MLPC (Compiler)
+    ├─→ SADECE İngilizce keywords anlar
+    ├─→ UTF-8 strings'i byte sequence'e çevirir
+    └─→ Assembly üretir
+    ↓
+Assembly (.asm)
+    ├─→ ASCII strings: db "Hello", 0
+    ├─→ UTF-8 strings: db 196,176,108,... (byte sequence)
+    └─→ Smart delimiter: '...' veya "..."
+    ↓
+NASM + GCC → Binary
+```
+
+**🔴 KURAL #2: LEXER ASLA TÜRKÇE GÖRMEZ!**
+
+```mlp
+❌ YANLIŞ MİMARİ:
+Türkçe kaynak → Lexer (YAZDIR token'ı ekle) → Parser
+
+✅ DOĞRU MİMARİ:
+Türkçe kaynak → Preprocessor (YAZDIR → print) → English IR → Lexer (print token'ı) → Parser
+```
+
+**Neden?**
+- Lexer/Parser sadece English keywords bilir
+- Çok dil desteği preprocessor katmanında
+- Assembly SADECE İngilizce keyword'lerden üretilir
+- diller.json'a yeni dil eklemek 10 dakika
+- Compiler core değişmeden yeni dil eklenebilir
+
+**🔴 KURAL #3: UTF-8 HANDLING (BYTE SEQUENCE YAKLAŞIMI)**
+
+**Problem:**
+- NASM UTF-8 karakterleri string içinde doğrudan kabul etmez
+- NASM `\"` escape sequence'ini `"..."` içinde kabul etmez
+
+**Çözüm:**
+```c
+// visit_Metin() fonksiyonunda (mlp_compiler.c ~line 4883)
+
+// 1. UTF-8 tespit et
+int has_utf8 = 0;
+for (const char* p = string; *p; p++) {
+    if ((unsigned char)*p >= 128) {  // Non-ASCII
+        has_utf8 = 1;
+        break;
+    }
+}
+
+// 2. UTF-8 varsa byte sequence kullan
+if (has_utf8) {
+    // Output: db 196,176,108,107,32,115,97,116,196,177,114,0
+    sprintf(buffer, "%s: db ", label);
+    for (const char* p = string; *p; p++) {
+        sprintf(buffer + strlen(buffer), "%d,", (unsigned char)*p);
+    }
+    strcat(buffer, "0");  // Null terminator
+}
+// 3. ASCII ise smart delimiter
+else {
+    // String içinde \" varsa ' kullan, yoksa \" kullan
+    int has_quote = (strchr(string, '"') != NULL);
+    char delim = has_quote ? '\'' : '"';
+    sprintf(buffer, "%s: db %c%s%c, 0", label, delim, string, delim);
+}
+```
+
+**Sonuç:**
+- UTF-8: `"İlk satır"` → `db 196,176,108,107,32,115,97,116,196,177,114,0`
+- ASCII: `"Hello"` → `db "Hello", 0`
+- Quotes: `"Say \"Hi\""` → `db 'Say "Hi"', 0`
+
+### 2. 📚 README.md - Proje Genel Bakış
+
+```bash
+/home/pardus/projeler/tyd-lang/MLP/README.md
+```
+
+**İçeriği:**
+- Proje tanıtımı ve felsefesi
+- Hızlı başlangıç örnekleri
+- Desteklenen diller (en-US, tr-TR, ru-RU, zh-CN, hi-IN)
+- Mimari açıklaması (Preprocessor → Compiler → Assembly)
+- GUI geliştirme rehberi
+
+### 3. 📄 diller.json - Dil Tanımları
+
+```bash
+/home/pardus/projeler/tyd-lang/MLP/diller.json
+```
+
+**UYARI:** Yeni dil eklemek dışında bu dosyayı değiştirmeyin!
+
+**İçeriği:**
+- Şu an 6 dil örneği (English, Turkish, Russian, Chinese, Hindi, Custom-Mehmet)
+- **Teorik olarak SINIRSIZ dil desteklenebilir** (JSON'a eklemek yeterli)
+- Anahtar kelime çevirileri (function → işleç, if → eğer)
+- Variant desteği (eğer, EĞER, eger, EGER)
+
+---
+
+## 🎯 PROJE HEDEFİ VE FELSEFESİ
+
+### Ana Hedef
+
+**"Programlama sadece İngilizce değil, HER DİLDE yapılabilir!"**
+
+### MLP Nedir?
+
+- **Multi-Language Programming Language** (Çok Dilli Programlama Dili)
+- Herkes kendi dilinde kod yazabilir
+- Türkçe, Rusça, Çince, Hintçe... hepsi eşit!
+- **Sınırsız dil desteklenebilir** (diller.json'a eklenerek)
+- Aynı programı farklı dillerde yazabilirsiniz
+
+### 🚫 MLP BİR OOP DİLİ DEĞİLDİR!
+
+**KRİTİK KARAR:** MLP, **ASLA** Object-Oriented Programming dili olmayacaktır.
+
+**MLP = Struct + Function Paradigması** ✅
+
+**MLP'de OLAN:**
+- ✅ Struct (veri yapıları)
+- ✅ Function (davranışlar)
+- ✅ Composition (kompozisyon)
+- ✅ Function pointers
+- ✅ Lambda & closures
+- ✅ Generic types (`optional<T>`)
+
+**MLP'de OLMAYAN ve OLMAYACAK:**
+- ❌ Class (sınıf tanımları)
+- ❌ Inheritance (kalıtım)
+- ❌ Method (struct'a bağlı fonksiyonlar)
+- ❌ this/self keyword
+- ❌ Constructor/Destructor
+- ❌ Public/Private/Protected
+- ❌ Interface/Trait
+- ❌ Virtual functions
+- ❌ Abstract classes
+
+**NEDEN?**
+1. **Basitlik:** Anlaşılır ve öğrenmesi kolay
+2. **Composition > Inheritance:** Modern yaklaşım
+3. **Bakım Kolaylığı:** Daha az karmaşıklık
+4. **Performans:** Vtable overhead yok
+5. **İspat:** Self-hosting derleyici OOP olmadan yazıldı
+6. **Açıklık:** Her şey explicit, gizli davranış yok
+
+**ÖRNEK:**
+
+```mlp
+-- ✅ MLP Yolu (Struct + Function)
+struct Person
+    string name
+    numeric age
+end struct
+
+function person_greet(Person p)
+    print "Hello, " + p.name
+end function
+
+Person alice
+alice.name = "Alice"
+person_greet(alice)  -- Açık ve net
+
+-- ❌ ASLA OLMAYACAK (OOP)
+class Person {
+    method greet() { ... }  -- MLP'de olmayacak!
+}
+```
+
+**Bu karar KESİNDİR ve değişmeyecektir!**
+
+### Mimari Felsefesi
+
+**🔴 KRİTİK: LEXER ASLA TÜRKÇE/RUSÇA/HİNTÇE GÖRMEZ!**
+
+```
+┌─────────────────────────────────────────────────┐
+│  Kaynak Kod (.mlp - Türkçe/Rusça/Hintçe)        │
+│  - Türkçe: YAZDIR "Merhaba", EĞER, DÖNGÜ       │
+│  - Rusça: печать "Привет", если, пока          │
+│  - Hintçe: likho "नमस्ते", agar, jab_tak        │
+└─────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────┐
+│  MLP_PREPROCESSOR (runtime/mlp_preprocessor.c)  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  1. Dil tespiti: -- lang: tr-TR header         │
+│  2. diller.json'dan keyword map yükle          │
+│  3. SADECE KEYWORDS çevir:                      │
+│     YAZDIR → print                              │
+│     EĞER → if                                   │
+│     SAYISAL → numeric                           │
+│  4. STRING İÇERİKLERİNİ KORU:                  │
+│     "Merhaba Dünya" → "Merhaba Dünya" (UTF-8)│
+│  5. COMMENT'LERİ KORU:                          │
+│     -- Bu yorum → -- Bu yorum                  │
+└─────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────┐
+│  English IR (.mlp)                              │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  print "Merhaba Dünya"  ← UTF-8 korunmuş       │
+│  if x > 10 then         ← Keywords İngilizce   │
+│  numeric y = 42         ← Tip isimleri İngilizce│
+└─────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────┐
+│  MLPC COMPILER (self_host/mlp_compiler.c)       │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  - Lexer: SADECE İngilizce keywords tanır      │
+│  - Parser: AST oluşturur                        │
+│  - Generator: Assembly üretir                   │
+│  - UTF-8 Handler: Byte sequence'e çevirir      │
+│    * ASCII: db "Hello", 0                       │
+│    * UTF-8: db 77,101,114,104,97,98,97,0       │
+└─────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────┐
+│  Assembly (.asm - NASM syntax)                  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│  str_1: db 77,101,114,104,97,98,97,0  ; UTF-8   │
+│  str_2: db "Hello", 0                 ; ASCII   │
+└─────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────┐
+│  NASM + GCC → Native Binary                     │
+│  ✅ UTF-8 characters display correctly          │
+└─────────────────────────────────────────────────┘
+```
+
+**Tasarım Kararları:**
+1. **Lexer English-only** → Basit, bakımı kolay
+2. **Preprocessor layer** → Çok dil desteği burada
+3. **UTF-8 byte sequence** → NASM compatibility
+4. **Smart delimiter** → ' vs " based on content
+5. **Pipeline ayrımı** → Her katman tek sorumlu
+
+---
+
+## 🔴 VERİ TİPLERİ - KRİTİK BİLGİ!
+
+### ⚠️ DİKKAT: MLP'DE SADECE NUMERIC VAR!
+
+**MLP'nin GERÇEK veri tipleri:**
+
+| MLP Tipi | English Keyword | Turkish | Russian | Açıklama |
+|----------|-----------------|---------|---------|----------|
+| **NUMERIC** | `numeric` | SAYISAL | ЧИСЛО | BigDecimal (sınırsız hassasiyet - int + float birleşik) |
+| **STRING** | `string` | METIN, SÖZEL | СТРОКА | BigString (sınırsız uzunluk) |
+| **BOOLEAN** | `boolean` | MANTIKSAL, ZITLIK | ЛОГИЧЕСКИЙ | Boolean (true/false) |
+| **NULL** | ✅ VAR | `null` | NULL | Null literal (0 olarak temsil edilir) |
+| **CHAR** | ❌ YOK! | - | - | Char tipi YOK - tek karakterlik string kullan |
+| **VOID** | ❌ YOK! | - | - | Return yoksa function kullan |
+
+### ⚠️ MLP'DE OLMAYAN KAVRAMLAR:
+
+| Kavram | Durum | Açıklama |
+|--------|-------|----------|
+| **null / nothing** | ✅ VAR | `null` keyword destekleniyor (numeric 0 olarak temsil edilir) |
+| **this / self** | ❌ YOK (henüz) | OOP implement edilmedi (v4.0'da gelecek) |
+| **char** | ❌ YOK | Tek karakterlik string kullan: `string c = "A"` |
+| **static** | ❌ YOK | Global scope yok - function içinde tanımla |
+| **global** | ❌ YOK | Her şey function scope'ta |
+| **class** | ❌ YOK (henüz) | v4.0'da OOP gelecek - şimdilik struct kullan |
+| **const** | ✅ VAR | `const numeric PI = 3.14159` (read-only değişken) |
+| **enum** | ✅ VAR | `enum Color { RED, GREEN, BLUE }` |
+| **struct** | ✅ VAR | `struct Person { string name, numeric age }` |
+
+### 🚨 YANLIŞ VS DOĞRU
+
+```mlp
+❌ YANLIŞ: int x = 5               -- MLP'de "int" YOK!
+❌ YANLIŞ: float pi = 3.14           -- MLP'de "float" YOK!
+❌ YANLIŞ: char c = 'A'              -- MLP'de "char" YOK!
+❌ YANLIŞ: static numeric count = 0  -- MLP'de "static" YOK!
+❌ YANLIŞ: class Person { }          -- MLP'de "class" YOK (henüz)!
+
+✅ DOĞRU:  numeric x = 5            -- Tek sayı tipi: numeric (BigDecimal)
+✅ DOĞRU:  numeric pi = 3.14159     -- Ondalıklı da numeric
+✅ DOĞRU:  string c = "A"           -- Tek karakter de string
+✅ DOĞRU:  string name = null       -- NULL değer destekleniyor!
+✅ DOĞRU:  numeric value = null     -- NULL = 0 (numeric)
+✅ DOĞRU:  numeric count = 0        -- Global yok, function scope
+✅ DOĞRU:  struct Person { }        -- class yerine struct (v3.0)
+
+-- Türkçe kaynak (user writes):
+SAYISAL x = 5                       ✅ Kullanıcı Türkçe yazar
+SAYISAL pi = 3.14                   ✅ Ondalık da SAYISAL
+METIN harf = "A"                    ✅ Tek karakter de METIN
+-- Preprocessor çevirir:
+numeric x = 5                       ✅ Compiler numeric görür
+numeric pi = 3.14                   ✅ Hepsi numeric (BigDecimal)
+string harf = "A"                   ✅ string'e çevrilir
+
+-- Çoklu tanımlama (MLP özelliği):
+a, b, c = numeric, string, boolean  ✅ Tek satırda çoklu tanımlama
+
+-- Const kullanımı:
+const numeric PI = 3.14159          ✅ Read-only değişken (değiştirilemez)
+
+-- NULL ve Boolean Literals (Phase 6.1):
+numeric x = null                    ✅ NULL değer (0 olarak temsil edilir)
+boolean flag = true                 ✅ Boolean literal (1)
+boolean active = false              ✅ Boolean literal (0)
+if value == null then               ✅ NULL karşılaştırması
+    print "Value is null"
+end if
+```
+
+**NEDEN?**
+- MLP'de **sadece NUMERIC** var (int/float ayrımı yok)
+- **BigDecimal** kullanır (sınırsız hassasiyet)
+- Preprocessor: SAYISAL → numeric, METIN → string
+- Compiler sadece numeric/string/boolean görür
+
+---
+
+## 🚫 YAPMAMANIZ GEREKENLER (KRİTİK!)
+
+### 1. ❌ Veri Tiplerini Karıştırmayın!
+
+```mlp
+❌ YANLIŞ:
+"MLP'de int, string, boolean tipleri vardır"
+
+✅ DOĞRU:
+"MLP'de SAYISAL (BigDecimal), SÖZEL (BigString), ZITLIK (Boolean) tipleri vardır.
+Compiler internal olarak bunları int/string/bool olarak işler ama kullanıcı 
+her zaman kendi dilindeki kelimeyi kullanır."
+```
+
+**Kural:** Kullanıcıya konuşurken **her zaman dil-agnostik** ol!
+
+### 2. ❌ SPECS.md'yi İhlal Etmeyin!
+
+**Noktalı Virgül Kuralı: NO SEMICOLONS (Python-Style)**
+
+```mlp
+✅ DOĞRU (Base Language):
+numeric x = 10          -- NO semicolon (Python-style)
+string name = "test"    -- NO semicolon
+x = 20                  -- NO semicolon
+return x + y            -- NO semicolon
+print x                 -- NO semicolon
+end                     -- NO semicolon
+
+-- Çoklu tanımlama (MLP özelliği):
+a, b = numeric, string  -- NO semicolon
+
+❌ YANLIŞ:
+numeric x = 10;         -- Noktalı virgül YASAK!
+return x + y;           -- Noktalı virgül YASAK!
+end;                    -- Noktalı virgül YASAK!
+```
+
+**NEDEN?** Python-style syntax! Newline-terminated statements. Hiçbir yerde noktalı virgül yok.
+
+### 3. ❌ Veri Tiplerini Karıştırma!
+
+**MLP'de int/float YOKTUR!**
+
+```mlp
+❌ YANLIŞ: "MLP'de int ve float var"
+✅ DOĞRU:  "MLP'de sadece numeric var (BigDecimal - int+float birleşik)"
+
+❌ YANLIŞ: int x = 5
+❌ YANLIŞ: float pi = 3.14
+✅ DOĞRU:  numeric x = 5
+✅ DOĞRU:  numeric pi = 3.14159
+
+-- Çoklu tanımlama:
+✅ DOĞRU:  a, b, c = numeric, string, boolean
+```
+
+### 4. ❌ Dil Eşitliğini Bozma!
+
+**Tüm diller eşittir!**
+
+```mlp
+❌ YANLIŞ: "İngilizce default dil, diğerleri opsiyonel"
+✅ DOĞRU:  "Tüm diller eşit, compiler internal olarak English kullanır"
+
+❌ YANLIŞ: "Türkçe anahtar kelimeler ekleyelim"
+✅ DOĞRU:  "diller.json'a yeni dil tanımı ekleyelim"
+```
+
+### 5. ❌ String/Comment İçeriğini Çevirmeyin!
+
+**Preprocessor state machine:**
+
+```mlp
+-- lang: tr-TR
+METIN mesaj = "EĞER bu değişmez";  -- String içi korunur!
+EĞER x > 10 İSE                     -- Bu çevrilir → if x > 10 then
+    YAZDIR mesaj                    -- Bu çevrilir → print mesaj
+SON                                 -- Bu çevrilir → end
+
+-- Bu yorum da korunur: EĞER DÖNGÜ İŞLEÇ
+```
+
+**KURAL:** STATE_CODE → çevir, STATE_STRING/STATE_COMMENT → koru!
+
+### 6. ❌ Tasarım Kararlarını Değiştirmeyin!
+
+**Bu konularda kullanıcıya sormadan değişiklik yapmayın:**
+- Anahtar kelimeler (İŞLEÇ, DÖNÜŞ, EĞER)
+- Blok sonlandırma (SON, end)
+- Noktalı virgül kullanımı
+- Yorum syntax (-- ve {- -})
+- Veri tipleri (SAYISAL, SÖZEL, ZITLIK)
+- Preprocessor yaklaşımı
+
+---
+
+## ✅ YAPMANIZ GEREKENLER
+
+### Her Oturumda (ZORUNLU!)
+
+```bash
+# 1. SPECS.md'yi okuyun
+cat /home/pardus/projeler/tyd-lang/MLP/SPECS.md
+
+# 2. README.md'yi okuyun (proje durumu)
+cat /home/pardus/projeler/tyd-lang/MLP/README.md
+
+# 3. diller.json'u inceleyin (dil tanımları)
+cat /home/pardus/projeler/tyd-lang/MLP/diller.json
+
+# 4. Mevcut durumu test edin
+./mlpc merhaba_dunya.mlp -o test
+./test
+```
+
+### Kod Yazmadan Önce
+
+1. **Dil Tespiti**
+   ```bash
+   # Kaynak dosyanın dilini belirle
+   head -5 input.mlp | grep "-- lang:"
+   ```
+
+2. **Syntax Kontrolü**
+   ```bash
+   # Noktalı virgül kontrolü (sadece tanımlamalarda olmalı)
+   grep -n "DÖNÜŞ.*;" input.mlp  # Hata!
+   grep -n "SON;" input.mlp       # Hata!
+   ```
+
+3. **Test**
+   ```bash
+   # Tüm pipeline'ı test et
+   ./mlpc input.mlp -o output --verbose
+   ./output
+   ```
+
+### Yeni Özellik Eklerken
+
+```markdown
+1. SPECS.md'de tanımlı mı kontrol et
+2. Compiler'a ekle (c_compiler/)
+   - c_lexer.c: Token ekle
+   - c_parser.c: Parsing ekle
+   - c_generator.c: Assembly generation ekle
+3. diller.json'a anahtar kelime ekle (TÜM diller için!)
+4. Test dosyası yaz (her dilde)
+5. mlpc ile derle ve test et
+6. README.md güncelle (gerekirse)
+```
+
+---
+
+## 📖 DİL KURALLARI (ÖZET)
+
+### ⚠️ ÖNEMLİ: "then" Kullanımı
+
+**KRİTİK KURAL:** `then` kelimesi **SADECE** `if` statement'larında kullanılır!
+
+```mlp
+✅ DOĞRU:
+if x > 5 then           -- ✅ 'then' sadece if ile kullanılır
+    print x
+end if
+
+❌ YANLIŞ:
+func add(a, b) then     -- ❌ HATALI! Fonksiyonlarda 'then' kullanılmaz!
+    return a + b
+end func
+
+✅ DOĞRU:
+func add(a, b)          -- ✅ Fonksiyonlarda 'then' yok
+    return a + b
+end func
+```
+
+**Semantik açıklama:** `then` kelimesi "sonra, o zaman" anlamına gelir ve sadece koşullu ifadelerde mantıklıdır. Fonksiyon tanımlamalarında anlamsızdır.
+
+### Noktalı Virgül (;)
+
+```mlp
+SAYISAL x;              ✅ Declaration
+SAYISAL y = 10;         ✅ Initialization
+x = 20                  ✅ Assignment (NO semicolon)
+DÖNÜŞ x + y             ✅ Return (NO semicolon)
+YAZDIR x                ✅ Print (NO semicolon)
+SON                     ✅ Block end (NO semicolon)
+```
+
+### Blok Yapıları (Base Language - English)
+
+```mlp
+func add(a, b)
+    return a + b
+end func                ✅ Explicit (preferred)
+-- veya:
+end                     ⚠️ Generic (tolerated)
+
+if x > 5 then
+    print x
+else
+    print "small"
+end if                  ✅ Explicit terminator
+
+while x < 10
+    x = x + 1
+end while               ✅ Condition-based loop
+
+-- Türkçe kaynak örneği:
+İŞLEÇ topla(a, b) İSE
+    DÖNÜŞ a + b
+SON İŞLEÇ               ← Preprocessor bunu "end func" yapar
+```
+
+### Yorumlar
+
+```mlp
+-- Tek satır yorum
+
+{-
+  Çok satırlı
+  yorum bloğu
+-}
+```
+
+### Çok Dilli Örnek
+
+**Türkçe (user writes):**
+```mlp
+-- lang: tr-TR
+SAYISAL x = 42
+SAYISAL pi = 3.14159
+a, b = METIN, MANTIKSAL
+YAZDIR "Merhaba Dünya"
+```
+
+**Preprocessor çıktısı (compiler receives):**
+```mlp
+numeric x = 42
+numeric pi = 3.14159
+a, b = string, boolean
+print "Merhaba Dünya"
+```
+
+**Rusça (user writes):**
+```mlp
+-- lang: ru-RU
+ЧИСЛО x = 42
+ЧИСЛО pi = 3.14159
+печать "Привет Мир"
+```
+
+**Preprocessor çıktısı (compiler receives):**
+```mlp
+numeric x = 42
+numeric pi = 3.14159
+print "Привет Мир"
+```
+
+**İkisi de aynı English IR → aynı assembly → aynı executable!**
+
+---
+
+## 🔧 GELİŞTİRME SÜRECİ
+
+### 1. Yeni Dil Eklerken
+
+```markdown
+1. diller.json'a dil tanımı ekle
+2. Tüm anahtar kelimeleri tanımla
+3. Variant'ları ekle (büyük/küçük harf)
+4. Test dosyası yaz (test_newlang.mlp)
+5. mlpc ile derle
+6. README.md'ye dili ekle
+```
+
+**Örnek:**
+
+```json
+{
+  "id": "es-ES",
+  "name": "Español (Spanish)",
+  "keywords": {
+    "int": ["entero"],
+    "string": ["cadena"],
+    "if": ["si"],
+    "then": ["entonces"],
+    "else": ["sino"],
+    "end": ["fin"],
+    "function": ["función"],
+    "return": ["devolver"],
+    "print": ["imprimir"]
+  }
+}
+```
+
+### 2. Compiler Hatası Düzeltirken
+
+```markdown
+1. Hangi aşamada hata? (lexer/parser/generator)
+2. SPECS.md'ye uygun mu kontrol et
+3. Test case yaz (minimal repro)
+4. Düzelt ve test et
+5. Tüm test dosyalarını çalıştır
+```
+
+### 3. Preprocessor Hatası Düzeltirken
+
+```markdown
+1. State machine state'ini kontrol et
+2. String/comment içi korunuyor mu?
+3. Çeviri doğru mu? (diller.json)
+4. --verbose ile debug
+5. .preprocessed.mlp çıktısını incele
+```
+
+---
+
+## 📊 PROJE YAPISI
+
+```
+MLP/
+├── SPECS.md                 # 🔒 Dil spesifikasyonu (KİLİTLİ)
+├── README.md                # Proje tanıtımı
+├── AI_RULES.md              # ← Bu dosya (AI kuralları)
+├── diller.json              # 🔒 Dil tanımları (dikkatli değiştir)
+│
+├── c_compiler/              # English-native compiler (C)
+│   ├── c_lexer.c/h         # Lexical analyzer
+│   ├── c_parser.c/h        # Parser (syntax check)
+│   ├── c_generator.c/h     # Assembly generator
+│   ├── main.c              # Entry point
+│   └── Makefile            # Build script
+│
+├── runtime/
+│   ├── runtime.c/h         # Built-in functions
+│   ├── gui_mock.c          # GUI mock backend
+│   └── gui_sdl.c           # GUI SDL2 backend (future)
+│
+├── dil_cevirici.py         # 🌍 Preprocessor (multi-language)
+├── mlpc                    # Compiler wrapper script
+├── migrate.py              # Migration tool
+│
+├── test_*.mlp              # Multi-language test cases
+└── vscode-mlp/             # VSCode extension
+    └── syntaxes/
+        └── mlp.tmLanguage.json
+```
+
+---
+
+## 🎯 ŞU ANKİ ÖNCELİKLER
+
+### Durum: Production Ready ✅
+
+- ✅ English-native compiler çalışıyor
+- ✅ Multi-language preprocessor çalışıyor
+- ✅ Şu an 6 dil (en, tr, ru, zh, hi, custom-mehmet) - **sınırsız eklenebilir**
+- ✅ Self-hosting compiler (MLP ile yazılmış)
+- ✅ GUI support (mock backend)
+- ✅ VSCode extension
+
+### Gelecek Özellikler (v3.1)
+
+1. ⏳ **float / ONDALIK** - Floating point desteği
+2. ⏳ **AND/OR/NOT / VE/VEYA/DEĞİL** - Mantıksal operatörler
+3. ⏳ **elif / EĞER_DEĞİLSE_EĞER** - Çoklu koşul
+4. ⏳ **array / DİZİ** - Array tipi
+5. ⏳ **input / GİRDİ_AL** - Kullanıcı girişi
+
+### Gelecek (v4.0)
+
+6. 📅 **class / SINIF** - OOP desteği
+7. 📅 **try-catch / DENE-YAKALA** - Exception handling
+8. 📅 **import / İÇE_AKTAR** - Module sistemi
+
+---
+
+## 🔍 SIKÇA SORULAN SORULAR
+
+### S: MLP neden preprocessor kullanıyor?
+
+**C:** Compiler core'u basit tutmak için. Compiler sadece İngilizce anlar, preprocessor çok dil desteği sağlar. Bu mimari:
+- Compiler'ı basit tutar
+- Yeni dil eklemek kolay (sadece JSON)
+- Her dil eşit şekilde işlenir
+- Bakımı kolay
+
+### S: Neden Python preprocessor var? TYD'de Python yasaktı!
+
+**C:** MLP farklı bir proje! TYD self-hosting hedefliyordu (hiç bağımlılık yok). MLP çok dilli destek hedefliyor, Python preprocessor bu iş için uygun. Gelecekte MLP'de yazılabilir ama öncelik değil.
+
+### S: `int` mi yoksa `SAYISAL` mı kullanmalıyım?
+
+**C:** **Bağlama göre!**
+- Kullanıcıya açıklarken → `SAYISAL` (veya hangi dildeyse o)
+- Compiler kodunda → `int` (internal keyword)
+- SPECS.md'de → Her ikisi de (mapping göster)
+
+### S: Yeni dil eklemek ne kadar sürer?
+
+**C:** ~10 dakika!
+1. diller.json'a dil ekle (5 dk)
+2. Test dosyası yaz (3 dk)
+3. Derle ve test et (2 dk)
+
+### S: SPECS.md'yi değiştirmem gerekirse?
+
+**C:**
+1. Kullanıcıdan onay al
+2. Değişikliği açıkla (neden gerekli?)
+3. Tüm testleri güncelle
+4. README.md'yi güncelle
+5. Commit yap (açıklayıcı mesaj)
+
+### S: GUI backend neden mock?
+
+**C:** SDL2 kurulumu gerekiyor. Mock backend test ve demo için yeterli. Kullanıcı gerçek GUI isterse SDL2 kurup `gui_sdl.c` kullanabilir.
+
+---
+
+## 📞 DESTEK VE İLETİŞİM
+
+### Commit Mesajları
+
+```bash
+# İyi örnekler:
+git commit -m "lexer: GUI keywords eklendi (6 dilde)"
+git commit -m "diller.json: Hindi dil desteği eklendi"
+git commit -m "SPECS.md: Float tip tanımı eklendi (kullanıcı onayı)"
+
+# Kötü örnekler:
+git commit -m "fix"
+git commit -m "güncelleme"
+git commit -m "çalışıyor"
+```
+
+### Issue/PR Formatı
+
+**Issue başlığı:**
+```
+[LANG] Rusça 'elif' anahtar kelimesi eksik
+[COMPILER] Parser float literal desteklemiyor
+[DOCS] SPECS.md'de array syntax belirsiz
+```
+
+**PR açıklaması:**
+```markdown
+## Değişiklik
+Hindi dil desteği eklendi
+
+## Dosyalar
+- diller.json: Hindi keywords eklendi
+- test_hindi.mlp: Test case eklendi
+- README.md: Hindi örneği eklendi
+
+## Test
+✅ ./mlpc test_hindi.mlp -o test
+✅ ./test → Çıktı doğru
+```
+
+---
+
+## 🎓 ÖĞRENİLMİŞ DERSLER
+
+### Geçmiş Hatalar (Tekrarlamayın!)
+
+1. **Veri Tiplerini Karıştırma**
+   - ❌ Hata: "MLP'de int, string vardır"
+   - ✅ Çözüm: "MLP'de SAYISAL, SÖZEL vardır (compiler internal: int/string)"
+
+2. **String İçinde Çeviri Yapma**
+   - ❌ Hata: `"EĞER"` string'i `"if"` olarak çevrildi
+   - ✅ Çözüm: Preprocessor state machine düzeltildi
+
+3. **Dil Eşitsizliği**
+   - ❌ Hata: "İngilizce default, diğerleri ekstra"
+   - ✅ Çözüm: Tüm diller eşit, preprocessor tüm dilleri destekler
+
+4. **SPECS.md Göz Ardı Etme**
+   - ❌ Hata: Noktalı virgül kuralı ihlal edildi
+   - ✅ Çözüm: Her değişiklik önce SPECS.md kontrol
+
+---
+
+## ✅ BAŞLAMADAN ÖNCE CHECKLİST
+
+Her oturumda bu adımları izleyin:
+
+```markdown
+- [ ] SPECS.md okudum
+- [ ] README.md okudum (proje durumu)
+- [ ] diller.json'u inceledim
+- [ ] Mevcut durumu test ettim (./mlpc test.mlp)
+- [ ] Yapacağım değişiklik SPECS'e uygun
+- [ ] Veri tiplerini doğru kullanıyorum (SAYISAL/SÖZEL)
+- [ ] Noktalı virgül kuralına uyuyorum
+- [ ] Çok dil desteğini göz önünde bulunduruyorum
+- [ ] Test case'leri hazırladım
+```
+
+---
+
+## 🚀 HEMEN BAŞLAYIN
+
+```bash
+# Proje dizinine git
+cd /home/pardus/projeler/tyd-lang/MLP
+
+# SPECS.md'yi oku
+cat SPECS.md
+
+# Test et
+./mlpc merhaba_dunya.mlp -o test
+./test
+
+# Yeni özellik ekle veya hata düzelt
+# ... (kodlama) ...
+
+# Test et (tüm diller)
+./mlpc test_turkish.mlp -o test_tr && ./test_tr
+./mlpc test_russian.mlp -o test_ru && ./test_ru
+./mlpc test_chinese.mlp -o test_zh && ./test_zh
+
+# Commit yap
+git add .
+git commit -m "feature: Açıklayıcı mesaj"
+```
+
+---
+
+## 📝 RAPOR FORMATI (ÖNERİLEN)
+
+Her oturum sonunda kısa rapor yazılması önerilir:
+
+```markdown
+# AI Çalışma Raporu - YYYY-MM-DD
+
+**AI:** [İsim]  
+**Tarih:** YYYY-MM-DD  
+**Süre:** XX dakika  
+**Durum:** ✅ Başarılı / ⚠️ Kısmi / ❌ Başarısız  
+
+---
+
+## Özet (2-3 cümle)
+Ne yapıldı?
+
+## ✅ Tamamlananlar
+- [x] Görev 1
+- [x] Görev 2
+- [ ] Görev 3 (kısmi)
+
+## ⚠️ Sorunlar
+| Sorun | Çözüm |
+|-------|-------|
+| Parser segfault | Null check eklendi |
+
+## 🔄 Sonraki Adımlar
+1. [ ] Yapılacak iş 1
+2. [ ] Yapılacak iş 2
+
+## 📁 Dosya Değişiklikleri
+- c_lexer.c (+50 satır)
+- diller.json (+1 dil)
+- test_spanish.mlp (yeni)
+```
+
+---
+
+## 🌟 MLP'NİN GÜÇLÜ YÖNLERİ
+
+### Neden MLP Özel?
+
+1. **Gerçek Çok Dil Desteği**
+   - Sadece string değil, tüm syntax çok dilli!
+   - Her dil eşit şekilde işlenir
+
+2. **Basit Mimari**
+   - Preprocessor + Compiler ayrımı
+   - Her biri tek sorumluluğa sahip
+   - Bakımı kolay
+
+3. **Extensible (Sınırsız Dil Desteği)**
+   - Yeni dil eklemek 10 dakika
+   - JSON tabanlı konfigürasyon
+   - Kod değişikliği gerektirmez
+   - Teorik limit yok, pratik sınırsız
+
+4. **Native Performance**
+   - Direkt x86-64 assembly
+   - VM yok, interpreter yok
+   - Hızlı çalışma
+
+5. **Self-Hosting**
+   - MLP compiler'ı MLP'de yazılmış
+   - Yani MLP kendini derleyebiliyor!
+
+---
+
+## 💡 SON NOTLAR
+
+### MLP Felsefesi
+
+> **"Programlama herkes için, her dilde olmalı!"**
+
+### Hatırlanması Gerekenler
+
+1. **Veri Tipleri:** SAYISAL (BigDecimal), SÖZEL (BigString), ZITLIK (Boolean)
+2. **Noktalı Virgül:** Sadece tanımlamalarda
+3. **Preprocessor:** Çok dil desteğinin kalbi
+4. **Compiler:** English-only, basit
+5. **Eşitlik:** Tüm diller eşit!
+
+### AI'lar İçin Altın Kurallar
+
+1. ✅ SPECS.md'ye uyun
+2. ✅ Veri tiplerini doğru kullanın
+3. ✅ Çok dil desteğini koruyun
+4. ✅ Test edin, test edin, test edin
+5. ✅ Kullanıcıya açık olun (değişiklik için onay)
+
+---
+
+**Notlar:**
+- Bu dosya AI'lar için bir kılavuzdur
+- İnsan geliştiriciler için de faydalıdır
+- Düzenli olarak güncellenmelidir
+- SPECS.md ile çelişmemelidir
+- Proje felsefesini yansıtmalıdır
+
+---
+
+**Son Güncelleme:** 19 Kasım 2025  
+**Yazar:** Güven Acar + GitHub Copilot  
+**Durum:** 🔒 Aktif Kılavuz  
+**Versiyon:** 1.0  
+
+---
+
+## 🎯 ÖZET: TEMEL KURALLAR
+
+```
+1. SPECS.md = Kutsal Kitap (değiştirme!)
+2. SAYISAL/SÖZEL/ZITLIK = Gerçek tipler (int/string değil!)
+3. Noktalı virgül = Sadece tanımlama
+4. Preprocessor = Çok dil sihri
+5. Tüm diller = Eşit!
+6. Test = Her zaman
+7. Kullanıcı = Patron (onay al)
+```
+
+**Başarılar! 🚀**

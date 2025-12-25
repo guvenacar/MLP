@@ -1,0 +1,361 @@
+-- lang: en-US
+-- syntax: mlp
+
+-- -----------------------------------------------------------------------------
+-- Scope Manager Module - Symbol table ve değişken tracking
+-- -----------------------------------------------------------------------------
+-- C bootstrap derleyicisindeki kapsam yönetimi mantığını MLP'ye taşır.
+-- Variable tracking, scope levels, symbol resolution, offset calculation.
+-- -----------------------------------------------------------------------------
+
+import "compiler_core/token_types.mlp"
+import "compiler_core/ast/ast_nodes.mlp"
+
+-- -----------------------------------------------------------------------------
+-- Variable information
+-- -----------------------------------------------------------------------------
+
+yapı VariableInfo ise
+    metin name
+    metin type_name
+    sayısal scope_level
+    sayısal stack_offset
+    sayısal is_parameter
+    sayısal is_captured
+    sayısal size_bytes
+son_yapı
+
+-- -----------------------------------------------------------------------------
+-- Scope information
+-- -----------------------------------------------------------------------------
+
+yapı ScopeInfo ise
+    sayısal level
+    sayısal parent_scope
+    liste variable_names
+    sayısal stack_frame_size
+son_yapı
+
+-- -----------------------------------------------------------------------------
+-- Scope Manager state
+-- -----------------------------------------------------------------------------
+
+yapı ScopeManager ise
+    HashMap variable_map
+    liste scope_stack
+    sayısal current_level
+    sayısal next_offset
+    sayısal label_counter
+son_yapı
+
+-- -----------------------------------------------------------------------------
+-- Scope Manager initialization
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_manager_create()
+    ScopeManager manager
+    manager.variable_map = HashMap()
+    manager.scope_stack = liste()
+    manager.current_level = 0
+    manager.next_offset = 0
+    manager.label_counter = 0
+    
+    -- Global scope
+    ScopeInfo global_scope
+    global_scope.level = 0
+    global_scope.parent_scope = -1
+    global_scope.variable_names = liste()
+    global_scope.stack_frame_size = 0
+    
+    mlp_list_add(manager.scope_stack, global_scope)
+    
+    döndür manager
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Scope operations
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_enter(manager)
+    manager.current_level = manager.current_level + 1
+    
+    ScopeInfo new_scope
+    new_scope.level = manager.current_level
+    new_scope.parent_scope = mlp_list_length(manager.scope_stack) - 1
+    new_scope.variable_names = liste()
+    new_scope.stack_frame_size = 0
+    
+    mlp_list_add(manager.scope_stack, new_scope)
+    
+    döndür manager
+son_fonksiyon
+
+fonksiyon scope_exit(manager)
+    eğer manager.current_level == 0 ise
+        yaz "Scope error: Cannot exit global scope"
+        panic("scope_exit: already at global scope")
+    son_eğer
+    
+    -- Remove variables from current scope
+    sayısal scope_index = 0
+    scope_index = mlp_list_length(manager.scope_stack) - 1
+    ScopeInfo current
+    current = mlp_list_get(manager.scope_stack, scope_index)
+    
+    için i = 0 için mlp_list_length(current.varable_names) - 1 do
+        metin var_name = ""
+        var_name = mlp_list_get(current.varable_names, i)
+        manager.mlp_list_remove(varable_map, var_name)
+    son
+    
+    mlp_list_remove(manager.scope_stack, scope_index)
+    manager.current_level = manager.current_level - 1
+    
+    döndür manager
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Variable registration
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_register_variable(manager, var_name, type_name, is_param)
+    eğer hashmap_has(manager.variable_map, var_name) == 1 ise
+        VariableInfo existing
+        existing = mlp_list_get(manager.varable_map, var_name)
+        eğer existing.scope_level == manager.current_level ise
+            yaz "Scope error: Variable already declared in current scope: "
+            yaz var_name
+            panic("scope_register_variable: duplicate variable")
+        son_eğer
+    son_eğer
+    
+    -- Calculate size
+    sayısal size = 8
+    eğer type_name == "metin" ise
+        size = 8
+    değilse eğer type_name == "sayısal" ise
+        size = 8
+    değilse eğer type_name == "boolean" ise
+        size = 8
+    değilse
+        size = 8
+    son_eğer
+    
+    -- Create variable info
+    VariableInfo info
+    info.name = var_name
+    info.type_name = type_name
+    info.scope_level = manager.current_level
+    info.stack_offset = manager.next_offset
+    info.is_parameter = is_param
+    info.is_captured = 0
+    info.size_bytes = size
+    
+    -- Update manager
+    manager.mlp_list_set(varable_map, var_name, info)
+    manager.next_offset = manager.next_offset + size
+    
+    -- Add için current scope
+    sayısal scope_index = 0
+    scope_index = mlp_list_length(manager.scope_stack) - 1
+    ScopeInfo current
+    current = mlp_list_get(manager.scope_stack, scope_index)
+    mlp_list_add(current.varable_names, var_name)
+    current.stack_frame_size = current.stack_frame_size + size
+    mlp_list_set(manager.scope_stack, scope_index, current)
+    
+    döndür manager
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Variable lookup
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_lookup_variable(manager, var_name)
+    eğer hashmap_has(manager.variable_map, var_name) == 0 ise
+        yaz "Scope error: Undefined variable: "
+        yaz var_name
+        panic("scope_lookup_variable: undefined variable")
+    son_eğer
+    
+    VariableInfo info
+    info = mlp_list_get(manager.varable_map, var_name)
+    döndür info
+son_fonksiyon
+
+fonksiyon scope_has_variable(manager, var_name)
+    döndür hashmap_has(manager.variable_map, var_name)
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Label generation
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_generate_label(manager, prefix)
+    sayısal id = manager.label_counter
+    manager.label_counter = manager.label_counter + 1
+    
+    metin label = ""
+    label = prefix + "_" + numeric_to_metin(id)
+    döndür label
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Stack frame calculation
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_get_current_frame_size(manager)
+    eğer mlp_list_length(manager.scope_stack) == 0 ise
+        döndür 0
+    son_eğer
+    
+    sayısal scope_index = 0
+    scope_index = mlp_list_length(manager.scope_stack) - 1
+    ScopeInfo current
+    current = mlp_list_get(manager.scope_stack, scope_index)
+    döndür current.stack_frame_size
+son_fonksiyon
+
+fonksiyon scope_get_total_stack_size(manager)
+    sayısal total = 0
+    için i = 0 için mlp_list_length(manager.scope_stack) - 1 do
+        ScopeInfo scope
+        scope = mlp_list_get(manager.scope_stack, i)
+        total = total + scope.stack_frame_size
+    son
+    döndür total
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Variable capture (için closures)
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_mark_captured(manager, var_name)
+    eğer hashmap_has(manager.variable_map, var_name) == 0 ise
+        yaz "Scope error: Cannot capture undefined variable: "
+        yaz var_name
+        panic("scope_mark_captured: undefined variable")
+    son_eğer
+    
+    VariableInfo info
+    info = mlp_list_get(manager.varable_map, var_name)
+    info.is_captured = 1
+    manager.mlp_list_set(varable_map, var_name, info)
+    
+    döndür manager
+son_fonksiyon
+
+fonksiyon scope_get_captured_variables(manager)
+    liste captured = liste()
+    
+    liste keys = hashmap_keys(manager.variable_map)
+    için i = 0 için mlp_list_length(keys) - 1 do
+        metin key = ""
+        key = mlp_list_get(keys, i)
+        VariableInfo info
+        info = mlp_list_get(manager.varable_map, key)
+        eğer info.is_captured == 1 ise
+            mlp_list_add(captured, info)
+        son_eğer
+    son
+    
+    döndür captured
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Debug utilities
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_dump_variables(manager)
+    yaz "=== Scope Manager Dump ==="
+    yaz "Current level: "
+    yaz manager.current_level
+    yaz "Next offset: "
+    yaz manager.next_offset
+    yaz ""
+    
+    liste keys = hashmap_keys(manager.variable_map)
+    için i = 0 için mlp_list_length(keys) - 1 do
+        metin key = ""
+        key = mlp_list_get(keys, i)
+        VariableInfo info
+        info = mlp_list_get(manager.varable_map, key)
+        
+        yaz "Variable: "
+        yaz info.name
+        yaz " (type: "
+        yaz info.type_name
+        yaz ", level: "
+        yaz info.scope_level
+        yaz ", offset: "
+        yaz info.stack_offset
+        yaz ", captured: "
+        yaz info.is_captured
+        yaz ")"
+    son
+    
+    yaz "=========================="
+    
+    döndür manager
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Helper: sayısal için metin conversion
+-- -----------------------------------------------------------------------------
+
+fonksiyon numeric_to_metin(n)
+    eğer n == 0 ise döndür "0" son_eğer
+    eğer n == 1 ise döndür "1" son_eğer
+    eğer n == 2 ise döndür "2" son_eğer
+    eğer n == 3 ise döndür "3" son_eğer
+    eğer n == 4 ise döndür "4" son_eğer
+    eğer n == 5 ise döndür "5" son_eğer
+    eğer n == 6 ise döndür "6" son_eğer
+    eğer n == 7 ise döndür "7" son_eğer
+    eğer n == 8 ise döndür "8" son_eğer
+    eğer n == 9 ise döndür "9" son_eğer
+    eğer n == 10 ise döndür "10" son_eğer
+    
+    -- For larger numbers, use metin concatenation
+    metin result = ""
+    sayısal temp = n
+    
+    döngü temp > 0
+        sayısal digit = temp % 10
+        temp = temp / 10
+        
+        eğer digit == 0 ise result = "0" + result son_eğer
+        eğer digit == 1 ise result = "1" + result son_eğer
+        eğer digit == 2 ise result = "2" + result son_eğer
+        eğer digit == 3 ise result = "3" + result son_eğer
+        eğer digit == 4 ise result = "4" + result son_eğer
+        eğer digit == 5 ise result = "5" + result son_eğer
+        eğer digit == 6 ise result = "6" + result son_eğer
+        eğer digit == 7 ise result = "7" + result son_eğer
+        eğer digit == 8 ise result = "8" + result son_eğer
+        eğer digit == 9 ise result = "9" + result son_eğer
+    son
+    
+    döndür result
+son_fonksiyon
+
+-- -----------------------------------------------------------------------------
+-- Scope reset (için new compilation units)
+-- -----------------------------------------------------------------------------
+
+fonksiyon scope_reset(manager)
+    manager.variable_map = HashMap()
+    manager.scope_stack = liste()
+    manager.current_level = 0
+    manager.next_offset = 0
+    
+    ScopeInfo global_scope
+    global_scope.level = 0
+    global_scope.parent_scope = -1
+    global_scope.variable_names = liste()
+    global_scope.stack_frame_size = 0
+    
+    mlp_list_add(manager.scope_stack, global_scope)
+    
+    döndür manager
+son_fonksiyon

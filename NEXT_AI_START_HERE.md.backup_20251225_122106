@@ -1,0 +1,246 @@
+# 🎯 GÖREVLİ YZ BAŞLANGIÇ NOKTASI
+
+**Son Güncelleme:** 25 Aralık 2025  
+**Durum:** 🟢 SyntaxYZ_01 Göreve Hazır!  
+**Proje:** mlp-original (guvenacar/mlp)  
+**Görev:** Stage0-C'ye PMLP Syntax Desteği
+
+---
+
+## 📊 PROJE DURUMU
+
+### ✅ TAMAMLANAN:
+- ✅ mlp-original self-hosting (%80-85) - Stage0-C çalışıyor
+- ✅ Performance test: GCC = LLVM (0% fark)
+- ✅ PMLP syntax analizi tamamlandı
+- ✅ **3 TODO OLUŞTURULDU:**
+  - TODO_STAGE0_PMLP_SYNTAX.md (12KB, 501 lines)
+  - TODO_RUNTIME_INTEGRATION.md (14KB, 582 lines)
+  - TODO_GCC_TO_LLVM_BACKEND.md (16KB, 758 lines)
+
+### 🎯 MEVCUT HEDEF:
+**Stage0-C Compiler'a PMLP Syntax Desteği Eklemek**
+
+**3 Adımlı Strateji:**
+```
+ADIM 1: Stage0-C → PMLP syntax (bu TODO) ⏳ ŞİMDİ
+    ↓
+ADIM 2: MLP-LLVM runtime.c → mlp-original entegre et
+    ↓
+ADIM 3: mlp-original → LLVM backend (GCC→LLVM)
+```
+
+**Neden?**
+- MLP-LLVM'de 1 ay boyunca geliştirilen C modüllerini kullanabilmek
+- Syntax tutarlılığı (`,` → `;` separator)
+- Modern kontrol akışı (`exit`, `continue`)
+
+---
+
+## 🚀 SyntaxYZ_01 İÇİN GÖREV
+
+**Phase 1: Token Desteği (1-2 saat)**
+
+### Task 1.1: Token Enum'a Ekle (15dk)
+
+**Dosya:** `compiler/stage1-mlp/mlp_compiler.c`  
+**Lokasyon:** `typedef enum` (yaklaşık line 120-220)
+
+**Eklenecek Kod:**
+```c
+// Döngü kontrol komutları (Phase 1 - PMLP)
+TOKEN_EXIT,              // exit - genel çıkış
+TOKEN_CONTINUE,          // continue - genel devam
+TOKEN_EXIT_FOR,          // exit_for - for'dan çık
+TOKEN_EXIT_WHILE,        // exit_while - while'dan çık
+TOKEN_EXIT_IF,           // exit_if - if'ten çık
+TOKEN_EXIT_FUNCTION,     // exit_function - fonksiyondan çık
+TOKEN_EXIT_SWITCH,       // exit_switch - switch'ten çık
+TOKEN_CONTINUE_FOR,      // continue_for - for'a devam
+TOKEN_CONTINUE_WHILE,    // continue_while - while'a devam
+```
+
+---
+
+### Task 1.2: Keyword Table'a Ekle (15dk)
+
+**Lokasyon:** `Keyword keywords[]` array (yaklaşık line 1350-1450)
+
+**Eklenecek Kod:**
+```c
+// Phase 1 - PMLP exit/continue keywords
+{"exit",           TOKEN_EXIT},
+{"continue",       TOKEN_CONTINUE},
+{"exit_for",       TOKEN_EXIT_FOR},
+{"exit_while",     TOKEN_EXIT_WHILE},
+{"exit_if",        TOKEN_EXIT_IF},
+{"exit_function",  TOKEN_EXIT_FUNCTION},
+{"exit_switch",    TOKEN_EXIT_SWITCH},
+{"continue_for",   TOKEN_CONTINUE_FOR},
+{"continue_while", TOKEN_CONTINUE_WHILE},
+```
+
+---
+
+### Task 1.3: Lexer Test (30dk)
+
+**Test Dosyası:** `tests/pmlp/test_exit_lexer.mlp`
+
+```mlp
+function test_exit() as numeric
+    while true
+        if x > 10 then
+            exit
+        end_if
+    end_while
+    return 0
+end_function
+```
+
+**Test Komutu:**
+```bash
+cd /home/pardus/projeler/mlp-original
+
+# Test klasörü oluştur
+mkdir -p tests/pmlp
+
+# Test dosyası oluştur
+cat > tests/pmlp/test_exit_lexer.mlp << 'EOF'
+function test_exit() as numeric
+    numeric x = 5
+    while true
+        if x > 10 then
+            exit
+        end_if
+        x = x + 1
+    end_while
+    return 0
+end_function
+EOF
+
+# Compile test (parser fail edecek ama lexer token'ı tanımalı)
+./build/bin/mlpc tests/pmlp/test_exit_lexer.mlp /tmp/test_exit.asm 2>&1
+
+# Beklenen: "Unknown statement" gibi parser error (lexer OK)
+# Beklenmeyen: "Unknown token: exit" gibi lexer error
+```
+
+---
+
+### Task 1.4: Recompile & Validate (30dk)
+
+**Rebuild Komutu:**
+```bash
+cd /home/pardus/projeler/mlp-original
+
+# Backup current binary
+cp build/bin/mlpc build/bin/mlpc.backup.syntax01
+
+# Recompile
+gcc -o build/bin/mlpc compiler/stage1-mlp/mlp_compiler.c \
+    compiler/runtime/src/hashmap.c \
+    -I compiler/runtime/src \
+    -lm
+
+# Test: Eski syntax hala çalışıyor mu?
+./build/bin/mlpc tests/test_hello.mlp /tmp/hello.asm
+
+# Test: Yeni keyword tanınıyor mu?
+./build/bin/mlpc tests/pmlp/test_exit_lexer.mlp /tmp/exit.asm 2>&1 | grep -i "exit"
+```
+
+---
+
+## 📋 HIZLI BAŞLANGIÇ
+
+```bash
+cd /home/pardus/projeler/mlp-original
+
+# 1. TODO'yu oku
+cat TODO_STAGE0_PMLP_SYNTAX.md
+
+# 2. Mevcut durumu kontrol et
+grep -n "TOKEN_END_IF" compiler/stage1-mlp/mlp_compiler.c
+# Line 144: TOKEN_END_IF,
+
+# 3. Yeni token'ların ekleneceği yeri bul
+grep -n "TOKEN_END_SWITCH" compiler/stage1-mlp/mlp_compiler.c
+# Sonrasına ekle
+
+# 4. Keyword table'ı bul
+grep -n '{"end_switch"' compiler/stage1-mlp/mlp_compiler.c
+# Line 1360 civarı
+
+# 5. Değişiklikleri yap (Task 1.1 ve 1.2)
+
+# 6. Recompile
+gcc -o build/bin/mlpc compiler/stage1-mlp/mlp_compiler.c \
+    compiler/runtime/src/hashmap.c \
+    -I compiler/runtime/src -lm
+
+# 7. Test
+./build/bin/mlpc tests/pmlp/test_exit_lexer.mlp /tmp/test.asm
+```
+
+---
+
+## 📚 OKUMAN GEREKENLER
+
+1. **TODO_STAGE0_PMLP_SYNTAX.md** - Tam görev listesi ✅
+2. **docs/specs/pmlp_kesin_sozdizimi.md** - PMLP syntax referansı
+3. **compiler/stage1-mlp/mlp_compiler.c** - Stage0-C compiler (10,303 lines)
+
+---
+
+## ⚠️ UYARILAR
+
+### Dikkat Edilecekler:
+1. **Backup:** Değişiklik öncesi binary'i backup al
+2. **Test:** Her değişiklikten sonra recompile ve test et
+3. **Commit:** Her task sonrası commit yap (küçük commitler)
+4. **Semicolon Separator:** Phase 5'e kadar DOKUNMA (riskli)
+
+### Phase Öncelikleri:
+- 🔴 **Phase 1-2:** YAPılmalı (token + AST)
+- 🟡 **Phase 3-4:** Orta öncelik (parser + codegen)
+- 🟢 **Phase 5:** DÜşük öncelik (semicolon separator - riskli)
+
+---
+
+## 🎯 SONRAKİ ADIMLAR
+
+### Phase 1 Tamamlandıktan Sonra:
+1. SyntaxYZ_01 rapor oluştur: `SYNTAX_YZ_01_TAMAMLANDI.md`
+2. NEXT_AI_START_HERE.md güncelle → SyntaxYZ_02'ye yönlendir
+3. Git commit:
+```bash
+git add compiler/stage1-mlp/mlp_compiler.c tests/pmlp/
+git commit -m "SyntaxYZ_01: PMLP Token Desteği
+
+- TOKEN_EXIT, TOKEN_CONTINUE ve variants eklendi
+- Keyword table güncellendi (9 yeni keyword)
+- Lexer test dosyası oluşturuldu
+- Recompile ve validation OK
+
+Phase: 1/6 (%17)
+Süre: 1.5 saat"
+```
+
+---
+
+## 📞 YARDIM
+
+**Sorun Yaşarsan:**
+1. `compiler/stage1-mlp/mlp_compiler.c` backup'ını geri yükle
+2. TODO_STAGE0_PMLP_SYNTAX.md'yi tekrar oku
+3. MLP-LLVM projesine referans:
+   ```bash
+   cd /home/pardus/projeler/MLP/MLP
+   grep -n "TOKEN_EXIT" self_host/mlp_compiler.c
+   ```
+
+---
+
+**İlerleme:** Phase 1 Task 1.1 başlayacak  
+**Hedef:** Stage0-C → PMLP uyumlu!  
+**Toplam Süre:** 11-16 saat (6 phases)

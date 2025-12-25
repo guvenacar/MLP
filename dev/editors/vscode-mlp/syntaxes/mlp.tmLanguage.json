@@ -1,0 +1,148 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "MLP",
+  "scopeName": "source.mlp",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#functions" },
+    { "include": "#operators" },
+    { "include": "#constants" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.mlp",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.mlp",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.mlp",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.mlp",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.mlp",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.mlp",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.mlp",
+          "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(if|eğer|eger|EĞER|EGER|如果|अगर|agar|если|ЕСЛИ|olursa|OLURSA)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(then|ise|İSE|那么|तो|to|то|ТО|ozaman|OZAMAN)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(else|değilse|DEĞİLSE|degilse|DEGILSE|否则|नहीं_तो|nahin_to|иначе|ИНАЧЕ|yoksa|YOKSA)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(while|döngü|DÖNGÜ|dongu|DONGU|当|जब_तक|jab_tak|пока|ПОКА|surekli)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(for|için|İÇİN|icin|ICIN|对于|प्रत्येक|pratyék|для|ДЛЯ|her)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(break|döngü_bitir|DÖNGÜ_BITIR|bitir|BITIR|中断|तोड़ो|todo|прервать|ПРЕРВАТЬ|dur)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(end|son|SON|结束|समाप्त|samaapt|конец|КОНЕЦ)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(function|func|işleç|İŞLEÇ|islec|ISLEC|fonksiyon|函数|फलन|falan|функция|ФУНКЦИЯ|yap)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(return|dönüş|DÖNÜŞ|donus|DONUS|返回|वापसी|vaapsi|вернуть|ВЕРНУТЬ|geri)\\b"
+        },
+        {
+          "name": "keyword.control.mlp",
+          "match": "\\b(print|yazdir|YAZDIR|打印|लिखो|likho|печать|ПЕЧАТЬ|goster)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.mlp",
+          "match": "\\b(int|sayisal|SAYISAL|tamsayı|TAMSAYI|整数|संख्या|sankhya|целое|ЦЕЛОЕ|sayi)\\b"
+        },
+        {
+          "name": "storage.type.mlp",
+          "match": "\\b(string|metin|METIN|yazi|YAZI|字符串|पाठ|paath|строка|СТРОКА|kelime)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.mlp",
+          "match": "\\b(true|doğru|DOĞRU|dogru|DOGRU|真|सत्य|satya|истина|ИСТИНА|evet)\\b"
+        },
+        {
+          "name": "constant.language.mlp",
+          "match": "\\b(false|yanlış|YANLIŞ|yanlis|YANLIS|假|झूठ|jhooth|ложь|ЛОЖЬ|hayir)\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.mlp",
+          "match": "\\b([a-zA-ZğüşıöçĞÜŞİÖÇа-яА-Я一-龯\\u0900-\\u097F_][a-zA-ZğüşıöçĞÜŞİÖÇа-яА-Я一-龯\\u0900-\\u097F0-9_]*)\\s*(?=\\()"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.mlp",
+          "match": "(\\+|\\-|\\*|\\/|%|==|!=|<|>|<=|>=|=|&&|\\|\\||!)"
+        }
+      ]
+    }
+  }
+}
